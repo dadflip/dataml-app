@@ -72,14 +72,18 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
     meta: [
       { charSet: "utf-8" },
       { name: "viewport", content: "width=device-width, initial-scale=1" },
-      { title: "Lovable App" },
-      { name: "description", content: "Lovable Generated Project" },
+      { title: "DataML" },
+      { name: "description", content: "Block Builder Studio creates and manages code notebooks with a visual drag-and-drop interface." },
       { name: "author", content: "Lovable" },
-      { property: "og:title", content: "Lovable App" },
-      { property: "og:description", content: "Lovable Generated Project" },
+      { property: "og:title", content: "DataML" },
+      { property: "og:description", content: "Block Builder Studio creates and manages code notebooks with a visual drag-and-drop interface." },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary" },
       { name: "twitter:site", content: "@Lovable" },
+      { name: "twitter:title", content: "DataML" },
+      { name: "twitter:description", content: "Block Builder Studio creates and manages code notebooks with a visual drag-and-drop interface." },
+      { property: "og:image", content: "https://storage.googleapis.com/gpt-engineer-file-uploads/RiyYhuD1TVYvdlYqxIVVExgec7z1/social-images/social-1778970528648-splash-icon.webp" },
+      { name: "twitter:image", content: "https://storage.googleapis.com/gpt-engineer-file-uploads/RiyYhuD1TVYvdlYqxIVVExgec7z1/social-images/social-1778970528648-splash-icon.webp" },
     ],
     links: [
       {
