@@ -1,0 +1,791 @@
+# ══════════════════════════════════════════════════════════════════════════
+# EVALUATION CATALOG — Métriques · Visualisations · Explicabilité
+#   Calibration · Fairness · Drift · Benchmark · Model Card
+# ══════════════════════════════════════════════════════════════════════════
+#
+# Structure de chaque entrée :
+#   id, name, enabled, category, description,
+#   applies_to, when_to_use,
+#   input_variables, output_variables,
+#   code_template
+# ══════════════════════════════════════════════════════════════════════════
+
+pipeline_contract:
+  bloc: 4
+  role: "Évaluation · Explicabilité · Visualisation — analyse le modèle entraîné et produit des rapports d'évaluation"
+
+  input_variables:
+    # Variables câblées — issues du bloc 3 (model_config)
+    model:              "objet entraîné (sklearn / xgb / lgb / torch…)"
+    X_train:            "np.ndarray | pd.DataFrame"
+    X_test:             "np.ndarray | pd.DataFrame"
+    y_train:            "pd.Series | np.ndarray"
+    y_test:             "pd.Series | np.ndarray"
+    y_pred:             "np.ndarray — prédictions sur X_test"
+    y_proba:            "np.ndarray | None — probabilités (classification)"
+    feature_names:      "list[str] — = feature_names_out du bloc 2"
+    task_type:          "str — détermine quelles métriques s'appliquent"
+    preprocessor:       "sklearn Pipeline/ColumnTransformer | None"
+    metrics:            "dict — métriques de base déjà calculées par le bloc 3"
+    shap_values:        "np.ndarray | None — si déjà calculés en bloc 3"
+    labels:             "np.ndarray | None — clusters (clustering)"
+    forecast:           "pd.Series | None — prévisions (timeseries)"
+    scores:             "np.ndarray | None — anomaly scores"
+    dates_train:        "pd.DatetimeIndex | None"
+    dates_future:       "pd.DatetimeIndex | None"
+
+    # Paramètres utilisateur locaux
+    SENSITIVE_COLS:     "list[str] — colonnes sensibles pour fairness (ex: ['gender','age_group'])"
+    REFERENCE_PERIOD:   "pd.DataFrame | None — données de référence pour drift"
+    N_SHAP_SAMPLES:     "int — nombre de samples SHAP (défaut : 200)"
+    CALIBRATION_BINS:   "int — bins courbe de calibration (défaut : 10)"
+    QUANTILES:          "list[float] — quantiles à évaluer (défaut : [0.1,0.5,0.9])"
+    ALPHA:              "float — seuil significativité fairness (défaut : 0.05)"
+    BENCHMARK_MODELS:   "dict — modèles de comparaison {nom: objet_entraîné}"
+
+  output_variables:
+    eval_report:        "dict — rapport complet : toutes métriques, scores, tests"
+    figures:            "dict[str, matplotlib.Figure] — toutes les figures générées"
+    shap_summary:       "pd.DataFrame — SHAP values + feature importance agrégée"
+    calibration_curve:  "tuple[np.ndarray, np.ndarray] — (prob_true, prob_pred)"
+    drift_flags:        "dict — colonnes en drift + statistiques KS/PSI"
+    fairness_metrics:   "dict — métriques par groupe sensible"
+    benchmark_df:       "pd.DataFrame — comparaison multi-modèles"
+    model_card_data:    "dict — données structurées pour le model card"
+    lime_explainer:     "lime.LimeTabularExplainer | None"
+    confusion_matrix:   "np.ndarray | None — matrice de confusion (classification)"
+    residuals:          "pd.Series | None — résidus (régression)"
+
+
+# ──────────────────────────────────────────────────────────────────────────
+classification_evaluation:
+# ──────────────────────────────────────────────────────────────────────────
+
+  - id: eval_clf_full
+    name: "Évaluation complète — Classification"
+    enabled: true
+    category: "Évaluation — Classification"
+    description: "Rapport complet : accuracy, F1, AUC-ROC, AUC-PR, MCC, Cohen's kappa, matrice de confusion, courbes ROC et PR."
+    applies_to: ["classification"]
+    when_to_use: "Toujours après entraînement d'un classifieur. Vue d'ensemble avant d'approfondir."
+    input_variables:
+      required: [y_test, y_pred, y_proba, task_type]
+      optional: [feature_names]
+    output_variables:
+      eval_report: "dict avec accuracy, f1_weighted, roc_auc, pr_auc, mcc, kappa"
+      figures: "{'confusion_matrix': Figure, 'roc_curve': Figure, 'pr_curve': Figure}"
+      confusion_matrix: "np.ndarray"
+    code_template: |
+      import numpy as np
+      import pandas as pd
+      import matplotlib.pyplot as plt
+      from sklearn.metrics import (
+          classification_report, confusion_matrix, ConfusionMatrixDisplay,
+          roc_auc_score, average_precision_score,
+          roc_curve, precision_recall_curve,
+          matthews_corrcoef, cohen_kappa_score,
+          f1_score, accuracy_score
+      )
+
+      IS_BINARY = len(np.unique(y_test)) == 2
+
+      print("=" * 60)
+      print(classification_report(y_test, y_pred, digits=4))
+
+      eval_report = {
+          "accuracy"   : accuracy_score(y_test, y_pred),
+          "f1_weighted": f1_score(y_test, y_pred, average="weighted"),
+          "f1_macro"   : f1_score(y_test, y_pred, average="macro"),
+          "mcc"        : matthews_corrcoef(y_test, y_pred),
+          "kappa"      : cohen_kappa_score(y_test, y_pred),
+      }
+      if y_proba is not None:
+          auc_kwargs = {"multi_class": "ovr", "average": "weighted"} if not IS_BINARY else {}
+          proba_arg  = y_proba[:, 1] if IS_BINARY else y_proba
+          eval_report["roc_auc"] = roc_auc_score(y_test, proba_arg, **auc_kwargs)
+          eval_report["pr_auc"]  = average_precision_score(y_test, proba_arg) if IS_BINARY else None
+
+      confusion_matrix_arr = confusion_matrix(y_test, y_pred)
+      figures = {}
+
+      fig, ax = plt.subplots(figsize=(6, 5))
+      ConfusionMatrixDisplay(confusion_matrix_arr).plot(ax=ax, colorbar=False)
+      ax.set_title("Matrice de confusion")
+      figures["confusion_matrix"] = fig
+
+      if y_proba is not None and IS_BINARY:
+          fpr, tpr, _ = roc_curve(y_test, y_proba[:, 1])
+          fig2, axes = plt.subplots(1, 2, figsize=(12, 4))
+          axes[0].plot(fpr, tpr, label=f"AUC = {eval_report['roc_auc']:.3f}")
+          axes[0].plot([0,1],[0,1],"k--"); axes[0].set_title("Courbe ROC")
+          axes[0].legend()
+          prec, rec, _ = precision_recall_curve(y_test, y_proba[:, 1])
+          axes[1].plot(rec, prec, label=f"AP = {eval_report['pr_auc']:.3f}")
+          axes[1].set_title("Courbe Precision-Recall"); axes[1].legend()
+          plt.tight_layout(); plt.show()
+          figures["roc_pr_curve"] = fig2
+
+      print("\nRésumé :", eval_report)
+
+
+  - id: eval_threshold_analysis
+    name: "Analyse du seuil de décision"
+    enabled: true
+    category: "Évaluation — Classification"
+    description: "Courbe F1/Précision/Rappel selon le seuil. Trouve le seuil optimal selon le critère métier."
+    applies_to: ["classification"]
+    when_to_use: "Quand les coûts FP/FN sont asymétriques (fraude, médical, maintenance prédictive)."
+    input_variables:
+      required: [y_test, y_proba]
+      optional: []
+    output_variables:
+      eval_report: "enrichi avec 'optimal_threshold', 'threshold_curve'"
+      figures: "{'threshold_analysis': Figure}"
+    code_template: |
+      import numpy as np
+      import matplotlib.pyplot as plt
+      from sklearn.metrics import f1_score, precision_score, recall_score
+
+      # y_proba[:, 1] pour la classe positive
+      proba_pos = y_proba[:, 1]
+      thresholds = np.linspace(0.01, 0.99, 99)
+
+      f1s, precs, recs = [], [], []
+      for t in thresholds:
+          preds = (proba_pos >= t).astype(int)
+          f1s.append(f1_score(y_test, preds, zero_division=0))
+          precs.append(precision_score(y_test, preds, zero_division=0))
+          recs.append(recall_score(y_test, preds, zero_division=0))
+
+      best_idx = np.argmax(f1s)
+      OPTIMAL_THRESHOLD = thresholds[best_idx]
+      print(f"Seuil optimal (F1 max) : {OPTIMAL_THRESHOLD:.3f}")
+      print(f"  → F1={f1s[best_idx]:.4f}  Précision={precs[best_idx]:.4f}  Rappel={recs[best_idx]:.4f}")
+
+      fig, ax = plt.subplots(figsize=(9, 4))
+      ax.plot(thresholds, f1s,   label="F1")
+      ax.plot(thresholds, precs, label="Précision", linestyle="--")
+      ax.plot(thresholds, recs,  label="Rappel",    linestyle=":")
+      ax.axvline(OPTIMAL_THRESHOLD, color="red", linestyle="--",
+                 label=f"Seuil optimal = {OPTIMAL_THRESHOLD:.2f}")
+      ax.set_xlabel("Seuil"); ax.legend(); ax.set_title("Métriques vs seuil")
+      plt.tight_layout(); plt.show()
+      figures["threshold_analysis"] = fig
+
+      eval_report["optimal_threshold"] = OPTIMAL_THRESHOLD
+      y_pred_opt = (proba_pos >= OPTIMAL_THRESHOLD).astype(int)
+
+
+# ──────────────────────────────────────────────────────────────────────────
+regression_evaluation:
+# ──────────────────────────────────────────────────────────────────────────
+
+  - id: eval_reg_full
+    name: "Évaluation complète — Régression"
+    enabled: true
+    category: "Évaluation — Régression"
+    description: "RMSE, MAE, R², MAPE, SMAPE, résidus, Q-Q plot, distribution des erreurs."
+    applies_to: ["regression"]
+    when_to_use: "Toujours après entraînement d'un régresseur."
+    input_variables:
+      required: [y_test, y_pred]
+      optional: [feature_names]
+    output_variables:
+      eval_report: "dict avec rmse, mae, r2, mape, smape, max_error"
+      figures: "{'residuals': Figure, 'pred_vs_true': Figure}"
+      residuals: "pd.Series"
+    code_template: |
+      import numpy as np
+      import pandas as pd
+      import matplotlib.pyplot as plt
+      from sklearn.metrics import mean_squared_error, mean_absolute_error, r2_score, max_error
+      from scipy import stats
+
+      residuals = pd.Series(y_test - y_pred, name="residuals")
+      mape  = np.mean(np.abs(residuals / (np.abs(y_test) + 1e-8))) * 100
+      smape = np.mean(2 * np.abs(y_test - y_pred) / (np.abs(y_test) + np.abs(y_pred) + 1e-8)) * 100
+
+      eval_report = {
+          "rmse"     : np.sqrt(mean_squared_error(y_test, y_pred)),
+          "mae"      : mean_absolute_error(y_test, y_pred),
+          "r2"       : r2_score(y_test, y_pred),
+          "mape"     : mape,
+          "smape"    : smape,
+          "max_error": max_error(y_test, y_pred),
+      }
+      print("Métriques régression :")
+      for k, v in eval_report.items():
+          print(f"  {k:12s} : {v:.4f}")
+
+      fig, axes = plt.subplots(1, 3, figsize=(15, 4))
+      axes[0].scatter(y_pred, residuals, alpha=0.3, s=10)
+      axes[0].axhline(0, color="r", linestyle="--")
+      axes[0].set_xlabel("Prédictions"); axes[0].set_ylabel("Résidus")
+      axes[0].set_title("Résidus vs prédictions")
+
+      residuals.hist(bins=50, ax=axes[1], color="steelblue", alpha=0.8)
+      axes[1].set_title("Distribution des résidus")
+
+      stats.probplot(residuals.dropna(), dist="norm", plot=axes[2])
+      axes[2].set_title("Q-Q Plot (normalité résidus)")
+
+      plt.tight_layout(); plt.show()
+      figures["residuals"] = fig
+
+      fig2, ax = plt.subplots(figsize=(6, 5))
+      ax.scatter(y_test, y_pred, alpha=0.3, s=10)
+      lims = [min(y_test.min(), y_pred.min()), max(y_test.max(), y_pred.max())]
+      ax.plot(lims, lims, "r--", label="Parfait")
+      ax.set_xlabel("Valeurs réelles"); ax.set_ylabel("Prédictions")
+      ax.set_title(f"Préd. vs Réel — R²={eval_report['r2']:.3f}")
+      ax.legend(); plt.tight_layout(); plt.show()
+      figures["pred_vs_true"] = fig2
+
+
+# ──────────────────────────────────────────────────────────────────────────
+timeseries_evaluation:
+# ──────────────────────────────────────────────────────────────────────────
+
+  - id: eval_ts_full
+    name: "Évaluation complète — Séries Temporelles"
+    enabled: true
+    category: "Évaluation — Timeseries"
+    description: "MAE, RMSE, MAPE, SMAPE, couverture des intervalles de prédiction, graphe prévision vs réel."
+    applies_to: ["timeseries"]
+    when_to_use: "Après tout modèle de prévision. Visualise l'erreur dans le temps."
+    input_variables:
+      required: [y_test, forecast, dates_future]
+      optional: [y_train, dates_train]
+    output_variables:
+      eval_report: "dict avec mae, rmse, mape, smape"
+      figures: "{'forecast_plot': Figure, 'error_over_time': Figure}"
+    code_template: |
+      import numpy as np
+      import pandas as pd
+      import matplotlib.pyplot as plt
+      from sklearn.metrics import mean_squared_error, mean_absolute_error
+
+      forecast_arr = np.array(forecast)
+      y_test_arr   = np.array(y_test)
+      residuals_ts = y_test_arr - forecast_arr
+
+      eval_report = {
+          "mae"  : mean_absolute_error(y_test_arr, forecast_arr),
+          "rmse" : np.sqrt(mean_squared_error(y_test_arr, forecast_arr)),
+          "mape" : np.mean(np.abs(residuals_ts / (np.abs(y_test_arr) + 1e-8))) * 100,
+          "smape": np.mean(2 * np.abs(residuals_ts) /
+                           (np.abs(y_test_arr) + np.abs(forecast_arr) + 1e-8)) * 100,
+      }
+      print("Évaluation timeseries :", eval_report)
+
+      fig, axes = plt.subplots(2, 1, figsize=(14, 7))
+      if y_train is not None and dates_train is not None:
+          axes[0].plot(dates_train, y_train, label="Train", alpha=0.6)
+      axes[0].plot(dates_future, y_test_arr,  label="Réel",      color="steelblue")
+      axes[0].plot(dates_future, forecast_arr, label="Prévision", color="tomato", linestyle="--")
+      axes[0].legend(); axes[0].set_title("Prévision vs Réel")
+      axes[1].bar(dates_future, residuals_ts, color="gray", alpha=0.6)
+      axes[1].axhline(0, color="k", linestyle="--")
+      axes[1].set_title("Erreur dans le temps")
+      plt.tight_layout(); plt.show()
+      figures["forecast_plot"] = fig
+
+
+# ──────────────────────────────────────────────────────────────────────────
+clustering_evaluation:
+# ──────────────────────────────────────────────────────────────────────────
+
+  - id: eval_clustering_full
+    name: "Évaluation complète — Clustering"
+    enabled: true
+    category: "Évaluation — Clustering"
+    description: "Silhouette, Davies-Bouldin, Calinski-Harabasz, profil des clusters, distribution des tailles."
+    applies_to: ["clustering"]
+    when_to_use: "Après tout algorithme de clustering."
+    input_variables:
+      required: [X_train, labels]
+      optional: [feature_names]
+    output_variables:
+      eval_report: "dict avec silhouette, davies_bouldin, calinski_harabasz, cluster_sizes"
+      figures: "{'cluster_profile': Figure, 'cluster_sizes': Figure}"
+    code_template: |
+      import numpy as np
+      import pandas as pd
+      import matplotlib.pyplot as plt
+      from sklearn.metrics import silhouette_score, davies_bouldin_score, calinski_harabasz_score
+      from sklearn.preprocessing import StandardScaler
+      from sklearn.decomposition import PCA
+
+      X_eval = X_train if hasattr(X_train, "shape") else np.array(X_train)
+      mask   = labels != -1   # exclure outliers DBSCAN
+
+      eval_report = {}
+      if mask.sum() > 1:
+          eval_report["silhouette"]         = silhouette_score(X_eval[mask], labels[mask])
+          eval_report["davies_bouldin"]     = davies_bouldin_score(X_eval[mask], labels[mask])
+          eval_report["calinski_harabasz"]  = calinski_harabasz_score(X_eval[mask], labels[mask])
+      unique, counts = np.unique(labels[mask], return_counts=True)
+      eval_report["cluster_sizes"] = dict(zip(unique.tolist(), counts.tolist()))
+      eval_report["n_clusters"]    = len(unique)
+      print("Évaluation clustering :", eval_report)
+
+      df_cl = pd.DataFrame(X_eval, columns=feature_names if feature_names else
+                            [f"f{i}" for i in range(X_eval.shape[1])])
+      df_cl["cluster"] = labels
+
+      fig, axes = plt.subplots(1, 2, figsize=(14, 5))
+      df_cl.groupby("cluster").mean().T.plot(ax=axes[0], cmap="tab10")
+      axes[0].set_title("Profil moyen par cluster")
+      pd.Series(eval_report["cluster_sizes"]).plot.bar(ax=axes[1], color="steelblue")
+      axes[1].set_title("Taille des clusters")
+      plt.tight_layout(); plt.show()
+      figures["cluster_profile"] = fig
+
+      X_2d = PCA(n_components=2).fit_transform(StandardScaler().fit_transform(X_eval))
+      fig2, ax = plt.subplots(figsize=(7, 5))
+      scatter = ax.scatter(X_2d[:, 0], X_2d[:, 1], c=labels, cmap="tab10", s=10, alpha=0.6)
+      plt.colorbar(scatter, ax=ax); ax.set_title("PCA 2D — clusters")
+      plt.tight_layout(); plt.show()
+      figures["pca_clusters"] = fig2
+
+
+# ──────────────────────────────────────────────────────────────────────────
+explainability:
+# ──────────────────────────────────────────────────────────────────────────
+
+  - id: shap_tree_explainer
+    name: "SHAP — TreeExplainer"
+    enabled: true
+    category: "Explicabilité — SHAP"
+    description: "Valeurs SHAP pour modèles arbre (XGBoost, LGB, RF, CatBoost). Summary plot, bar plot, beeswarm, dependence plots."
+    applies_to: ["classification", "regression"]
+    when_to_use: "Pour tout modèle arbre. Plus rapide et exact que KernelExplainer."
+    input_variables:
+      required: [model, X_test, feature_names]
+      optional: [X_train, N_SHAP_SAMPLES]
+    output_variables:
+      shap_summary: "pd.DataFrame avec colonnes feature + shap_importance"
+      figures: "{'shap_summary': Figure, 'shap_bar': Figure}"
+    code_template: |
+      import shap
+      import pandas as pd
+      import numpy as np
+      import matplotlib.pyplot as plt
+
+      N_SHAP_SAMPLES = N_SHAP_SAMPLES if "N_SHAP_SAMPLES" in dir() else 200
+      X_shap = X_test[:N_SHAP_SAMPLES]
+      if hasattr(X_shap, "values"):
+          X_shap_arr = X_shap.values
+      else:
+          X_shap_arr = X_shap
+
+      explainer   = shap.TreeExplainer(model)
+      shap_values = explainer.shap_values(X_shap)
+
+      # Pour classification multi-classe, prendre la classe 1 ou moyenner
+      sv = shap_values[1] if isinstance(shap_values, list) else shap_values
+
+      shap_summary = pd.DataFrame({
+          "feature"   : feature_names,
+          "shap_mean_abs": np.abs(sv).mean(axis=0)
+      }).sort_values("shap_mean_abs", ascending=False)
+      print(shap_summary.head(20).to_string(index=False))
+
+      plt.figure()
+      shap.summary_plot(sv, X_shap_arr, feature_names=feature_names, show=False)
+      figures["shap_summary"] = plt.gcf(); plt.show()
+
+      plt.figure()
+      shap.summary_plot(sv, X_shap_arr, feature_names=feature_names,
+                        plot_type="bar", show=False)
+      figures["shap_bar"] = plt.gcf(); plt.show()
+
+      # Dependence plot pour la feature la plus importante
+      top_feat_idx = shap_summary.index[0]
+      plt.figure()
+      shap.dependence_plot(top_feat_idx, sv, X_shap_arr,
+                           feature_names=feature_names, show=False)
+      figures["shap_dependence_top"] = plt.gcf(); plt.show()
+
+  - id: shap_kernel_explainer
+    name: "SHAP — KernelExplainer (modèle-agnostique)"
+    enabled: true
+    category: "Explicabilité — SHAP"
+    description: "SHAP pour tout modèle (SVM, MLP, pipelines sklearn). Plus lent mais universel."
+    applies_to: ["classification", "regression"]
+    when_to_use: "Pour les modèles non-arbre : SVM, MLP, Logistic Regression, pipelines."
+    input_variables:
+      required: [model, X_train, X_test, feature_names]
+      optional: [N_SHAP_SAMPLES]
+    output_variables:
+      shap_summary: "pd.DataFrame"
+      figures: "{'shap_kernel_summary': Figure}"
+    code_template: |
+      import shap
+      import numpy as np
+      import pandas as pd
+      import matplotlib.pyplot as plt
+
+      N_SHAP_SAMPLES = N_SHAP_SAMPLES if "N_SHAP_SAMPLES" in dir() else 100
+      background    = shap.sample(X_train, 50)
+      X_explain     = X_test[:N_SHAP_SAMPLES]
+
+      predict_fn = (model.predict_proba if hasattr(model, "predict_proba")
+                    else model.predict)
+      explainer   = shap.KernelExplainer(predict_fn, background)
+      shap_values = explainer.shap_values(X_explain, nsamples=100)
+
+      sv = shap_values[1] if isinstance(shap_values, list) else shap_values
+      shap_summary = pd.DataFrame({
+          "feature"      : feature_names,
+          "shap_mean_abs": np.abs(sv).mean(axis=0)
+      }).sort_values("shap_mean_abs", ascending=False)
+
+      plt.figure()
+      shap.summary_plot(sv, X_explain, feature_names=feature_names, show=False)
+      figures["shap_kernel_summary"] = plt.gcf(); plt.show()
+
+  - id: lime_explainer
+    name: "LIME — Explicabilité locale"
+    enabled: true
+    category: "Explicabilité — LIME"
+    description: "Explique une prédiction individuelle par approximation linéaire locale."
+    applies_to: ["classification", "regression"]
+    when_to_use: "Pour expliquer UNE prédiction en particulier. Complémentaire à SHAP."
+    input_variables:
+      required: [model, X_train, X_test, feature_names, task_type]
+      optional: []
+    output_variables:
+      lime_explainer: "lime.LimeTabularExplainer"
+      figures: "{'lime_instance_N': Figure}"
+    code_template: |
+      import lime
+      import lime.lime_tabular
+      import matplotlib.pyplot as plt
+      import numpy as np
+
+      predict_fn = (model.predict_proba if hasattr(model, "predict_proba")
+                    else lambda x: model.predict(x).reshape(-1, 1))
+
+      lime_explainer = lime.lime_tabular.LimeTabularExplainer(
+          training_data  = X_train if not hasattr(X_train, "values") else X_train.values,
+          feature_names  = feature_names,
+          mode           = "classification" if task_type == "classification" else "regression",
+          discretize_continuous = True,
+          random_state   = 42,
+      )
+
+      # Expliquer les N premières instances
+      INSTANCES_TO_EXPLAIN = 3
+      for i in range(INSTANCES_TO_EXPLAIN):
+          instance = X_test[i] if not hasattr(X_test, "iloc") else X_test.iloc[i].values
+          exp = lime_explainer.explain_instance(
+              data_row      = instance,
+              predict_fn    = predict_fn,
+              num_features  = 10,
+          )
+          fig = exp.as_pyplot_figure()
+          fig.suptitle(f"LIME — instance {i}")
+          plt.tight_layout(); plt.show()
+          figures[f"lime_instance_{i}"] = fig
+
+
+# ──────────────────────────────────────────────────────────────────────────
+calibration:
+# ──────────────────────────────────────────────────────────────────────────
+
+  - id: eval_calibration
+    name: "Calibration des probabilités"
+    enabled: true
+    category: "Évaluation — Calibration"
+    description: "Courbe de calibration, Brier Score, Expected Calibration Error (ECE)."
+    applies_to: ["classification"]
+    when_to_use: "Quand les probabilités sont utilisées en décision (scoring, ranking). Après SVM, GBM, RF."
+    input_variables:
+      required: [y_test, y_proba, CALIBRATION_BINS]
+      optional: []
+    output_variables:
+      calibration_curve: "tuple (prob_true, prob_pred)"
+      eval_report: "enrichi avec brier_score, ece"
+      figures: "{'calibration': Figure}"
+    code_template: |
+      import numpy as np
+      import matplotlib.pyplot as plt
+      from sklearn.calibration import calibration_curve
+      from sklearn.metrics import brier_score_loss
+
+      CALIBRATION_BINS = CALIBRATION_BINS if "CALIBRATION_BINS" in dir() else 10
+      proba_pos = y_proba[:, 1]
+
+      prob_true, prob_pred = calibration_curve(y_test, proba_pos, n_bins=CALIBRATION_BINS)
+      calibration_curve_out = (prob_true, prob_pred)
+
+      brier = brier_score_loss(y_test, proba_pos)
+      ece   = np.mean(np.abs(prob_true - prob_pred))
+
+      eval_report["brier_score"] = brier
+      eval_report["ece"]         = ece
+      print(f"Brier Score : {brier:.4f}")
+      print(f"ECE         : {ece:.4f}")
+
+      fig, ax = plt.subplots(figsize=(6, 5))
+      ax.plot([0, 1], [0, 1], "k--", label="Calibration parfaite")
+      ax.plot(prob_pred, prob_true, "s-", label=f"Modèle (Brier={brier:.3f})")
+      ax.fill_between(prob_pred, prob_pred, prob_true, alpha=0.1, color="red")
+      ax.set_xlabel("Probabilité prédite"); ax.set_ylabel("Fraction de positifs")
+      ax.set_title("Courbe de calibration"); ax.legend()
+      plt.tight_layout(); plt.show()
+      figures["calibration"] = fig
+
+
+# ──────────────────────────────────────────────────────────────────────────
+fairness:
+# ──────────────────────────────────────────────────────────────────────────
+
+  - id: eval_fairness
+    name: "Analyse de Fairness (équité)"
+    enabled: true
+    category: "Évaluation — Fairness"
+    description: "Métriques d'équité par groupe : demographic parity, equalized odds, disparate impact."
+    applies_to: ["classification"]
+    when_to_use: "Quand le modèle est utilisé sur des populations avec variables sensibles (genre, âge, origine)."
+    input_variables:
+      required: [y_test, y_pred, y_proba, SENSITIVE_COLS]
+      optional: [ALPHA, X_test]
+    output_variables:
+      fairness_metrics: "dict par colonne sensible : {col: {groupe: {metric: val}}}"
+      eval_report: "enrichi avec fairness_summary"
+      figures: "{'fairness_bar': Figure}"
+    code_template: |
+      import pandas as pd
+      import numpy as np
+      import matplotlib.pyplot as plt
+      from sklearn.metrics import f1_score, accuracy_score
+      from scipy.stats import chi2_contingency
+
+      SENSITIVE_COLS = SENSITIVE_COLS if "SENSITIVE_COLS" in dir() else []
+      ALPHA          = ALPHA if "ALPHA" in dir() else 0.05
+
+      X_eval = X_test if hasattr(X_test, "columns") else pd.DataFrame(
+                   X_test, columns=feature_names)
+
+      fairness_metrics = {}
+
+      for col in SENSITIVE_COLS:
+          if col not in X_eval.columns:
+              print(f"⚠ {col} non trouvé dans X_test — ignoré")
+              continue
+          groups = X_eval[col]
+          result = {}
+          for g in groups.unique():
+              mask = (groups == g).values
+              result[str(g)] = {
+                  "n"           : mask.sum(),
+                  "accuracy"    : accuracy_score(y_test[mask], y_pred[mask]),
+                  "f1"          : f1_score(y_test[mask], y_pred[mask],
+                                           average="weighted", zero_division=0),
+                  "positive_rate": y_pred[mask].mean(),
+              }
+          fairness_metrics[col] = result
+
+          # Test disparate impact (ratio min/max positive rate)
+          rates = [v["positive_rate"] for v in result.values()]
+          di = min(rates) / (max(rates) + 1e-8)
+          print(f"\n{col} — Disparate Impact ratio : {di:.3f}")
+          if di < 0.8:
+              print(f"  ⚠ DI < 0.8 : discrimination potentielle détectée")
+
+      fig, axes = plt.subplots(1, len(SENSITIVE_COLS) or 1, figsize=(7 * max(len(SENSITIVE_COLS),1), 4))
+      if len(SENSITIVE_COLS) == 1:
+          axes = [axes]
+      for ax, col in zip(axes, SENSITIVE_COLS):
+          if col in fairness_metrics:
+              df_f = pd.DataFrame(fairness_metrics[col]).T
+              df_f[["accuracy", "f1", "positive_rate"]].plot.bar(ax=ax)
+              ax.set_title(f"Fairness — {col}"); ax.set_xticklabels(ax.get_xticklabels(), rotation=30)
+      plt.tight_layout(); plt.show()
+      figures["fairness_bar"] = fig
+
+
+# ──────────────────────────────────────────────────────────────────────────
+drift_detection:
+# ──────────────────────────────────────────────────────────────────────────
+
+  - id: eval_data_drift
+    name: "Détection de Data Drift"
+    enabled: true
+    category: "Évaluation — Drift"
+    description: "Détecte le glissement de distribution entre données de référence et nouvelles données. KS test + PSI."
+    applies_to: ["classification", "regression", "timeseries"]
+    when_to_use: "En production, à chaque nouveau batch de données pour surveiller la stationnarité."
+    input_variables:
+      required: [X_train, X_test, feature_names]
+      optional: [REFERENCE_PERIOD, ALPHA]
+    output_variables:
+      drift_flags: "dict {feature: {ks_stat, ks_pval, psi, drift_detected}}"
+      eval_report: "enrichi avec drift_summary"
+      figures: "{'drift_heatmap': Figure}"
+    code_template: |
+      import numpy as np
+      import pandas as pd
+      import matplotlib.pyplot as plt
+      from scipy.stats import ks_2samp
+
+      ALPHA = ALPHA if "ALPHA" in dir() else 0.05
+
+      X_ref  = X_train if not hasattr(X_train, "values") else X_train.values
+      X_new  = X_test  if not hasattr(X_test,  "values") else X_test.values
+      drift_flags = {}
+
+      def compute_psi(ref, new, n_bins=10):
+          bins = np.percentile(ref, np.linspace(0, 100, n_bins + 1))
+          bins[0] -= 1e-8; bins[-1] += 1e-8
+          r = np.histogram(ref, bins=bins)[0] / len(ref)
+          n = np.histogram(new, bins=bins)[0] / len(new)
+          r = np.clip(r, 1e-8, None); n = np.clip(n, 1e-8, None)
+          return np.sum((r - n) * np.log(r / n))
+
+      for i, feat in enumerate(feature_names):
+          col_ref = X_ref[:, i].astype(float)
+          col_new = X_new[:, i].astype(float)
+          ks_stat, ks_pval = ks_2samp(col_ref, col_new)
+          psi = compute_psi(col_ref, col_new)
+          drift_flags[feat] = {
+              "ks_stat"      : round(ks_stat, 4),
+              "ks_pval"      : round(ks_pval, 4),
+              "psi"          : round(psi, 4),
+              "drift_detected": ks_pval < ALPHA or psi > 0.2,
+          }
+
+      drifted = [f for f, v in drift_flags.items() if v["drift_detected"]]
+      print(f"Features en drift ({len(drifted)}) : {drifted}")
+
+      df_drift = pd.DataFrame(drift_flags).T
+      fig, ax = plt.subplots(figsize=(max(8, len(feature_names) * 0.4), 4))
+      colors = ["tomato" if v["drift_detected"] else "steelblue" for v in drift_flags.values()]
+      ax.bar(feature_names, df_drift["psi"], color=colors)
+      ax.axhline(0.2, color="red", linestyle="--", label="Seuil PSI=0.2")
+      ax.set_xticklabels(feature_names, rotation=45, ha="right")
+      ax.set_title("PSI par feature (rouge = drift détecté)")
+      ax.legend(); plt.tight_layout(); plt.show()
+      figures["drift_heatmap"] = fig
+      eval_report["drift_summary"] = {"n_drifted": len(drifted), "features": drifted}
+
+
+# ──────────────────────────────────────────────────────────────────────────
+benchmark:
+# ──────────────────────────────────────────────────────────────────────────
+
+  - id: eval_benchmark
+    name: "Benchmark multi-modèles"
+    enabled: true
+    category: "Évaluation — Benchmark"
+    description: "Compare plusieurs modèles sur les mêmes données. Tableau de bord de performance."
+    applies_to: ["classification", "regression"]
+    when_to_use: "Pour sélectionner le meilleur modèle parmi plusieurs candidats."
+    input_variables:
+      required: [X_train, X_test, y_train, y_test, task_type, BENCHMARK_MODELS]
+      optional: [feature_names]
+    output_variables:
+      benchmark_df: "pd.DataFrame — une ligne par modèle, colonnes = métriques"
+      figures: "{'benchmark': Figure}"
+    code_template: |
+      import pandas as pd
+      import numpy as np
+      import matplotlib.pyplot as plt
+      from sklearn.metrics import (f1_score, accuracy_score, roc_auc_score,
+                                   mean_squared_error, r2_score)
+      import time
+
+      # BENCHMARK_MODELS = {"LR": lr_model, "RF": rf_model, "XGB": xgb_model}
+      IS_CLF = task_type == "classification"
+      rows   = []
+
+      for name, m in BENCHMARK_MODELS.items():
+          t0 = time.time()
+          m.fit(X_train, y_train)
+          train_time = time.time() - t0
+
+          t0 = time.time()
+          yp = m.predict(X_test)
+          infer_time = time.time() - t0
+
+          row = {"model": name, "train_s": round(train_time, 3),
+                 "infer_ms": round(infer_time * 1000, 2)}
+          if IS_CLF:
+              row["accuracy"] = accuracy_score(y_test, yp)
+              row["f1_weighted"] = f1_score(y_test, yp, average="weighted")
+              if hasattr(m, "predict_proba"):
+                  proba = m.predict_proba(X_test)
+                  row["roc_auc"] = roc_auc_score(
+                      y_test, proba[:, 1] if proba.shape[1] == 2 else proba,
+                      multi_class="ovr", average="weighted")
+          else:
+              row["rmse"] = np.sqrt(mean_squared_error(y_test, yp))
+              row["r2"]   = r2_score(y_test, yp)
+          rows.append(row)
+
+      benchmark_df = pd.DataFrame(rows).set_index("model")
+      print(benchmark_df.to_string())
+
+      metric_col = "f1_weighted" if IS_CLF else "r2"
+      fig, ax = plt.subplots(figsize=(8, 4))
+      benchmark_df[metric_col].sort_values().plot.barh(ax=ax, color="steelblue")
+      ax.set_title(f"Benchmark — {metric_col}")
+      plt.tight_layout(); plt.show()
+      figures["benchmark"] = fig
+
+
+# ──────────────────────────────────────────────────────────────────────────
+model_card:
+# ──────────────────────────────────────────────────────────────────────────
+
+  - id: generate_model_card
+    name: "Génération du Model Card"
+    enabled: true
+    category: "Évaluation — Documentation"
+    description: "Génère les données structurées d'un Model Card (Google / HuggingFace standard) à partir des résultats d'évaluation."
+    applies_to: ["classification", "regression", "clustering", "timeseries"]
+    when_to_use: "En fin de pipeline, pour documenter formellement le modèle avant déploiement."
+    input_variables:
+      required: [model, eval_report, task_type, feature_names]
+      optional: [fairness_metrics, drift_flags, benchmark_df, shap_summary]
+    output_variables:
+      model_card_data: "dict structuré au standard HuggingFace Model Card"
+    code_template: |
+      import json
+      from datetime import datetime
+
+      model_card_data = {
+          "model_details": {
+              "name"          : "MonModele_v1",
+              "version"       : "1.0.0",
+              "date"          : datetime.now().strftime("%Y-%m-%d"),
+              "type"          : str(type(model).__name__),
+              "task_type"     : task_type,
+              "framework"     : "scikit-learn / xgboost / lightgbm / pytorch",
+              "description"   : "Modèle entraîné via le pipeline ML catalogue",
+          },
+          "intended_use": {
+              "primary_use"   : "À compléter",
+              "users"         : "À compléter",
+              "out_of_scope"  : "À compléter",
+          },
+          "training_data": {
+              "n_features"    : len(feature_names),
+              "feature_names" : feature_names,
+              "n_train"       : None,  # à compléter
+              "n_test"        : None,
+          },
+          "evaluation_results": eval_report,
+          "fairness"         : fairness_metrics if "fairness_metrics" in dir() else {},
+          "drift_monitoring" : drift_flags      if "drift_flags"      in dir() else {},
+          "top_features"     : (shap_summary.head(10).to_dict("records")
+                                if "shap_summary" in dir() else []),
+          "benchmark"        : (benchmark_df.to_dict()
+                                if "benchmark_df" in dir() else {}),
+          "caveats"          : "À compléter — limites connues du modèle",
+          "ethical_considerations": "À compléter",
+      }
+
+      print(json.dumps(model_card_data, indent=2, default=str))

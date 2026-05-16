@@ -1,0 +1,745 @@
+# ══════════════════════════════════════════════════════════════════════════
+# EXPORT & REPORT CATALOG — Sauvegarde · Rapports · Inférence · Serving
+#   Réentrée dans le pipeline · Monitoring · Retraining
+# ══════════════════════════════════════════════════════════════════════════
+#
+# Structure de chaque entrée :
+#   id, name, enabled, category, description,
+#   applies_to, when_to_use,
+#   input_variables, output_variables,
+#   reentry_target (bloc de réentrée pour les boucles feedback),
+#   code_template
+# ══════════════════════════════════════════════════════════════════════════
+
+pipeline_contract:
+  bloc: 5
+  role: "Export · Report · Déploiement · Réentrée — clôture le pipeline et gère les boucles de feedback"
+
+  input_variables:
+    # Variables câblées — issues du bloc 4 (evaluation_config)
+    model:              "objet entraîné"
+    preprocessor:       "sklearn Pipeline/ColumnTransformer — fitted"
+    eval_report:        "dict — rapport d'évaluation complet"
+    figures:            "dict[str, matplotlib.Figure]"
+    shap_summary:       "pd.DataFrame | None"
+    model_card_data:    "dict | None"
+    benchmark_df:       "pd.DataFrame | None"
+    drift_flags:        "dict | None"
+    fairness_metrics:   "dict | None"
+    # Données du pipeline
+    X_train:            "np.ndarray | pd.DataFrame"
+    X_test:             "np.ndarray | pd.DataFrame"
+    y_train:            "pd.Series | np.ndarray"
+    y_test:             "pd.Series | np.ndarray"
+    y_pred:             "np.ndarray"
+    y_proba:            "np.ndarray | None"
+    feature_names:      "list[str]"
+    task_type:          "str"
+    meta:               "dict"
+    forecast:           "pd.Series | None"
+    labels:             "np.ndarray | None"
+
+    # Paramètres utilisateur locaux
+    MODEL_PATH:         "str — chemin de sauvegarde du modèle (ex: 'models/model_v1.pkl')"
+    REPORT_PATH:        "str — chemin du rapport HTML/PDF (ex: 'reports/report.html')"
+    PREDICTIONS_PATH:   "str — chemin export des prédictions CSV"
+    NEW_DATA_PATH:      "str — chemin nouvelles données pour inférence/retraining"
+    API_HOST:           "str — host serving FastAPI (défaut : '0.0.0.0')"
+    API_PORT:           "int — port serving (défaut : 8000)"
+    RETRAINING_TRIGGER: "str — 'drift' | 'schedule' | 'manual'"
+    MONITORING_BACKEND: "str — 'evidently' | 'whylogs' | 'custom'"
+    PROJECT_NAME:       "str — nom du projet MLflow/W&B"
+    RUN_NAME:           "str — nom du run d'expérience"
+    MLFLOW_URI:         "str — URI MLflow tracking (défaut : 'mlruns')"
+
+  output_variables:
+    model_path:         "str — chemin du fichier modèle sauvegardé"
+    pipeline_artifact:  "str — chemin du pipeline complet (preprocessor + model)"
+    report_path:        "str — chemin du rapport HTML/PDF généré"
+    predictions_df:     "pd.DataFrame — prédictions avec index + y_true + y_pred + y_proba"
+    predictions_path:   "str — chemin CSV des prédictions"
+    api_endpoint:       "str — URL de l'API de serving"
+    monitoring_config:  "dict — configuration du monitoring en production"
+    retraining_schedule: "dict — calendrier et conditions de réentraînement"
+    mlflow_run_id:      "str | None — ID du run MLflow"
+    experiment_url:     "str | None — URL W&B / MLflow de l'expérience"
+
+  reentry_contracts:
+    # Décrit ce que chaque boucle reinjecte et vers quel bloc
+    loop_A_full_retrain:
+      description: "Réentraînement complet sur nouvelles données"
+      triggers: ["drift_flags contient des features driftées", "schedule déclenché", "métriques dégradées"]
+      reinjects_to_bloc: 1
+      variables_reinjected: [NEW_DATA_PATH, TARGET_COL, task_type]
+      action: "Relancer datasets_config avec NEW_DATA_PATH → pipeline entier repart"
+
+    loop_B_warm_predictions:
+      description: "Enrichissement features avec prédictions passées"
+      triggers: ["pseudo-labeling", "self-training", "stacking"]
+      reinjects_to_bloc: 2
+      variables_reinjected: [predictions_df, y_pred, y_proba]
+      action: "Joindre predictions_df à X_train comme nouvelles features → reprendre depuis EDA"
+
+    loop_C_inference_only:
+      description: "Inférence sur nouvelles données sans réentraînement"
+      triggers: ["nouvelles données en production", "batch scoring"]
+      reinjects_to_bloc: 2
+      variables_reinjected: [pipeline_artifact, NEW_DATA_PATH]
+      action: "Charger pipeline_artifact → preprocessor.transform(X_new) → model.predict"
+
+    loop_D_hyperparam_tuning:
+      description: "Tuning guidé par l'évaluation"
+      triggers: ["métriques insuffisantes", "benchmark insatisfaisant"]
+      reinjects_to_bloc: 3
+      variables_reinjected: [eval_report, benchmark_df, X_train, X_test, y_train, y_test]
+      action: "Reprendre le bloc 3 avec hyperparamètres ajustés sur les mêmes splits"
+
+
+# ──────────────────────────────────────────────────────────────────────────
+model_persistence:
+# ──────────────────────────────────────────────────────────────────────────
+
+  - id: save_model_joblib
+    name: "Sauvegarde modèle — Joblib"
+    enabled: true
+    category: "Export — Modèle"
+    description: "Sérialise le modèle et le preprocessor en fichiers .pkl via joblib. Standard sklearn."
+    applies_to: ["classification", "regression", "clustering"]
+    when_to_use: "Pour tout modèle sklearn / XGBoost / LightGBM. Inclure le preprocessor dans le pipeline."
+    input_variables:
+      required: [model, preprocessor, MODEL_PATH, feature_names, task_type, eval_report]
+      optional: [meta]
+    output_variables:
+      model_path: "str"
+      pipeline_artifact: "str"
+    code_template: |
+      import joblib
+      import json
+      import os
+      from datetime import datetime
+
+      MODEL_PATH = MODEL_PATH if "MODEL_PATH" in dir() else "models/model.pkl"
+      os.makedirs(os.path.dirname(MODEL_PATH) or ".", exist_ok=True)
+
+      # Sauvegarder le modèle seul
+      joblib.dump(model, MODEL_PATH)
+      model_path = MODEL_PATH
+      print(f"Modèle sauvegardé : {model_path}")
+
+      # Sauvegarder le pipeline complet (preprocessor + model)
+      from sklearn.pipeline import Pipeline as SKPipeline
+      full_pipeline = SKPipeline([
+          ("preprocessor", preprocessor),
+          ("model",        model),
+      ])
+      PIPELINE_PATH = MODEL_PATH.replace(".pkl", "_pipeline.pkl")
+      joblib.dump(full_pipeline, PIPELINE_PATH)
+      pipeline_artifact = PIPELINE_PATH
+      print(f"Pipeline complet sauvegardé : {pipeline_artifact}")
+
+      # Sauvegarder les métadonnées
+      artifact_meta = {
+          "model_class"   : str(type(model).__name__),
+          "task_type"     : task_type,
+          "feature_names" : feature_names,
+          "n_features"    : len(feature_names),
+          "eval_report"   : eval_report,
+          "saved_at"      : datetime.now().isoformat(),
+      }
+      meta_path = MODEL_PATH.replace(".pkl", "_meta.json")
+      with open(meta_path, "w") as f:
+          json.dump(artifact_meta, f, indent=2, default=str)
+      print(f"Métadonnées sauvegardées : {meta_path}")
+
+
+  - id: load_model_joblib
+    name: "Chargement modèle — Joblib (réentrée boucle C)"
+    enabled: true
+    category: "Export — Modèle"
+    reentry_target: "bloc_2_inference"
+    description: "Charge le pipeline complet depuis disque et prepare les données pour l'inférence."
+    applies_to: ["classification", "regression", "clustering"]
+    when_to_use: "Boucle C — inférence sur nouvelles données sans réentraînement."
+    input_variables:
+      required: [pipeline_artifact, NEW_DATA_PATH]
+      optional: [TARGET_COL]
+    output_variables:
+      model: "objet chargé"
+      preprocessor: "sklearn Pipeline chargé"
+      X_new: "np.ndarray — nouvelles données preprocessées"
+      y_pred: "np.ndarray — prédictions sur X_new"
+      predictions_df: "pd.DataFrame"
+    code_template: |
+      import joblib
+      import pandas as pd
+      import json
+      import os
+
+      pipeline_artifact = pipeline_artifact if "pipeline_artifact" in dir() else "models/model_pipeline.pkl"
+      NEW_DATA_PATH     = NEW_DATA_PATH     if "NEW_DATA_PATH"     in dir() else "data/new_data.csv"
+
+      # Charger le pipeline complet
+      full_pipeline = joblib.load(pipeline_artifact)
+      model         = full_pipeline.named_steps["model"]
+      preprocessor  = full_pipeline.named_steps["preprocessor"]
+
+      # Charger les métadonnées
+      meta_path = pipeline_artifact.replace("_pipeline.pkl", "_meta.json")
+      if os.path.exists(meta_path):
+          with open(meta_path) as f:
+              artifact_meta = json.load(f)
+          feature_names = artifact_meta["feature_names"]
+          task_type     = artifact_meta["task_type"]
+          print(f"Modèle chargé : {artifact_meta['model_class']} | task={task_type}")
+
+      # Charger les nouvelles données
+      df_new = pd.read_csv(NEW_DATA_PATH)
+      TARGET_COL = TARGET_COL if "TARGET_COL" in dir() else None
+      X_new_raw  = df_new.drop(columns=[TARGET_COL]) if TARGET_COL in df_new.columns else df_new
+
+      # Préprocesser + prédire via le pipeline complet
+      y_pred_new = full_pipeline.predict(X_new_raw)
+      y_proba_new = (full_pipeline.predict_proba(X_new_raw)
+                     if hasattr(model, "predict_proba") else None)
+
+      predictions_df = df_new.copy()
+      predictions_df["y_pred"] = y_pred_new
+      if y_proba_new is not None:
+          for i in range(y_proba_new.shape[1]):
+              predictions_df[f"proba_class_{i}"] = y_proba_new[:, i]
+
+      print(f"Prédictions générées : {len(predictions_df)} lignes")
+      print(predictions_df.head())
+
+
+  - id: save_model_onnx
+    name: "Export modèle — ONNX"
+    enabled: true
+    category: "Export — Modèle"
+    description: "Convertit le modèle au format ONNX pour serving cross-plateforme (C++, Java, edge)."
+    applies_to: ["classification", "regression"]
+    when_to_use: "Pour déploiement en production haute performance ou sur des systèmes non-Python."
+    input_variables:
+      required: [model, X_test, MODEL_PATH]
+      optional: [feature_names]
+    output_variables:
+      model_path: "str — chemin .onnx"
+    code_template: |
+      from skl2onnx import convert_sklearn
+      from skl2onnx.common.data_types import FloatTensorType
+      import numpy as np
+
+      MODEL_PATH  = MODEL_PATH.replace(".pkl", ".onnx") if "MODEL_PATH" in dir() else "models/model.onnx"
+      N_FEATURES  = X_test.shape[1] if hasattr(X_test, "shape") else len(feature_names)
+
+      initial_type = [("float_input", FloatTensorType([None, N_FEATURES]))]
+      onnx_model   = convert_sklearn(model, initial_types=initial_type,
+                                      target_opset=17)
+
+      with open(MODEL_PATH, "wb") as f:
+          f.write(onnx_model.SerializeToString())
+      model_path = MODEL_PATH
+      print(f"Modèle ONNX exporté : {model_path}")
+
+      # Vérification
+      import onnxruntime as rt
+      sess   = rt.InferenceSession(model_path)
+      X_test_f = X_test[:5].astype(np.float32) if hasattr(X_test, "astype") else np.array(X_test[:5], dtype=np.float32)
+      preds  = sess.run(None, {"float_input": X_test_f})
+      print("Prédictions ONNX (5 premiers) :", preds[0])
+
+
+# ──────────────────────────────────────────────────────────────────────────
+report_generation:
+# ──────────────────────────────────────────────────────────────────────────
+
+  - id: report_html
+    name: "Rapport HTML interactif"
+    enabled: true
+    category: "Report — HTML"
+    description: "Génère un rapport HTML auto-contenu avec métriques, figures matplotlib et model card."
+    applies_to: ["classification", "regression", "clustering", "timeseries"]
+    when_to_use: "Rapport livrable à un stakeholder non-technique. Fonctionne hors-ligne."
+    input_variables:
+      required: [eval_report, figures, task_type, REPORT_PATH]
+      optional: [model_card_data, shap_summary, benchmark_df, fairness_metrics]
+    output_variables:
+      report_path: "str — chemin du fichier HTML"
+    code_template: |
+      import base64
+      import io
+      import os
+      import json
+      from datetime import datetime
+      import matplotlib.pyplot as plt
+
+      REPORT_PATH = REPORT_PATH if "REPORT_PATH" in dir() else "reports/report.html"
+      os.makedirs(os.path.dirname(REPORT_PATH) or ".", exist_ok=True)
+
+      def fig_to_b64(fig):
+          buf = io.BytesIO()
+          fig.savefig(buf, format="png", bbox_inches="tight", dpi=120)
+          buf.seek(0)
+          return base64.b64encode(buf.read()).decode()
+
+      # Construire le HTML
+      sections = []
+      sections.append(f"""
+      <h1>Rapport ML — {task_type}</h1>
+      <p>Généré le {datetime.now().strftime('%Y-%m-%d %H:%M')}</p>
+      """)
+
+      # Métriques
+      sections.append("<h2>Métriques d'évaluation</h2><table border='1' cellpadding='6'>")
+      for k, v in eval_report.items():
+          sections.append(f"<tr><td><b>{k}</b></td><td>{v if not isinstance(v, float) else f'{v:.4f}'}</td></tr>")
+      sections.append("</table>")
+
+      # Figures
+      sections.append("<h2>Visualisations</h2>")
+      for name, fig in figures.items():
+          b64 = fig_to_b64(fig)
+          sections.append(f"<h3>{name}</h3><img src='data:image/png;base64,{b64}' style='max-width:100%'>")
+
+      # Model card
+      if "model_card_data" in dir() and model_card_data:
+          sections.append("<h2>Model Card</h2>")
+          sections.append(f"<pre>{json.dumps(model_card_data, indent=2, default=str)}</pre>")
+
+      # Benchmark
+      if "benchmark_df" in dir() and benchmark_df is not None:
+          sections.append("<h2>Benchmark</h2>")
+          sections.append(benchmark_df.to_html())
+
+      html = f"""<!DOCTYPE html>
+      <html><head><meta charset="utf-8">
+      <style>body{{font-family:sans-serif;max-width:1200px;margin:auto;padding:2rem}}
+      table{{border-collapse:collapse}}td,th{{padding:6px 12px}}
+      img{{border:1px solid #eee;border-radius:4px;margin:8px 0}}</style>
+      </head><body>{''.join(sections)}</body></html>"""
+
+      with open(REPORT_PATH, "w", encoding="utf-8") as f:
+          f.write(html)
+      report_path = REPORT_PATH
+      print(f"Rapport HTML généré : {report_path}")
+
+
+  - id: report_evidently
+    name: "Rapport Evidently AI"
+    enabled: true
+    category: "Report — Monitoring"
+    description: "Rapport de drift, qualité des données et performance via Evidently AI."
+    applies_to: ["classification", "regression"]
+    when_to_use: "Pour un rapport de monitoring professionnel avec détection automatique de drift et data quality."
+    input_variables:
+      required: [X_train, X_test, y_train, y_test, y_pred, feature_names, REPORT_PATH]
+      optional: [task_type]
+    output_variables:
+      report_path: "str"
+      monitoring_config: "dict"
+    code_template: |
+      import pandas as pd
+      from evidently.report import Report
+      from evidently.metric_preset import (DataDriftPreset, DataQualityPreset,
+                                            ClassificationPreset, RegressionPreset)
+      from evidently import ColumnMapping
+
+      REPORT_PATH = REPORT_PATH if "REPORT_PATH" in dir() else "reports/evidently_report.html"
+      IS_CLF      = task_type == "classification"
+
+      # Préparer les DataFrames référence et courant
+      df_ref = (X_train if hasattr(X_train, "columns")
+                else pd.DataFrame(X_train, columns=feature_names)).copy()
+      df_cur = (X_test  if hasattr(X_test,  "columns")
+                else pd.DataFrame(X_test,  columns=feature_names)).copy()
+
+      df_ref["target"] = y_train.values if hasattr(y_train, "values") else y_train
+      df_cur["target"] = y_test.values  if hasattr(y_test, "values")  else y_test
+      df_cur["prediction"] = y_pred
+
+      column_mapping = ColumnMapping(target="target", prediction="prediction",
+                                     numerical_features=feature_names)
+
+      presets = [DataDriftPreset(), DataQualityPreset()]
+      presets.append(ClassificationPreset() if IS_CLF else RegressionPreset())
+
+      report = Report(metrics=presets)
+      report.run(reference_data=df_ref, current_data=df_cur,
+                 column_mapping=column_mapping)
+      report.save_html(REPORT_PATH)
+      report_path = REPORT_PATH
+      print(f"Rapport Evidently généré : {report_path}")
+
+      monitoring_config = {
+          "tool"      : "evidently",
+          "ref_size"  : len(df_ref),
+          "cur_size"  : len(df_cur),
+          "report"    : report_path,
+      }
+
+
+# ──────────────────────────────────────────────────────────────────────────
+predictions_export:
+# ──────────────────────────────────────────────────────────────────────────
+
+  - id: export_predictions_csv
+    name: "Export des prédictions — CSV"
+    enabled: true
+    category: "Export — Prédictions"
+    description: "Exporte les prédictions avec y_true, y_pred, probabilités et résidus dans un CSV."
+    applies_to: ["classification", "regression", "timeseries", "clustering"]
+    when_to_use: "Pour livrer les prédictions à un système aval ou pour analyse post-hoc."
+    input_variables:
+      required: [y_test, y_pred, PREDICTIONS_PATH]
+      optional: [y_proba, feature_names, X_test, task_type, forecast, labels, dates_future]
+    output_variables:
+      predictions_df: "pd.DataFrame"
+      predictions_path: "str"
+    code_template: |
+      import pandas as pd
+      import numpy as np
+      import os
+
+      PREDICTIONS_PATH = PREDICTIONS_PATH if "PREDICTIONS_PATH" in dir() else "outputs/predictions.csv"
+      os.makedirs(os.path.dirname(PREDICTIONS_PATH) or ".", exist_ok=True)
+
+      if task_type == "timeseries" and "forecast" in dir() and forecast is not None:
+          predictions_df = pd.DataFrame({
+              "date"    : dates_future,
+              "y_true"  : np.array(y_test),
+              "forecast": np.array(forecast),
+              "error"   : np.array(y_test) - np.array(forecast),
+          })
+      elif task_type == "clustering" and "labels" in dir():
+          X_df = (X_test if hasattr(X_test, "columns")
+                  else pd.DataFrame(X_test, columns=feature_names))
+          predictions_df = X_df.copy()
+          predictions_df["cluster"] = labels
+      else:
+          predictions_df = pd.DataFrame({
+              "y_true": np.array(y_test),
+              "y_pred": y_pred,
+          })
+          if task_type == "regression":
+              predictions_df["residual"] = predictions_df["y_true"] - predictions_df["y_pred"]
+          if y_proba is not None:
+              for i in range(y_proba.shape[1]):
+                  predictions_df[f"proba_class_{i}"] = y_proba[:, i]
+
+      predictions_df.to_csv(PREDICTIONS_PATH, index=False)
+      predictions_path = PREDICTIONS_PATH
+      print(f"Prédictions exportées : {predictions_path}")
+      print(predictions_df.head())
+
+
+# ──────────────────────────────────────────────────────────────────────────
+serving:
+# ──────────────────────────────────────────────────────────────────────────
+
+  - id: serve_fastapi
+    name: "Serving API — FastAPI"
+    enabled: true
+    category: "Export — Serving"
+    description: "Expose le modèle comme API REST JSON via FastAPI. Endpoint /predict avec validation Pydantic."
+    applies_to: ["classification", "regression"]
+    when_to_use: "Pour intégrer le modèle dans un système de production. Inclut health check et versioning."
+    input_variables:
+      required: [pipeline_artifact, feature_names, task_type, API_HOST, API_PORT]
+      optional: []
+    output_variables:
+      api_endpoint: "str — URL de l'API"
+    code_template: |
+      # Fichier : api/serve.py — à lancer avec : uvicorn api.serve:app --host 0.0.0.0 --port 8000
+
+      from fastapi import FastAPI, HTTPException
+      from pydantic import BaseModel
+      import joblib, numpy as np, os
+      from typing import Optional
+
+      API_HOST          = API_HOST          if "API_HOST"          in dir() else "0.0.0.0"
+      API_PORT          = API_PORT          if "API_PORT"          in dir() else 8000
+      PIPELINE_PATH     = pipeline_artifact if "pipeline_artifact" in dir() else "models/model_pipeline.pkl"
+
+      app      = FastAPI(title="ML Model API", version="1.0.0")
+      pipeline = joblib.load(PIPELINE_PATH)
+
+      class PredictRequest(BaseModel):
+          features: list[list[float]]  # liste de lignes
+
+      class PredictResponse(BaseModel):
+          predictions: list
+          probabilities: Optional[list] = None
+          model_version: str = "1.0.0"
+
+      @app.get("/health")
+      def health():
+          return {"status": "ok", "model": str(type(pipeline.named_steps["model"]).__name__)}
+
+      @app.post("/predict", response_model=PredictResponse)
+      def predict(req: PredictRequest):
+          try:
+              X = np.array(req.features)
+              preds = pipeline.predict(X).tolist()
+              proba = (pipeline.predict_proba(X).tolist()
+                       if hasattr(pipeline.named_steps["model"], "predict_proba")
+                       else None)
+              return PredictResponse(predictions=preds, probabilities=proba)
+          except Exception as e:
+              raise HTTPException(status_code=422, detail=str(e))
+
+      # Lancement local
+      # if __name__ == "__main__":
+      #     import uvicorn
+      #     uvicorn.run(app, host=API_HOST, port=API_PORT)
+
+      api_endpoint = f"http://{API_HOST}:{API_PORT}"
+      print(f"API prête sur {api_endpoint}/predict")
+      print(f"Docs disponibles sur {api_endpoint}/docs")
+
+
+# ──────────────────────────────────────────────────────────────────────────
+experiment_tracking:
+# ──────────────────────────────────────────────────────────────────────────
+
+  - id: mlflow_tracking
+    name: "Tracking expérience — MLflow"
+    enabled: true
+    category: "Export — Tracking"
+    description: "Enregistre le run, les paramètres, métriques, artefacts et le modèle dans MLflow."
+    applies_to: ["classification", "regression", "clustering", "timeseries"]
+    when_to_use: "Pour toute expérience reproductible. Permet de comparer les runs et déployer via MLflow."
+    input_variables:
+      required: [model, eval_report, task_type, PROJECT_NAME, RUN_NAME]
+      optional: [MLFLOW_URI, feature_names, figures, shap_summary, pipeline_artifact]
+    output_variables:
+      mlflow_run_id: "str"
+      experiment_url: "str"
+    code_template: |
+      import mlflow
+      import mlflow.sklearn
+      import os
+      import io
+
+      MLFLOW_URI   = MLFLOW_URI   if "MLFLOW_URI"   in dir() else "mlruns"
+      PROJECT_NAME = PROJECT_NAME if "PROJECT_NAME" in dir() else "ml_pipeline"
+      RUN_NAME     = RUN_NAME     if "RUN_NAME"     in dir() else "run_01"
+
+      mlflow.set_tracking_uri(MLFLOW_URI)
+      mlflow.set_experiment(PROJECT_NAME)
+
+      with mlflow.start_run(run_name=RUN_NAME) as run:
+          # Paramètres du modèle
+          if hasattr(model, "get_params"):
+              mlflow.log_params(model.get_params())
+
+          # Métriques d'évaluation
+          for k, v in eval_report.items():
+              if isinstance(v, (int, float)):
+                  mlflow.log_metric(k, v)
+
+          # Features
+          mlflow.log_param("n_features", len(feature_names) if feature_names else 0)
+          mlflow.log_param("task_type",  task_type)
+
+          # Modèle sklearn
+          mlflow.sklearn.log_model(model, "model",
+                                   registered_model_name=PROJECT_NAME)
+
+          # Pipeline artifact
+          if "pipeline_artifact" in dir() and os.path.exists(pipeline_artifact):
+              mlflow.log_artifact(pipeline_artifact, "pipeline")
+
+          # Figures
+          for name, fig in (figures.items() if "figures" in dir() else {}.items()):
+              buf = io.BytesIO()
+              fig.savefig(buf, format="png", bbox_inches="tight")
+              buf.seek(0)
+              mlflow.log_image(buf.read(), f"figures/{name}.png")
+
+          # SHAP summary
+          if "shap_summary" in dir() and shap_summary is not None:
+              shap_path = "/tmp/shap_summary.csv"
+              shap_summary.to_csv(shap_path, index=False)
+              mlflow.log_artifact(shap_path, "explainability")
+
+          mlflow_run_id  = run.info.run_id
+          experiment_url = f"{MLFLOW_URI}/#/experiments/{run.info.experiment_id}/runs/{mlflow_run_id}"
+
+      print(f"MLflow run ID  : {mlflow_run_id}")
+      print(f"Experiment URL : {experiment_url}")
+
+
+# ──────────────────────────────────────────────────────────────────────────
+reentry_loops:
+# ──────────────────────────────────────────────────────────────────────────
+
+  - id: reentry_loop_A_full_retrain
+    name: "Boucle A — Réentraînement complet (→ bloc 1)"
+    enabled: true
+    category: "Réentrée — Retraining"
+    reentry_target: "bloc_1_datasets"
+    description: "Déclenche un réentraînement complet sur de nouvelles données. Réinitialise le pipeline depuis la source."
+    applies_to: ["classification", "regression", "timeseries"]
+    when_to_use: "Quand drift_flags indique un glissement majeur, ou selon un calendrier de retraining."
+    input_variables:
+      required: [drift_flags, NEW_DATA_PATH, pipeline_artifact, RETRAINING_TRIGGER]
+      optional: [monitoring_config, retraining_schedule]
+    output_variables:
+      retraining_schedule: "dict — conditions, fréquence, seuils de déclenchement"
+    code_template: |
+      import json
+      from datetime import datetime, timedelta
+
+      RETRAINING_TRIGGER = RETRAINING_TRIGGER if "RETRAINING_TRIGGER" in dir() else "drift"
+      NEW_DATA_PATH      = NEW_DATA_PATH      if "NEW_DATA_PATH"      in dir() else None
+
+      # Évaluer le déclenchement
+      should_retrain = False
+      reason         = []
+
+      if RETRAINING_TRIGGER == "drift" and "drift_flags" in dir():
+          drifted = [f for f, v in drift_flags.items() if v.get("drift_detected")]
+          if len(drifted) > len(drift_flags) * 0.3:   # >30% des features en drift
+              should_retrain = True
+              reason.append(f"Drift sur {len(drifted)} features : {drifted[:5]}")
+
+      if RETRAINING_TRIGGER == "schedule":
+          should_retrain = True
+          reason.append("Calendrier de retraining atteint")
+
+      if RETRAINING_TRIGGER == "manual":
+          should_retrain = True
+          reason.append("Déclenchement manuel")
+
+      retraining_schedule = {
+          "should_retrain"   : should_retrain,
+          "trigger"          : RETRAINING_TRIGGER,
+          "reason"           : reason,
+          "new_data_path"    : NEW_DATA_PATH,
+          "next_check"       : (datetime.now() + timedelta(days=7)).isoformat(),
+          "evaluated_at"     : datetime.now().isoformat(),
+      }
+      print(json.dumps(retraining_schedule, indent=2))
+
+      if should_retrain and NEW_DATA_PATH:
+          print("\n→ RÉENTRÉE BLOC 1 : relancer datasets_config avec NEW_DATA_PATH")
+          print(f"  FILE_PATH = '{NEW_DATA_PATH}'")
+          print("  Le pipeline repart entièrement depuis la source.")
+          # ── Réinitialiser les variables du contrat I/O ──────────────
+          # FILE_PATH  = NEW_DATA_PATH
+          # → Exécuter datasets_config, eda_config, model_config,
+          #   evaluation_config, export_report_config dans l'ordre
+      else:
+          print("\n→ Pas de réentraînement nécessaire.")
+
+
+  - id: reentry_loop_B_warm_predictions
+    name: "Boucle B — Warm start prédictions (→ bloc 2)"
+    enabled: true
+    category: "Réentrée — Warm Start"
+    reentry_target: "bloc_2_eda_preprocessing"
+    description: "Injecte y_pred / y_proba comme nouvelles features dans X_train. Utile pour pseudo-labeling ou stacking."
+    applies_to: ["classification", "regression"]
+    when_to_use: "Semi-supervisé, self-training, stacking de modèles. Améliore un modèle sans nouvelles données."
+    input_variables:
+      required: [X_train, X_test, y_pred, feature_names]
+      optional: [y_proba]
+    output_variables:
+      X_train: "pd.DataFrame enrichi avec colonnes pred_* "
+      X_test:  "pd.DataFrame enrichi"
+      feature_names: "list[str] mise à jour"
+    code_template: |
+      import numpy as np
+      import pandas as pd
+
+      X_train_df = (X_train if hasattr(X_train, "columns")
+                    else pd.DataFrame(X_train, columns=feature_names))
+      X_test_df  = (X_test  if hasattr(X_test,  "columns")
+                    else pd.DataFrame(X_test,  columns=feature_names))
+
+      # Ajouter les prédictions comme features
+      X_train_df = X_train_df.copy()
+      X_test_df  = X_test_df.copy()
+
+      # Attention au data leakage : y_pred doit venir d'un modèle
+      # entraîné sur un fold différent (cross-val OOF)
+      X_test_df["pred_model1"] = y_pred
+      if y_proba is not None:
+          for i in range(y_proba.shape[1]):
+              X_test_df[f"proba_class_{i}_model1"] = y_proba[:, i]
+
+      # Pour X_train : utiliser des prédictions OOF (out-of-fold)
+      # pour éviter le leakage — ici placeholder
+      X_train_df["pred_model1"]   = 0.0   # remplacer par prédictions OOF
+      feature_names = X_test_df.columns.tolist()
+
+      print(f"→ RÉENTRÉE BLOC 2 : X enrichi avec {len(feature_names)} features")
+      print("  Relancer eda_config depuis imputation/scaling avec le nouveau X")
+      print(f"  Nouvelles features : {[f for f in feature_names if 'pred' in f or 'proba' in f]}")
+
+
+  - id: reentry_loop_D_hyperparam_tuning
+    name: "Boucle D — Tuning guidé par l'évaluation (→ bloc 3)"
+    enabled: true
+    category: "Réentrée — Tuning"
+    reentry_target: "bloc_3_models"
+    description: "Relance le bloc 3 avec des hyperparamètres ajustés selon les résultats d'évaluation."
+    applies_to: ["classification", "regression"]
+    when_to_use: "Quand les métriques sont insuffisantes. Optuna ou GridSearch guidé par eval_report."
+    input_variables:
+      required: [eval_report, X_train, X_test, y_train, y_test, task_type]
+      optional: [benchmark_df, N_ITER]
+    output_variables:
+      model: "meilleur modèle après tuning"
+      y_pred: "np.ndarray"
+      metrics: "dict"
+    code_template: |
+      import optuna
+      import numpy as np
+      from sklearn.metrics import f1_score, r2_score
+      from sklearn.model_selection import cross_val_score
+      import xgboost as xgb
+
+      N_ITER  = N_ITER  if "N_ITER"  in dir() else 50
+      IS_CLF  = task_type == "classification"
+      SCORING = "f1_weighted" if IS_CLF else "r2"
+
+      print(f"\n→ RÉENTRÉE BLOC 3 : tuning Optuna ({N_ITER} trials)")
+      print(f"  Métrique cible : {SCORING}")
+      print(f"  Meilleure valeur actuelle : {eval_report.get(SCORING.replace('neg_', ''), 'N/A')}")
+
+      def objective(trial):
+          params = {
+              "n_estimators" : trial.suggest_int("n_estimators", 100, 500),
+              "max_depth"    : trial.suggest_int("max_depth", 3, 9),
+              "learning_rate": trial.suggest_float("learning_rate", 0.01, 0.3, log=True),
+              "subsample"    : trial.suggest_float("subsample", 0.6, 1.0),
+              "colsample_bytree": trial.suggest_float("colsample_bytree", 0.6, 1.0),
+              "reg_alpha"    : trial.suggest_float("reg_alpha", 1e-8, 10.0, log=True),
+          }
+          m = (xgb.XGBClassifier(**params, random_state=42, eval_metric="logloss",
+                                  use_label_encoder=False, n_jobs=-1)
+               if IS_CLF else
+               xgb.XGBRegressor(**params, random_state=42, n_jobs=-1))
+          cv_scores = cross_val_score(m, X_train, y_train, cv=5,
+                                      scoring=SCORING, n_jobs=-1)
+          return cv_scores.mean()
+
+      study = optuna.create_study(direction="maximize")
+      optuna.logging.set_verbosity(optuna.logging.WARNING)
+      study.optimize(objective, n_trials=N_ITER, show_progress_bar=True)
+
+      print(f"\nMeilleurs hyperparamètres : {study.best_params}")
+      print(f"Meilleur score CV        : {study.best_value:.4f}")
+
+      best_model = (xgb.XGBClassifier(**study.best_params, random_state=42,
+                                       eval_metric="logloss", use_label_encoder=False)
+                    if IS_CLF else
+                    xgb.XGBRegressor(**study.best_params, random_state=42))
+      best_model.fit(X_train, y_train)
+      model  = best_model
+      y_pred = model.predict(X_test)
+
+      score  = f1_score(y_test, y_pred, average="weighted") if IS_CLF else r2_score(y_test, y_pred)
+      metrics = {SCORING: score, "best_params": study.best_params}
+      print(f"Score final ({SCORING}) : {score:.4f}")

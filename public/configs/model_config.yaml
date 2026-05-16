@@ -1,0 +1,2093 @@
+# ══════════════════════════════════════════════════════════════════════════
+# CONTRAT I/O GLOBAL DU PIPELINE ML
+# ══════════════════════════════════════════════════════════════════════════
+#
+#  BLOC 1 — datasets_config.yaml
+#    INPUT  : paramètres utilisateur (FILE_PATH, TARGET_COL, …)
+#    OUTPUT : df, X, y, feature_names, target_name, task_type, meta
+#             + texts_train / texts_test  (NLP)
+#             + y_train / y_test / dates_train / dates_future  (timeseries)
+#
+#  BLOC 2 — eda_config.yaml
+#    INPUT  : df, X, y, feature_names, target_name, task_type, meta
+#             + texts_train / texts_test  (NLP)
+#             + TARGET_COL  (param local à préciser)
+#    OUTPUT : X_train, X_test, y_train, y_test
+#             preprocessor  (sklearn Pipeline/ColumnTransformer — fitted)
+#             feature_names_out  (list[str] — après OHE/poly/selection)
+#             task_type  (confirmé / inchangé)
+#             + dates_train / dates_future  (timeseries, pass-through)
+#             + texts_train / texts_test    (NLP, pass-through)
+#
+#  BLOC 3 — model_config.yaml
+#    INPUT  : X_train, X_test, y_train, y_test
+#             feature_names  (= feature_names_out du bloc 2)
+#             task_type, preprocessor
+#             + texts_train / texts_test     (NLP)
+#             + dates_train / dates_future   (timeseries)
+#    OUTPUT : model, y_pred, y_proba, metrics, shap_values
+#             + labels  (clustering)
+#             + forecast  (timeseries)
+#             + scores   (anomaly)
+#
+#  RÈGLE D'OR : ne jamais renommer ces variables entre les blocs.
+#  Seuls les paramètres en MAJUSCULES (FILE_PATH, TARGET_COL, etc.)
+#  sont à adapter selon le projet — tout le reste est câblé.
+# ══════════════════════════════════════════════════════════════════════════
+
+
+# ──────────────────────────────────────────────────────────────────────────
+# CONTRAT I/O — BLOC 3 : model_config.yaml
+# ──────────────────────────────────────────────────────────────────────────
+
+pipeline_contract:
+  bloc: 3
+  role: "Entraînement · Évaluation · Inférence — consomme les données preprocessées et produit un modèle exploitable"
+
+  input_variables:
+    # Variables câblées — produites par eda_config.yaml (bloc 2)
+    X_train:          "np.ndarray | pd.DataFrame — features preprocessées train"
+    X_test:           "np.ndarray | pd.DataFrame — features preprocessées test"
+    y_train:          "pd.Series | np.ndarray — target train"
+    y_test:           "pd.Series | np.ndarray — target test"
+    feature_names:    "list[str] — renommer feature_names_out en feature_names ici"
+    task_type:        "str — détermine quel catalogue de modèles utiliser"
+    preprocessor:     "sklearn Pipeline/ColumnTransformer — pour pipeline complet"
+    texts_train:      "list[str] — NLP uniquement"
+    texts_test:       "list[str] — NLP uniquement"
+    dates_train:      "pd.DatetimeIndex — timeseries"
+    dates_future:     "pd.DatetimeIndex — timeseries"
+    durations:        "pd.Series — survival"
+    events:           "pd.Series — survival"
+    df_survival:      "pd.DataFrame — survival"
+
+    # Paramètres utilisateur locaux à configurer par modèle
+    RANDOM_STATE:     "int — graine aléatoire (défaut : 42)"
+    N_JOBS:           "int — parallélisme (défaut : -1)"
+    CV:               "int — nombre de folds cross-validation (défaut : 5)"
+    SCORING:          "str — métrique CV : 'f1_weighted', 'r2', 'neg_rmse'…"
+    N_ITER:           "int — itérations RandomizedSearchCV (défaut : 20)"
+    CONTAMINATION:    "float — taux anomalies estimé (anomaly, défaut : 0.05)"
+    LATENT_DIM:       "int — dimension latente autoencodeur (défaut : 16)"
+    EPOCHS:           "int — epochs deep learning (défaut : 100)"
+    BATCH_SIZE:       "int — taille batch DL (défaut : 128)"
+    LR:               "float — learning rate DL (défaut : 3e-4)"
+    THRESHOLD_PCT:    "int — percentile seuil erreur reconstruction AE (défaut : 95)"
+
+  output_variables:
+    # Variables TOUJOURS produites
+    model:            "objet entraîné — sklearn / xgboost / lightgbm / catboost / torch.nn.Module…"
+    y_pred:           "np.ndarray — prédictions sur X_test (labels ou valeurs)"
+    metrics:          "dict — métriques d'évaluation selon task_type"
+
+    # Variables supplémentaires selon task_type
+    y_proba:          "np.ndarray — probabilités par classe (classification)"
+    shap_values:      "np.ndarray — valeurs SHAP (si TreeExplainer applicable)"
+    labels:           "np.ndarray — affectation clusters (clustering)"
+    forecast:         "pd.Series | np.ndarray — prévisions (timeseries)"
+    scores:           "np.ndarray — anomaly scores (anomaly detection)"
+    recon_errors:     "np.ndarray — erreurs reconstruction (autoencodeur)"
+    X_reduced:        "np.ndarray — données projetées (dim reduction)"
+    survival_func:    "pd.DataFrame — fonctions de survie prédites (survival)"
+
+    # Métriques disponibles par task_type (clés dans metrics)
+    metrics_classification: ["accuracy", "f1_weighted", "f1_macro", "roc_auc", "precision", "recall", "brier_score"]
+    metrics_regression:     ["rmse", "mae", "r2", "mape", "smape", "pinball_loss"]
+    metrics_clustering:     ["silhouette", "davies_bouldin", "calinski_harabasz", "inertia"]
+    metrics_timeseries:     ["mae", "rmse", "mape", "smape", "coverage"]
+    metrics_anomaly:        ["precision", "recall", "f1", "roc_auc", "reconstruction_error"]
+    metrics_survival:       ["concordance_index", "log_rank_p", "median_survival_time"]
+    metrics_nlp:            ["accuracy", "f1_weighted", "roc_auc"]
+
+
+# ══════════════════════════════════════════════════════════════════════════
+# ML MODEL CATALOG — Classification · Regression · Clustering
+#                    Timeseries · Anomaly Detection · Dimensionality Reduction
+#                    Neural Networks · NLP · Survival · Bayesian
+# ══════════════════════════════════════════════════════════════════════════
+#
+# Structure de chaque entrée :
+#   id, name, enabled, library, class, category,
+#   description, use_cases, pros, cons,
+#   hyperparameters, eval_metrics,
+#   code_template          ← snippet générique prêt à l'emploi
+#
+# Convention code_template :
+#   - X_train / X_test / y_train / y_test  : données déjà splittées
+#   - preprocessor                          : pipeline de prétraitement (optionnel)
+#   - Les imports sont inclus dans chaque template
+# ══════════════════════════════════════════════════════════════════════════
+
+# ──────────────────────────────────────────────────────────────────────────
+classification:
+# ──────────────────────────────────────────────────────────────────────────
+
+  - id: logistic_regression
+    name: "Régression Logistique"
+    enabled: true
+    library: sklearn
+    class: sklearn.linear_model.LogisticRegression
+    category: "Linéaire"
+    description: "Modèle probabiliste linéaire. Idéal comme baseline. Très interprétable via les coefficients."
+    use_cases: ["classification binaire", "multi-classe (OvR)", "features nombreuses et sparses"]
+    pros: ["très rapide", "interprétable", "régularisation intégrée", "probabilités calibrées"]
+    cons: ["frontière de décision linéaire uniquement", "sensible aux outliers"]
+    hyperparameters:
+      C: [0.001, 0.01, 0.1, 1, 10, 100]
+      penalty: ["l2", "l1", "elasticnet"]
+      solver: ["lbfgs", "saga", "liblinear"]
+      max_iter: [100, 500, 1000]
+    eval_metrics: ["accuracy", "f1_weighted", "roc_auc", "precision", "recall"]
+    illustration_svg: '<svg viewBox="0 0 600 160" xmlns="http://www.w3.org/2000/svg" class="w-full h-auto drop-shadow-xl rounded-xl"><rect width="600" height="160" fill="#0A0A0A" rx="12"/><!-- Grid pattern --><pattern id="grid" width="40" height="40" patternUnits="userSpaceOnUse">  <path d="M 40 0 L 0 0 0 40" fill="none" stroke="#222222" stroke-width="0.5"/></pattern><rect width="600" height="160" fill="url(#grid)" rx="12"/><!-- Inputs --><g transform="translate(20, 40)"></g><!-- Central Node --><rect x="230" y="40" width="140" height="80" fill="#1a1a1a" stroke="#444" rx="10" stroke-width="2"/><text x="300" y="70" fill="#EEEEEE" font-family="sans-serif" font-weight="bold" font-size="12" text-anchor="middle">Régression Logisti</text><text x="300" y="90" fill="#888888" font-family="sans-serif" font-size="10" text-anchor="middle">ML Model</text><!-- Outputs --><g transform="translate(440, 40)"></g></svg>'
+    code_template: |
+      from sklearn.linear_model import LogisticRegression
+      from sklearn.pipeline import Pipeline
+      from sklearn.preprocessing import StandardScaler
+      from sklearn.model_selection import cross_val_score
+      from sklearn.metrics import classification_report
+
+      model = Pipeline([
+          ("scaler", StandardScaler()),
+          ("clf", LogisticRegression(C=1.0, penalty="l2", solver="lbfgs",
+                                     max_iter=1000, random_state=42))
+      ])
+      model.fit(X_train, y_train)
+      y_pred = model.predict(X_test)
+      print(classification_report(y_test, y_pred))
+
+      # GridSearch
+      from sklearn.model_selection import GridSearchCV
+      param_grid = {"clf__C": [0.01, 0.1, 1, 10], "clf__penalty": ["l1", "l2"]}
+      gs = GridSearchCV(model, param_grid, cv=5, scoring="f1_weighted", n_jobs=-1)
+      gs.fit(X_train, y_train)
+      print("Best params:", gs.best_params_)
+
+  - id: knn_clf
+    name: "K-Nearest Neighbors (KNN)"
+    enabled: true
+    library: sklearn
+    class: sklearn.neighbors.KNeighborsClassifier
+    category: "Instance-based"
+    description: "Classifie selon les k voisins les plus proches. Pas d'entraînement, toute la charge est à la prédiction."
+    use_cases: ["petits datasets", "géométrie locale importante", "recommandation simple"]
+    pros: ["simple", "pas d'hypothèse sur la distribution", "naturellement multi-classe"]
+    cons: ["lent à la prédiction sur grands datasets", "sensible à l'échelle", "malédiction de la dimensionnalité"]
+    hyperparameters:
+      n_neighbors: [3, 5, 7, 10, 15, 20]
+      weights: ["uniform", "distance"]
+      metric: ["euclidean", "manhattan", "minkowski"]
+    eval_metrics: ["accuracy", "f1_weighted"]
+    illustration_svg: '<svg viewBox="0 0 600 160" xmlns="http://www.w3.org/2000/svg" class="w-full h-auto drop-shadow-xl rounded-xl"><rect width="600" height="160" fill="#0A0A0A" rx="12"/><!-- Grid pattern --><pattern id="grid" width="40" height="40" patternUnits="userSpaceOnUse">  <path d="M 40 0 L 0 0 0 40" fill="none" stroke="#222222" stroke-width="0.5"/></pattern><rect width="600" height="160" fill="url(#grid)" rx="12"/><!-- Inputs --><g transform="translate(20, 40)"></g><!-- Central Node --><rect x="230" y="40" width="140" height="80" fill="#1a1a1a" stroke="#444" rx="10" stroke-width="2"/><text x="300" y="70" fill="#EEEEEE" font-family="sans-serif" font-weight="bold" font-size="12" text-anchor="middle">K-Nearest Neighbor</text><text x="300" y="90" fill="#888888" font-family="sans-serif" font-size="10" text-anchor="middle">ML Model</text><!-- Outputs --><g transform="translate(440, 40)"></g></svg>'
+    code_template: |
+      from sklearn.neighbors import KNeighborsClassifier
+      from sklearn.pipeline import Pipeline
+      from sklearn.preprocessing import StandardScaler
+      from sklearn.metrics import classification_report
+
+      model = Pipeline([
+          ("scaler", StandardScaler()),
+          ("clf", KNeighborsClassifier(n_neighbors=5, weights="uniform",
+                                       metric="euclidean"))
+      ])
+      model.fit(X_train, y_train)
+      y_pred = model.predict(X_test)
+      print(classification_report(y_test, y_pred))
+
+      # Recherche du meilleur k
+      import numpy as np
+      from sklearn.model_selection import cross_val_score
+      k_range = range(1, 31)
+      scores = [cross_val_score(Pipeline([("s", StandardScaler()),
+                    ("c", KNeighborsClassifier(n_neighbors=k))]),
+                    X_train, y_train, cv=5, scoring="accuracy").mean()
+                for k in k_range]
+      best_k = k_range[np.argmax(scores)]
+      print(f"Meilleur k : {best_k}")
+
+  - id: naive_bayes_gaussian
+    name: "Naive Bayes (Gaussien)"
+    enabled: true
+    library: sklearn
+    class: sklearn.naive_bayes.GaussianNB
+    category: "Probabiliste"
+    description: "Classificateur probabiliste basé sur Bayes avec hypothèse d'indépendance des features. Très rapide."
+    use_cases: ["texte (MultinomialNB)", "features continues (GaussianNB)", "baseline rapide", "spam detection"]
+    pros: ["extrêmement rapide", "fonctionne bien avec peu de données", "interprétable"]
+    cons: ["hypothèse d'indépendance souvent irréaliste", "mauvais calibrage des probabilités"]
+    hyperparameters:
+      var_smoothing: [1.0e-9, 1.0e-8, 1.0e-7, 1.0e-6]
+    eval_metrics: ["accuracy", "f1_weighted"]
+    illustration_svg: '<svg viewBox="0 0 600 160" xmlns="http://www.w3.org/2000/svg" class="w-full h-auto drop-shadow-xl rounded-xl"><rect width="600" height="160" fill="#0A0A0A" rx="12"/><!-- Grid pattern --><pattern id="grid" width="40" height="40" patternUnits="userSpaceOnUse">  <path d="M 40 0 L 0 0 0 40" fill="none" stroke="#222222" stroke-width="0.5"/></pattern><rect width="600" height="160" fill="url(#grid)" rx="12"/><!-- Inputs --><g transform="translate(20, 40)"></g><!-- Central Node --><rect x="230" y="40" width="140" height="80" fill="#1a1a1a" stroke="#444" rx="10" stroke-width="2"/><text x="300" y="70" fill="#EEEEEE" font-family="sans-serif" font-weight="bold" font-size="12" text-anchor="middle">Naive Bayes (Gauss</text><text x="300" y="90" fill="#888888" font-family="sans-serif" font-size="10" text-anchor="middle">ML Model</text><!-- Outputs --><g transform="translate(440, 40)"></g></svg>'
+    code_template: |
+      from sklearn.naive_bayes import GaussianNB
+      from sklearn.metrics import classification_report
+      from sklearn.preprocessing import StandardScaler
+      from sklearn.pipeline import Pipeline
+
+      model = Pipeline([
+          ("scaler", StandardScaler()),
+          ("clf", GaussianNB(var_smoothing=1e-9))
+      ])
+      model.fit(X_train, y_train)
+      y_pred = model.predict(X_test)
+      print(classification_report(y_test, y_pred))
+
+      # Probabilités
+      proba = model.predict_proba(X_test)
+      print("Probabilités (5 premiers) :", proba[:5])
+
+  - id: decision_tree_clf
+    name: "Arbre de Décision (CART)"
+    enabled: true
+    library: sklearn
+    class: sklearn.tree.DecisionTreeClassifier
+    category: "Arbre"
+    description: "Modèle hiérarchique de décisions basé sur des règles if/else. Très interprétable (visualisable)."
+    use_cases: ["règles de décision lisibles", "features mixtes", "interactions non-linéaires simples"]
+    pros: ["très interprétable", "gère les features mixtes", "pas besoin de scaling"]
+    cons: ["sur-apprentissage facile", "instable (variance élevée)", "frontières en escalier"]
+    hyperparameters:
+      max_depth: [3, 5, 7, 10, null]
+      min_samples_split: [2, 5, 10, 20]
+      min_samples_leaf: [1, 2, 5, 10]
+      criterion: ["gini", "entropy"]
+    eval_metrics: ["accuracy", "f1_weighted", "roc_auc"]
+    illustration_svg: '<svg viewBox="0 0 600 160" xmlns="http://www.w3.org/2000/svg" class="w-full h-auto drop-shadow-xl rounded-xl"><rect width="600" height="160" fill="#0A0A0A" rx="12"/><!-- Grid pattern --><pattern id="grid" width="40" height="40" patternUnits="userSpaceOnUse">  <path d="M 40 0 L 0 0 0 40" fill="none" stroke="#222222" stroke-width="0.5"/></pattern><rect width="600" height="160" fill="url(#grid)" rx="12"/><!-- Inputs --><g transform="translate(20, 40)"></g><!-- Central Node --><rect x="230" y="40" width="140" height="80" fill="#1a1a1a" stroke="#444" rx="10" stroke-width="2"/><text x="300" y="70" fill="#EEEEEE" font-family="sans-serif" font-weight="bold" font-size="12" text-anchor="middle">Arbre de Décision </text><text x="300" y="90" fill="#888888" font-family="sans-serif" font-size="10" text-anchor="middle">ML Model</text><!-- Outputs --><g transform="translate(440, 40)"></g></svg>'
+    code_template: |
+      from sklearn.tree import DecisionTreeClassifier, plot_tree
+      from sklearn.metrics import classification_report
+      import matplotlib.pyplot as plt
+
+      model = DecisionTreeClassifier(max_depth=5, criterion="gini",
+                                      min_samples_split=10, random_state=42)
+      model.fit(X_train, y_train)
+      y_pred = model.predict(X_test)
+      print(classification_report(y_test, y_pred))
+
+      # Visualisation
+      fig, ax = plt.subplots(figsize=(20, 8))
+      plot_tree(model, feature_names=feature_names, class_names=class_names,
+                filled=True, ax=ax)
+      plt.tight_layout()
+      plt.savefig("decision_tree.png", dpi=150)
+
+      # Feature importance
+      import pandas as pd
+      fi = pd.Series(model.feature_importances_, index=feature_names).sort_values(ascending=False)
+      print(fi.head(10))
+
+  - id: random_forest_clf
+    name: "Random Forest"
+    enabled: true
+    library: sklearn
+    class: sklearn.ensemble.RandomForestClassifier
+    category: "Ensemble — Bagging"
+    description: "Ensemble d'arbres de décision entraînés sur sous-échantillons bootstrap. Robuste et puissant."
+    use_cases: ["tabular data généraliste", "feature importance", "résistance aux outliers"]
+    pros: ["robuste au sur-apprentissage", "feature importance native", "parallélisable", "pas besoin de scaling"]
+    cons: ["boîte noire", "lent sur très grands datasets", "moins bon que boosting en général"]
+    hyperparameters:
+      n_estimators: [100, 200, 500]
+      max_depth: [5, 10, 20, null]
+      min_samples_split: [2, 5, 10]
+      max_features: ["sqrt", "log2", 0.5]
+    eval_metrics: ["accuracy", "f1_weighted", "roc_auc"]
+    illustration_svg: '<svg viewBox="0 0 600 160" xmlns="http://www.w3.org/2000/svg" class="w-full h-auto drop-shadow-xl rounded-xl"><rect width="600" height="160" fill="#0A0A0A" rx="12"/><!-- Grid pattern --><pattern id="grid" width="40" height="40" patternUnits="userSpaceOnUse">  <path d="M 40 0 L 0 0 0 40" fill="none" stroke="#222222" stroke-width="0.5"/></pattern><rect width="600" height="160" fill="url(#grid)" rx="12"/><!-- Inputs --><g transform="translate(20, 40)"></g><!-- Central Node --><rect x="230" y="40" width="140" height="80" fill="#1a1a1a" stroke="#444" rx="10" stroke-width="2"/><text x="300" y="70" fill="#EEEEEE" font-family="sans-serif" font-weight="bold" font-size="12" text-anchor="middle">Random Forest</text><text x="300" y="90" fill="#888888" font-family="sans-serif" font-size="10" text-anchor="middle">ML Model</text><!-- Outputs --><g transform="translate(440, 40)"></g></svg>'
+    code_template: |
+      from sklearn.ensemble import RandomForestClassifier
+      from sklearn.metrics import classification_report, ConfusionMatrixDisplay
+      from sklearn.model_selection import RandomizedSearchCV
+      import pandas as pd
+
+      model = RandomForestClassifier(n_estimators=200, max_depth=None,
+                                      max_features="sqrt", n_jobs=-1, random_state=42)
+      model.fit(X_train, y_train)
+      y_pred = model.predict(X_test)
+      print(classification_report(y_test, y_pred))
+
+      # Feature importance
+      fi = pd.Series(model.feature_importances_, index=feature_names).sort_values(ascending=False)
+      print(fi.head(15))
+
+      # Tuning rapide
+      param_dist = {"n_estimators": [100, 300, 500], "max_depth": [5, 10, 20, None],
+                    "min_samples_split": [2, 5, 10], "max_features": ["sqrt", "log2"]}
+      rs = RandomizedSearchCV(model, param_dist, n_iter=20, cv=5,
+                               scoring="f1_weighted", n_jobs=-1, random_state=42)
+      rs.fit(X_train, y_train)
+      print("Best params:", rs.best_params_)
+
+  - id: gradient_boosting_clf
+    name: "Gradient Boosting (sklearn)"
+    enabled: true
+    library: sklearn
+    class: sklearn.ensemble.GradientBoostingClassifier
+    category: "Ensemble — Boosting"
+    description: "Boosting séquentiel qui corrige les erreurs du modèle précédent. Très performant."
+    use_cases: ["tabular data compétitif", "quand la précision prime sur la vitesse"]
+    pros: ["très performant", "gère les interactions complexes", "robuste"]
+    cons: ["lent à entraîner", "nombreux hyperparamètres", "peut sur-apprendre"]
+    hyperparameters:
+      n_estimators: [100, 200, 300]
+      learning_rate: [0.01, 0.05, 0.1, 0.2]
+      max_depth: [3, 4, 5, 6]
+      subsample: [0.7, 0.8, 1.0]
+    eval_metrics: ["accuracy", "f1_weighted", "roc_auc"]
+    illustration_svg: '<svg viewBox="0 0 600 160" xmlns="http://www.w3.org/2000/svg" class="w-full h-auto drop-shadow-xl rounded-xl"><rect width="600" height="160" fill="#0A0A0A" rx="12"/><!-- Grid pattern --><pattern id="grid" width="40" height="40" patternUnits="userSpaceOnUse">  <path d="M 40 0 L 0 0 0 40" fill="none" stroke="#222222" stroke-width="0.5"/></pattern><rect width="600" height="160" fill="url(#grid)" rx="12"/><!-- Inputs --><g transform="translate(20, 40)"></g><!-- Central Node --><rect x="230" y="40" width="140" height="80" fill="#1a1a1a" stroke="#444" rx="10" stroke-width="2"/><text x="300" y="70" fill="#EEEEEE" font-family="sans-serif" font-weight="bold" font-size="12" text-anchor="middle">Gradient Boosting </text><text x="300" y="90" fill="#888888" font-family="sans-serif" font-size="10" text-anchor="middle">ML Model</text><!-- Outputs --><g transform="translate(440, 40)"></g></svg>'
+    code_template: |
+      from sklearn.ensemble import GradientBoostingClassifier
+      from sklearn.metrics import classification_report
+
+      model = GradientBoostingClassifier(n_estimators=200, learning_rate=0.1,
+                                          max_depth=4, subsample=0.8, random_state=42)
+      model.fit(X_train, y_train)
+      y_pred = model.predict(X_test)
+      print(classification_report(y_test, y_pred))
+
+      # Suivi de la loss
+      import matplotlib.pyplot as plt
+      plt.plot(model.train_score_, label="Train")
+      plt.xlabel("Iterations")
+      plt.ylabel("Loss")
+      plt.legend()
+      plt.show()
+
+  - id: xgboost_clf
+    name: "XGBoost"
+    enabled: true
+    library: xgboost
+    class: xgboost.XGBClassifier
+    category: "Ensemble — Boosting"
+    description: "Implémentation optimisée et régularisée du gradient boosting. Standard de l'industrie pour tabular data."
+    use_cases: ["compétitions ML", "tabular data haute performance", "features sparses"]
+    pros: ["très performant", "régularisation L1/L2", "gère les valeurs manquantes nativement", "rapide"]
+    cons: ["nombreux hyperparamètres", "peut nécessiter du tuning"]
+    hyperparameters:
+      n_estimators: [100, 200, 500]
+      learning_rate: [0.01, 0.05, 0.1]
+      max_depth: [3, 5, 7, 9]
+      subsample: [0.7, 0.8, 1.0]
+      colsample_bytree: [0.7, 0.8, 1.0]
+      reg_alpha: [0, 0.1, 1]
+      reg_lambda: [1, 5, 10]
+    eval_metrics: ["accuracy", "f1_weighted", "roc_auc"]
+    illustration_svg: '<svg viewBox="0 0 600 160" xmlns="http://www.w3.org/2000/svg" class="w-full h-auto drop-shadow-xl rounded-xl"><rect width="600" height="160" fill="#0A0A0A" rx="12"/><!-- Grid pattern --><pattern id="grid" width="40" height="40" patternUnits="userSpaceOnUse">  <path d="M 40 0 L 0 0 0 40" fill="none" stroke="#222222" stroke-width="0.5"/></pattern><rect width="600" height="160" fill="url(#grid)" rx="12"/><!-- Inputs --><g transform="translate(20, 40)"></g><!-- Central Node --><rect x="230" y="40" width="140" height="80" fill="#1a1a1a" stroke="#444" rx="10" stroke-width="2"/><text x="300" y="70" fill="#EEEEEE" font-family="sans-serif" font-weight="bold" font-size="12" text-anchor="middle">XGBoost</text><text x="300" y="90" fill="#888888" font-family="sans-serif" font-size="10" text-anchor="middle">ML Model</text><!-- Outputs --><g transform="translate(440, 40)"></g></svg>'
+    code_template: |
+      import xgboost as xgb
+      from sklearn.metrics import classification_report
+      from sklearn.model_selection import cross_val_score
+
+      model = xgb.XGBClassifier(n_estimators=300, learning_rate=0.05, max_depth=5,
+                                  subsample=0.8, colsample_bytree=0.8,
+                                  reg_alpha=0, reg_lambda=1,
+                                  use_label_encoder=False, eval_metric="logloss",
+                                  random_state=42, n_jobs=-1)
+      model.fit(X_train, y_train,
+                eval_set=[(X_test, y_test)],
+                early_stopping_rounds=30,
+                verbose=50)
+      y_pred = model.predict(X_test)
+      print(classification_report(y_test, y_pred))
+
+      # Feature importance SHAP
+      import shap
+      explainer = shap.TreeExplainer(model)
+      shap_values = explainer.shap_values(X_test)
+      shap.summary_plot(shap_values, X_test, feature_names=feature_names)
+
+  - id: lightgbm_clf
+    name: "LightGBM"
+    enabled: true
+    library: lightgbm
+    class: lightgbm.LGBMClassifier
+    category: "Ensemble — Boosting"
+    description: "Boosting basé sur histogrammes. Très rapide, faible mémoire. Excellent sur grands datasets."
+    use_cases: ["grands datasets (>100k lignes)", "haute dimensionnalité", "production rapide"]
+    pros: ["le plus rapide des boosting", "faible consommation mémoire", "gère les catégorielles nativement"]
+    cons: ["peut sur-apprendre sur petits datasets", "sensible aux outliers"]
+    hyperparameters:
+      n_estimators: [100, 200, 500]
+      learning_rate: [0.01, 0.05, 0.1]
+      num_leaves: [31, 63, 127]
+      max_depth: [-1, 5, 10]
+      subsample: [0.7, 0.8, 1.0]
+    eval_metrics: ["accuracy", "f1_weighted", "roc_auc"]
+    illustration_svg: '<svg viewBox="0 0 600 160" xmlns="http://www.w3.org/2000/svg" class="w-full h-auto drop-shadow-xl rounded-xl"><rect width="600" height="160" fill="#0A0A0A" rx="12"/><!-- Grid pattern --><pattern id="grid" width="40" height="40" patternUnits="userSpaceOnUse">  <path d="M 40 0 L 0 0 0 40" fill="none" stroke="#222222" stroke-width="0.5"/></pattern><rect width="600" height="160" fill="url(#grid)" rx="12"/><!-- Inputs --><g transform="translate(20, 40)"></g><!-- Central Node --><rect x="230" y="40" width="140" height="80" fill="#1a1a1a" stroke="#444" rx="10" stroke-width="2"/><text x="300" y="70" fill="#EEEEEE" font-family="sans-serif" font-weight="bold" font-size="12" text-anchor="middle">LightGBM</text><text x="300" y="90" fill="#888888" font-family="sans-serif" font-size="10" text-anchor="middle">ML Model</text><!-- Outputs --><g transform="translate(440, 40)"></g></svg>'
+    code_template: |
+      import lightgbm as lgb
+      from sklearn.metrics import classification_report
+
+      model = lgb.LGBMClassifier(n_estimators=500, learning_rate=0.05,
+                                   num_leaves=63, max_depth=-1,
+                                   subsample=0.8, colsample_bytree=0.8,
+                                   random_state=42, n_jobs=-1)
+      model.fit(X_train, y_train,
+                eval_set=[(X_test, y_test)],
+                callbacks=[lgb.early_stopping(50), lgb.log_evaluation(100)])
+      y_pred = model.predict(X_test)
+      print(classification_report(y_test, y_pred))
+
+      # Importance
+      lgb.plot_importance(model, max_num_features=20)
+
+  - id: catboost_clf
+    name: "CatBoost"
+    enabled: true
+    library: catboost
+    class: catboost.CatBoostClassifier
+    category: "Ensemble — Boosting"
+    description: "Boosting optimisé pour les features catégorielles. Peu de tuning nécessaire."
+    use_cases: ["datasets avec beaucoup de catégorielles", "peu de prétraitement voulu", "données hétérogènes"]
+    pros: ["gère nativement les catégorielles", "peu de tuning", "robuste au sur-apprentissage"]
+    cons: ["lent sur très grands datasets", "modèles lourds"]
+    hyperparameters:
+      iterations: [100, 300, 500]
+      learning_rate: [0.01, 0.05, 0.1]
+      depth: [4, 6, 8, 10]
+      l2_leaf_reg: [1, 3, 5, 10]
+    eval_metrics: ["accuracy", "f1_weighted", "roc_auc"]
+    illustration_svg: '<svg viewBox="0 0 600 160" xmlns="http://www.w3.org/2000/svg" class="w-full h-auto drop-shadow-xl rounded-xl"><rect width="600" height="160" fill="#0A0A0A" rx="12"/><!-- Grid pattern --><pattern id="grid" width="40" height="40" patternUnits="userSpaceOnUse">  <path d="M 40 0 L 0 0 0 40" fill="none" stroke="#222222" stroke-width="0.5"/></pattern><rect width="600" height="160" fill="url(#grid)" rx="12"/><!-- Inputs --><g transform="translate(20, 40)"></g><!-- Central Node --><rect x="230" y="40" width="140" height="80" fill="#1a1a1a" stroke="#444" rx="10" stroke-width="2"/><text x="300" y="70" fill="#EEEEEE" font-family="sans-serif" font-weight="bold" font-size="12" text-anchor="middle">CatBoost</text><text x="300" y="90" fill="#888888" font-family="sans-serif" font-size="10" text-anchor="middle">ML Model</text><!-- Outputs --><g transform="translate(440, 40)"></g></svg>'
+    code_template: |
+      from catboost import CatBoostClassifier, Pool
+      from sklearn.metrics import classification_report
+
+      # Spécifier les indices des colonnes catégorielles
+      cat_features_idx = [0, 2, 5]  # à adapter
+
+      train_pool = Pool(X_train, y_train, cat_features=cat_features_idx)
+      test_pool  = Pool(X_test,  y_test,  cat_features=cat_features_idx)
+
+      model = CatBoostClassifier(iterations=500, learning_rate=0.05,
+                                  depth=6, l2_leaf_reg=3,
+                                  random_state=42, verbose=100)
+      model.fit(train_pool, eval_set=test_pool, early_stopping_rounds=50)
+      y_pred = model.predict(X_test)
+      print(classification_report(y_test, y_pred))
+
+  - id: svm_clf
+    name: "Support Vector Machine (SVC)"
+    enabled: true
+    library: sklearn
+    class: sklearn.svm.SVC
+    category: "Kernel"
+    description: "Trouve l'hyperplan de séparation à marge maximale. Très puissant avec kernel RBF."
+    use_cases: ["données de haute dimension", "petits datasets", "marges claires entre classes"]
+    pros: ["efficace en haute dimension", "polyvalent (kernels)", "robuste aux outliers"]
+    cons: ["lent sur grands datasets", "scalabilité limitée", "sensible au scaling"]
+    hyperparameters:
+      C: [0.1, 1, 10, 100]
+      kernel: ["rbf", "linear", "poly", "sigmoid"]
+      gamma: ["scale", "auto", 0.001, 0.01, 0.1]
+    eval_metrics: ["accuracy", "f1_weighted"]
+    illustration_svg: '<svg viewBox="0 0 600 160" xmlns="http://www.w3.org/2000/svg" class="w-full h-auto drop-shadow-xl rounded-xl"><rect width="600" height="160" fill="#0A0A0A" rx="12"/><!-- Grid pattern --><pattern id="grid" width="40" height="40" patternUnits="userSpaceOnUse">  <path d="M 40 0 L 0 0 0 40" fill="none" stroke="#222222" stroke-width="0.5"/></pattern><rect width="600" height="160" fill="url(#grid)" rx="12"/><!-- Inputs --><g transform="translate(20, 40)"></g><!-- Central Node --><rect x="230" y="40" width="140" height="80" fill="#1a1a1a" stroke="#444" rx="10" stroke-width="2"/><text x="300" y="70" fill="#EEEEEE" font-family="sans-serif" font-weight="bold" font-size="12" text-anchor="middle">Support Vector Mac</text><text x="300" y="90" fill="#888888" font-family="sans-serif" font-size="10" text-anchor="middle">ML Model</text><!-- Outputs --><g transform="translate(440, 40)"></g></svg>'
+    code_template: |
+      from sklearn.svm import SVC
+      from sklearn.pipeline import Pipeline
+      from sklearn.preprocessing import StandardScaler
+      from sklearn.metrics import classification_report
+      from sklearn.model_selection import GridSearchCV
+
+      model = Pipeline([
+          ("scaler", StandardScaler()),
+          ("svc", SVC(C=1.0, kernel="rbf", gamma="scale",
+                      probability=True, random_state=42))
+      ])
+      model.fit(X_train, y_train)
+      y_pred = model.predict(X_test)
+      print(classification_report(y_test, y_pred))
+
+      # Tuning
+      param_grid = {"svc__C": [0.1, 1, 10], "svc__gamma": ["scale", "auto", 0.01, 0.1]}
+      gs = GridSearchCV(model, param_grid, cv=5, scoring="f1_weighted", n_jobs=-1)
+      gs.fit(X_train, y_train)
+      print("Best:", gs.best_params_)
+
+  - id: adaboost_clf
+    name: "AdaBoost"
+    enabled: true
+    library: sklearn
+    class: sklearn.ensemble.AdaBoostClassifier
+    category: "Ensemble — Boosting"
+    description: "Premier algorithme de boosting. Combine des classifieurs faibles pondérés selon leurs erreurs."
+    use_cases: ["baseline boosting", "données propres peu bruitées"]
+    pros: ["simple", "peu de hyperparamètres", "interprétable"]
+    cons: ["sensible aux outliers et au bruit", "moins performant que XGBoost/LGB"]
+    hyperparameters:
+      n_estimators: [50, 100, 200]
+      learning_rate: [0.1, 0.5, 1.0]
+    eval_metrics: ["accuracy", "f1_weighted"]
+    illustration_svg: '<svg viewBox="0 0 600 160" xmlns="http://www.w3.org/2000/svg" class="w-full h-auto drop-shadow-xl rounded-xl"><rect width="600" height="160" fill="#0A0A0A" rx="12"/><!-- Grid pattern --><pattern id="grid" width="40" height="40" patternUnits="userSpaceOnUse">  <path d="M 40 0 L 0 0 0 40" fill="none" stroke="#222222" stroke-width="0.5"/></pattern><rect width="600" height="160" fill="url(#grid)" rx="12"/><!-- Inputs --><g transform="translate(20, 40)"></g><!-- Central Node --><rect x="230" y="40" width="140" height="80" fill="#1a1a1a" stroke="#444" rx="10" stroke-width="2"/><text x="300" y="70" fill="#EEEEEE" font-family="sans-serif" font-weight="bold" font-size="12" text-anchor="middle">AdaBoost</text><text x="300" y="90" fill="#888888" font-family="sans-serif" font-size="10" text-anchor="middle">ML Model</text><!-- Outputs --><g transform="translate(440, 40)"></g></svg>'
+    code_template: |
+      from sklearn.ensemble import AdaBoostClassifier
+      from sklearn.tree import DecisionTreeClassifier
+      from sklearn.metrics import classification_report
+
+      base_clf = DecisionTreeClassifier(max_depth=1)
+      model = AdaBoostClassifier(estimator=base_clf, n_estimators=100,
+                                  learning_rate=0.5, random_state=42)
+      model.fit(X_train, y_train)
+      y_pred = model.predict(X_test)
+      print(classification_report(y_test, y_pred))
+
+  - id: lda_clf
+    name: "Linear Discriminant Analysis (LDA)"
+    enabled: true
+    library: sklearn
+    class: sklearn.discriminant_analysis.LinearDiscriminantAnalysis
+    category: "Linéaire"
+    description: "Trouve les axes qui maximisent la séparation entre classes. Aussi utilisable pour réduction de dim."
+    use_cases: ["réduction de dimensionnalité supervisée", "baseline linéaire", "classes bien séparées"]
+    pros: ["interprétable", "réduction de dim intégrée", "rapide"]
+    cons: ["hypothèse gaussienne + covariance égale", "linéaire"]
+    hyperparameters:
+      solver: ["svd", "lsqr", "eigen"]
+    eval_metrics: ["accuracy", "f1_weighted"]
+    illustration_svg: '<svg viewBox="0 0 600 160" xmlns="http://www.w3.org/2000/svg" class="w-full h-auto drop-shadow-xl rounded-xl"><rect width="600" height="160" fill="#0A0A0A" rx="12"/><!-- Grid pattern --><pattern id="grid" width="40" height="40" patternUnits="userSpaceOnUse">  <path d="M 40 0 L 0 0 0 40" fill="none" stroke="#222222" stroke-width="0.5"/></pattern><rect width="600" height="160" fill="url(#grid)" rx="12"/><!-- Inputs --><g transform="translate(20, 40)"></g><!-- Central Node --><rect x="230" y="40" width="140" height="80" fill="#1a1a1a" stroke="#444" rx="10" stroke-width="2"/><text x="300" y="70" fill="#EEEEEE" font-family="sans-serif" font-weight="bold" font-size="12" text-anchor="middle">Linear Discriminan</text><text x="300" y="90" fill="#888888" font-family="sans-serif" font-size="10" text-anchor="middle">ML Model</text><!-- Outputs --><g transform="translate(440, 40)"></g></svg>'
+    code_template: |
+      from sklearn.discriminant_analysis import LinearDiscriminantAnalysis
+      from sklearn.metrics import classification_report
+      import matplotlib.pyplot as plt
+
+      model = LinearDiscriminantAnalysis(solver="svd")
+      model.fit(X_train, y_train)
+      y_pred = model.predict(X_test)
+      print(classification_report(y_test, y_pred))
+
+      # LDA comme réducteur de dim (n_classes - 1 composantes)
+      X_lda = model.transform(X_train)
+      plt.scatter(X_lda[:, 0], X_lda[:, 1], c=y_train, cmap="tab10", alpha=0.6)
+      plt.title("Projection LDA")
+      plt.show()
+
+  - id: extra_trees_clf
+    name: "Extra Trees (Extremely Randomized Trees)"
+    enabled: true
+    library: sklearn
+    class: sklearn.ensemble.ExtraTreesClassifier
+    category: "Ensemble — Bagging"
+    description: "Variante du Random Forest avec des seuils de split complètement aléatoires. Plus rapide, souvent aussi précis."
+    use_cases: ["alternative rapide au Random Forest", "feature importance", "grands datasets"]
+    pros: ["plus rapide que RF", "moins de variance", "parallélisable"]
+    cons: ["légèrement plus biaisé que RF", "boîte noire"]
+    hyperparameters:
+      n_estimators: [100, 200, 500]
+      max_depth: [5, 10, 20, null]
+      min_samples_split: [2, 5, 10]
+      max_features: ["sqrt", "log2", 0.5]
+    eval_metrics: ["accuracy", "f1_weighted", "roc_auc"]
+    illustration_svg: '<svg viewBox="0 0 600 160" xmlns="http://www.w3.org/2000/svg" class="w-full h-auto drop-shadow-xl rounded-xl"><rect width="600" height="160" fill="#0A0A0A" rx="12"/><!-- Grid pattern --><pattern id="grid" width="40" height="40" patternUnits="userSpaceOnUse">  <path d="M 40 0 L 0 0 0 40" fill="none" stroke="#222222" stroke-width="0.5"/></pattern><rect width="600" height="160" fill="url(#grid)" rx="12"/><!-- Inputs --><g transform="translate(20, 40)"></g><!-- Central Node --><rect x="230" y="40" width="140" height="80" fill="#1a1a1a" stroke="#444" rx="10" stroke-width="2"/><text x="300" y="70" fill="#EEEEEE" font-family="sans-serif" font-weight="bold" font-size="12" text-anchor="middle">Extra Trees (Extre</text><text x="300" y="90" fill="#888888" font-family="sans-serif" font-size="10" text-anchor="middle">ML Model</text><!-- Outputs --><g transform="translate(440, 40)"></g></svg>'
+    code_template: |
+      from sklearn.ensemble import ExtraTreesClassifier
+      from sklearn.metrics import classification_report
+      import pandas as pd
+
+      model = ExtraTreesClassifier(n_estimators=200, max_depth=None,
+                                    max_features="sqrt", n_jobs=-1, random_state=42)
+      model.fit(X_train, y_train)
+      y_pred = model.predict(X_test)
+      print(classification_report(y_test, y_pred))
+
+      fi = pd.Series(model.feature_importances_, index=feature_names).sort_values(ascending=False)
+      print(fi.head(15))
+
+  - id: hist_gradient_boosting_clf
+    name: "HistGradientBoosting Classifier"
+    enabled: true
+    library: sklearn
+    class: sklearn.ensemble.HistGradientBoostingClassifier
+    category: "Ensemble — Boosting"
+    description: "Implémentation sklearn du boosting par histogrammes. Rapide comme LightGBM, natif sklearn."
+    use_cases: ["alternative sklearn à XGBoost/LGB", "grands datasets", "gère les NaN nativement"]
+    pros: ["très rapide", "gère les NaN nativement", "intégration sklearn parfaite"]
+    cons: ["moins de fonctionnalités que XGBoost/LGB"]
+    hyperparameters:
+      max_iter: [100, 300, 500]
+      learning_rate: [0.01, 0.05, 0.1]
+      max_depth: [3, 5, 7, null]
+      max_leaf_nodes: [31, 63, 127]
+      l2_regularization: [0, 0.1, 1]
+    eval_metrics: ["accuracy", "f1_weighted", "roc_auc"]
+    illustration_svg: '<svg viewBox="0 0 600 160" xmlns="http://www.w3.org/2000/svg" class="w-full h-auto drop-shadow-xl rounded-xl"><rect width="600" height="160" fill="#0A0A0A" rx="12"/><!-- Grid pattern --><pattern id="grid" width="40" height="40" patternUnits="userSpaceOnUse">  <path d="M 40 0 L 0 0 0 40" fill="none" stroke="#222222" stroke-width="0.5"/></pattern><rect width="600" height="160" fill="url(#grid)" rx="12"/><!-- Inputs --><g transform="translate(20, 40)"></g><!-- Central Node --><rect x="230" y="40" width="140" height="80" fill="#1a1a1a" stroke="#444" rx="10" stroke-width="2"/><text x="300" y="70" fill="#EEEEEE" font-family="sans-serif" font-weight="bold" font-size="12" text-anchor="middle">HistGradientBoosti</text><text x="300" y="90" fill="#888888" font-family="sans-serif" font-size="10" text-anchor="middle">ML Model</text><!-- Outputs --><g transform="translate(440, 40)"></g></svg>'
+    code_template: |
+      from sklearn.ensemble import HistGradientBoostingClassifier
+      from sklearn.metrics import classification_report
+
+      model = HistGradientBoostingClassifier(max_iter=300, learning_rate=0.05,
+                                              max_depth=None, max_leaf_nodes=63,
+                                              l2_regularization=0.1,
+                                              early_stopping=True, random_state=42)
+      model.fit(X_train, y_train)
+      y_pred = model.predict(X_test)
+      print(classification_report(y_test, y_pred))
+
+  - id: voting_clf
+    name: "Voting Classifier (Ensemble)"
+    enabled: true
+    library: sklearn
+    class: sklearn.ensemble.VotingClassifier
+    category: "Ensemble — Stacking/Voting"
+    description: "Combine plusieurs modèles hétérogènes par vote majoritaire ou pondéré."
+    use_cases: ["combinaison de modèles complémentaires", "compétitions", "réduction de variance ensemble"]
+    pros: ["réduit les erreurs individuelles", "flexible", "simple à mettre en place"]
+    cons: ["interprétabilité nulle", "latence accrue"]
+    hyperparameters:
+      voting: ["hard", "soft"]
+      weights: ["uniform", "custom"]
+    eval_metrics: ["accuracy", "f1_weighted", "roc_auc"]
+    illustration_svg: '<svg viewBox="0 0 600 160" xmlns="http://www.w3.org/2000/svg" class="w-full h-auto drop-shadow-xl rounded-xl"><rect width="600" height="160" fill="#0A0A0A" rx="12"/><!-- Grid pattern --><pattern id="grid" width="40" height="40" patternUnits="userSpaceOnUse">  <path d="M 40 0 L 0 0 0 40" fill="none" stroke="#222222" stroke-width="0.5"/></pattern><rect width="600" height="160" fill="url(#grid)" rx="12"/><!-- Inputs --><g transform="translate(20, 40)"></g><!-- Central Node --><rect x="230" y="40" width="140" height="80" fill="#1a1a1a" stroke="#444" rx="10" stroke-width="2"/><text x="300" y="70" fill="#EEEEEE" font-family="sans-serif" font-weight="bold" font-size="12" text-anchor="middle">Voting Classifier </text><text x="300" y="90" fill="#888888" font-family="sans-serif" font-size="10" text-anchor="middle">ML Model</text><!-- Outputs --><g transform="translate(440, 40)"></g></svg>'
+    code_template: |
+      from sklearn.ensemble import VotingClassifier, RandomForestClassifier, GradientBoostingClassifier
+      from sklearn.linear_model import LogisticRegression
+      from sklearn.preprocessing import StandardScaler
+      from sklearn.pipeline import Pipeline
+      from sklearn.metrics import classification_report
+
+      clf1 = Pipeline([("s", StandardScaler()), ("lr", LogisticRegression(max_iter=1000))])
+      clf2 = RandomForestClassifier(n_estimators=200, random_state=42)
+      clf3 = GradientBoostingClassifier(n_estimators=200, random_state=42)
+
+      voting = VotingClassifier(
+          estimators=[("lr", clf1), ("rf", clf2), ("gb", clf3)],
+          voting="soft",
+          weights=[1, 2, 2]  # pondération optionnelle
+      )
+      voting.fit(X_train, y_train)
+      y_pred = voting.predict(X_test)
+      print(classification_report(y_test, y_pred))
+
+  - id: stacking_clf
+    name: "Stacking Classifier"
+    enabled: true
+    library: sklearn
+    class: sklearn.ensemble.StackingClassifier
+    category: "Ensemble — Stacking/Voting"
+    description: "Méta-apprentissage : utilise les prédictions des modèles de base comme features pour un méta-modèle."
+    use_cases: ["compétitions ML", "maximiser la performance", "combiner des modèles spécialisés"]
+    pros: ["meilleure performance que voting en général", "flexible"]
+    cons: ["lent", "risque de fuite de données si mal implémenté", "complexe"]
+    hyperparameters:
+      cv: [5, 10]
+      passthrough: [true, false]
+    eval_metrics: ["accuracy", "f1_weighted", "roc_auc"]
+    illustration_svg: '<svg viewBox="0 0 600 160" xmlns="http://www.w3.org/2000/svg" class="w-full h-auto drop-shadow-xl rounded-xl"><rect width="600" height="160" fill="#0A0A0A" rx="12"/><!-- Grid pattern --><pattern id="grid" width="40" height="40" patternUnits="userSpaceOnUse">  <path d="M 40 0 L 0 0 0 40" fill="none" stroke="#222222" stroke-width="0.5"/></pattern><rect width="600" height="160" fill="url(#grid)" rx="12"/><!-- Inputs --><g transform="translate(20, 40)"></g><!-- Central Node --><rect x="230" y="40" width="140" height="80" fill="#1a1a1a" stroke="#444" rx="10" stroke-width="2"/><text x="300" y="70" fill="#EEEEEE" font-family="sans-serif" font-weight="bold" font-size="12" text-anchor="middle">Stacking Classifie</text><text x="300" y="90" fill="#888888" font-family="sans-serif" font-size="10" text-anchor="middle">ML Model</text><!-- Outputs --><g transform="translate(440, 40)"></g></svg>'
+    code_template: |
+      from sklearn.ensemble import StackingClassifier, RandomForestClassifier, GradientBoostingClassifier
+      from sklearn.linear_model import LogisticRegression
+      from sklearn.svm import SVC
+      from sklearn.metrics import classification_report
+
+      estimators = [
+          ("rf",  RandomForestClassifier(n_estimators=200, random_state=42)),
+          ("gb",  GradientBoostingClassifier(n_estimators=200, random_state=42)),
+          ("svm", SVC(kernel="rbf", probability=True, random_state=42)),
+      ]
+      stacking = StackingClassifier(
+          estimators=estimators,
+          final_estimator=LogisticRegression(max_iter=1000),
+          cv=5,
+          passthrough=False,
+          n_jobs=-1
+      )
+      stacking.fit(X_train, y_train)
+      y_pred = stacking.predict(X_test)
+      print(classification_report(y_test, y_pred))
+
+# ──────────────────────────────────────────────────────────────────────────
+regression:
+# ──────────────────────────────────────────────────────────────────────────
+
+  - id: linear_regression
+    name: "Régression Linéaire (OLS)"
+    enabled: true
+    library: sklearn
+    class: sklearn.linear_model.LinearRegression
+    category: "Linéaire"
+    description: "Régression par moindres carrés ordinaires. Baseline incontournable."
+    use_cases: ["relation linéaire entre features et target", "interprétation des coefficients"]
+    pros: ["très interprétable", "rapide", "coefficients significatifs via statsmodels"]
+    cons: ["linéaire uniquement", "sensible aux outliers et à la multicolinéarité"]
+    hyperparameters: {}
+    eval_metrics: ["rmse", "mae", "r2", "mape"]
+    illustration_svg: '<svg viewBox="0 0 600 160" xmlns="http://www.w3.org/2000/svg" class="w-full h-auto drop-shadow-xl rounded-xl"><rect width="600" height="160" fill="#0A0A0A" rx="12"/><!-- Grid pattern --><pattern id="grid" width="40" height="40" patternUnits="userSpaceOnUse">  <path d="M 40 0 L 0 0 0 40" fill="none" stroke="#222222" stroke-width="0.5"/></pattern><rect width="600" height="160" fill="url(#grid)" rx="12"/><!-- Inputs --><g transform="translate(20, 40)"></g><!-- Central Node --><rect x="230" y="40" width="140" height="80" fill="#1a1a1a" stroke="#444" rx="10" stroke-width="2"/><text x="300" y="70" fill="#EEEEEE" font-family="sans-serif" font-weight="bold" font-size="12" text-anchor="middle">Régression Linéair</text><text x="300" y="90" fill="#888888" font-family="sans-serif" font-size="10" text-anchor="middle">ML Model</text><!-- Outputs --><g transform="translate(440, 40)"></g></svg>'
+    code_template: |
+      from sklearn.linear_model import LinearRegression
+      from sklearn.pipeline import Pipeline
+      from sklearn.preprocessing import StandardScaler
+      from sklearn.metrics import mean_squared_error, mean_absolute_error, r2_score
+      import numpy as np
+
+      model = Pipeline([
+          ("scaler", StandardScaler()),
+          ("reg", LinearRegression())
+      ])
+      model.fit(X_train, y_train)
+      y_pred = model.predict(X_test)
+
+      rmse = np.sqrt(mean_squared_error(y_test, y_pred))
+      print(f"RMSE: {rmse:.4f} | MAE: {mean_absolute_error(y_test, y_pred):.4f} | R²: {r2_score(y_test, y_pred):.4f}")
+
+      # Coefficients via statsmodels pour tests statistiques
+      import statsmodels.api as sm
+      X_sm = sm.add_constant(X_train)
+      ols = sm.OLS(y_train, X_sm).fit()
+      print(ols.summary())
+
+  - id: ridge
+    name: "Ridge (L2)"
+    enabled: true
+    library: sklearn
+    class: sklearn.linear_model.Ridge
+    category: "Linéaire Régularisé"
+    description: "Régression linéaire avec régularisation L2. Réduit les coefficients sans les annuler."
+    use_cases: ["multicolinéarité élevée", "nombreuses features corrélées"]
+    pros: ["stable avec multicolinéarité", "rapide", "interprétable"]
+    cons: ["ne fait pas de sélection de features (tous coeff ≠ 0)"]
+    hyperparameters:
+      alpha: [0.001, 0.01, 0.1, 1, 10, 100, 1000]
+    eval_metrics: ["rmse", "mae", "r2"]
+    illustration_svg: '<svg viewBox="0 0 600 160" xmlns="http://www.w3.org/2000/svg" class="w-full h-auto drop-shadow-xl rounded-xl"><rect width="600" height="160" fill="#0A0A0A" rx="12"/><!-- Grid pattern --><pattern id="grid" width="40" height="40" patternUnits="userSpaceOnUse">  <path d="M 40 0 L 0 0 0 40" fill="none" stroke="#222222" stroke-width="0.5"/></pattern><rect width="600" height="160" fill="url(#grid)" rx="12"/><!-- Inputs --><g transform="translate(20, 40)"></g><!-- Central Node --><rect x="230" y="40" width="140" height="80" fill="#1a1a1a" stroke="#444" rx="10" stroke-width="2"/><text x="300" y="70" fill="#EEEEEE" font-family="sans-serif" font-weight="bold" font-size="12" text-anchor="middle">Ridge (L2)</text><text x="300" y="90" fill="#888888" font-family="sans-serif" font-size="10" text-anchor="middle">ML Model</text><!-- Outputs --><g transform="translate(440, 40)"></g></svg>'
+    code_template: |
+      from sklearn.linear_model import Ridge, RidgeCV
+      from sklearn.preprocessing import StandardScaler
+      from sklearn.pipeline import Pipeline
+      from sklearn.metrics import mean_squared_error, r2_score
+      import numpy as np
+
+      # RidgeCV sélectionne alpha automatiquement
+      model = Pipeline([
+          ("scaler", StandardScaler()),
+          ("reg", RidgeCV(alphas=[0.001, 0.01, 0.1, 1, 10, 100, 1000], cv=5))
+      ])
+      model.fit(X_train, y_train)
+      y_pred = model.predict(X_test)
+      print(f"Best alpha: {model['reg'].alpha_}")
+      print(f"RMSE: {np.sqrt(mean_squared_error(y_test, y_pred)):.4f} | R²: {r2_score(y_test, y_pred):.4f}")
+
+  - id: lasso
+    name: "Lasso (L1)"
+    enabled: true
+    library: sklearn
+    class: sklearn.linear_model.Lasso
+    category: "Linéaire Régularisé"
+    description: "Régression linéaire avec régularisation L1. Met à zéro les coefficients non pertinents."
+    use_cases: ["sélection de features automatique", "données sparses", "interprétabilité maximale"]
+    pros: ["sélection de features intégrée", "sparse solutions"]
+    cons: ["instable si features corrélées (sélectionne une seule au hasard)"]
+    hyperparameters:
+      alpha: [0.001, 0.01, 0.1, 1, 10]
+    eval_metrics: ["rmse", "mae", "r2"]
+    illustration_svg: '<svg viewBox="0 0 600 160" xmlns="http://www.w3.org/2000/svg" class="w-full h-auto drop-shadow-xl rounded-xl"><rect width="600" height="160" fill="#0A0A0A" rx="12"/><!-- Grid pattern --><pattern id="grid" width="40" height="40" patternUnits="userSpaceOnUse">  <path d="M 40 0 L 0 0 0 40" fill="none" stroke="#222222" stroke-width="0.5"/></pattern><rect width="600" height="160" fill="url(#grid)" rx="12"/><!-- Inputs --><g transform="translate(20, 40)"></g><!-- Central Node --><rect x="230" y="40" width="140" height="80" fill="#1a1a1a" stroke="#444" rx="10" stroke-width="2"/><text x="300" y="70" fill="#EEEEEE" font-family="sans-serif" font-weight="bold" font-size="12" text-anchor="middle">Lasso (L1)</text><text x="300" y="90" fill="#888888" font-family="sans-serif" font-size="10" text-anchor="middle">ML Model</text><!-- Outputs --><g transform="translate(440, 40)"></g></svg>'
+    code_template: |
+      from sklearn.linear_model import LassoCV
+      from sklearn.preprocessing import StandardScaler
+      from sklearn.pipeline import Pipeline
+      from sklearn.metrics import mean_squared_error, r2_score
+      import numpy as np, pandas as pd
+
+      model = Pipeline([
+          ("scaler", StandardScaler()),
+          ("reg", LassoCV(alphas=None, cv=5, max_iter=10000))
+      ])
+      model.fit(X_train, y_train)
+      y_pred = model.predict(X_test)
+      print(f"Best alpha: {model['reg'].alpha_}")
+      print(f"RMSE: {np.sqrt(mean_squared_error(y_test, y_pred)):.4f} | R²: {r2_score(y_test, y_pred):.4f}")
+
+      # Features sélectionnées (coeff != 0)
+      coefs = pd.Series(model["reg"].coef_, index=feature_names)
+      print("Features retenues :", coefs[coefs != 0].sort_values().to_string())
+
+  - id: elasticnet
+    name: "ElasticNet (L1 + L2)"
+    enabled: true
+    library: sklearn
+    class: sklearn.linear_model.ElasticNet
+    category: "Linéaire Régularisé"
+    description: "Combinaison Ridge + Lasso. Sélection de features + stabilité avec features corrélées."
+    use_cases: ["features nombreuses et corrélées", "meilleur des deux mondes Lasso/Ridge"]
+    pros: ["équilibre entre L1 et L2", "stable", "sélection de features"]
+    cons: ["2 hyperparamètres à tuner"]
+    hyperparameters:
+      alpha: [0.001, 0.01, 0.1, 1]
+      l1_ratio: [0.1, 0.3, 0.5, 0.7, 0.9]
+    eval_metrics: ["rmse", "mae", "r2"]
+    illustration_svg: '<svg viewBox="0 0 600 160" xmlns="http://www.w3.org/2000/svg" class="w-full h-auto drop-shadow-xl rounded-xl"><rect width="600" height="160" fill="#0A0A0A" rx="12"/><!-- Grid pattern --><pattern id="grid" width="40" height="40" patternUnits="userSpaceOnUse">  <path d="M 40 0 L 0 0 0 40" fill="none" stroke="#222222" stroke-width="0.5"/></pattern><rect width="600" height="160" fill="url(#grid)" rx="12"/><!-- Inputs --><g transform="translate(20, 40)"></g><!-- Central Node --><rect x="230" y="40" width="140" height="80" fill="#1a1a1a" stroke="#444" rx="10" stroke-width="2"/><text x="300" y="70" fill="#EEEEEE" font-family="sans-serif" font-weight="bold" font-size="12" text-anchor="middle">ElasticNet (L1 + L</text><text x="300" y="90" fill="#888888" font-family="sans-serif" font-size="10" text-anchor="middle">ML Model</text><!-- Outputs --><g transform="translate(440, 40)"></g></svg>'
+    code_template: |
+      from sklearn.linear_model import ElasticNetCV
+      from sklearn.preprocessing import StandardScaler
+      from sklearn.pipeline import Pipeline
+      from sklearn.metrics import mean_squared_error, r2_score
+      import numpy as np
+
+      model = Pipeline([
+          ("scaler", StandardScaler()),
+          ("reg", ElasticNetCV(l1_ratio=[0.1, 0.3, 0.5, 0.7, 0.9],
+                               alphas=[0.001, 0.01, 0.1, 1], cv=5, max_iter=10000))
+      ])
+      model.fit(X_train, y_train)
+      y_pred = model.predict(X_test)
+      print(f"Alpha: {model['reg'].alpha_} | l1_ratio: {model['reg'].l1_ratio_}")
+      print(f"RMSE: {np.sqrt(mean_squared_error(y_test, y_pred)):.4f} | R²: {r2_score(y_test, y_pred):.4f}")
+
+  - id: random_forest_reg
+    name: "Random Forest Regressor"
+    enabled: true
+    library: sklearn
+    class: sklearn.ensemble.RandomForestRegressor
+    category: "Ensemble — Bagging"
+    description: "Ensemble d'arbres pour la régression. Capture les non-linéarités."
+    use_cases: ["régression non-linéaire", "feature importance", "résistance aux outliers"]
+    pros: ["robuste", "feature importance", "pas de scaling requis"]
+    cons: ["boîte noire", "extrapolation limitée"]
+    hyperparameters:
+      n_estimators: [100, 200, 500]
+      max_depth: [5, 10, 20, null]
+      min_samples_split: [2, 5, 10]
+    eval_metrics: ["rmse", "mae", "r2", "mape"]
+    illustration_svg: '<svg viewBox="0 0 600 160" xmlns="http://www.w3.org/2000/svg" class="w-full h-auto drop-shadow-xl rounded-xl"><rect width="600" height="160" fill="#0A0A0A" rx="12"/><!-- Grid pattern --><pattern id="grid" width="40" height="40" patternUnits="userSpaceOnUse">  <path d="M 40 0 L 0 0 0 40" fill="none" stroke="#222222" stroke-width="0.5"/></pattern><rect width="600" height="160" fill="url(#grid)" rx="12"/><!-- Inputs --><g transform="translate(20, 40)"></g><!-- Central Node --><rect x="230" y="40" width="140" height="80" fill="#1a1a1a" stroke="#444" rx="10" stroke-width="2"/><text x="300" y="70" fill="#EEEEEE" font-family="sans-serif" font-weight="bold" font-size="12" text-anchor="middle">Random Forest Regr</text><text x="300" y="90" fill="#888888" font-family="sans-serif" font-size="10" text-anchor="middle">ML Model</text><!-- Outputs --><g transform="translate(440, 40)"></g></svg>'
+    code_template: |
+      from sklearn.ensemble import RandomForestRegressor
+      from sklearn.metrics import mean_squared_error, r2_score
+      import numpy as np, pandas as pd
+
+      model = RandomForestRegressor(n_estimators=200, max_depth=None,
+                                     min_samples_split=5, n_jobs=-1, random_state=42)
+      model.fit(X_train, y_train)
+      y_pred = model.predict(X_test)
+      print(f"RMSE: {np.sqrt(mean_squared_error(y_test, y_pred)):.4f} | R²: {r2_score(y_test, y_pred):.4f}")
+
+      fi = pd.Series(model.feature_importances_, index=feature_names).sort_values(ascending=False)
+      print(fi.head(15))
+
+  - id: xgboost_reg
+    name: "XGBoost Regressor"
+    enabled: true
+    library: xgboost
+    class: xgboost.XGBRegressor
+    category: "Ensemble — Boosting"
+    description: "Gradient boosting pour régression. Standard pour tabular regression en compétition."
+    use_cases: ["régression tabular haute performance"]
+    pros: ["très performant", "régularisation", "gère les NaN"]
+    cons: ["tuning nécessaire", "extrapolation limitée"]
+    hyperparameters:
+      n_estimators: [100, 200, 500]
+      learning_rate: [0.01, 0.05, 0.1]
+      max_depth: [3, 5, 7]
+      subsample: [0.7, 0.8, 1.0]
+    eval_metrics: ["rmse", "mae", "r2", "mape"]
+    illustration_svg: '<svg viewBox="0 0 600 160" xmlns="http://www.w3.org/2000/svg" class="w-full h-auto drop-shadow-xl rounded-xl"><rect width="600" height="160" fill="#0A0A0A" rx="12"/><!-- Grid pattern --><pattern id="grid" width="40" height="40" patternUnits="userSpaceOnUse">  <path d="M 40 0 L 0 0 0 40" fill="none" stroke="#222222" stroke-width="0.5"/></pattern><rect width="600" height="160" fill="url(#grid)" rx="12"/><!-- Inputs --><g transform="translate(20, 40)"></g><!-- Central Node --><rect x="230" y="40" width="140" height="80" fill="#1a1a1a" stroke="#444" rx="10" stroke-width="2"/><text x="300" y="70" fill="#EEEEEE" font-family="sans-serif" font-weight="bold" font-size="12" text-anchor="middle">XGBoost Regressor</text><text x="300" y="90" fill="#888888" font-family="sans-serif" font-size="10" text-anchor="middle">ML Model</text><!-- Outputs --><g transform="translate(440, 40)"></g></svg>'
+    code_template: |
+      import xgboost as xgb
+      from sklearn.metrics import mean_squared_error, r2_score
+      import numpy as np
+
+      model = xgb.XGBRegressor(n_estimators=500, learning_rate=0.05, max_depth=5,
+                                 subsample=0.8, colsample_bytree=0.8,
+                                 reg_alpha=0, reg_lambda=1,
+                                 eval_metric="rmse", random_state=42, n_jobs=-1)
+      model.fit(X_train, y_train,
+                eval_set=[(X_test, y_test)],
+                early_stopping_rounds=50,
+                verbose=100)
+      y_pred = model.predict(X_test)
+      print(f"RMSE: {np.sqrt(mean_squared_error(y_test, y_pred)):.4f} | R²: {r2_score(y_test, y_pred):.4f}")
+
+  - id: lightgbm_reg
+    name: "LightGBM Regressor"
+    enabled: true
+    library: lightgbm
+    class: lightgbm.LGBMRegressor
+    category: "Ensemble — Boosting"
+    description: "Boosting sur histogrammes pour régression. Très rapide sur grands datasets."
+    use_cases: ["grands datasets en régression"]
+    pros: ["très rapide", "faible mémoire"]
+    cons: ["sur-apprentissage possible sur petits jeux"]
+    hyperparameters:
+      n_estimators: [100, 300, 500]
+      learning_rate: [0.01, 0.05, 0.1]
+      num_leaves: [31, 63, 127]
+    eval_metrics: ["rmse", "mae", "r2"]
+    illustration_svg: '<svg viewBox="0 0 600 160" xmlns="http://www.w3.org/2000/svg" class="w-full h-auto drop-shadow-xl rounded-xl"><rect width="600" height="160" fill="#0A0A0A" rx="12"/><!-- Grid pattern --><pattern id="grid" width="40" height="40" patternUnits="userSpaceOnUse">  <path d="M 40 0 L 0 0 0 40" fill="none" stroke="#222222" stroke-width="0.5"/></pattern><rect width="600" height="160" fill="url(#grid)" rx="12"/><!-- Inputs --><g transform="translate(20, 40)"></g><!-- Central Node --><rect x="230" y="40" width="140" height="80" fill="#1a1a1a" stroke="#444" rx="10" stroke-width="2"/><text x="300" y="70" fill="#EEEEEE" font-family="sans-serif" font-weight="bold" font-size="12" text-anchor="middle">LightGBM Regressor</text><text x="300" y="90" fill="#888888" font-family="sans-serif" font-size="10" text-anchor="middle">ML Model</text><!-- Outputs --><g transform="translate(440, 40)"></g></svg>'
+    code_template: |
+      import lightgbm as lgb
+      from sklearn.metrics import mean_squared_error, r2_score
+      import numpy as np
+
+      model = lgb.LGBMRegressor(n_estimators=500, learning_rate=0.05,
+                                  num_leaves=63, subsample=0.8,
+                                  colsample_bytree=0.8, random_state=42, n_jobs=-1)
+      model.fit(X_train, y_train,
+                eval_set=[(X_test, y_test)],
+                callbacks=[lgb.early_stopping(50), lgb.log_evaluation(100)])
+      y_pred = model.predict(X_test)
+      print(f"RMSE: {np.sqrt(mean_squared_error(y_test, y_pred)):.4f} | R²: {r2_score(y_test, y_pred):.4f}")
+
+  - id: svr
+    name: "Support Vector Regression (SVR)"
+    enabled: true
+    library: sklearn
+    class: sklearn.svm.SVR
+    category: "Kernel"
+    description: "SVR avec tube epsilon. Robuste aux outliers si bien configuré."
+    use_cases: ["petits datasets", "régression non-linéaire"]
+    pros: ["robuste aux outliers", "polyvalent (kernels)"]
+    cons: ["lent sur grands datasets", "scaling obligatoire"]
+    hyperparameters:
+      C: [0.1, 1, 10, 100]
+      kernel: ["rbf", "linear", "poly"]
+      epsilon: [0.01, 0.1, 0.5]
+      gamma: ["scale", "auto"]
+    eval_metrics: ["rmse", "mae", "r2"]
+    illustration_svg: '<svg viewBox="0 0 600 160" xmlns="http://www.w3.org/2000/svg" class="w-full h-auto drop-shadow-xl rounded-xl"><rect width="600" height="160" fill="#0A0A0A" rx="12"/><!-- Grid pattern --><pattern id="grid" width="40" height="40" patternUnits="userSpaceOnUse">  <path d="M 40 0 L 0 0 0 40" fill="none" stroke="#222222" stroke-width="0.5"/></pattern><rect width="600" height="160" fill="url(#grid)" rx="12"/><!-- Inputs --><g transform="translate(20, 40)"></g><!-- Central Node --><rect x="230" y="40" width="140" height="80" fill="#1a1a1a" stroke="#444" rx="10" stroke-width="2"/><text x="300" y="70" fill="#EEEEEE" font-family="sans-serif" font-weight="bold" font-size="12" text-anchor="middle">Support Vector Reg</text><text x="300" y="90" fill="#888888" font-family="sans-serif" font-size="10" text-anchor="middle">ML Model</text><!-- Outputs --><g transform="translate(440, 40)"></g></svg>'
+    code_template: |
+      from sklearn.svm import SVR
+      from sklearn.pipeline import Pipeline
+      from sklearn.preprocessing import StandardScaler
+      from sklearn.model_selection import GridSearchCV
+      from sklearn.metrics import mean_squared_error, r2_score
+      import numpy as np
+
+      model = Pipeline([
+          ("scaler", StandardScaler()),
+          ("svr", SVR(C=10, kernel="rbf", epsilon=0.1, gamma="scale"))
+      ])
+      model.fit(X_train, y_train)
+      y_pred = model.predict(X_test)
+      print(f"RMSE: {np.sqrt(mean_squared_error(y_test, y_pred)):.4f} | R²: {r2_score(y_test, y_pred):.4f}")
+
+      # GridSearch
+      param_grid = {"svr__C": [1, 10, 100], "svr__epsilon": [0.01, 0.1, 0.5]}
+      gs = GridSearchCV(model, param_grid, cv=5, scoring="neg_root_mean_squared_error")
+      gs.fit(X_train, y_train)
+      print("Best:", gs.best_params_)
+
+  - id: quantile_regression
+    name: "Quantile Regression (GBM)"
+    enabled: true
+    library: sklearn
+    class: sklearn.ensemble.GradientBoostingRegressor
+    category: "Régression Quantile"
+    description: "Prédit des quantiles (médiane, intervalles de confiance). Robuste aux outliers, intervalles de prédiction."
+    use_cases: ["intervalles de prédiction", "données asymétriques", "quand la médiane est meilleure que la moyenne"]
+    pros: ["intervalles de prédiction natifs", "robuste aux outliers", "asymétrie possible"]
+    cons: ["plusieurs modèles à entraîner (un par quantile)", "plus lent"]
+    hyperparameters:
+      alpha: [0.05, 0.25, 0.5, 0.75, 0.95]
+      n_estimators: [100, 200, 300]
+      learning_rate: [0.05, 0.1]
+    eval_metrics: ["pinball_loss", "coverage", "interval_width"]
+    illustration_svg: '<svg viewBox="0 0 600 160" xmlns="http://www.w3.org/2000/svg" class="w-full h-auto drop-shadow-xl rounded-xl"><rect width="600" height="160" fill="#0A0A0A" rx="12"/><!-- Grid pattern --><pattern id="grid" width="40" height="40" patternUnits="userSpaceOnUse">  <path d="M 40 0 L 0 0 0 40" fill="none" stroke="#222222" stroke-width="0.5"/></pattern><rect width="600" height="160" fill="url(#grid)" rx="12"/><!-- Inputs --><g transform="translate(20, 40)"></g><!-- Central Node --><rect x="230" y="40" width="140" height="80" fill="#1a1a1a" stroke="#444" rx="10" stroke-width="2"/><text x="300" y="70" fill="#EEEEEE" font-family="sans-serif" font-weight="bold" font-size="12" text-anchor="middle">Quantile Regressio</text><text x="300" y="90" fill="#888888" font-family="sans-serif" font-size="10" text-anchor="middle">ML Model</text><!-- Outputs --><g transform="translate(440, 40)"></g></svg>'
+    code_template: |
+      from sklearn.ensemble import GradientBoostingRegressor
+      import numpy as np
+
+      quantiles = [0.1, 0.5, 0.9]
+      models = {}
+      for q in quantiles:
+          m = GradientBoostingRegressor(loss="quantile", alpha=q,
+                                         n_estimators=200, learning_rate=0.1,
+                                         max_depth=4, random_state=42)
+          m.fit(X_train, y_train)
+          models[q] = m
+
+      preds = {q: m.predict(X_test) for q, m in models.items()}
+      coverage = np.mean((y_test >= preds[0.1]) & (y_test <= preds[0.9]))
+      print(f"Couverture 80% : {coverage:.2%}")  # doit être ~0.80
+
+  - id: bayesian_ridge
+    name: "Bayesian Ridge Regression"
+    enabled: true
+    library: sklearn
+    class: sklearn.linear_model.BayesianRidge
+    category: "Bayésien"
+    description: "Régression linéaire bayésienne avec estimation de l'incertitude sur les coefficients et les prédictions."
+    use_cases: ["données limitées", "intervalles de confiance nécessaires", "régularisation automatique"]
+    pros: ["incertitude sur les prédictions", "régularisation automatique", "interprétable"]
+    cons: ["plus lent qu'OLS", "hypothèse linéaire"]
+    hyperparameters:
+      n_iter: [300]
+      alpha_1: [1.0e-6]
+      alpha_2: [1.0e-6]
+      lambda_1: [1.0e-6]
+      lambda_2: [1.0e-6]
+    eval_metrics: ["rmse", "mae", "r2"]
+    illustration_svg: '<svg viewBox="0 0 600 160" xmlns="http://www.w3.org/2000/svg" class="w-full h-auto drop-shadow-xl rounded-xl"><rect width="600" height="160" fill="#0A0A0A" rx="12"/><!-- Grid pattern --><pattern id="grid" width="40" height="40" patternUnits="userSpaceOnUse">  <path d="M 40 0 L 0 0 0 40" fill="none" stroke="#222222" stroke-width="0.5"/></pattern><rect width="600" height="160" fill="url(#grid)" rx="12"/><!-- Inputs --><g transform="translate(20, 40)"></g><!-- Central Node --><rect x="230" y="40" width="140" height="80" fill="#1a1a1a" stroke="#444" rx="10" stroke-width="2"/><text x="300" y="70" fill="#EEEEEE" font-family="sans-serif" font-weight="bold" font-size="12" text-anchor="middle">Bayesian Ridge Reg</text><text x="300" y="90" fill="#888888" font-family="sans-serif" font-size="10" text-anchor="middle">ML Model</text><!-- Outputs --><g transform="translate(440, 40)"></g></svg>'
+    code_template: |
+      from sklearn.linear_model import BayesianRidge
+      from sklearn.preprocessing import StandardScaler
+      from sklearn.pipeline import Pipeline
+      import numpy as np
+
+      model = Pipeline([
+          ("scaler", StandardScaler()),
+          ("reg", BayesianRidge(n_iter=300))
+      ])
+      model.fit(X_train, y_train)
+
+      # Prédiction avec incertitude (std)
+      y_pred, y_std = model["reg"].predict(model["scaler"].transform(X_test), return_std=True)
+      print("Prédictions (5 premiers) :", y_pred[:5])
+      print("Incertitude (std)        :", y_std[:5])
+
+# ──────────────────────────────────────────────────────────────────────────
+clustering:
+# ──────────────────────────────────────────────────────────────────────────
+
+  - id: kmeans
+    name: "K-Means"
+    enabled: true
+    library: sklearn
+    class: sklearn.cluster.KMeans
+    category: "Centroïde"
+    description: "Partitionne les données en K clusters en minimisant la variance intra-cluster."
+    use_cases: ["segmentation client", "quantification", "données sphériques"]
+    pros: ["simple", "rapide", "scalable", "interprétable"]
+    cons: ["K à fixer a priori", "sensible aux outliers", "hypothèse de clusters sphériques"]
+    hyperparameters:
+      n_clusters: [2, 3, 4, 5, 6, 7, 8, 9, 10]
+      init: ["k-means++", "random"]
+      max_iter: [300]
+    eval_metrics: ["silhouette", "davies_bouldin", "calinski_harabasz", "inertia"]
+    illustration_svg: '<svg viewBox="0 0 600 160" xmlns="http://www.w3.org/2000/svg" class="w-full h-auto drop-shadow-xl rounded-xl"><rect width="600" height="160" fill="#0A0A0A" rx="12"/><!-- Grid pattern --><pattern id="grid" width="40" height="40" patternUnits="userSpaceOnUse">  <path d="M 40 0 L 0 0 0 40" fill="none" stroke="#222222" stroke-width="0.5"/></pattern><rect width="600" height="160" fill="url(#grid)" rx="12"/><!-- Inputs --><g transform="translate(20, 40)"></g><!-- Central Node --><rect x="230" y="40" width="140" height="80" fill="#1a1a1a" stroke="#444" rx="10" stroke-width="2"/><text x="300" y="70" fill="#EEEEEE" font-family="sans-serif" font-weight="bold" font-size="12" text-anchor="middle">K-Means</text><text x="300" y="90" fill="#888888" font-family="sans-serif" font-size="10" text-anchor="middle">ML Model</text><!-- Outputs --><g transform="translate(440, 40)"></g></svg>'
+    code_template: |
+      from sklearn.cluster import KMeans
+      from sklearn.preprocessing import StandardScaler
+      from sklearn.metrics import silhouette_score, davies_bouldin_score
+      import matplotlib.pyplot as plt
+      import numpy as np
+
+      scaler = StandardScaler()
+      X_scaled = scaler.fit_transform(X)
+
+      # Méthode du coude + silhouette
+      inertias, sil_scores = [], []
+      K_range = range(2, 11)
+      for k in K_range:
+          km = KMeans(n_clusters=k, init="k-means++", random_state=42, n_init=10)
+          labels = km.fit_predict(X_scaled)
+          inertias.append(km.inertia_)
+          sil_scores.append(silhouette_score(X_scaled, labels))
+
+      fig, axes = plt.subplots(1, 2, figsize=(12, 4))
+      axes[0].plot(list(K_range), inertias, "bo-"); axes[0].set_title("Elbow")
+      axes[1].plot(list(K_range), sil_scores, "ro-"); axes[1].set_title("Silhouette")
+      plt.tight_layout(); plt.show()
+
+      best_k = list(K_range)[np.argmax(sil_scores)]
+      final_model = KMeans(n_clusters=best_k, random_state=42, n_init=10)
+      labels = final_model.fit_predict(X_scaled)
+      print(f"K optimal : {best_k} | Silhouette : {silhouette_score(X_scaled, labels):.3f}")
+
+  - id: dbscan
+    name: "DBSCAN"
+    enabled: true
+    library: sklearn
+    class: sklearn.cluster.DBSCAN
+    category: "Densité"
+    description: "Cluster basé sur la densité. Détecte automatiquement les outliers et n'exige pas K fixé."
+    use_cases: ["clusters de forme arbitraire", "détection d'anomalies", "données géospatiales"]
+    pros: ["K non fixé", "détecte outliers", "formes arbitraires"]
+    cons: ["sensible aux paramètres eps et min_samples", "difficile en haute dimension"]
+    hyperparameters:
+      eps: [0.1, 0.3, 0.5, 0.7, 1.0]
+      min_samples: [3, 5, 10]
+      metric: ["euclidean", "manhattan"]
+    eval_metrics: ["silhouette", "davies_bouldin"]
+    illustration_svg: '<svg viewBox="0 0 600 160" xmlns="http://www.w3.org/2000/svg" class="w-full h-auto drop-shadow-xl rounded-xl"><rect width="600" height="160" fill="#0A0A0A" rx="12"/><!-- Grid pattern --><pattern id="grid" width="40" height="40" patternUnits="userSpaceOnUse">  <path d="M 40 0 L 0 0 0 40" fill="none" stroke="#222222" stroke-width="0.5"/></pattern><rect width="600" height="160" fill="url(#grid)" rx="12"/><!-- Inputs --><g transform="translate(20, 40)"></g><!-- Central Node --><rect x="230" y="40" width="140" height="80" fill="#1a1a1a" stroke="#444" rx="10" stroke-width="2"/><text x="300" y="70" fill="#EEEEEE" font-family="sans-serif" font-weight="bold" font-size="12" text-anchor="middle">DBSCAN</text><text x="300" y="90" fill="#888888" font-family="sans-serif" font-size="10" text-anchor="middle">ML Model</text><!-- Outputs --><g transform="translate(440, 40)"></g></svg>'
+    code_template: |
+      from sklearn.cluster import DBSCAN
+      from sklearn.preprocessing import StandardScaler
+      from sklearn.metrics import silhouette_score
+      from sklearn.neighbors import NearestNeighbors
+      import numpy as np, matplotlib.pyplot as plt
+
+      scaler = StandardScaler()
+      X_scaled = scaler.fit_transform(X)
+
+      # Estimation de eps via courbe k-distance
+      nbrs = NearestNeighbors(n_neighbors=5).fit(X_scaled)
+      distances, _ = nbrs.kneighbors(X_scaled)
+      distances = np.sort(distances[:, -1])
+      plt.plot(distances); plt.title("k-distance graph (choisir le coude)"); plt.show()
+
+      db = DBSCAN(eps=0.5, min_samples=5, metric="euclidean")
+      labels = db.fit_predict(X_scaled)
+      n_clusters = len(set(labels)) - (1 if -1 in labels else 0)
+      n_noise = np.sum(labels == -1)
+      print(f"Clusters : {n_clusters} | Outliers : {n_noise}")
+      if n_clusters > 1:
+          mask = labels != -1
+          print(f"Silhouette (sans outliers) : {silhouette_score(X_scaled[mask], labels[mask]):.3f}")
+
+  - id: hdbscan
+    name: "HDBSCAN"
+    enabled: true
+    library: hdbscan
+    class: hdbscan.HDBSCAN
+    category: "Densité Hiérarchique"
+    description: "Version hiérarchique de DBSCAN. Plus robuste, pas besoin de eps."
+    use_cases: ["données de densité variable", "clusters de tailles très différentes"]
+    pros: ["robuste", "pas de eps", "densité variable", "détecte outliers"]
+    cons: ["lent sur très grands datasets"]
+    hyperparameters:
+      min_cluster_size: [5, 10, 20, 50]
+      min_samples: [1, 5, 10]
+    eval_metrics: ["silhouette", "davies_bouldin"]
+    illustration_svg: '<svg viewBox="0 0 600 160" xmlns="http://www.w3.org/2000/svg" class="w-full h-auto drop-shadow-xl rounded-xl"><rect width="600" height="160" fill="#0A0A0A" rx="12"/><!-- Grid pattern --><pattern id="grid" width="40" height="40" patternUnits="userSpaceOnUse">  <path d="M 40 0 L 0 0 0 40" fill="none" stroke="#222222" stroke-width="0.5"/></pattern><rect width="600" height="160" fill="url(#grid)" rx="12"/><!-- Inputs --><g transform="translate(20, 40)"></g><!-- Central Node --><rect x="230" y="40" width="140" height="80" fill="#1a1a1a" stroke="#444" rx="10" stroke-width="2"/><text x="300" y="70" fill="#EEEEEE" font-family="sans-serif" font-weight="bold" font-size="12" text-anchor="middle">HDBSCAN</text><text x="300" y="90" fill="#888888" font-family="sans-serif" font-size="10" text-anchor="middle">ML Model</text><!-- Outputs --><g transform="translate(440, 40)"></g></svg>'
+    code_template: |
+      import hdbscan
+      from sklearn.preprocessing import StandardScaler
+      from sklearn.metrics import silhouette_score
+      import numpy as np
+
+      scaler = StandardScaler()
+      X_scaled = scaler.fit_transform(X)
+
+      clusterer = hdbscan.HDBSCAN(min_cluster_size=10, min_samples=5,
+                                   cluster_selection_method="eom")
+      labels = clusterer.fit_predict(X_scaled)
+      n_clusters = len(set(labels)) - (1 if -1 in labels else 0)
+      print(f"Clusters : {n_clusters} | Outliers : {np.sum(labels == -1)}")
+
+      # Probabilité d'appartenance
+      soft_labels = hdbscan.all_points_membership_vectors(clusterer)
+      print("Probabilités (5 premiers) :", soft_labels[:5])
+
+  - id: gaussian_mixture
+    name: "Gaussian Mixture Model (GMM)"
+    enabled: true
+    library: sklearn
+    class: sklearn.mixture.GaussianMixture
+    category: "Probabiliste"
+    description: "Modèle de mélange gaussien. Assigne des probabilités d'appartenance soft."
+    use_cases: ["clusters elliptiques", "probabilités d'appartenance", "génération de données"]
+    pros: ["soft assignment", "clusters elliptiques", "fondement probabiliste solide"]
+    cons: ["K fixé", "peut converger vers un minimum local"]
+    hyperparameters:
+      n_components: [2, 3, 4, 5, 6, 7, 8]
+      covariance_type: ["full", "tied", "diag", "spherical"]
+    eval_metrics: ["silhouette", "bic", "aic"]
+    illustration_svg: '<svg viewBox="0 0 600 160" xmlns="http://www.w3.org/2000/svg" class="w-full h-auto drop-shadow-xl rounded-xl"><rect width="600" height="160" fill="#0A0A0A" rx="12"/><!-- Grid pattern --><pattern id="grid" width="40" height="40" patternUnits="userSpaceOnUse">  <path d="M 40 0 L 0 0 0 40" fill="none" stroke="#222222" stroke-width="0.5"/></pattern><rect width="600" height="160" fill="url(#grid)" rx="12"/><!-- Inputs --><g transform="translate(20, 40)"></g><!-- Central Node --><rect x="230" y="40" width="140" height="80" fill="#1a1a1a" stroke="#444" rx="10" stroke-width="2"/><text x="300" y="70" fill="#EEEEEE" font-family="sans-serif" font-weight="bold" font-size="12" text-anchor="middle">Gaussian Mixture M</text><text x="300" y="90" fill="#888888" font-family="sans-serif" font-size="10" text-anchor="middle">ML Model</text><!-- Outputs --><g transform="translate(440, 40)"></g></svg>'
+    code_template: |
+      from sklearn.mixture import GaussianMixture
+      from sklearn.preprocessing import StandardScaler
+      from sklearn.metrics import silhouette_score
+      import numpy as np, matplotlib.pyplot as plt
+
+      scaler = StandardScaler()
+      X_scaled = scaler.fit_transform(X)
+
+      # Sélection de n_components par BIC
+      bic_scores = []
+      n_range = range(2, 10)
+      for n in n_range:
+          gm = GaussianMixture(n_components=n, covariance_type="full",
+                               random_state=42, n_init=3)
+          gm.fit(X_scaled)
+          bic_scores.append(gm.bic(X_scaled))
+
+      plt.plot(list(n_range), bic_scores, "go-")
+      plt.title("BIC (minimiser)"); plt.xlabel("n_components"); plt.show()
+
+      best_n = list(n_range)[np.argmin(bic_scores)]
+      gm = GaussianMixture(n_components=best_n, covariance_type="full",
+                           random_state=42, n_init=5)
+      labels = gm.fit_predict(X_scaled)
+      probas = gm.predict_proba(X_scaled)
+      print(f"n_components optimal : {best_n}")
+      print(f"Silhouette : {silhouette_score(X_scaled, labels):.3f}")
+
+  - id: agglomerative
+    name: "Clustering Agglomératif"
+    enabled: true
+    library: sklearn
+    class: sklearn.cluster.AgglomerativeClustering
+    category: "Hiérarchique"
+    description: "Fusionne itérativement les clusters les plus proches. Dendrogramme interprétable."
+    use_cases: ["structure hiérarchique dans les données", "quand K est inconnu", "taxonomies"]
+    pros: ["pas besoin de K a priori (dendrogramme)", "déterministe", "interprétable"]
+    cons: ["lent O(n²)", "pas scalable"]
+    hyperparameters:
+      n_clusters: [2, 3, 4, 5, 6, 7, 8]
+      linkage: ["ward", "complete", "average", "single"]
+    eval_metrics: ["silhouette", "davies_bouldin"]
+    illustration_svg: '<svg viewBox="0 0 600 160" xmlns="http://www.w3.org/2000/svg" class="w-full h-auto drop-shadow-xl rounded-xl"><rect width="600" height="160" fill="#0A0A0A" rx="12"/><!-- Grid pattern --><pattern id="grid" width="40" height="40" patternUnits="userSpaceOnUse">  <path d="M 40 0 L 0 0 0 40" fill="none" stroke="#222222" stroke-width="0.5"/></pattern><rect width="600" height="160" fill="url(#grid)" rx="12"/><!-- Inputs --><g transform="translate(20, 40)"></g><!-- Central Node --><rect x="230" y="40" width="140" height="80" fill="#1a1a1a" stroke="#444" rx="10" stroke-width="2"/><text x="300" y="70" fill="#EEEEEE" font-family="sans-serif" font-weight="bold" font-size="12" text-anchor="middle">Clustering Agglomé</text><text x="300" y="90" fill="#888888" font-family="sans-serif" font-size="10" text-anchor="middle">ML Model</text><!-- Outputs --><g transform="translate(440, 40)"></g></svg>'
+    code_template: |
+      from sklearn.cluster import AgglomerativeClustering
+      from sklearn.preprocessing import StandardScaler
+      from sklearn.metrics import silhouette_score
+      from scipy.cluster.hierarchy import dendrogram, linkage
+      import matplotlib.pyplot as plt
+
+      scaler = StandardScaler()
+      X_scaled = scaler.fit_transform(X)
+
+      # Dendrogramme pour choisir K
+      Z = linkage(X_scaled, method="ward")
+      plt.figure(figsize=(14, 6))
+      dendrogram(Z, truncate_mode="lastp", p=30)
+      plt.title("Dendrogramme (Ward)"); plt.show()
+
+      model = AgglomerativeClustering(n_clusters=4, linkage="ward")
+      labels = model.fit_predict(X_scaled)
+      print(f"Silhouette : {silhouette_score(X_scaled, labels):.3f}")
+
+# ──────────────────────────────────────────────────────────────────────────
+timeseries:
+# ──────────────────────────────────────────────────────────────────────────
+
+  - id: arima
+    name: "ARIMA"
+    enabled: true
+    library: statsmodels
+    class: statsmodels.tsa.arima.model.ARIMA
+    category: "Classique"
+    description: "AutoRégression Intégrée Moyenne Mobile. Modèle standard pour séries stationnaires."
+    use_cases: ["prévision univariée", "séries stationnaires ou rendues stationnaires"]
+    pros: ["interprétable", "fondement statistique solide", "bien documenté"]
+    cons: ["univarié uniquement", "hypothèse de stationnarité", "ordre p,d,q à choisir"]
+    hyperparameters:
+      p: [0, 1, 2, 3]
+      d: [0, 1, 2]
+      q: [0, 1, 2, 3]
+    eval_metrics: ["mae", "rmse", "mape", "smape"]
+    illustration_svg: '<svg viewBox="0 0 600 160" xmlns="http://www.w3.org/2000/svg" class="w-full h-auto drop-shadow-xl rounded-xl"><rect width="600" height="160" fill="#0A0A0A" rx="12"/><!-- Grid pattern --><pattern id="grid" width="40" height="40" patternUnits="userSpaceOnUse">  <path d="M 40 0 L 0 0 0 40" fill="none" stroke="#222222" stroke-width="0.5"/></pattern><rect width="600" height="160" fill="url(#grid)" rx="12"/><!-- Inputs --><g transform="translate(20, 40)"></g><!-- Central Node --><rect x="230" y="40" width="140" height="80" fill="#1a1a1a" stroke="#444" rx="10" stroke-width="2"/><text x="300" y="70" fill="#EEEEEE" font-family="sans-serif" font-weight="bold" font-size="12" text-anchor="middle">ARIMA</text><text x="300" y="90" fill="#888888" font-family="sans-serif" font-size="10" text-anchor="middle">ML Model</text><!-- Outputs --><g transform="translate(440, 40)"></g></svg>'
+    code_template: |
+      from statsmodels.tsa.arima.model import ARIMA
+      from statsmodels.tsa.stattools import adfuller
+      from sklearn.metrics import mean_absolute_error
+      import numpy as np, matplotlib.pyplot as plt
+
+      # Test de stationnarité
+      adf_result = adfuller(y_train)
+      print(f"ADF stat: {adf_result[0]:.4f} | p-value: {adf_result[1]:.4f}")
+      # Si p > 0.05 → non stationnaire → augmenter d
+
+      model = ARIMA(y_train, order=(2, 1, 2))
+      result = model.fit()
+      print(result.summary())
+
+      # Prévision sur n_steps
+      n_steps = len(y_test)
+      forecast = result.forecast(steps=n_steps)
+      mae = mean_absolute_error(y_test, forecast)
+      mape = np.mean(np.abs((y_test - forecast) / y_test)) * 100
+      print(f"MAE: {mae:.4f} | MAPE: {mape:.2f}%")
+
+      plt.plot(y_test.values, label="Réel")
+      plt.plot(forecast.values, label="Prévision")
+      plt.legend(); plt.show()
+
+  - id: auto_arima
+    name: "Auto-ARIMA"
+    enabled: true
+    library: pmdarima
+    class: pmdarima.auto_arima
+    category: "Classique"
+    description: "Sélection automatique des ordres ARIMA par critère AIC/BIC. Version automatisée de ARIMA."
+    use_cases: ["prévision univariée sans expertise TS", "exploration rapide"]
+    pros: ["automatique", "teste saisonnalité", "sélection des ordres"]
+    cons: ["lent sur grandes séries"]
+    hyperparameters:
+      seasonal: [true, false]
+      m: [1, 4, 7, 12]
+    eval_metrics: ["mae", "rmse", "mape"]
+    illustration_svg: '<svg viewBox="0 0 600 160" xmlns="http://www.w3.org/2000/svg" class="w-full h-auto drop-shadow-xl rounded-xl"><rect width="600" height="160" fill="#0A0A0A" rx="12"/><!-- Grid pattern --><pattern id="grid" width="40" height="40" patternUnits="userSpaceOnUse">  <path d="M 40 0 L 0 0 0 40" fill="none" stroke="#222222" stroke-width="0.5"/></pattern><rect width="600" height="160" fill="url(#grid)" rx="12"/><!-- Inputs --><g transform="translate(20, 40)"></g><!-- Central Node --><rect x="230" y="40" width="140" height="80" fill="#1a1a1a" stroke="#444" rx="10" stroke-width="2"/><text x="300" y="70" fill="#EEEEEE" font-family="sans-serif" font-weight="bold" font-size="12" text-anchor="middle">Auto-ARIMA</text><text x="300" y="90" fill="#888888" font-family="sans-serif" font-size="10" text-anchor="middle">ML Model</text><!-- Outputs --><g transform="translate(440, 40)"></g></svg>'
+    code_template: |
+      import pmdarima as pm
+      from sklearn.metrics import mean_absolute_error
+      import numpy as np
+
+      model = pm.auto_arima(y_train,
+                            seasonal=True, m=12,        # m=7 pour données hebdo
+                            stepwise=True,
+                            information_criterion="aic",
+                            error_action="ignore",
+                            suppress_warnings=True,
+                            trace=True)
+      print(model.summary())
+
+      forecast = model.predict(n_periods=len(y_test))
+      mae = mean_absolute_error(y_test, forecast)
+      mape = np.mean(np.abs((y_test - forecast) / y_test)) * 100
+      print(f"MAE: {mae:.4f} | MAPE: {mape:.2f}%")
+
+  - id: prophet
+    name: "Prophet (Meta)"
+    enabled: true
+    library: prophet
+    class: prophet.Prophet
+    category: "Décomposition"
+    description: "Modèle additif de décomposition tendance + saisonnalité + évènements. Très facile d'usage."
+    use_cases: ["séries avec saisonnalité forte", "effets de vacances/jours fériés", "datasets business"]
+    pros: ["robuste aux données manquantes", "gère plusieurs saisonnalités", "interprétable", "simple"]
+    cons: ["pas optimal pour séries très courtes ou sans saisonnalité"]
+    hyperparameters:
+      seasonality_mode: ["additive", "multiplicative"]
+      changepoint_prior_scale: [0.001, 0.01, 0.1, 0.5]
+      yearly_seasonality: [true, false, "auto"]
+    eval_metrics: ["mae", "rmse", "mape"]
+    illustration_svg: '<svg viewBox="0 0 600 160" xmlns="http://www.w3.org/2000/svg" class="w-full h-auto drop-shadow-xl rounded-xl"><rect width="600" height="160" fill="#0A0A0A" rx="12"/><!-- Grid pattern --><pattern id="grid" width="40" height="40" patternUnits="userSpaceOnUse">  <path d="M 40 0 L 0 0 0 40" fill="none" stroke="#222222" stroke-width="0.5"/></pattern><rect width="600" height="160" fill="url(#grid)" rx="12"/><!-- Inputs --><g transform="translate(20, 40)"></g><!-- Central Node --><rect x="230" y="40" width="140" height="80" fill="#1a1a1a" stroke="#444" rx="10" stroke-width="2"/><text x="300" y="70" fill="#EEEEEE" font-family="sans-serif" font-weight="bold" font-size="12" text-anchor="middle">Prophet (Meta)</text><text x="300" y="90" fill="#888888" font-family="sans-serif" font-size="10" text-anchor="middle">ML Model</text><!-- Outputs --><g transform="translate(440, 40)"></g></svg>'
+    code_template: |
+      from prophet import Prophet
+      from prophet.diagnostics import cross_validation, performance_metrics
+      import pandas as pd
+
+      # Prophet attend les colonnes 'ds' (datetime) et 'y' (target)
+      df_train = pd.DataFrame({"ds": dates_train, "y": y_train})
+      df_future = pd.DataFrame({"ds": dates_future})
+
+      model = Prophet(seasonality_mode="multiplicative",
+                      changepoint_prior_scale=0.05,
+                      yearly_seasonality="auto",
+                      weekly_seasonality=True,
+                      daily_seasonality=False)
+
+      # Ajouter des jours fériés (optionnel)
+      # model.add_country_holidays(country_name="FR")
+
+      model.fit(df_train)
+      forecast = model.predict(df_future)
+      model.plot(forecast)
+      model.plot_components(forecast)
+
+      # Cross-validation intégrée
+      df_cv = cross_validation(model, initial="365 days", period="90 days", horizon="30 days")
+      print(performance_metrics(df_cv)[["mape", "rmse", "mae"]].mean())
+
+  - id: xgboost_ts
+    name: "XGBoost (Time Series)"
+    enabled: true
+    library: xgboost
+    class: xgboost.XGBRegressor
+    category: "ML avec features temporelles"
+    description: "XGBoost avec features temporelles engineered (lags, rolling stats, encodage calendaire)."
+    use_cases: ["séries multivariées", "features exogènes importantes", "non-linéarités complexes"]
+    pros: ["capture non-linéarités", "features exogènes", "très performant"]
+    cons: ["pas de gestion native du temps", "feature engineering manuel nécessaire"]
+    hyperparameters:
+      n_estimators: [100, 200, 300]
+      learning_rate: [0.01, 0.05, 0.1]
+      max_depth: [3, 5, 7]
+    eval_metrics: ["mae", "rmse", "mape"]
+    illustration_svg: '<svg viewBox="0 0 600 160" xmlns="http://www.w3.org/2000/svg" class="w-full h-auto drop-shadow-xl rounded-xl"><rect width="600" height="160" fill="#0A0A0A" rx="12"/><!-- Grid pattern --><pattern id="grid" width="40" height="40" patternUnits="userSpaceOnUse">  <path d="M 40 0 L 0 0 0 40" fill="none" stroke="#222222" stroke-width="0.5"/></pattern><rect width="600" height="160" fill="url(#grid)" rx="12"/><!-- Inputs --><g transform="translate(20, 40)"></g><!-- Central Node --><rect x="230" y="40" width="140" height="80" fill="#1a1a1a" stroke="#444" rx="10" stroke-width="2"/><text x="300" y="70" fill="#EEEEEE" font-family="sans-serif" font-weight="bold" font-size="12" text-anchor="middle">XGBoost (Time Seri</text><text x="300" y="90" fill="#888888" font-family="sans-serif" font-size="10" text-anchor="middle">ML Model</text><!-- Outputs --><g transform="translate(440, 40)"></g></svg>'
+    code_template: |
+      import pandas as pd
+      import numpy as np
+      import xgboost as xgb
+      from sklearn.metrics import mean_absolute_error
+
+      def create_ts_features(df, target_col, lags=[1, 7, 14, 28], rolling_windows=[7, 14, 28]):
+          df = df.copy()
+          for lag in lags:
+              df[f"lag_{lag}"] = df[target_col].shift(lag)
+          for w in rolling_windows:
+              df[f"rolling_mean_{w}"] = df[target_col].shift(1).rolling(w).mean()
+              df[f"rolling_std_{w}"]  = df[target_col].shift(1).rolling(w).std()
+          df["dayofweek"]  = df.index.dayofweek
+          df["month"]      = df.index.month
+          df["quarter"]    = df.index.quarter
+          df["dayofyear"]  = df.index.dayofyear
+          return df.dropna()
+
+      df_feat = create_ts_features(df, target_col="y")
+      feature_cols = [c for c in df_feat.columns if c != "y"]
+
+      split_idx = int(len(df_feat) * 0.8)
+      X_train, y_train = df_feat.iloc[:split_idx][feature_cols], df_feat.iloc[:split_idx]["y"]
+      X_test,  y_test  = df_feat.iloc[split_idx:][feature_cols], df_feat.iloc[split_idx:]["y"]
+
+      model = xgb.XGBRegressor(n_estimators=300, learning_rate=0.05, max_depth=5,
+                                 subsample=0.8, random_state=42)
+      model.fit(X_train, y_train)
+      y_pred = model.predict(X_test)
+      mape = np.mean(np.abs((y_test - y_pred) / y_test)) * 100
+      print(f"MAE: {mean_absolute_error(y_test, y_pred):.4f} | MAPE: {mape:.2f}%")
+
+  - id: exponential_smoothing
+    name: "Exponential Smoothing (Holt-Winters)"
+    enabled: true
+    library: statsmodels
+    class: statsmodels.tsa.holtwinters.ExponentialSmoothing
+    category: "Classique"
+    description: "Lissage exponentiel avec tendance et saisonnalité. Simple et souvent très compétitif."
+    use_cases: ["prévision univariée", "tendance + saisonnalité claire", "données business"]
+    pros: ["simple", "compétitif sur données de courte portée", "interprétable"]
+    cons: ["univarié", "pas de covariables"]
+    hyperparameters:
+      trend: ["add", "mul", null]
+      seasonal: ["add", "mul", null]
+      seasonal_periods: [4, 7, 12, 52]
+    eval_metrics: ["mae", "rmse", "mape"]
+    illustration_svg: '<svg viewBox="0 0 600 160" xmlns="http://www.w3.org/2000/svg" class="w-full h-auto drop-shadow-xl rounded-xl"><rect width="600" height="160" fill="#0A0A0A" rx="12"/><!-- Grid pattern --><pattern id="grid" width="40" height="40" patternUnits="userSpaceOnUse">  <path d="M 40 0 L 0 0 0 40" fill="none" stroke="#222222" stroke-width="0.5"/></pattern><rect width="600" height="160" fill="url(#grid)" rx="12"/><!-- Inputs --><g transform="translate(20, 40)"></g><!-- Central Node --><rect x="230" y="40" width="140" height="80" fill="#1a1a1a" stroke="#444" rx="10" stroke-width="2"/><text x="300" y="70" fill="#EEEEEE" font-family="sans-serif" font-weight="bold" font-size="12" text-anchor="middle">Exponential Smooth</text><text x="300" y="90" fill="#888888" font-family="sans-serif" font-size="10" text-anchor="middle">ML Model</text><!-- Outputs --><g transform="translate(440, 40)"></g></svg>'
+    code_template: |
+      from statsmodels.tsa.holtwinters import ExponentialSmoothing
+      from sklearn.metrics import mean_absolute_error
+      import numpy as np
+
+      model = ExponentialSmoothing(y_train,
+                                   trend="add",
+                                   seasonal="add",
+                                   seasonal_periods=12,   # 12 pour données mensuelles
+                                   initialization_method="estimated")
+      result = model.fit(optimized=True)
+      print(result.summary())
+
+      forecast = result.forecast(len(y_test))
+      mae = mean_absolute_error(y_test, forecast)
+      mape = np.mean(np.abs((y_test - forecast) / y_test)) * 100
+      print(f"MAE: {mae:.4f} | MAPE: {mape:.2f}%")
+
+# ──────────────────────────────────────────────────────────────────────────
+anomaly_detection:
+# ──────────────────────────────────────────────────────────────────────────
+
+  - id: isolation_forest
+    name: "Isolation Forest"
+    enabled: true
+    library: sklearn
+    class: sklearn.ensemble.IsolationForest
+    category: "Ensemble"
+    description: "Isole les anomalies par partitionnement aléatoire. Efficace et rapide."
+    use_cases: ["détection d'anomalies multivariée", "fraude", "monitoring"]
+    pros: ["rapide", "scalable", "pas besoin de labeled anomalies", "gère la haute dim"]
+    cons: ["paramètre contamination à estimer"]
+    hyperparameters:
+      n_estimators: [100, 200]
+      contamination: [0.01, 0.05, 0.1, 0.2]
+      max_features: [0.5, 0.7, 1.0]
+    eval_metrics: ["precision", "recall", "f1", "roc_auc"]
+    illustration_svg: '<svg viewBox="0 0 600 160" xmlns="http://www.w3.org/2000/svg" class="w-full h-auto drop-shadow-xl rounded-xl"><rect width="600" height="160" fill="#0A0A0A" rx="12"/><!-- Grid pattern --><pattern id="grid" width="40" height="40" patternUnits="userSpaceOnUse">  <path d="M 40 0 L 0 0 0 40" fill="none" stroke="#222222" stroke-width="0.5"/></pattern><rect width="600" height="160" fill="url(#grid)" rx="12"/><!-- Inputs --><g transform="translate(20, 40)"></g><!-- Central Node --><rect x="230" y="40" width="140" height="80" fill="#1a1a1a" stroke="#444" rx="10" stroke-width="2"/><text x="300" y="70" fill="#EEEEEE" font-family="sans-serif" font-weight="bold" font-size="12" text-anchor="middle">Isolation Forest</text><text x="300" y="90" fill="#888888" font-family="sans-serif" font-size="10" text-anchor="middle">ML Model</text><!-- Outputs --><g transform="translate(440, 40)"></g></svg>'
+    code_template: |
+      from sklearn.ensemble import IsolationForest
+      from sklearn.preprocessing import StandardScaler
+      from sklearn.metrics import classification_report
+      import numpy as np
+
+      scaler = StandardScaler()
+      X_scaled = scaler.fit_transform(X)
+
+      model = IsolationForest(n_estimators=200, contamination=0.05,
+                              max_features=1.0, random_state=42, n_jobs=-1)
+      model.fit(X_scaled)
+
+      # Scores d'anomalie (plus bas = plus anormal)
+      scores = model.decision_function(X_scaled)
+      labels = model.predict(X_scaled)   # 1 = normal, -1 = anomalie
+      anomalies = np.where(labels == -1)[0]
+      print(f"Anomalies détectées : {len(anomalies)} ({len(anomalies)/len(X)*100:.1f}%)")
+
+      # Si labels de vérité disponibles (y_true : 0=normal, 1=anomalie)
+      # y_pred_bin = (labels == -1).astype(int)
+      # print(classification_report(y_true, y_pred_bin))
+
+  - id: local_outlier_factor
+    name: "Local Outlier Factor (LOF)"
+    enabled: true
+    library: sklearn
+    class: sklearn.neighbors.LocalOutlierFactor
+    category: "Densité"
+    description: "Détecte les anomalies par comparaison de densité locale. Bon pour les clusters de densité variable."
+    use_cases: ["anomalies contextuelles", "données géographiques", "clusters de densité variable"]
+    pros: ["sensible au contexte local", "intuitif"]
+    cons: ["lent sur grands datasets", "choix de n_neighbors critique"]
+    hyperparameters:
+      n_neighbors: [5, 10, 20, 30]
+      contamination: [0.05, 0.1, 0.15]
+    eval_metrics: ["precision", "recall", "f1"]
+    illustration_svg: '<svg viewBox="0 0 600 160" xmlns="http://www.w3.org/2000/svg" class="w-full h-auto drop-shadow-xl rounded-xl"><rect width="600" height="160" fill="#0A0A0A" rx="12"/><!-- Grid pattern --><pattern id="grid" width="40" height="40" patternUnits="userSpaceOnUse">  <path d="M 40 0 L 0 0 0 40" fill="none" stroke="#222222" stroke-width="0.5"/></pattern><rect width="600" height="160" fill="url(#grid)" rx="12"/><!-- Inputs --><g transform="translate(20, 40)"></g><!-- Central Node --><rect x="230" y="40" width="140" height="80" fill="#1a1a1a" stroke="#444" rx="10" stroke-width="2"/><text x="300" y="70" fill="#EEEEEE" font-family="sans-serif" font-weight="bold" font-size="12" text-anchor="middle">Local Outlier Fact</text><text x="300" y="90" fill="#888888" font-family="sans-serif" font-size="10" text-anchor="middle">ML Model</text><!-- Outputs --><g transform="translate(440, 40)"></g></svg>'
+    code_template: |
+      from sklearn.neighbors import LocalOutlierFactor
+      from sklearn.preprocessing import StandardScaler
+      import numpy as np
+
+      scaler = StandardScaler()
+      X_scaled = scaler.fit_transform(X)
+
+      lof = LocalOutlierFactor(n_neighbors=20, contamination=0.05,
+                               novelty=False, metric="euclidean")
+      labels = lof.fit_predict(X_scaled)   # 1 = normal, -1 = anomalie
+      scores = -lof.negative_outlier_factor_  # plus élevé = plus anormal
+
+      anomalies = np.where(labels == -1)[0]
+      print(f"Anomalies : {len(anomalies)}")
+
+      # Mode novelty=True pour prédire sur de nouvelles données
+      # lof_nov = LocalOutlierFactor(novelty=True, ...) ; lof_nov.fit(X_train)
+      # lof_nov.predict(X_new)
+
+  - id: one_class_svm
+    name: "One-Class SVM"
+    enabled: true
+    library: sklearn
+    class: sklearn.svm.OneClassSVM
+    category: "Kernel"
+    description: "SVM entraîné uniquement sur données normales. Trouve la frontière de la distribution nominale."
+    use_cases: ["quand les anomalies sont rares ou inconnues", "high dimensional data"]
+    pros: ["efficace en haute dimension", "noyaux flexibles"]
+    cons: ["scaling obligatoire", "très lent sur grands datasets"]
+    hyperparameters:
+      nu: [0.01, 0.05, 0.1, 0.2]
+      kernel: ["rbf", "linear"]
+      gamma: ["scale", "auto"]
+    eval_metrics: ["precision", "recall", "f1"]
+    illustration_svg: '<svg viewBox="0 0 600 160" xmlns="http://www.w3.org/2000/svg" class="w-full h-auto drop-shadow-xl rounded-xl"><rect width="600" height="160" fill="#0A0A0A" rx="12"/><!-- Grid pattern --><pattern id="grid" width="40" height="40" patternUnits="userSpaceOnUse">  <path d="M 40 0 L 0 0 0 40" fill="none" stroke="#222222" stroke-width="0.5"/></pattern><rect width="600" height="160" fill="url(#grid)" rx="12"/><!-- Inputs --><g transform="translate(20, 40)"></g><!-- Central Node --><rect x="230" y="40" width="140" height="80" fill="#1a1a1a" stroke="#444" rx="10" stroke-width="2"/><text x="300" y="70" fill="#EEEEEE" font-family="sans-serif" font-weight="bold" font-size="12" text-anchor="middle">One-Class SVM</text><text x="300" y="90" fill="#888888" font-family="sans-serif" font-size="10" text-anchor="middle">ML Model</text><!-- Outputs --><g transform="translate(440, 40)"></g></svg>'
+    code_template: |
+      from sklearn.svm import OneClassSVM
+      from sklearn.preprocessing import StandardScaler
+      import numpy as np
+
+      scaler = StandardScaler()
+      X_normal_scaled = scaler.fit_transform(X_normal)  # entraîné sur données normales seulement
+      X_test_scaled   = scaler.transform(X_test)
+
+      model = OneClassSVM(nu=0.05, kernel="rbf", gamma="scale")
+      model.fit(X_normal_scaled)
+
+      labels = model.predict(X_test_scaled)  # 1 = normal, -1 = anomalie
+      scores = model.decision_function(X_test_scaled)
+      print(f"Anomalies : {np.sum(labels == -1)}")
+
+  - id: autoencoder_anomaly
+    name: "Autoencodeur (Anomalie)"
+    enabled: true
+    library: torch
+    class: torch.nn.Module
+    category: "Deep Learning"
+    description: "Réseau encodeur-décodeur : détecte les anomalies par erreur de reconstruction élevée."
+    use_cases: ["anomalies complexes / non-linéaires", "images", "séries temporelles", "logs"]
+    pros: ["très puissant", "apprend des représentations latentes", "generalise bien"]
+    cons: ["nécessite beaucoup de données normales", "entraînement plus long", "GPU recommandé"]
+    hyperparameters:
+      latent_dim: [8, 16, 32]
+      epochs: [50, 100, 200]
+      threshold_percentile: [90, 95, 99]
+    eval_metrics: ["reconstruction_error", "roc_auc", "precision", "recall"]
+    illustration_svg: '<svg viewBox="0 0 600 160" xmlns="http://www.w3.org/2000/svg" class="w-full h-auto drop-shadow-xl rounded-xl"><rect width="600" height="160" fill="#0A0A0A" rx="12"/><!-- Grid pattern --><pattern id="grid" width="40" height="40" patternUnits="userSpaceOnUse">  <path d="M 40 0 L 0 0 0 40" fill="none" stroke="#222222" stroke-width="0.5"/></pattern><rect width="600" height="160" fill="url(#grid)" rx="12"/><!-- Inputs --><g transform="translate(20, 40)"></g><!-- Central Node --><rect x="230" y="40" width="140" height="80" fill="#1a1a1a" stroke="#444" rx="10" stroke-width="2"/><text x="300" y="70" fill="#EEEEEE" font-family="sans-serif" font-weight="bold" font-size="12" text-anchor="middle">Autoencodeur (Anom</text><text x="300" y="90" fill="#888888" font-family="sans-serif" font-size="10" text-anchor="middle">ML Model</text><!-- Outputs --><g transform="translate(440, 40)"></g></svg>'
+    code_template: |
+      import torch
+      import torch.nn as nn
+      from torch.utils.data import DataLoader, TensorDataset
+      import numpy as np
+
+      class Autoencoder(nn.Module):
+          def __init__(self, input_dim, latent_dim=16):
+              super().__init__()
+              self.encoder = nn.Sequential(
+                  nn.Linear(input_dim, 64), nn.ReLU(),
+                  nn.Linear(64, 32), nn.ReLU(),
+                  nn.Linear(32, latent_dim)
+              )
+              self.decoder = nn.Sequential(
+                  nn.Linear(latent_dim, 32), nn.ReLU(),
+                  nn.Linear(32, 64), nn.ReLU(),
+                  nn.Linear(64, input_dim)
+              )
+          def forward(self, x):
+              return self.decoder(self.encoder(x))
+
+      from sklearn.preprocessing import StandardScaler
+      scaler = StandardScaler()
+      X_normal_scaled = scaler.fit_transform(X_normal).astype(np.float32)
+      X_test_scaled   = scaler.transform(X_test).astype(np.float32)
+
+      loader = DataLoader(TensorDataset(torch.tensor(X_normal_scaled)),
+                          batch_size=64, shuffle=True)
+
+      model = Autoencoder(input_dim=X_normal_scaled.shape[1], latent_dim=16)
+      optimizer = torch.optim.Adam(model.parameters(), lr=1e-3)
+      criterion = nn.MSELoss()
+
+      for epoch in range(100):
+          for (batch,) in loader:
+              loss = criterion(model(batch), batch)
+              optimizer.zero_grad(); loss.backward(); optimizer.step()
+          if (epoch + 1) % 20 == 0:
+              print(f"Epoch {epoch+1} | Loss: {loss.item():.4f}")
+
+      # Seuil sur erreurs de reconstruction
+      with torch.no_grad():
+          X_t = torch.tensor(X_test_scaled)
+          recon_errors = ((model(X_t) - X_t) ** 2).mean(dim=1).numpy()
+
+      threshold = np.percentile(recon_errors, 95)
+      anomalies = recon_errors > threshold
+      print(f"Anomalies détectées : {anomalies.sum()}")
+
+# ──────────────────────────────────────────────────────────────────────────
+dimensionality_reduction:
+# ──────────────────────────────────────────────────────────────────────────
+
+  - id: pca
+    name: "PCA (Analyse en Composantes Principales)"
+    enabled: true
+    library: sklearn
+    class: sklearn.decomposition.PCA
+    category: "Linéaire"
+    description: "Réduit la dimensionnalité en maximisant la variance expliquée. Décomposition orthogonale."
+    use_cases: ["réduction de bruit", "visualisation", "preprocessing avant ML"]
+    pros: ["interprétable (loadings)", "rapide", "déterministe"]
+    cons: ["linéaire uniquement", "variance ≠ information discriminante"]
+    hyperparameters:
+      n_components: [2, 3, 5, 10, 0.95]
+      whiten: [true, false]
+    eval_metrics: ["explained_variance_ratio", "reconstruction_error"]
+    illustration_svg: '<svg viewBox="0 0 600 160" xmlns="http://www.w3.org/2000/svg" class="w-full h-auto drop-shadow-xl rounded-xl"><rect width="600" height="160" fill="#0A0A0A" rx="12"/><!-- Grid pattern --><pattern id="grid" width="40" height="40" patternUnits="userSpaceOnUse">  <path d="M 40 0 L 0 0 0 40" fill="none" stroke="#222222" stroke-width="0.5"/></pattern><rect width="600" height="160" fill="url(#grid)" rx="12"/><!-- Inputs --><g transform="translate(20, 40)"></g><!-- Central Node --><rect x="230" y="40" width="140" height="80" fill="#1a1a1a" stroke="#444" rx="10" stroke-width="2"/><text x="300" y="70" fill="#EEEEEE" font-family="sans-serif" font-weight="bold" font-size="12" text-anchor="middle">PCA (Analyse en Co</text><text x="300" y="90" fill="#888888" font-family="sans-serif" font-size="10" text-anchor="middle">ML Model</text><!-- Outputs --><g transform="translate(440, 40)"></g></svg>'
+    code_template: |
+      from sklearn.decomposition import PCA
+      from sklearn.preprocessing import StandardScaler
+      import matplotlib.pyplot as plt
+      import numpy as np
+
+      scaler = StandardScaler()
+      X_scaled = scaler.fit_transform(X)
+
+      # Variance expliquée par composante
+      pca_full = PCA().fit(X_scaled)
+      cum_var = np.cumsum(pca_full.explained_variance_ratio_)
+      plt.plot(cum_var); plt.axhline(0.95, color="r", linestyle="--")
+      plt.xlabel("Composantes"); plt.ylabel("Variance expliquée cumulée"); plt.show()
+
+      # PCA à 95% de variance
+      pca = PCA(n_components=0.95, whiten=False)
+      X_pca = pca.fit_transform(X_scaled)
+      print(f"Dimensions : {X.shape[1]} → {X_pca.shape[1]}")
+
+      # Visualisation 2D
+      pca2 = PCA(n_components=2)
+      X_2d = pca2.fit_transform(X_scaled)
+      plt.scatter(X_2d[:, 0], X_2d[:, 1], c=y if y is not None else "steelblue", alpha=0.5)
+      plt.show()
+
+  - id: tsne
+    name: "t-SNE"
+    enabled: true
+    library: sklearn
+    class: sklearn.manifold.TSNE
+    category: "Non-linéaire"
+    description: "Visualisation 2D/3D non-linéaire. Préserve la structure locale. Standard pour visualisation."
+    use_cases: ["visualisation clusters", "exploration de données haute dim"]
+    pros: ["excellent pour visualisation", "révèle structure locale"]
+    cons: ["non déterministe", "lent O(n²)", "pas utilisable pour projection de nouveaux points"]
+    hyperparameters:
+      n_components: [2, 3]
+      perplexity: [5, 15, 30, 50]
+      learning_rate: [50, 100, 200, 500]
+      n_iter: [1000]
+    eval_metrics: ["trustworthiness"]
+    illustration_svg: '<svg viewBox="0 0 600 160" xmlns="http://www.w3.org/2000/svg" class="w-full h-auto drop-shadow-xl rounded-xl"><rect width="600" height="160" fill="#0A0A0A" rx="12"/><!-- Grid pattern --><pattern id="grid" width="40" height="40" patternUnits="userSpaceOnUse">  <path d="M 40 0 L 0 0 0 40" fill="none" stroke="#222222" stroke-width="0.5"/></pattern><rect width="600" height="160" fill="url(#grid)" rx="12"/><!-- Inputs --><g transform="translate(20, 40)"></g><!-- Central Node --><rect x="230" y="40" width="140" height="80" fill="#1a1a1a" stroke="#444" rx="10" stroke-width="2"/><text x="300" y="70" fill="#EEEEEE" font-family="sans-serif" font-weight="bold" font-size="12" text-anchor="middle">t-SNE</text><text x="300" y="90" fill="#888888" font-family="sans-serif" font-size="10" text-anchor="middle">ML Model</text><!-- Outputs --><g transform="translate(440, 40)"></g></svg>'
+    code_template: |
+      from sklearn.manifold import TSNE
+      from sklearn.preprocessing import StandardScaler
+      from sklearn.decomposition import PCA
+      import matplotlib.pyplot as plt
+
+      scaler = StandardScaler()
+      X_scaled = scaler.fit_transform(X)
+
+      # PCA → 50 dims avant t-SNE pour accélérer
+      if X_scaled.shape[1] > 50:
+          X_scaled = PCA(n_components=50).fit_transform(X_scaled)
+
+      tsne = TSNE(n_components=2, perplexity=30, learning_rate=200,
+                  n_iter=1000, random_state=42, verbose=1)
+      X_2d = tsne.fit_transform(X_scaled)
+
+      plt.figure(figsize=(10, 7))
+      scatter = plt.scatter(X_2d[:, 0], X_2d[:, 1],
+                            c=y if y is not None else "steelblue",
+                            cmap="tab10", alpha=0.6, s=10)
+      if y is not None:
+          plt.colorbar(scatter)
+      plt.title("t-SNE"); plt.show()
+
+  - id: umap_reduction
+    name: "UMAP"
+    enabled: true
+    library: umap-learn
+    class: umap.UMAP
+    category: "Non-linéaire"
+    description: "Réduction de dim basée sur la topologie. Plus rapide que t-SNE, préserve aussi la structure globale."
+    use_cases: ["visualisation", "preprocessing", "réduction pour clustering"]
+    pros: ["rapide", "préserve structure globale + locale", "projectable sur nouveaux points"]
+    cons: ["stochastique", "hyperparamètres subtils"]
+    hyperparameters:
+      n_components: [2, 3, 5, 10]
+      n_neighbors: [5, 10, 15, 30]
+      min_dist: [0.0, 0.1, 0.25, 0.5]
+    eval_metrics: ["trustworthiness"]
+    illustration_svg: '<svg viewBox="0 0 600 160" xmlns="http://www.w3.org/2000/svg" class="w-full h-auto drop-shadow-xl rounded-xl"><rect width="600" height="160" fill="#0A0A0A" rx="12"/><!-- Grid pattern --><pattern id="grid" width="40" height="40" patternUnits="userSpaceOnUse">  <path d="M 40 0 L 0 0 0 40" fill="none" stroke="#222222" stroke-width="0.5"/></pattern><rect width="600" height="160" fill="url(#grid)" rx="12"/><!-- Inputs --><g transform="translate(20, 40)"></g><!-- Central Node --><rect x="230" y="40" width="140" height="80" fill="#1a1a1a" stroke="#444" rx="10" stroke-width="2"/><text x="300" y="70" fill="#EEEEEE" font-family="sans-serif" font-weight="bold" font-size="12" text-anchor="middle">UMAP</text><text x="300" y="90" fill="#888888" font-family="sans-serif" font-size="10" text-anchor="middle">ML Model</text><!-- Outputs --><g transform="translate(440, 40)"></g></svg>'
+    code_template: |
+      import umap
+      from sklearn.preprocessing import StandardScaler
+      import matplotlib.pyplot as plt
+
+      scaler = StandardScaler()
+      X_scaled = scaler.fit_transform(X)
+
+      reducer = umap.UMAP(n_components=2, n_neighbors=15,
+                          min_dist=0.1, metric="euclidean", random_state=42)
+      X_2d = reducer.fit_transform(X_scaled)
+
+      plt.figure(figsize=(10, 7))
+      plt.scatter(X_2d[:, 0], X_2d[:, 1],
+                  c=y if y is not None else "steelblue",
+                  cmap="tab10", alpha=0.6, s=10)
+      plt.title("UMAP"); plt.show()
+
+      # Projection de nouveaux points (contrairement à t-SNE)
+      X_new_2d = reducer.transform(scaler.transform(X_new))
+
+  - id: kernel_pca
+    name: "Kernel PCA"
+    enabled: true
+    library: sklearn
+    class: sklearn.decomposition.KernelPCA
+    category: "Non-linéaire"
+    description: "PCA dans un espace de features implicite via kernel trick. Capture des relations non-linéaires."
+    use_cases: ["données non-linéaires", "preprocessing non-linéaire avant SVM"]
+    pros: ["non-linéaire", "noyaux flexibles (rbf, poly, cosine)"]
+    cons: ["lent sur grands datasets", "peu interprétable"]
+    hyperparameters:
+      n_components: [2, 5, 10, 20]
+      kernel: ["rbf", "poly", "cosine", "sigmoid"]
+      gamma: ["scale", 0.01, 0.1, 1]
+    eval_metrics: ["reconstruction_error"]
+    illustration_svg: '<svg viewBox="0 0 600 160" xmlns="http://www.w3.org/2000/svg" class="w-full h-auto drop-shadow-xl rounded-xl"><rect width="600" height="160" fill="#0A0A0A" rx="12"/><!-- Grid pattern --><pattern id="grid" width="40" height="40" patternUnits="userSpaceOnUse">  <path d="M 40 0 L 0 0 0 40" fill="none" stroke="#222222" stroke-width="0.5"/></pattern><rect width="600" height="160" fill="url(#grid)" rx="12"/><!-- Inputs --><g transform="translate(20, 40)"></g><!-- Central Node --><rect x="230" y="40" width="140" height="80" fill="#1a1a1a" stroke="#444" rx="10" stroke-width="2"/><text x="300" y="70" fill="#EEEEEE" font-family="sans-serif" font-weight="bold" font-size="12" text-anchor="middle">Kernel PCA</text><text x="300" y="90" fill="#888888" font-family="sans-serif" font-size="10" text-anchor="middle">ML Model</text><!-- Outputs --><g transform="translate(440, 40)"></g></svg>'
+    code_template: |
+      from sklearn.decomposition import KernelPCA
+      from sklearn.preprocessing import StandardScaler
+      import matplotlib.pyplot as plt
+
+      scaler = StandardScaler()
+      X_scaled = scaler.fit_transform(X)
+
+      kpca = KernelPCA(n_components=2, kernel="rbf", gamma=0.1,
+                       fit_inverse_transform=True, random_state=42)
+      X_kpca = kpca.fit_transform(X_scaled)
+
+      plt.scatter(X_kpca[:, 0], X_kpca[:, 1],
+                  c=y if y is not None else "steelblue", cmap="tab10", alpha=0.5)
+      plt.title("Kernel PCA (RBF)"); plt.show()
+
+# ──────────────────────────────────────────────────────────────────────────
+neural_networks:
+# ──────────────────────────────────────────────────────────────────────────
+
+  - id: mlp_clf
+    name: "MLP Classifier (sklearn)"
+    enabled: true
+    library: sklearn
+    class: sklearn.neural_network.MLPClassifier
+    category: "Réseau de Neurones"
+    description: "Perceptron multi-couches pour classification. Simple à utiliser, sans GPU."
+    use_cases: ["classification non-linéaire", "données tabulaires", "baseline deep learning"]
+    pros: ["non-linéaire", "intégration sklearn native", "rapide à expérimenter"]
+    cons: ["sensible au scaling", "convergence capricieuse", "moins puissant que PyTorch/TF"]
+    hyperparameters:
+      hidden_layer_sizes: ["(100,)", "(100, 50)", "(200, 100, 50)"]
+      activation: ["relu", "tanh"]
+      alpha: [0.0001, 0.001, 0.01]
+      learning_rate: ["constant", "adaptive"]
+      max_iter: [300, 500]
+    eval_metrics: ["accuracy", "f1_weighted", "roc_auc"]
+    illustration_svg: '<svg viewBox="0 0 600 160" xmlns="http://www.w3.org/2000/svg" class="w-full h-auto drop-shadow-xl rounded-xl"><rect width="600" height="160" fill="#0A0A0A" rx="12"/><!-- Grid pattern --><pattern id="grid" width="40" height="40" patternUnits="userSpaceOnUse">  <path d="M 40 0 L 0 0 0 40" fill="none" stroke="#222222" stroke-width="0.5"/></pattern><rect width="600" height="160" fill="url(#grid)" rx="12"/><!-- Inputs --><g transform="translate(20, 40)"></g><!-- Central Node --><rect x="230" y="40" width="140" height="80" fill="#1a1a1a" stroke="#444" rx="10" stroke-width="2"/><text x="300" y="70" fill="#EEEEEE" font-family="sans-serif" font-weight="bold" font-size="12" text-anchor="middle">MLP Classifier (sk</text><text x="300" y="90" fill="#888888" font-family="sans-serif" font-size="10" text-anchor="middle">ML Model</text><!-- Outputs --><g transform="translate(440, 40)"></g></svg>'
+    code_template: |
+      from sklearn.neural_network import MLPClassifier
+      from sklearn.pipeline import Pipeline
+      from sklearn.preprocessing import StandardScaler
+      from sklearn.metrics import classification_report
+
+      model = Pipeline([
+          ("scaler", StandardScaler()),
+          ("mlp", MLPClassifier(hidden_layer_sizes=(200, 100),
+                                activation="relu",
+                                alpha=0.001,
+                                learning_rate="adaptive",
+                                max_iter=500,
+                                early_stopping=True,
+                                validation_fraction=0.1,
+                                random_state=42))
+      ])
+      model.fit(X_train, y_train)
+      y_pred = model.predict(X_test)
+      print(classification_report(y_test, y_pred))
+
+      # Courbe de perte
+      import matplotlib.pyplot as plt
+      plt.plot(model["mlp"].loss_curve_)
+      plt.title("Courbe de perte"); plt.xlabel("Epochs"); plt.show()
+
+  - id: pytorch_tabular_clf
+    name: "PyTorch MLP (Tabulaire)"
+    enabled: true
+    library: torch
+    class: torch.nn.Module
+    category: "Réseau de Neurones"
+    description: "MLP flexible en PyTorch pour classification tabulaire. Contrôle total sur l'architecture."
+    use_cases: ["classification tabulaire", "données mixtes", "architecture personnalisée"]
+    pros: ["très flexible", "GPU natif", "batch norm / dropout", "extensible"]
+    cons: ["verbeux", "GPU nécessaire pour gros datasets", "plus long à coder"]
+    hyperparameters:
+      hidden_dims: ["[256, 128, 64]", "[512, 256, 128]"]
+      dropout: [0.1, 0.2, 0.3, 0.5]
+      lr: [0.001, 0.0003, 0.0001]
+      batch_size: [64, 128, 256]
+      epochs: [50, 100, 200]
+    eval_metrics: ["accuracy", "f1_weighted", "roc_auc"]
+    illustration_svg: '<svg viewBox="0 0 600 160" xmlns="http://www.w3.org/2000/svg" class="w-full h-auto drop-shadow-xl rounded-xl"><rect width="600" height="160" fill="#0A0A0A" rx="12"/><!-- Grid pattern --><pattern id="grid" width="40" height="40" patternUnits="userSpaceOnUse">  <path d="M 40 0 L 0 0 0 40" fill="none" stroke="#222222" stroke-width="0.5"/></pattern><rect width="600" height="160" fill="url(#grid)" rx="12"/><!-- Inputs --><g transform="translate(20, 40)"></g><!-- Central Node --><rect x="230" y="40" width="140" height="80" fill="#1a1a1a" stroke="#444" rx="10" stroke-width="2"/><text x="300" y="70" fill="#EEEEEE" font-family="sans-serif" font-weight="bold" font-size="12" text-anchor="middle">PyTorch MLP (Tabul</text><text x="300" y="90" fill="#888888" font-family="sans-serif" font-size="10" text-anchor="middle">ML Model</text><!-- Outputs --><g transform="translate(440, 40)"></g></svg>'
+    code_template: |
+      import torch
+      import torch.nn as nn
+      from torch.utils.data import DataLoader, TensorDataset
+      from sklearn.preprocessing import StandardScaler
+      from sklearn.metrics import classification_report
+      import numpy as np
+
+      class TabularMLP(nn.Module):
+          def __init__(self, input_dim, hidden_dims, n_classes, dropout=0.2):
+              super().__init__()
+              layers = []
+              prev_dim = input_dim
+              for h in hidden_dims:
+                  layers += [nn.Linear(prev_dim, h), nn.BatchNorm1d(h),
+                              nn.ReLU(), nn.Dropout(dropout)]
+                  prev_dim = h
+              layers.append(nn.Linear(prev_dim, n_classes))
+              self.net = nn.Sequential(*layers)
+          def forward(self, x):
+              return self.net(x)
+
+      device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+
+      scaler = StandardScaler()
+      X_tr = torch.tensor(scaler.fit_transform(X_train), dtype=torch.float32)
+      X_te = torch.tensor(scaler.transform(X_test),      dtype=torch.float32)
+      y_tr = torch.tensor(y_train, dtype=torch.long)
+
+      loader = DataLoader(TensorDataset(X_tr, y_tr), batch_size=128, shuffle=True)
+
+      n_classes = len(np.unique(y_train))
+      model = TabularMLP(X_train.shape[1], [256, 128, 64], n_classes, dropout=0.2).to(device)
+      optimizer = torch.optim.Adam(model.parameters(), lr=3e-4)
+      criterion = nn.CrossEntropyLoss()
+
+      for epoch in range(100):
+          model.train()
+          for Xb, yb in loader:
+              Xb, yb = Xb.to(device), yb.to(device)
+              loss = criterion(model(Xb), yb)
+              optimizer.zero_grad(); loss.backward(); optimizer.step()
+          if (epoch + 1) % 20 == 0:
+              print(f"Epoch {epoch+1} | Loss: {loss.item():.4f}")
+
+      model.eval()
+      with torch.no_grad():
+          y_pred = model(X_te.to(device)).argmax(dim=1).cpu().numpy()
+      print(classification_report(y_test, y_pred))
+
+# ──────────────────────────────────────────────────────────────────────────
+nlp:
+# ──────────────────────────────────────────────────────────────────────────
+
+  - id: tfidf_logreg
+    name: "TF-IDF + Logistic Regression"
+    enabled: true
+    library: sklearn
+    class: sklearn.linear_model.LogisticRegression
+    category: "NLP — Classique"
+    description: "Pipeline TF-IDF vectorisation + régression logistique. Baseline NLP très solide."
+    use_cases: ["classification de texte", "analyse de sentiment", "détection de spam"]
+    pros: ["rapide", "interprétable", "très compétitif en baseline", "peu de données nécessaires"]
+    cons: ["ignore la sémantique et l'ordre des mots", "vocabulaire fixe"]
+    hyperparameters:
+      max_features: [10000, 50000, null]
+      ngram_range: ["(1,1)", "(1,2)", "(1,3)"]
+      C: [0.1, 1, 10]
+      analyzer: ["word", "char_wb"]
+    eval_metrics: ["accuracy", "f1_weighted", "roc_auc"]
+    illustration_svg: '<svg viewBox="0 0 600 160" xmlns="http://www.w3.org/2000/svg" class="w-full h-auto drop-shadow-xl rounded-xl"><rect width="600" height="160" fill="#0A0A0A" rx="12"/><!-- Grid pattern --><pattern id="grid" width="40" height="40" patternUnits="userSpaceOnUse">  <path d="M 40 0 L 0 0 0 40" fill="none" stroke="#222222" stroke-width="0.5"/></pattern><rect width="600" height="160" fill="url(#grid)" rx="12"/><!-- Inputs --><g transform="translate(20, 40)"></g><!-- Central Node --><rect x="230" y="40" width="140" height="80" fill="#1a1a1a" stroke="#444" rx="10" stroke-width="2"/><text x="300" y="70" fill="#EEEEEE" font-family="sans-serif" font-weight="bold" font-size="12" text-anchor="middle">TF-IDF + Logistic </text><text x="300" y="90" fill="#888888" font-family="sans-serif" font-size="10" text-anchor="middle">ML Model</text><!-- Outputs --><g transform="translate(440, 40)"></g></svg>'
+    code_template: |
+      from sklearn.feature_extraction.text import TfidfVectorizer
+      from sklearn.linear_model import LogisticRegression
+      from sklearn.pipeline import Pipeline
+      from sklearn.metrics import classification_report
+
+      model = Pipeline([
+          ("tfidf", TfidfVectorizer(max_features=50000, ngram_range=(1, 2),
+                                    sublinear_tf=True, strip_accents="unicode",
+                                    analyzer="word", min_df=2)),
+          ("clf", LogisticRegression(C=1.0, max_iter=1000, solver="saga", n_jobs=-1))
+      ])
+      model.fit(texts_train, y_train)
+      y_pred = model.predict(texts_test)
+      print(classification_report(y_test, y_pred))
+
+      # Mots les plus discriminants par classe
+      import numpy as np
+      feature_names = model["tfidf"].get_feature_names_out()
+      coef = model["clf"].coef_
+      for i, class_name in enumerate(model["clf"].classes_):
+          top_idx = np.argsort(coef[i])[-10:]
+          print(f"\nClasse '{class_name}' :", feature_names[top_idx].tolist())
+
+  - id: sentence_transformers_clf
+    name: "Sentence Transformers + Classifier"
+    enabled: true
+    library: sentence_transformers
+    class: sentence_transformers.SentenceTransformer
+    category: "NLP — Transformers"
+    description: "Embeddings de phrases denses via modèles pré-entraînés (SBERT) + classificateur downstream."
+    use_cases: ["classification sémantique", "similarité de texte", "peu de données (few-shot)"]
+    pros: ["capture la sémantique", "peu de données nécessaires", "multilingue", "état de l'art"]
+    cons: ["plus lent que TF-IDF", "GPU recommandé", "taille des modèles"]
+    hyperparameters:
+      model_name: ["all-MiniLM-L6-v2", "all-mpnet-base-v2", "paraphrase-multilingual-MiniLM-L12-v2"]
+      batch_size: [32, 64, 128]
+    eval_metrics: ["accuracy", "f1_weighted", "roc_auc"]
+    illustration_svg: '<svg viewBox="0 0 600 160" xmlns="http://www.w3.org/2000/svg" class="w-full h-auto drop-shadow-xl rounded-xl"><rect width="600" height="160" fill="#0A0A0A" rx="12"/><!-- Grid pattern --><pattern id="grid" width="40" height="40" patternUnits="userSpaceOnUse">  <path d="M 40 0 L 0 0 0 40" fill="none" stroke="#222222" stroke-width="0.5"/></pattern><rect width="600" height="160" fill="url(#grid)" rx="12"/><!-- Inputs --><g transform="translate(20, 40)"></g><!-- Central Node --><rect x="230" y="40" width="140" height="80" fill="#1a1a1a" stroke="#444" rx="10" stroke-width="2"/><text x="300" y="70" fill="#EEEEEE" font-family="sans-serif" font-weight="bold" font-size="12" text-anchor="middle">Sentence Transform</text><text x="300" y="90" fill="#888888" font-family="sans-serif" font-size="10" text-anchor="middle">ML Model</text><!-- Outputs --><g transform="translate(440, 40)"></g></svg>'
+    code_template: |
+      from sentence_transformers import SentenceTransformer
+      from sklearn.linear_model import LogisticRegression
+      from sklearn.metrics import classification_report
+      import numpy as np
+
+      # Modèle multilingue recommandé pour le français
+      encoder = SentenceTransformer("paraphrase-multilingual-MiniLM-L12-v2")
+
+      print("Encoding train...")
+      X_train_emb = encoder.encode(texts_train, batch_size=64,
+                                    show_progress_bar=True, normalize_embeddings=True)
+      print("Encoding test...")
+      X_test_emb  = encoder.encode(texts_test,  batch_size=64,
+                                    show_progress_bar=True, normalize_embeddings=True)
+
+      clf = LogisticRegression(C=1.0, max_iter=1000)
+      clf.fit(X_train_emb, y_train)
+      y_pred = clf.predict(X_test_emb)
+      print(classification_report(y_test, y_pred))
+
+      # Similarité cosinus entre deux phrases
+      from sentence_transformers.util import cos_sim
+      sim = cos_sim(X_train_emb[0], X_train_emb[1])
+      print(f"Similarité : {sim.item():.3f}")
+
+# ──────────────────────────────────────────────────────────────────────────
+survival_analysis:
+# ──────────────────────────────────────────────────────────────────────────
+
+  - id: kaplan_meier
+    name: "Kaplan-Meier"
+    enabled: true
+    library: lifelines
+    class: lifelines.KaplanMeierFitter
+    category: "Survie — Non-Paramétrique"
+    description: "Estimateur non-paramétrique de la fonction de survie. Standard pour la visualisation de survie."
+    use_cases: ["analyse de churn", "durée de vie client", "études cliniques", "time-to-event"]
+    pros: ["simple", "aucune hypothèse distributionnelle", "visualisation claire", "intervalles de confiance"]
+    cons: ["univarié", "pas de covariables"]
+    hyperparameters: {}
+    eval_metrics: ["log_rank_test", "median_survival_time"]
+    illustration_svg: '<svg viewBox="0 0 600 160" xmlns="http://www.w3.org/2000/svg" class="w-full h-auto drop-shadow-xl rounded-xl"><rect width="600" height="160" fill="#0A0A0A" rx="12"/><!-- Grid pattern --><pattern id="grid" width="40" height="40" patternUnits="userSpaceOnUse">  <path d="M 40 0 L 0 0 0 40" fill="none" stroke="#222222" stroke-width="0.5"/></pattern><rect width="600" height="160" fill="url(#grid)" rx="12"/><!-- Inputs --><g transform="translate(20, 40)"></g><!-- Central Node --><rect x="230" y="40" width="140" height="80" fill="#1a1a1a" stroke="#444" rx="10" stroke-width="2"/><text x="300" y="70" fill="#EEEEEE" font-family="sans-serif" font-weight="bold" font-size="12" text-anchor="middle">Kaplan-Meier</text><text x="300" y="90" fill="#888888" font-family="sans-serif" font-size="10" text-anchor="middle">ML Model</text><!-- Outputs --><g transform="translate(440, 40)"></g></svg>'
+    code_template: |
+      from lifelines import KaplanMeierFitter
+      from lifelines.statistics import logrank_test
+      import matplotlib.pyplot as plt
+
+      # durations : temps jusqu'à l'événement ou censure
+      # events    : 1 si événement observé, 0 si censuré
+      kmf = KaplanMeierFitter()
+      kmf.fit(durations, event_observed=events, label="Global")
+      kmf.plot_survival_function(ci_show=True)
+      plt.title("Courbe de survie Kaplan-Meier")
+      plt.xlabel("Temps"); plt.ylabel("P(survie)")
+      plt.show()
+      print(f"Médiane de survie : {kmf.median_survival_time_:.2f}")
+
+      # Comparaison de 2 groupes
+      mask_A = groups == "A"
+      kmf_A = KaplanMeierFitter().fit(durations[mask_A], events[mask_A], label="Groupe A")
+      kmf_B = KaplanMeierFitter().fit(durations[~mask_A], events[~mask_A], label="Groupe B")
+      ax = kmf_A.plot_survival_function()
+      kmf_B.plot_survival_function(ax=ax)
+      plt.show()
+
+      result = logrank_test(durations[mask_A], durations[~mask_A],
+                             events[mask_A], events[~mask_A])
+      print(f"Log-rank p-value : {result.p_value:.4f}")
+
+  - id: cox_ph
+    name: "Cox Proportional Hazards"
+    enabled: true
+    library: lifelines
+    class: lifelines.CoxPHFitter
+    category: "Survie — Semi-Paramétrique"
+    description: "Modèle de régression de survie avec covariables. Standard en analyse de survie multivariée."
+    use_cases: ["effet des covariables sur le risque", "prédiction de survie personnalisée"]
+    pros: ["interprétable (hazard ratios)", "gère les censures", "standard médical et churn"]
+    cons: ["hypothèse de risques proportionnels", "feature engineering nécessaire"]
+    hyperparameters:
+      penalizer: [0, 0.1, 0.5, 1.0]
+      l1_ratio: [0, 0.5, 1.0]
+    eval_metrics: ["concordance_index", "log_likelihood", "AIC"]
+    illustration_svg: '<svg viewBox="0 0 600 160" xmlns="http://www.w3.org/2000/svg" class="w-full h-auto drop-shadow-xl rounded-xl"><rect width="600" height="160" fill="#0A0A0A" rx="12"/><!-- Grid pattern --><pattern id="grid" width="40" height="40" patternUnits="userSpaceOnUse">  <path d="M 40 0 L 0 0 0 40" fill="none" stroke="#222222" stroke-width="0.5"/></pattern><rect width="600" height="160" fill="url(#grid)" rx="12"/><!-- Inputs --><g transform="translate(20, 40)"></g><!-- Central Node --><rect x="230" y="40" width="140" height="80" fill="#1a1a1a" stroke="#444" rx="10" stroke-width="2"/><text x="300" y="70" fill="#EEEEEE" font-family="sans-serif" font-weight="bold" font-size="12" text-anchor="middle">Cox Proportional H</text><text x="300" y="90" fill="#888888" font-family="sans-serif" font-size="10" text-anchor="middle">ML Model</text><!-- Outputs --><g transform="translate(440, 40)"></g></svg>'
+    code_template: |
+      from lifelines import CoxPHFitter
+      import pandas as pd
+
+      # df doit contenir : durée (col_duration), événement (col_event) + covariables
+      df_survival = df.copy()  # colonnes : duration, event, feature1, feature2, ...
+
+      cph = CoxPHFitter(penalizer=0.1, l1_ratio=0.0)
+      cph.fit(df_survival, duration_col="duration", event_col="event",
+              show_progress=True)
+      cph.print_summary()
+
+      # Concordance index
+      print(f"C-index : {cph.concordance_index_:.4f}")
+
+      # Prédiction de survie pour un individu
+      X_new = pd.DataFrame([{"feature1": 42, "feature2": 0.3}])
+      survival_func = cph.predict_survival_function(X_new)
+      survival_func.plot(title="Survie prédite")
+
+# ──────────────────────────────────────────────────────────────────────────
+calibration_and_evaluation:  # utilitaires transverses
+# ──────────────────────────────────────────────────────────────────────────
+
+  - id: probability_calibration
+    name: "Calibration des Probabilités"
+    enabled: true
+    library: sklearn
+    class: sklearn.calibration.CalibratedClassifierCV
+    category: "Post-traitement"
+    description: "Corrige les probabilités mal calibrées via Platt Scaling (sigmoïde) ou isotonic regression."
+    use_cases: ["quand les probabilités sont utilisées (pas seulement le label)", "après SVM, Boosting, RF"]
+    pros: ["améliore la calibration sans changer le ranking", "simple à appliquer"]
+    cons: ["peut légèrement dégrader l'AUC", "nécessite un jeu de calibration"]
+    hyperparameters:
+      method: ["sigmoid", "isotonic"]
+      cv: [5, 10, "prefit"]
+    eval_metrics: ["brier_score", "log_loss", "calibration_curve"]
+    illustration_svg: '<svg viewBox="0 0 600 160" xmlns="http://www.w3.org/2000/svg" class="w-full h-auto drop-shadow-xl rounded-xl"><rect width="600" height="160" fill="#0A0A0A" rx="12"/><!-- Grid pattern --><pattern id="grid" width="40" height="40" patternUnits="userSpaceOnUse">  <path d="M 40 0 L 0 0 0 40" fill="none" stroke="#222222" stroke-width="0.5"/></pattern><rect width="600" height="160" fill="url(#grid)" rx="12"/><!-- Inputs --><g transform="translate(20, 40)"></g><!-- Central Node --><rect x="230" y="40" width="140" height="80" fill="#1a1a1a" stroke="#444" rx="10" stroke-width="2"/><text x="300" y="70" fill="#EEEEEE" font-family="sans-serif" font-weight="bold" font-size="12" text-anchor="middle">Calibration des Pr</text><text x="300" y="90" fill="#888888" font-family="sans-serif" font-size="10" text-anchor="middle">ML Model</text><!-- Outputs --><g transform="translate(440, 40)"></g></svg>'
+    code_template: |
+      from sklearn.calibration import CalibratedClassifierCV, calibration_curve
+      from sklearn.ensemble import GradientBoostingClassifier
+      from sklearn.metrics import brier_score_loss
+      import matplotlib.pyplot as plt
+
+      base_clf = GradientBoostingClassifier(n_estimators=200, random_state=42)
+
+      # Calibration par cross-validation interne
+      calibrated = CalibratedClassifierCV(base_clf, method="isotonic", cv=5)
+      calibrated.fit(X_train, y_train)
+      proba_cal = calibrated.predict_proba(X_test)[:, 1]
+
+      # Courbe de calibration
+      prob_true, prob_pred = calibration_curve(y_test, proba_cal, n_bins=10)
+      plt.plot([0, 1], [0, 1], "k--", label="Parfait")
+      plt.plot(prob_pred, prob_true, "s-", label="Calibré")
+      plt.xlabel("Probabilité prédite"); plt.ylabel("Fraction de positifs")
+      plt.legend(); plt.show()
+
+      print(f"Brier Score : {brier_score_loss(y_test, proba_cal):.4f}")
