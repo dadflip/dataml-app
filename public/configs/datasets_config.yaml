@@ -1,0 +1,1257 @@
+# ══════════════════════════════════════════════════════════════════════════
+# CONTRAT I/O GLOBAL DU PIPELINE ML
+# ══════════════════════════════════════════════════════════════════════════
+#
+#  BLOC 1 — datasets_config.yaml
+#    INPUT  : paramètres utilisateur (FILE_PATH, TARGET_COL, …)
+#    OUTPUT : df, X, y, feature_names, target_name, task_type, meta
+#             + texts_train / texts_test  (NLP)
+#             + y_train / y_test / dates_train / dates_future  (timeseries)
+#
+#  BLOC 2 — eda_config.yaml
+#    INPUT  : df, X, y, feature_names, target_name, task_type, meta
+#             + texts_train / texts_test  (NLP)
+#             + TARGET_COL  (param local à préciser)
+#    OUTPUT : X_train, X_test, y_train, y_test
+#             preprocessor  (sklearn Pipeline/ColumnTransformer — fitted)
+#             feature_names_out  (list[str] — après OHE/poly/selection)
+#             task_type  (confirmé / inchangé)
+#             + dates_train / dates_future  (timeseries, pass-through)
+#             + texts_train / texts_test    (NLP, pass-through)
+#
+#  BLOC 3 — model_config.yaml
+#    INPUT  : X_train, X_test, y_train, y_test
+#             feature_names  (= feature_names_out du bloc 2)
+#             task_type, preprocessor
+#             + texts_train / texts_test     (NLP)
+#             + dates_train / dates_future   (timeseries)
+#    OUTPUT : model, y_pred, y_proba, metrics, shap_values
+#             + labels  (clustering)
+#             + forecast  (timeseries)
+#             + scores   (anomaly)
+#
+#  RÈGLE D'OR : ne jamais renommer ces variables entre les blocs.
+#  Seuls les paramètres en MAJUSCULES (FILE_PATH, TARGET_COL, etc.)
+#  sont à adapter selon le projet — tout le reste est câblé.
+# ══════════════════════════════════════════════════════════════════════════
+
+
+# ──────────────────────────────────────────────────────────────────────────
+# CONTRAT I/O — BLOC 1 : datasets_config.yaml
+# ──────────────────────────────────────────────────────────────────────────
+
+pipeline_contract:
+  bloc: 1
+  role: "Source de données — produit les variables standards du pipeline"
+
+  input_variables:
+    # Paramètres utilisateur à configurer avant exécution
+    FILE_PATH:        "str — chemin ou URL vers la source de données"
+    TARGET_COL:       "str | None — nom de la colonne cible (None si non supervisé)"
+    SEPARATOR:        "str — séparateur CSV (défaut : ',')"
+    ENCODING:         "str — encodage fichier (défaut : 'utf-8')"
+    SHEET_NAME:       "int | str — feuille Excel (défaut : 0)"
+    COLUMNS:          "list[str] | None — colonnes à lire (None = toutes)"
+    TEXT_COL:         "str | None — colonne texte pour NLP"
+    DATE_COL:         "str — colonne datetime pour timeseries"
+    FREQ:             "str — fréquence TS : 'D','W','M','H'…"
+    TEST_RATIO:       "float — ratio test pour split temporel (défaut : 0.2)"
+    HORIZON:          "int — nombre de pas à prévoir (timeseries)"
+    DB_URL:           "str — chaîne de connexion SQLAlchemy"
+    MONGO_URI:        "str — URI MongoDB"
+    PROJECT_ID:       "str — projet Google BigQuery"
+    API_KEY:          "str — clé API REST"
+    DATASET_NAME:     "str — nom dataset HuggingFace"
+    DATASET_ID:       "int — ID dataset OpenML"
+
+  output_variables:
+    # Variables TOUJOURS produites (données tabulaires)
+    df:               "pd.DataFrame — données brutes complètes"
+    X:                "pd.DataFrame — features (sans la target)"
+    y:                "pd.Series | None — target (None si non supervisé)"
+    feature_names:    "list[str] — noms des colonnes features"
+    target_name:      "str | None — nom de la colonne target"
+    task_type:        "str — 'classification' | 'regression' | 'clustering' | 'timeseries' | 'nlp' | 'anomaly' | 'survival'"
+    meta:             "dict — métadonnées source (path, shape, encoding, ticker…)"
+
+    # Variables supplémentaires selon task_type
+    texts_train:      "list[str] — corpus train (NLP uniquement)"
+    texts_test:       "list[str] — corpus test  (NLP uniquement)"
+    y_train:          "pd.Series — série train (timeseries uniquement)"
+    y_test:           "pd.Series — série test  (timeseries uniquement)"
+    dates_train:      "pd.DatetimeIndex — index dates train (timeseries)"
+    dates_future:     "pd.DatetimeIndex — index dates prévision (timeseries)"
+    durations:        "pd.Series — durées (survival uniquement)"
+    events:           "pd.Series — indicateurs événement 0/1 (survival)"
+    df_survival:      "pd.DataFrame — df complet avec duration+event+features (survival)"
+
+
+# ══════════════════════════════════════════════════════════════════════════
+# DATASET CATALOG — Sources · Formats · Domaines
+#   Fichiers locaux · APIs · Bases de données · Web · Streaming · Synthétiques
+# ══════════════════════════════════════════════════════════════════════════
+#
+# Structure de chaque entrée :
+#   id, name, enabled, category, format, description,
+#   use_cases, pros, cons,
+#   output_contract        ← ce que le code produit (variables standards)
+#   code_template          ← snippet prêt à l'emploi
+#
+# Convention output_contract (variables standards pour EDA/Preprocessing/Modèles) :
+#   df          : pd.DataFrame brut complet
+#   X           : np.ndarray ou pd.DataFrame — features (après split éventuel)
+#   y           : pd.Series ou np.ndarray — target (si supervisé)
+#   feature_names : list[str]
+#   target_name   : str | None
+#   task_type     : "classification" | "regression" | "clustering" |
+#                   "timeseries" | "nlp" | "anomaly" | "survival"
+#   meta          : dict — infos supplémentaires (dates, ids, textes bruts…)
+# ══════════════════════════════════════════════════════════════════════════
+
+
+# ──────────────────────────────────────────────────────────────────────────
+flat_files:
+# ──────────────────────────────────────────────────────────────────────────
+
+  - id: csv_local
+    name: "CSV / TSV Local"
+    enabled: true
+    category: "Fichier Plat"
+    format: "csv / tsv"
+    description: "Chargement d'un fichier CSV ou TSV local. Format universel, base de tout pipeline ML."
+    use_cases: ["données tabulaires standards", "exports Excel/SQL", "Kaggle datasets"]
+    pros: ["universel", "simple", "pandas natif"]
+    cons: ["pas de types stricts", "pas de compression native", "lent sur très grands fichiers"]
+    output_contract:
+      df: "pd.DataFrame — données brutes"
+      X: "pd.DataFrame — features numériques/catégorielles"
+      y: "pd.Series — target"
+      feature_names: "list[str]"
+      target_name: "str"
+      task_type: "classification | regression"
+    illustration_svg: '<svg viewBox="0 0 600 296" xmlns="http://www.w3.org/2000/svg" class="w-full h-auto drop-shadow-xl rounded-xl"><rect width="600" height="296" fill="#0A0A0A" rx="12"/><!-- Grid pattern --><pattern id="grid" width="40" height="40" patternUnits="userSpaceOnUse">  <path d="M 40 0 L 0 0 0 40" fill="none" stroke="#222222" stroke-width="0.5"/></pattern><rect width="600" height="296" fill="url(#grid)" rx="12"/><!-- Inputs --><g transform="translate(20, 40)">    <rect y="0" width="140" height="28" fill="#1a1a1a" stroke="#333333" rx="6"/>    <text x="10" y="18" fill="#A0A0A0" font-family="monospace" font-size="11" alignment-baseline="middle">Config/Params</text>    <path d="M 140 14 C 180 14, 200 148, 230 148" fill="none" stroke="#555" stroke-width="1.5" stroke-dasharray="4"/></g><!-- Central Node --><rect x="230" y="108" width="140" height="80" fill="#1a1a1a" stroke="#444" rx="10" stroke-width="2"/><text x="300" y="138" fill="#EEEEEE" font-family="sans-serif" font-weight="bold" font-size="12" text-anchor="middle">CSV / TSV Local</text><text x="300" y="158" fill="#888888" font-family="sans-serif" font-size="10" text-anchor="middle">Dataset Loader</text><!-- Outputs --><g transform="translate(440, 40)">    <path d="M 370 148 C 400 148, 420 14, 440 14" fill="none" stroke="#555" stroke-width="1.5" stroke-dasharray="4"/>    <rect y="0" width="140" height="28" fill="#0A0A0A" stroke="#3b82f6" stroke-width="1.5" rx="6"/>    <text x="10" y="18" fill="#bfdbfe" font-family="monospace" font-size="11" alignment-baseline="middle">df</text>    <path d="M 370 148 C 400 148, 420 50, 440 50" fill="none" stroke="#555" stroke-width="1.5" stroke-dasharray="4"/>    <rect y="36" width="140" height="28" fill="#0A0A0A" stroke="#3b82f6" stroke-width="1.5" rx="6"/>    <text x="10" y="54" fill="#bfdbfe" font-family="monospace" font-size="11" alignment-baseline="middle">X</text>    <path d="M 370 148 C 400 148, 420 86, 440 86" fill="none" stroke="#555" stroke-width="1.5" stroke-dasharray="4"/>    <rect y="72" width="140" height="28" fill="#0A0A0A" stroke="#3b82f6" stroke-width="1.5" rx="6"/>    <text x="10" y="90" fill="#bfdbfe" font-family="monospace" font-size="11" alignment-baseline="middle">y</text>    <path d="M 370 148 C 400 148, 420 122, 440 122" fill="none" stroke="#555" stroke-width="1.5" stroke-dasharray="4"/>    <rect y="108" width="140" height="28" fill="#0A0A0A" stroke="#3b82f6" stroke-width="1.5" rx="6"/>    <text x="10" y="126" fill="#bfdbfe" font-family="monospace" font-size="11" alignment-baseline="middle">feature_names</text>    <path d="M 370 148 C 400 148, 420 158, 440 158" fill="none" stroke="#555" stroke-width="1.5" stroke-dasharray="4"/>    <rect y="144" width="140" height="28" fill="#0A0A0A" stroke="#3b82f6" stroke-width="1.5" rx="6"/>    <text x="10" y="162" fill="#bfdbfe" font-family="monospace" font-size="11" alignment-baseline="middle">target_name</text>    <path d="M 370 148 C 400 148, 420 194, 440 194" fill="none" stroke="#555" stroke-width="1.5" stroke-dasharray="4"/>    <rect y="180" width="140" height="28" fill="#0A0A0A" stroke="#3b82f6" stroke-width="1.5" rx="6"/>    <text x="10" y="198" fill="#bfdbfe" font-family="monospace" font-size="11" alignment-baseline="middle">task_type</text></g></svg>'
+    code_template: |
+      import pandas as pd
+      import numpy as np
+
+      # ── Paramètres à adapter ──────────────────────────────────────────
+      FILE_PATH   = "data/dataset.csv"
+      TARGET_COL  = "target"          # None si non supervisé
+      SEPARATOR   = ","               # ";" ou "\t" pour TSV
+      ENCODING    = "utf-8"           # "latin-1" si caractères spéciaux
+      # ─────────────────────────────────────────────────────────────────
+
+      df = pd.read_csv(
+          FILE_PATH,
+          sep=SEPARATOR,
+          encoding=ENCODING,
+          low_memory=False,
+          parse_dates=True,     # tente de parser les colonnes date
+          infer_datetime_format=True,
+      )
+
+      print(f"Shape : {df.shape}")
+      print(f"Colonnes : {df.columns.tolist()}")
+      print(f"Types :\n{df.dtypes}")
+      print(f"Valeurs manquantes :\n{df.isnull().sum()}")
+
+      # ── Séparation features / target ─────────────────────────────────
+      if TARGET_COL and TARGET_COL in df.columns:
+          X = df.drop(columns=[TARGET_COL])
+          y = df[TARGET_COL]
+          task_type = "classification" if y.dtype == object or y.nunique() < 20 else "regression"
+      else:
+          X = df.copy()
+          y = None
+          task_type = "clustering"
+
+      feature_names = X.columns.tolist()
+      target_name   = TARGET_COL
+
+      meta = {"file_path": FILE_PATH, "shape": df.shape, "encoding": ENCODING}
+
+  - id: excel_local
+    name: "Excel (xlsx / xls)"
+    enabled: true
+    category: "Fichier Plat"
+    format: "xlsx / xls"
+    description: "Chargement d'un classeur Excel avec sélection de feuille et plage."
+    use_cases: ["données métier", "rapports financiers", "exports ERP/CRM"]
+    pros: ["très répandu en entreprise", "plusieurs feuilles", "formatage riche"]
+    cons: ["lent à lire", "formules non évaluées par pandas", "types ambigus"]
+    output_contract:
+      df: "pd.DataFrame"
+      X: "pd.DataFrame"
+      y: "pd.Series"
+      feature_names: "list[str]"
+      target_name: "str"
+      task_type: "classification | regression"
+    illustration_svg: '<svg viewBox="0 0 600 296" xmlns="http://www.w3.org/2000/svg" class="w-full h-auto drop-shadow-xl rounded-xl"><rect width="600" height="296" fill="#0A0A0A" rx="12"/><!-- Grid pattern --><pattern id="grid" width="40" height="40" patternUnits="userSpaceOnUse">  <path d="M 40 0 L 0 0 0 40" fill="none" stroke="#222222" stroke-width="0.5"/></pattern><rect width="600" height="296" fill="url(#grid)" rx="12"/><!-- Inputs --><g transform="translate(20, 40)">    <rect y="0" width="140" height="28" fill="#1a1a1a" stroke="#333333" rx="6"/>    <text x="10" y="18" fill="#A0A0A0" font-family="monospace" font-size="11" alignment-baseline="middle">Config/Params</text>    <path d="M 140 14 C 180 14, 200 148, 230 148" fill="none" stroke="#555" stroke-width="1.5" stroke-dasharray="4"/></g><!-- Central Node --><rect x="230" y="108" width="140" height="80" fill="#1a1a1a" stroke="#444" rx="10" stroke-width="2"/><text x="300" y="138" fill="#EEEEEE" font-family="sans-serif" font-weight="bold" font-size="12" text-anchor="middle">Excel (xlsx / xls)</text><text x="300" y="158" fill="#888888" font-family="sans-serif" font-size="10" text-anchor="middle">Dataset Loader</text><!-- Outputs --><g transform="translate(440, 40)">    <path d="M 370 148 C 400 148, 420 14, 440 14" fill="none" stroke="#555" stroke-width="1.5" stroke-dasharray="4"/>    <rect y="0" width="140" height="28" fill="#0A0A0A" stroke="#3b82f6" stroke-width="1.5" rx="6"/>    <text x="10" y="18" fill="#bfdbfe" font-family="monospace" font-size="11" alignment-baseline="middle">df</text>    <path d="M 370 148 C 400 148, 420 50, 440 50" fill="none" stroke="#555" stroke-width="1.5" stroke-dasharray="4"/>    <rect y="36" width="140" height="28" fill="#0A0A0A" stroke="#3b82f6" stroke-width="1.5" rx="6"/>    <text x="10" y="54" fill="#bfdbfe" font-family="monospace" font-size="11" alignment-baseline="middle">X</text>    <path d="M 370 148 C 400 148, 420 86, 440 86" fill="none" stroke="#555" stroke-width="1.5" stroke-dasharray="4"/>    <rect y="72" width="140" height="28" fill="#0A0A0A" stroke="#3b82f6" stroke-width="1.5" rx="6"/>    <text x="10" y="90" fill="#bfdbfe" font-family="monospace" font-size="11" alignment-baseline="middle">y</text>    <path d="M 370 148 C 400 148, 420 122, 440 122" fill="none" stroke="#555" stroke-width="1.5" stroke-dasharray="4"/>    <rect y="108" width="140" height="28" fill="#0A0A0A" stroke="#3b82f6" stroke-width="1.5" rx="6"/>    <text x="10" y="126" fill="#bfdbfe" font-family="monospace" font-size="11" alignment-baseline="middle">feature_names</text>    <path d="M 370 148 C 400 148, 420 158, 440 158" fill="none" stroke="#555" stroke-width="1.5" stroke-dasharray="4"/>    <rect y="144" width="140" height="28" fill="#0A0A0A" stroke="#3b82f6" stroke-width="1.5" rx="6"/>    <text x="10" y="162" fill="#bfdbfe" font-family="monospace" font-size="11" alignment-baseline="middle">target_name</text>    <path d="M 370 148 C 400 148, 420 194, 440 194" fill="none" stroke="#555" stroke-width="1.5" stroke-dasharray="4"/>    <rect y="180" width="140" height="28" fill="#0A0A0A" stroke="#3b82f6" stroke-width="1.5" rx="6"/>    <text x="10" y="198" fill="#bfdbfe" font-family="monospace" font-size="11" alignment-baseline="middle">task_type</text></g></svg>'
+    code_template: |
+      import pandas as pd
+
+      FILE_PATH  = "data/dataset.xlsx"
+      SHEET_NAME = 0          # 0 = première feuille, ou nom "Sheet1"
+      TARGET_COL = "target"
+      HEADER_ROW = 0          # ligne d'en-tête (0-indexed)
+      SKIP_ROWS  = None       # ex: [0, 1] pour ignorer des lignes
+
+      # Lister les feuilles disponibles
+      xl = pd.ExcelFile(FILE_PATH)
+      print("Feuilles disponibles :", xl.sheet_names)
+
+      df = pd.read_excel(
+          FILE_PATH,
+          sheet_name=SHEET_NAME,
+          header=HEADER_ROW,
+          skiprows=SKIP_ROWS,
+          engine="openpyxl",
+      )
+
+      # Nettoyage basique
+      df.columns = df.columns.str.strip().str.lower().str.replace(" ", "_")
+      df = df.dropna(how="all").dropna(axis=1, how="all")
+
+      print(f"Shape : {df.shape}")
+
+      if TARGET_COL and TARGET_COL in df.columns:
+          X = df.drop(columns=[TARGET_COL])
+          y = df[TARGET_COL]
+          task_type = "classification" if y.dtype == object or y.nunique() < 20 else "regression"
+      else:
+          X = df.copy()
+          y = None
+          task_type = "clustering"
+
+      feature_names = X.columns.tolist()
+      target_name   = TARGET_COL
+      meta = {"file": FILE_PATH, "sheet": SHEET_NAME}
+
+  - id: parquet_local
+    name: "Parquet"
+    enabled: true
+    category: "Fichier Colonnaire"
+    format: "parquet"
+    description: "Format colonnaire compressé. Standard de facto pour la data engineering et les gros volumes."
+    use_cases: ["gros volumes (>1M lignes)", "données Spark/Databricks", "pipelines de production"]
+    pros: ["très rapide en lecture", "compressé", "types stricts", "filtrage colonnaire"]
+    cons: ["non lisible à l'œil nu", "nécessite pyarrow ou fastparquet"]
+    output_contract:
+      df: "pd.DataFrame"
+      X: "pd.DataFrame"
+      y: "pd.Series"
+      feature_names: "list[str]"
+      target_name: "str"
+      task_type: "classification | regression | clustering"
+    illustration_svg: '<svg viewBox="0 0 600 296" xmlns="http://www.w3.org/2000/svg" class="w-full h-auto drop-shadow-xl rounded-xl"><rect width="600" height="296" fill="#0A0A0A" rx="12"/><!-- Grid pattern --><pattern id="grid" width="40" height="40" patternUnits="userSpaceOnUse">  <path d="M 40 0 L 0 0 0 40" fill="none" stroke="#222222" stroke-width="0.5"/></pattern><rect width="600" height="296" fill="url(#grid)" rx="12"/><!-- Inputs --><g transform="translate(20, 40)">    <rect y="0" width="140" height="28" fill="#1a1a1a" stroke="#333333" rx="6"/>    <text x="10" y="18" fill="#A0A0A0" font-family="monospace" font-size="11" alignment-baseline="middle">Config/Params</text>    <path d="M 140 14 C 180 14, 200 148, 230 148" fill="none" stroke="#555" stroke-width="1.5" stroke-dasharray="4"/></g><!-- Central Node --><rect x="230" y="108" width="140" height="80" fill="#1a1a1a" stroke="#444" rx="10" stroke-width="2"/><text x="300" y="138" fill="#EEEEEE" font-family="sans-serif" font-weight="bold" font-size="12" text-anchor="middle">Parquet</text><text x="300" y="158" fill="#888888" font-family="sans-serif" font-size="10" text-anchor="middle">Dataset Loader</text><!-- Outputs --><g transform="translate(440, 40)">    <path d="M 370 148 C 400 148, 420 14, 440 14" fill="none" stroke="#555" stroke-width="1.5" stroke-dasharray="4"/>    <rect y="0" width="140" height="28" fill="#0A0A0A" stroke="#3b82f6" stroke-width="1.5" rx="6"/>    <text x="10" y="18" fill="#bfdbfe" font-family="monospace" font-size="11" alignment-baseline="middle">df</text>    <path d="M 370 148 C 400 148, 420 50, 440 50" fill="none" stroke="#555" stroke-width="1.5" stroke-dasharray="4"/>    <rect y="36" width="140" height="28" fill="#0A0A0A" stroke="#3b82f6" stroke-width="1.5" rx="6"/>    <text x="10" y="54" fill="#bfdbfe" font-family="monospace" font-size="11" alignment-baseline="middle">X</text>    <path d="M 370 148 C 400 148, 420 86, 440 86" fill="none" stroke="#555" stroke-width="1.5" stroke-dasharray="4"/>    <rect y="72" width="140" height="28" fill="#0A0A0A" stroke="#3b82f6" stroke-width="1.5" rx="6"/>    <text x="10" y="90" fill="#bfdbfe" font-family="monospace" font-size="11" alignment-baseline="middle">y</text>    <path d="M 370 148 C 400 148, 420 122, 440 122" fill="none" stroke="#555" stroke-width="1.5" stroke-dasharray="4"/>    <rect y="108" width="140" height="28" fill="#0A0A0A" stroke="#3b82f6" stroke-width="1.5" rx="6"/>    <text x="10" y="126" fill="#bfdbfe" font-family="monospace" font-size="11" alignment-baseline="middle">feature_names</text>    <path d="M 370 148 C 400 148, 420 158, 440 158" fill="none" stroke="#555" stroke-width="1.5" stroke-dasharray="4"/>    <rect y="144" width="140" height="28" fill="#0A0A0A" stroke="#3b82f6" stroke-width="1.5" rx="6"/>    <text x="10" y="162" fill="#bfdbfe" font-family="monospace" font-size="11" alignment-baseline="middle">target_name</text>    <path d="M 370 148 C 400 148, 420 194, 440 194" fill="none" stroke="#555" stroke-width="1.5" stroke-dasharray="4"/>    <rect y="180" width="140" height="28" fill="#0A0A0A" stroke="#3b82f6" stroke-width="1.5" rx="6"/>    <text x="10" y="198" fill="#bfdbfe" font-family="monospace" font-size="11" alignment-baseline="middle">task_type</text></g></svg>'
+    code_template: |
+      import pandas as pd
+
+      FILE_PATH  = "data/dataset.parquet"  # ou dossier partitionné
+      TARGET_COL = "target"
+      COLUMNS    = None   # liste de colonnes à lire, ou None pour tout
+
+      # Lecture (pyarrow est le backend par défaut)
+      df = pd.read_parquet(FILE_PATH, columns=COLUMNS, engine="pyarrow")
+
+      # Lecture partitionnée (ex: dossier Spark)
+      # import pyarrow.dataset as ds
+      # dataset = ds.dataset("data/partitioned/", format="parquet")
+      # df = dataset.to_table(filter=ds.field("year") == 2024).to_pandas()
+
+      print(f"Shape : {df.shape}")
+      print(f"Types :\n{df.dtypes}")
+
+      if TARGET_COL and TARGET_COL in df.columns:
+          X = df.drop(columns=[TARGET_COL])
+          y = df[TARGET_COL]
+          task_type = "classification" if y.nunique() < 20 else "regression"
+      else:
+          X = df.copy()
+          y = None
+          task_type = "clustering"
+
+      feature_names = X.columns.tolist()
+      target_name   = TARGET_COL
+      meta = {"engine": "pyarrow", "file": FILE_PATH}
+
+  - id: json_local
+    name: "JSON / JSONL"
+    enabled: true
+    category: "Fichier Semi-Structuré"
+    format: "json / jsonl"
+    description: "Chargement de JSON tabulaire ou imbriqué, et de JSONL (JSON Lines) pour le streaming."
+    use_cases: ["données API", "logs applicatifs", "exports NoSQL", "NLP datasets"]
+    pros: ["flexible", "hiérarchique", "omniprésent"]
+    cons: ["imbrication complexe à aplatir", "lent sur gros volumes", "pas de types stricts"]
+    output_contract:
+      df: "pd.DataFrame (aplati)"
+      X: "pd.DataFrame"
+      y: "pd.Series | None"
+      feature_names: "list[str]"
+      task_type: "classification | regression | clustering | nlp"
+    illustration_svg: '<svg viewBox="0 0 600 260" xmlns="http://www.w3.org/2000/svg" class="w-full h-auto drop-shadow-xl rounded-xl"><rect width="600" height="260" fill="#0A0A0A" rx="12"/><!-- Grid pattern --><pattern id="grid" width="40" height="40" patternUnits="userSpaceOnUse">  <path d="M 40 0 L 0 0 0 40" fill="none" stroke="#222222" stroke-width="0.5"/></pattern><rect width="600" height="260" fill="url(#grid)" rx="12"/><!-- Inputs --><g transform="translate(20, 40)">    <rect y="0" width="140" height="28" fill="#1a1a1a" stroke="#333333" rx="6"/>    <text x="10" y="18" fill="#A0A0A0" font-family="monospace" font-size="11" alignment-baseline="middle">Config/Params</text>    <path d="M 140 14 C 180 14, 200 130, 230 130" fill="none" stroke="#555" stroke-width="1.5" stroke-dasharray="4"/></g><!-- Central Node --><rect x="230" y="90" width="140" height="80" fill="#1a1a1a" stroke="#444" rx="10" stroke-width="2"/><text x="300" y="120" fill="#EEEEEE" font-family="sans-serif" font-weight="bold" font-size="12" text-anchor="middle">JSON / JSONL</text><text x="300" y="140" fill="#888888" font-family="sans-serif" font-size="10" text-anchor="middle">Dataset Loader</text><!-- Outputs --><g transform="translate(440, 40)">    <path d="M 370 130 C 400 130, 420 14, 440 14" fill="none" stroke="#555" stroke-width="1.5" stroke-dasharray="4"/>    <rect y="0" width="140" height="28" fill="#0A0A0A" stroke="#3b82f6" stroke-width="1.5" rx="6"/>    <text x="10" y="18" fill="#bfdbfe" font-family="monospace" font-size="11" alignment-baseline="middle">df</text>    <path d="M 370 130 C 400 130, 420 50, 440 50" fill="none" stroke="#555" stroke-width="1.5" stroke-dasharray="4"/>    <rect y="36" width="140" height="28" fill="#0A0A0A" stroke="#3b82f6" stroke-width="1.5" rx="6"/>    <text x="10" y="54" fill="#bfdbfe" font-family="monospace" font-size="11" alignment-baseline="middle">X</text>    <path d="M 370 130 C 400 130, 420 86, 440 86" fill="none" stroke="#555" stroke-width="1.5" stroke-dasharray="4"/>    <rect y="72" width="140" height="28" fill="#0A0A0A" stroke="#3b82f6" stroke-width="1.5" rx="6"/>    <text x="10" y="90" fill="#bfdbfe" font-family="monospace" font-size="11" alignment-baseline="middle">y</text>    <path d="M 370 130 C 400 130, 420 122, 440 122" fill="none" stroke="#555" stroke-width="1.5" stroke-dasharray="4"/>    <rect y="108" width="140" height="28" fill="#0A0A0A" stroke="#3b82f6" stroke-width="1.5" rx="6"/>    <text x="10" y="126" fill="#bfdbfe" font-family="monospace" font-size="11" alignment-baseline="middle">feature_names</text>    <path d="M 370 130 C 400 130, 420 158, 440 158" fill="none" stroke="#555" stroke-width="1.5" stroke-dasharray="4"/>    <rect y="144" width="140" height="28" fill="#0A0A0A" stroke="#3b82f6" stroke-width="1.5" rx="6"/>    <text x="10" y="162" fill="#bfdbfe" font-family="monospace" font-size="11" alignment-baseline="middle">task_type</text></g></svg>'
+    code_template: |
+      import pandas as pd
+      import json
+
+      FILE_PATH  = "data/dataset.json"  # ou .jsonl
+      TARGET_COL = "label"
+      TEXT_COL   = None   # ex: "text" pour NLP
+      IS_JSONL   = FILE_PATH.endswith(".jsonl")
+
+      if IS_JSONL:
+          # JSON Lines : un objet JSON par ligne
+          records = []
+          with open(FILE_PATH, encoding="utf-8") as f:
+              for line in f:
+                  records.append(json.loads(line.strip()))
+          df = pd.DataFrame(records)
+      else:
+          df = pd.read_json(FILE_PATH, encoding="utf-8")
+
+      # Aplatissement des colonnes imbriquées (nested dicts)
+      nested_cols = [c for c in df.columns if df[c].apply(lambda x: isinstance(x, dict)).any()]
+      for col in nested_cols:
+          expanded = pd.json_normalize(df[col])
+          expanded.columns = [f"{col}.{c}" for c in expanded.columns]
+          df = pd.concat([df.drop(columns=[col]), expanded], axis=1)
+
+      print(f"Shape : {df.shape}")
+
+      if TARGET_COL and TARGET_COL in df.columns:
+          X = df.drop(columns=[TARGET_COL])
+          y = df[TARGET_COL]
+          task_type = "classification" if y.dtype == object or y.nunique() < 20 else "regression"
+      elif TEXT_COL:
+          X = df[[TEXT_COL]]
+          y = df[TARGET_COL] if TARGET_COL in df.columns else None
+          task_type = "nlp"
+      else:
+          X = df.copy()
+          y = None
+          task_type = "clustering"
+
+      feature_names = [c for c in X.columns if c != TEXT_COL]
+      target_name   = TARGET_COL
+      meta = {"text_col": TEXT_COL, "nested_cols_expanded": nested_cols}
+
+
+# ──────────────────────────────────────────────────────────────────────────
+databases:
+# ──────────────────────────────────────────────────────────────────────────
+
+  - id: sql_relational
+    name: "Base SQL (PostgreSQL / MySQL / SQLite)"
+    enabled: true
+    category: "Base de Données Relationnelle"
+    format: "SQL"
+    description: "Chargement depuis une base relationnelle via SQLAlchemy. Compatible PostgreSQL, MySQL, SQLite, MSSQL."
+    use_cases: ["données de production", "entrepôts de données", "systèmes transactionnels"]
+    pros: ["données fraîches", "requêtes complexes", "jointures", "filtrage en amont"]
+    cons: ["accès réseau nécessaire", "charge sur la DB", "droits d'accès"]
+    output_contract:
+      df: "pd.DataFrame"
+      X: "pd.DataFrame"
+      y: "pd.Series"
+      feature_names: "list[str]"
+      task_type: "classification | regression"
+    illustration_svg: '<svg viewBox="0 0 600 260" xmlns="http://www.w3.org/2000/svg" class="w-full h-auto drop-shadow-xl rounded-xl"><rect width="600" height="260" fill="#0A0A0A" rx="12"/><!-- Grid pattern --><pattern id="grid" width="40" height="40" patternUnits="userSpaceOnUse">  <path d="M 40 0 L 0 0 0 40" fill="none" stroke="#222222" stroke-width="0.5"/></pattern><rect width="600" height="260" fill="url(#grid)" rx="12"/><!-- Inputs --><g transform="translate(20, 40)">    <rect y="0" width="140" height="28" fill="#1a1a1a" stroke="#333333" rx="6"/>    <text x="10" y="18" fill="#A0A0A0" font-family="monospace" font-size="11" alignment-baseline="middle">Config/Params</text>    <path d="M 140 14 C 180 14, 200 130, 230 130" fill="none" stroke="#555" stroke-width="1.5" stroke-dasharray="4"/></g><!-- Central Node --><rect x="230" y="90" width="140" height="80" fill="#1a1a1a" stroke="#444" rx="10" stroke-width="2"/><text x="300" y="120" fill="#EEEEEE" font-family="sans-serif" font-weight="bold" font-size="12" text-anchor="middle">Base SQL (PostgreS</text><text x="300" y="140" fill="#888888" font-family="sans-serif" font-size="10" text-anchor="middle">Dataset Loader</text><!-- Outputs --><g transform="translate(440, 40)">    <path d="M 370 130 C 400 130, 420 14, 440 14" fill="none" stroke="#555" stroke-width="1.5" stroke-dasharray="4"/>    <rect y="0" width="140" height="28" fill="#0A0A0A" stroke="#3b82f6" stroke-width="1.5" rx="6"/>    <text x="10" y="18" fill="#bfdbfe" font-family="monospace" font-size="11" alignment-baseline="middle">df</text>    <path d="M 370 130 C 400 130, 420 50, 440 50" fill="none" stroke="#555" stroke-width="1.5" stroke-dasharray="4"/>    <rect y="36" width="140" height="28" fill="#0A0A0A" stroke="#3b82f6" stroke-width="1.5" rx="6"/>    <text x="10" y="54" fill="#bfdbfe" font-family="monospace" font-size="11" alignment-baseline="middle">X</text>    <path d="M 370 130 C 400 130, 420 86, 440 86" fill="none" stroke="#555" stroke-width="1.5" stroke-dasharray="4"/>    <rect y="72" width="140" height="28" fill="#0A0A0A" stroke="#3b82f6" stroke-width="1.5" rx="6"/>    <text x="10" y="90" fill="#bfdbfe" font-family="monospace" font-size="11" alignment-baseline="middle">y</text>    <path d="M 370 130 C 400 130, 420 122, 440 122" fill="none" stroke="#555" stroke-width="1.5" stroke-dasharray="4"/>    <rect y="108" width="140" height="28" fill="#0A0A0A" stroke="#3b82f6" stroke-width="1.5" rx="6"/>    <text x="10" y="126" fill="#bfdbfe" font-family="monospace" font-size="11" alignment-baseline="middle">feature_names</text>    <path d="M 370 130 C 400 130, 420 158, 440 158" fill="none" stroke="#555" stroke-width="1.5" stroke-dasharray="4"/>    <rect y="144" width="140" height="28" fill="#0A0A0A" stroke="#3b82f6" stroke-width="1.5" rx="6"/>    <text x="10" y="162" fill="#bfdbfe" font-family="monospace" font-size="11" alignment-baseline="middle">task_type</text></g></svg>'
+    code_template: |
+      import pandas as pd
+      from sqlalchemy import create_engine
+
+      # ── Connexions possibles ──────────────────────────────────────────
+      # PostgreSQL : "postgresql+psycopg2://user:pwd@host:5432/dbname"
+      # MySQL      : "mysql+pymysql://user:pwd@host:3306/dbname"
+      # SQLite     : "sqlite:///path/to/file.db"
+      # MSSQL      : "mssql+pyodbc://user:pwd@dsn"
+      DB_URL     = "postgresql+psycopg2://user:password@localhost:5432/mydb"
+      TARGET_COL = "target"
+
+      engine = create_engine(DB_URL, pool_pre_ping=True)
+
+      QUERY = """
+          SELECT
+              t.*,
+              f.feature_extra
+          FROM   main_table t
+          JOIN   features_table f ON t.id = f.id
+          WHERE  t.created_at >= '2023-01-01'
+            AND  t.status = 'active'
+          LIMIT  500000
+      """
+
+      with engine.connect() as conn:
+          df = pd.read_sql(QUERY, conn, parse_dates=["created_at"])
+
+      print(f"Shape : {df.shape}")
+
+      # Exclure les colonnes non-features (IDs, dates, textes)
+      EXCLUDE = ["id", "created_at", "updated_at", TARGET_COL]
+      X = df.drop(columns=[c for c in EXCLUDE if c in df.columns])
+      y = df[TARGET_COL] if TARGET_COL in df.columns else None
+      task_type = "classification" if y is not None and y.nunique() < 20 else "regression"
+
+      feature_names = X.columns.tolist()
+      target_name   = TARGET_COL
+      meta = {"query": QUERY, "db_url": DB_URL.split("@")[1]}  # masquer le mdp
+
+  - id: mongodb
+    name: "MongoDB"
+    enabled: true
+    category: "Base de Données NoSQL"
+    format: "BSON / Documents"
+    description: "Extraction depuis MongoDB et aplatissement en DataFrame tabulaire."
+    use_cases: ["données semi-structurées", "logs", "profils utilisateurs", "IoT"]
+    pros: ["flexible (schemaless)", "requêtes riches (agrégations)", "scalable"]
+    cons: ["imbrication à aplatir", "pas de jointures natives", "pymongo requis"]
+    output_contract:
+      df: "pd.DataFrame (aplati)"
+      X: "pd.DataFrame"
+      y: "pd.Series | None"
+      feature_names: "list[str]"
+      task_type: "classification | clustering | nlp"
+    illustration_svg: '<svg viewBox="0 0 600 260" xmlns="http://www.w3.org/2000/svg" class="w-full h-auto drop-shadow-xl rounded-xl"><rect width="600" height="260" fill="#0A0A0A" rx="12"/><!-- Grid pattern --><pattern id="grid" width="40" height="40" patternUnits="userSpaceOnUse">  <path d="M 40 0 L 0 0 0 40" fill="none" stroke="#222222" stroke-width="0.5"/></pattern><rect width="600" height="260" fill="url(#grid)" rx="12"/><!-- Inputs --><g transform="translate(20, 40)">    <rect y="0" width="140" height="28" fill="#1a1a1a" stroke="#333333" rx="6"/>    <text x="10" y="18" fill="#A0A0A0" font-family="monospace" font-size="11" alignment-baseline="middle">Config/Params</text>    <path d="M 140 14 C 180 14, 200 130, 230 130" fill="none" stroke="#555" stroke-width="1.5" stroke-dasharray="4"/></g><!-- Central Node --><rect x="230" y="90" width="140" height="80" fill="#1a1a1a" stroke="#444" rx="10" stroke-width="2"/><text x="300" y="120" fill="#EEEEEE" font-family="sans-serif" font-weight="bold" font-size="12" text-anchor="middle">MongoDB</text><text x="300" y="140" fill="#888888" font-family="sans-serif" font-size="10" text-anchor="middle">Dataset Loader</text><!-- Outputs --><g transform="translate(440, 40)">    <path d="M 370 130 C 400 130, 420 14, 440 14" fill="none" stroke="#555" stroke-width="1.5" stroke-dasharray="4"/>    <rect y="0" width="140" height="28" fill="#0A0A0A" stroke="#3b82f6" stroke-width="1.5" rx="6"/>    <text x="10" y="18" fill="#bfdbfe" font-family="monospace" font-size="11" alignment-baseline="middle">df</text>    <path d="M 370 130 C 400 130, 420 50, 440 50" fill="none" stroke="#555" stroke-width="1.5" stroke-dasharray="4"/>    <rect y="36" width="140" height="28" fill="#0A0A0A" stroke="#3b82f6" stroke-width="1.5" rx="6"/>    <text x="10" y="54" fill="#bfdbfe" font-family="monospace" font-size="11" alignment-baseline="middle">X</text>    <path d="M 370 130 C 400 130, 420 86, 440 86" fill="none" stroke="#555" stroke-width="1.5" stroke-dasharray="4"/>    <rect y="72" width="140" height="28" fill="#0A0A0A" stroke="#3b82f6" stroke-width="1.5" rx="6"/>    <text x="10" y="90" fill="#bfdbfe" font-family="monospace" font-size="11" alignment-baseline="middle">y</text>    <path d="M 370 130 C 400 130, 420 122, 440 122" fill="none" stroke="#555" stroke-width="1.5" stroke-dasharray="4"/>    <rect y="108" width="140" height="28" fill="#0A0A0A" stroke="#3b82f6" stroke-width="1.5" rx="6"/>    <text x="10" y="126" fill="#bfdbfe" font-family="monospace" font-size="11" alignment-baseline="middle">feature_names</text>    <path d="M 370 130 C 400 130, 420 158, 440 158" fill="none" stroke="#555" stroke-width="1.5" stroke-dasharray="4"/>    <rect y="144" width="140" height="28" fill="#0A0A0A" stroke="#3b82f6" stroke-width="1.5" rx="6"/>    <text x="10" y="162" fill="#bfdbfe" font-family="monospace" font-size="11" alignment-baseline="middle">task_type</text></g></svg>'
+    code_template: |
+      import pandas as pd
+      from pymongo import MongoClient
+
+      MONGO_URI   = "mongodb://localhost:27017/"
+      DB_NAME     = "mydb"
+      COLLECTION  = "mycollection"
+      TARGET_COL  = "label"
+      QUERY_FILTER = {"status": "active"}   # {} pour tout
+      PROJECTION   = {"_id": 0, "feature1": 1, "feature2": 1, "label": 1}
+
+      client = MongoClient(MONGO_URI)
+      db     = client[DB_NAME]
+      cursor = db[COLLECTION].find(QUERY_FILTER, PROJECTION).limit(100000)
+
+      df = pd.json_normalize(list(cursor))
+      print(f"Shape : {df.shape}")
+
+      if TARGET_COL and TARGET_COL in df.columns:
+          X = df.drop(columns=[TARGET_COL])
+          y = df[TARGET_COL]
+          task_type = "classification" if y.dtype == object or y.nunique() < 20 else "regression"
+      else:
+          X = df.copy()
+          y = None
+          task_type = "clustering"
+
+      feature_names = X.columns.tolist()
+      target_name   = TARGET_COL
+      meta = {"collection": COLLECTION, "filter": QUERY_FILTER}
+      client.close()
+
+  - id: bigquery
+    name: "Google BigQuery"
+    enabled: true
+    category: "Data Warehouse Cloud"
+    format: "SQL / Arrow"
+    description: "Requêtage BigQuery via google-cloud-bigquery. Transfert optimisé via BigQuery Storage API."
+    use_cases: ["analytics à l'échelle pétaoctets", "données Google Cloud", "data warehouse"]
+    pros: ["très rapide pour grands volumes", "SQL standard", "intégration GCP"]
+    cons: ["coût par octets lus", "GCP requis", "latence réseau"]
+    output_contract:
+      df: "pd.DataFrame"
+      X: "pd.DataFrame"
+      y: "pd.Series"
+      feature_names: "list[str]"
+      task_type: "classification | regression"
+    illustration_svg: '<svg viewBox="0 0 600 260" xmlns="http://www.w3.org/2000/svg" class="w-full h-auto drop-shadow-xl rounded-xl"><rect width="600" height="260" fill="#0A0A0A" rx="12"/><!-- Grid pattern --><pattern id="grid" width="40" height="40" patternUnits="userSpaceOnUse">  <path d="M 40 0 L 0 0 0 40" fill="none" stroke="#222222" stroke-width="0.5"/></pattern><rect width="600" height="260" fill="url(#grid)" rx="12"/><!-- Inputs --><g transform="translate(20, 40)">    <rect y="0" width="140" height="28" fill="#1a1a1a" stroke="#333333" rx="6"/>    <text x="10" y="18" fill="#A0A0A0" font-family="monospace" font-size="11" alignment-baseline="middle">Config/Params</text>    <path d="M 140 14 C 180 14, 200 130, 230 130" fill="none" stroke="#555" stroke-width="1.5" stroke-dasharray="4"/></g><!-- Central Node --><rect x="230" y="90" width="140" height="80" fill="#1a1a1a" stroke="#444" rx="10" stroke-width="2"/><text x="300" y="120" fill="#EEEEEE" font-family="sans-serif" font-weight="bold" font-size="12" text-anchor="middle">Google BigQuery</text><text x="300" y="140" fill="#888888" font-family="sans-serif" font-size="10" text-anchor="middle">Dataset Loader</text><!-- Outputs --><g transform="translate(440, 40)">    <path d="M 370 130 C 400 130, 420 14, 440 14" fill="none" stroke="#555" stroke-width="1.5" stroke-dasharray="4"/>    <rect y="0" width="140" height="28" fill="#0A0A0A" stroke="#3b82f6" stroke-width="1.5" rx="6"/>    <text x="10" y="18" fill="#bfdbfe" font-family="monospace" font-size="11" alignment-baseline="middle">df</text>    <path d="M 370 130 C 400 130, 420 50, 440 50" fill="none" stroke="#555" stroke-width="1.5" stroke-dasharray="4"/>    <rect y="36" width="140" height="28" fill="#0A0A0A" stroke="#3b82f6" stroke-width="1.5" rx="6"/>    <text x="10" y="54" fill="#bfdbfe" font-family="monospace" font-size="11" alignment-baseline="middle">X</text>    <path d="M 370 130 C 400 130, 420 86, 440 86" fill="none" stroke="#555" stroke-width="1.5" stroke-dasharray="4"/>    <rect y="72" width="140" height="28" fill="#0A0A0A" stroke="#3b82f6" stroke-width="1.5" rx="6"/>    <text x="10" y="90" fill="#bfdbfe" font-family="monospace" font-size="11" alignment-baseline="middle">y</text>    <path d="M 370 130 C 400 130, 420 122, 440 122" fill="none" stroke="#555" stroke-width="1.5" stroke-dasharray="4"/>    <rect y="108" width="140" height="28" fill="#0A0A0A" stroke="#3b82f6" stroke-width="1.5" rx="6"/>    <text x="10" y="126" fill="#bfdbfe" font-family="monospace" font-size="11" alignment-baseline="middle">feature_names</text>    <path d="M 370 130 C 400 130, 420 158, 440 158" fill="none" stroke="#555" stroke-width="1.5" stroke-dasharray="4"/>    <rect y="144" width="140" height="28" fill="#0A0A0A" stroke="#3b82f6" stroke-width="1.5" rx="6"/>    <text x="10" y="162" fill="#bfdbfe" font-family="monospace" font-size="11" alignment-baseline="middle">task_type</text></g></svg>'
+    code_template: |
+      from google.cloud import bigquery
+      import pandas as pd
+
+      PROJECT_ID = "my-gcp-project"
+      TARGET_COL = "target"
+
+      client = bigquery.Client(project=PROJECT_ID)
+
+      QUERY = """
+          SELECT
+              feature1, feature2, feature3,
+              target
+          FROM   `my-gcp-project.my_dataset.my_table`
+          WHERE  DATE(created_at) >= '2024-01-01'
+          LIMIT  1000000
+      """
+
+      # Méthode standard (télécharge en RAM)
+      df = client.query(QUERY).to_dataframe()
+
+      # Méthode rapide via Storage API (gros volumes)
+      # df = client.query(QUERY).to_dataframe(create_bqstorage_client=True)
+
+      print(f"Shape : {df.shape}")
+
+      X = df.drop(columns=[TARGET_COL])
+      y = df[TARGET_COL]
+      task_type = "classification" if y.nunique() < 20 else "regression"
+
+      feature_names = X.columns.tolist()
+      target_name   = TARGET_COL
+      meta = {"project": PROJECT_ID, "query_bytes": "voir BigQuery Console"}
+
+
+# ──────────────────────────────────────────────────────────────────────────
+api_and_web:
+# ──────────────────────────────────────────────────────────────────────────
+
+  - id: rest_api
+    name: "REST API (HTTP/JSON)"
+    enabled: true
+    category: "API Web"
+    format: "JSON / XML"
+    description: "Collecte de données depuis une API REST avec pagination, authentification et retry."
+    use_cases: ["données financières", "météo", "réseaux sociaux", "SaaS"]
+    pros: ["données fraîches", "standardisé", "flexible"]
+    cons: ["rate limiting", "pagination complexe", "authentification", "instable"]
+    output_contract:
+      df: "pd.DataFrame"
+      X: "pd.DataFrame"
+      y: "pd.Series | None"
+      feature_names: "list[str]"
+      task_type: "classification | regression | timeseries"
+    illustration_svg: '<svg viewBox="0 0 600 260" xmlns="http://www.w3.org/2000/svg" class="w-full h-auto drop-shadow-xl rounded-xl"><rect width="600" height="260" fill="#0A0A0A" rx="12"/><!-- Grid pattern --><pattern id="grid" width="40" height="40" patternUnits="userSpaceOnUse">  <path d="M 40 0 L 0 0 0 40" fill="none" stroke="#222222" stroke-width="0.5"/></pattern><rect width="600" height="260" fill="url(#grid)" rx="12"/><!-- Inputs --><g transform="translate(20, 40)">    <rect y="0" width="140" height="28" fill="#1a1a1a" stroke="#333333" rx="6"/>    <text x="10" y="18" fill="#A0A0A0" font-family="monospace" font-size="11" alignment-baseline="middle">Config/Params</text>    <path d="M 140 14 C 180 14, 200 130, 230 130" fill="none" stroke="#555" stroke-width="1.5" stroke-dasharray="4"/></g><!-- Central Node --><rect x="230" y="90" width="140" height="80" fill="#1a1a1a" stroke="#444" rx="10" stroke-width="2"/><text x="300" y="120" fill="#EEEEEE" font-family="sans-serif" font-weight="bold" font-size="12" text-anchor="middle">REST API (HTTP/JSO</text><text x="300" y="140" fill="#888888" font-family="sans-serif" font-size="10" text-anchor="middle">Dataset Loader</text><!-- Outputs --><g transform="translate(440, 40)">    <path d="M 370 130 C 400 130, 420 14, 440 14" fill="none" stroke="#555" stroke-width="1.5" stroke-dasharray="4"/>    <rect y="0" width="140" height="28" fill="#0A0A0A" stroke="#3b82f6" stroke-width="1.5" rx="6"/>    <text x="10" y="18" fill="#bfdbfe" font-family="monospace" font-size="11" alignment-baseline="middle">df</text>    <path d="M 370 130 C 400 130, 420 50, 440 50" fill="none" stroke="#555" stroke-width="1.5" stroke-dasharray="4"/>    <rect y="36" width="140" height="28" fill="#0A0A0A" stroke="#3b82f6" stroke-width="1.5" rx="6"/>    <text x="10" y="54" fill="#bfdbfe" font-family="monospace" font-size="11" alignment-baseline="middle">X</text>    <path d="M 370 130 C 400 130, 420 86, 440 86" fill="none" stroke="#555" stroke-width="1.5" stroke-dasharray="4"/>    <rect y="72" width="140" height="28" fill="#0A0A0A" stroke="#3b82f6" stroke-width="1.5" rx="6"/>    <text x="10" y="90" fill="#bfdbfe" font-family="monospace" font-size="11" alignment-baseline="middle">y</text>    <path d="M 370 130 C 400 130, 420 122, 440 122" fill="none" stroke="#555" stroke-width="1.5" stroke-dasharray="4"/>    <rect y="108" width="140" height="28" fill="#0A0A0A" stroke="#3b82f6" stroke-width="1.5" rx="6"/>    <text x="10" y="126" fill="#bfdbfe" font-family="monospace" font-size="11" alignment-baseline="middle">feature_names</text>    <path d="M 370 130 C 400 130, 420 158, 440 158" fill="none" stroke="#555" stroke-width="1.5" stroke-dasharray="4"/>    <rect y="144" width="140" height="28" fill="#0A0A0A" stroke="#3b82f6" stroke-width="1.5" rx="6"/>    <text x="10" y="162" fill="#bfdbfe" font-family="monospace" font-size="11" alignment-baseline="middle">task_type</text></g></svg>'
+    code_template: |
+      import requests
+      import pandas as pd
+      import time
+      from typing import Optional
+
+      BASE_URL   = "https://api.example.com/v1"
+      API_KEY    = "YOUR_API_KEY"
+      ENDPOINT   = "/data"
+      TARGET_COL = "label"
+
+      HEADERS = {
+          "Authorization": f"Bearer {API_KEY}",
+          "Content-Type": "application/json"
+      }
+
+      def fetch_all_pages(endpoint: str, params: dict,
+                          page_key: str = "page",
+                          max_pages: int = 100) -> list:
+          """Pagination automatique."""
+          records = []
+          for page in range(1, max_pages + 1):
+              params[page_key] = page
+              try:
+                  response = requests.get(
+                      BASE_URL + endpoint,
+                      headers=HEADERS,
+                      params=params,
+                      timeout=30
+                  )
+                  response.raise_for_status()
+                  data = response.json()
+                  items = data.get("results", data.get("data", []))
+                  if not items:
+                      break
+                  records.extend(items)
+                  print(f"Page {page} : {len(items)} enregistrements")
+                  time.sleep(0.2)   # respect du rate limit
+              except requests.RequestException as e:
+                  print(f"Erreur page {page} : {e}")
+                  break
+          return records
+
+      params = {"limit": 100, "format": "json"}
+      records = fetch_all_pages(ENDPOINT, params)
+      df = pd.json_normalize(records)
+
+      print(f"Shape : {df.shape}")
+
+      if TARGET_COL and TARGET_COL in df.columns:
+          X = df.drop(columns=[TARGET_COL])
+          y = df[TARGET_COL]
+          task_type = "classification" if y.dtype == object or y.nunique() < 20 else "regression"
+      else:
+          X = df.copy()
+          y = None
+          task_type = "clustering"
+
+      feature_names = X.columns.tolist()
+      target_name   = TARGET_COL
+      meta = {"base_url": BASE_URL, "n_records": len(records)}
+
+  - id: web_scraping
+    name: "Web Scraping (HTML)"
+    enabled: true
+    category: "Web"
+    format: "HTML / CSS"
+    description: "Extraction de tableaux et données structurées depuis des pages web avec BeautifulSoup."
+    use_cases: ["données publiques", "prix e-commerce", "statistiques sportives", "immobilier"]
+    pros: ["accès à données non disponibles via API", "flexible"]
+    cons: ["fragile (structure HTML change)", "légalité à vérifier (robots.txt)", "lent"]
+    output_contract:
+      df: "pd.DataFrame"
+      X: "pd.DataFrame"
+      y: "pd.Series | None"
+      feature_names: "list[str]"
+      task_type: "regression | classification"
+    illustration_svg: '<svg viewBox="0 0 600 260" xmlns="http://www.w3.org/2000/svg" class="w-full h-auto drop-shadow-xl rounded-xl"><rect width="600" height="260" fill="#0A0A0A" rx="12"/><!-- Grid pattern --><pattern id="grid" width="40" height="40" patternUnits="userSpaceOnUse">  <path d="M 40 0 L 0 0 0 40" fill="none" stroke="#222222" stroke-width="0.5"/></pattern><rect width="600" height="260" fill="url(#grid)" rx="12"/><!-- Inputs --><g transform="translate(20, 40)">    <rect y="0" width="140" height="28" fill="#1a1a1a" stroke="#333333" rx="6"/>    <text x="10" y="18" fill="#A0A0A0" font-family="monospace" font-size="11" alignment-baseline="middle">Config/Params</text>    <path d="M 140 14 C 180 14, 200 130, 230 130" fill="none" stroke="#555" stroke-width="1.5" stroke-dasharray="4"/></g><!-- Central Node --><rect x="230" y="90" width="140" height="80" fill="#1a1a1a" stroke="#444" rx="10" stroke-width="2"/><text x="300" y="120" fill="#EEEEEE" font-family="sans-serif" font-weight="bold" font-size="12" text-anchor="middle">Web Scraping (HTML</text><text x="300" y="140" fill="#888888" font-family="sans-serif" font-size="10" text-anchor="middle">Dataset Loader</text><!-- Outputs --><g transform="translate(440, 40)">    <path d="M 370 130 C 400 130, 420 14, 440 14" fill="none" stroke="#555" stroke-width="1.5" stroke-dasharray="4"/>    <rect y="0" width="140" height="28" fill="#0A0A0A" stroke="#3b82f6" stroke-width="1.5" rx="6"/>    <text x="10" y="18" fill="#bfdbfe" font-family="monospace" font-size="11" alignment-baseline="middle">df</text>    <path d="M 370 130 C 400 130, 420 50, 440 50" fill="none" stroke="#555" stroke-width="1.5" stroke-dasharray="4"/>    <rect y="36" width="140" height="28" fill="#0A0A0A" stroke="#3b82f6" stroke-width="1.5" rx="6"/>    <text x="10" y="54" fill="#bfdbfe" font-family="monospace" font-size="11" alignment-baseline="middle">X</text>    <path d="M 370 130 C 400 130, 420 86, 440 86" fill="none" stroke="#555" stroke-width="1.5" stroke-dasharray="4"/>    <rect y="72" width="140" height="28" fill="#0A0A0A" stroke="#3b82f6" stroke-width="1.5" rx="6"/>    <text x="10" y="90" fill="#bfdbfe" font-family="monospace" font-size="11" alignment-baseline="middle">y</text>    <path d="M 370 130 C 400 130, 420 122, 440 122" fill="none" stroke="#555" stroke-width="1.5" stroke-dasharray="4"/>    <rect y="108" width="140" height="28" fill="#0A0A0A" stroke="#3b82f6" stroke-width="1.5" rx="6"/>    <text x="10" y="126" fill="#bfdbfe" font-family="monospace" font-size="11" alignment-baseline="middle">feature_names</text>    <path d="M 370 130 C 400 130, 420 158, 440 158" fill="none" stroke="#555" stroke-width="1.5" stroke-dasharray="4"/>    <rect y="144" width="140" height="28" fill="#0A0A0A" stroke="#3b82f6" stroke-width="1.5" rx="6"/>    <text x="10" y="162" fill="#bfdbfe" font-family="monospace" font-size="11" alignment-baseline="middle">task_type</text></g></svg>'
+    code_template: |
+      import requests
+      import pandas as pd
+      from bs4 import BeautifulSoup
+      import time
+
+      URL        = "https://example.com/data-table"
+      TARGET_COL = "price"
+      HEADERS    = {"User-Agent": "Mozilla/5.0 (compatible; DataBot/1.0)"}
+
+      # ── Option 1 : tableau HTML direct ───────────────────────────────
+      response = requests.get(URL, headers=HEADERS, timeout=30)
+      response.raise_for_status()
+      tables = pd.read_html(response.text)  # retourne une liste de DataFrames
+      df = tables[0]   # prendre le bon tableau
+
+      # ── Option 2 : parsing custom avec BeautifulSoup ─────────────────
+      soup = BeautifulSoup(response.text, "html.parser")
+      rows = []
+      for row in soup.select("table.data-table tbody tr"):
+          cells = [td.get_text(strip=True) for td in row.find_all("td")]
+          rows.append(cells)
+      headers = [th.get_text(strip=True) for th in soup.select("table.data-table thead th")]
+      df = pd.DataFrame(rows, columns=headers)
+
+      # ── Option 3 : scraping multi-pages ──────────────────────────────
+      all_dfs = []
+      for page in range(1, 11):
+          r = requests.get(f"{URL}?page={page}", headers=HEADERS, timeout=30)
+          all_dfs.extend(pd.read_html(r.text))
+          time.sleep(1.0)
+      df = pd.concat(all_dfs, ignore_index=True)
+
+      # Nettoyage basique
+      df.columns = df.columns.str.strip().str.lower().str.replace(" ", "_")
+      df = df.drop_duplicates()
+
+      if TARGET_COL and TARGET_COL in df.columns:
+          X = df.drop(columns=[TARGET_COL])
+          y = pd.to_numeric(df[TARGET_COL].astype(str).str.replace("[^0-9.]", "", regex=True),
+                            errors="coerce")
+          task_type = "regression"
+      else:
+          X = df.copy()
+          y = None
+          task_type = "clustering"
+
+      feature_names = X.columns.tolist()
+      target_name   = TARGET_COL
+      meta = {"url": URL}
+
+
+# ──────────────────────────────────────────────────────────────────────────
+scientific_and_benchmark:
+# ──────────────────────────────────────────────────────────────────────────
+
+  - id: sklearn_datasets
+    name: "Datasets sklearn (built-in)"
+    enabled: true
+    category: "Benchmark"
+    format: "Bunch (numpy)"
+    description: "Datasets de référence intégrés à sklearn. Idéaux pour tester et benchmarker rapidement."
+    use_cases: ["prototypage", "tests unitaires ML", "tutoriels", "benchmark modèles"]
+    pros: ["aucun téléchargement", "bien documentés", "variété de tâches"]
+    cons: ["petits datasets", "peu représentatifs des données réelles"]
+    output_contract:
+      df: "pd.DataFrame"
+      X: "np.ndarray | pd.DataFrame"
+      y: "np.ndarray | pd.Series"
+      feature_names: "list[str]"
+      target_name: "str"
+      task_type: "classification | regression | clustering"
+    illustration_svg: '<svg viewBox="0 0 600 296" xmlns="http://www.w3.org/2000/svg" class="w-full h-auto drop-shadow-xl rounded-xl"><rect width="600" height="296" fill="#0A0A0A" rx="12"/><!-- Grid pattern --><pattern id="grid" width="40" height="40" patternUnits="userSpaceOnUse">  <path d="M 40 0 L 0 0 0 40" fill="none" stroke="#222222" stroke-width="0.5"/></pattern><rect width="600" height="296" fill="url(#grid)" rx="12"/><!-- Inputs --><g transform="translate(20, 40)">    <rect y="0" width="140" height="28" fill="#1a1a1a" stroke="#333333" rx="6"/>    <text x="10" y="18" fill="#A0A0A0" font-family="monospace" font-size="11" alignment-baseline="middle">Config/Params</text>    <path d="M 140 14 C 180 14, 200 148, 230 148" fill="none" stroke="#555" stroke-width="1.5" stroke-dasharray="4"/></g><!-- Central Node --><rect x="230" y="108" width="140" height="80" fill="#1a1a1a" stroke="#444" rx="10" stroke-width="2"/><text x="300" y="138" fill="#EEEEEE" font-family="sans-serif" font-weight="bold" font-size="12" text-anchor="middle">Datasets sklearn (</text><text x="300" y="158" fill="#888888" font-family="sans-serif" font-size="10" text-anchor="middle">Dataset Loader</text><!-- Outputs --><g transform="translate(440, 40)">    <path d="M 370 148 C 400 148, 420 14, 440 14" fill="none" stroke="#555" stroke-width="1.5" stroke-dasharray="4"/>    <rect y="0" width="140" height="28" fill="#0A0A0A" stroke="#3b82f6" stroke-width="1.5" rx="6"/>    <text x="10" y="18" fill="#bfdbfe" font-family="monospace" font-size="11" alignment-baseline="middle">df</text>    <path d="M 370 148 C 400 148, 420 50, 440 50" fill="none" stroke="#555" stroke-width="1.5" stroke-dasharray="4"/>    <rect y="36" width="140" height="28" fill="#0A0A0A" stroke="#3b82f6" stroke-width="1.5" rx="6"/>    <text x="10" y="54" fill="#bfdbfe" font-family="monospace" font-size="11" alignment-baseline="middle">X</text>    <path d="M 370 148 C 400 148, 420 86, 440 86" fill="none" stroke="#555" stroke-width="1.5" stroke-dasharray="4"/>    <rect y="72" width="140" height="28" fill="#0A0A0A" stroke="#3b82f6" stroke-width="1.5" rx="6"/>    <text x="10" y="90" fill="#bfdbfe" font-family="monospace" font-size="11" alignment-baseline="middle">y</text>    <path d="M 370 148 C 400 148, 420 122, 440 122" fill="none" stroke="#555" stroke-width="1.5" stroke-dasharray="4"/>    <rect y="108" width="140" height="28" fill="#0A0A0A" stroke="#3b82f6" stroke-width="1.5" rx="6"/>    <text x="10" y="126" fill="#bfdbfe" font-family="monospace" font-size="11" alignment-baseline="middle">feature_names</text>    <path d="M 370 148 C 400 148, 420 158, 440 158" fill="none" stroke="#555" stroke-width="1.5" stroke-dasharray="4"/>    <rect y="144" width="140" height="28" fill="#0A0A0A" stroke="#3b82f6" stroke-width="1.5" rx="6"/>    <text x="10" y="162" fill="#bfdbfe" font-family="monospace" font-size="11" alignment-baseline="middle">target_name</text>    <path d="M 370 148 C 400 148, 420 194, 440 194" fill="none" stroke="#555" stroke-width="1.5" stroke-dasharray="4"/>    <rect y="180" width="140" height="28" fill="#0A0A0A" stroke="#3b82f6" stroke-width="1.5" rx="6"/>    <text x="10" y="198" fill="#bfdbfe" font-family="monospace" font-size="11" alignment-baseline="middle">task_type</text></g></svg>'
+    code_template: |
+      from sklearn import datasets
+      import pandas as pd
+      import numpy as np
+
+      # ── Choisir le dataset ───────────────────────────────────────────
+      # Classification :
+      #   load_iris()         — 150 obs, 4 features, 3 classes
+      #   load_breast_cancer()— 569 obs, 30 features, 2 classes
+      #   load_wine()         — 178 obs, 13 features, 3 classes
+      #   load_digits()       — 1797 obs, 64 features (images 8x8)
+      # Régression :
+      #   load_diabetes()     — 442 obs, 10 features
+      #   load_california_housing() — 20640 obs, 8 features
+      # Clustering :
+      #   make_blobs(), make_moons(), make_circles()
+
+      bunch = datasets.load_breast_cancer(as_frame=True)
+
+      df           = bunch.frame
+      X            = bunch.data
+      y            = bunch.target
+      feature_names = bunch.feature_names.tolist()
+      target_name  = "target"
+      task_type    = "classification"  # ou "regression"
+
+      # Datasets synthétiques
+      X_cls, y_cls = datasets.make_classification(
+          n_samples=10000, n_features=20, n_informative=10,
+          n_redundant=5, n_classes=3, random_state=42
+      )
+      X_reg, y_reg = datasets.make_regression(
+          n_samples=10000, n_features=20, noise=0.1, random_state=42
+      )
+      X_blob, y_blob = datasets.make_blobs(
+          n_samples=5000, n_features=10, centers=5, random_state=42
+      )
+
+      print(f"Classification  — X: {X_cls.shape} | classes: {np.unique(y_cls)}")
+      print(f"Régression      — X: {X_reg.shape}")
+      print(f"Clustering      — X: {X_blob.shape} | clusters: {np.unique(y_blob)}")
+
+      meta = {"source": "sklearn.datasets", "dataset": "breast_cancer"}
+
+  - id: huggingface_datasets
+    name: "Hugging Face Datasets"
+    enabled: true
+    category: "NLP / Multimodal"
+    format: "Arrow / Parquet"
+    description: "Hub de datasets NLP, vision et audio. Accès à des milliers de datasets standardisés."
+    use_cases: ["NLP", "classification de texte", "NER", "résumé", "QA", "vision"]
+    pros: ["immense catalogue", "streaming possible", "intégration transformers", "formats standardisés"]
+    cons: ["téléchargement parfois long", "nécessite huggingface_hub", "RAM si grand dataset"]
+    output_contract:
+      df: "pd.DataFrame"
+      X: "pd.Series (textes)"
+      y: "pd.Series (labels)"
+      feature_names: "['text']"
+      target_name: "str"
+      task_type: "nlp | classification"
+    illustration_svg: '<svg viewBox="0 0 600 296" xmlns="http://www.w3.org/2000/svg" class="w-full h-auto drop-shadow-xl rounded-xl"><rect width="600" height="296" fill="#0A0A0A" rx="12"/><!-- Grid pattern --><pattern id="grid" width="40" height="40" patternUnits="userSpaceOnUse">  <path d="M 40 0 L 0 0 0 40" fill="none" stroke="#222222" stroke-width="0.5"/></pattern><rect width="600" height="296" fill="url(#grid)" rx="12"/><!-- Inputs --><g transform="translate(20, 40)">    <rect y="0" width="140" height="28" fill="#1a1a1a" stroke="#333333" rx="6"/>    <text x="10" y="18" fill="#A0A0A0" font-family="monospace" font-size="11" alignment-baseline="middle">Config/Params</text>    <path d="M 140 14 C 180 14, 200 148, 230 148" fill="none" stroke="#555" stroke-width="1.5" stroke-dasharray="4"/></g><!-- Central Node --><rect x="230" y="108" width="140" height="80" fill="#1a1a1a" stroke="#444" rx="10" stroke-width="2"/><text x="300" y="138" fill="#EEEEEE" font-family="sans-serif" font-weight="bold" font-size="12" text-anchor="middle">Hugging Face Datas</text><text x="300" y="158" fill="#888888" font-family="sans-serif" font-size="10" text-anchor="middle">Dataset Loader</text><!-- Outputs --><g transform="translate(440, 40)">    <path d="M 370 148 C 400 148, 420 14, 440 14" fill="none" stroke="#555" stroke-width="1.5" stroke-dasharray="4"/>    <rect y="0" width="140" height="28" fill="#0A0A0A" stroke="#3b82f6" stroke-width="1.5" rx="6"/>    <text x="10" y="18" fill="#bfdbfe" font-family="monospace" font-size="11" alignment-baseline="middle">df</text>    <path d="M 370 148 C 400 148, 420 50, 440 50" fill="none" stroke="#555" stroke-width="1.5" stroke-dasharray="4"/>    <rect y="36" width="140" height="28" fill="#0A0A0A" stroke="#3b82f6" stroke-width="1.5" rx="6"/>    <text x="10" y="54" fill="#bfdbfe" font-family="monospace" font-size="11" alignment-baseline="middle">X</text>    <path d="M 370 148 C 400 148, 420 86, 440 86" fill="none" stroke="#555" stroke-width="1.5" stroke-dasharray="4"/>    <rect y="72" width="140" height="28" fill="#0A0A0A" stroke="#3b82f6" stroke-width="1.5" rx="6"/>    <text x="10" y="90" fill="#bfdbfe" font-family="monospace" font-size="11" alignment-baseline="middle">y</text>    <path d="M 370 148 C 400 148, 420 122, 440 122" fill="none" stroke="#555" stroke-width="1.5" stroke-dasharray="4"/>    <rect y="108" width="140" height="28" fill="#0A0A0A" stroke="#3b82f6" stroke-width="1.5" rx="6"/>    <text x="10" y="126" fill="#bfdbfe" font-family="monospace" font-size="11" alignment-baseline="middle">feature_names</text>    <path d="M 370 148 C 400 148, 420 158, 440 158" fill="none" stroke="#555" stroke-width="1.5" stroke-dasharray="4"/>    <rect y="144" width="140" height="28" fill="#0A0A0A" stroke="#3b82f6" stroke-width="1.5" rx="6"/>    <text x="10" y="162" fill="#bfdbfe" font-family="monospace" font-size="11" alignment-baseline="middle">target_name</text>    <path d="M 370 148 C 400 148, 420 194, 440 194" fill="none" stroke="#555" stroke-width="1.5" stroke-dasharray="4"/>    <rect y="180" width="140" height="28" fill="#0A0A0A" stroke="#3b82f6" stroke-width="1.5" rx="6"/>    <text x="10" y="198" fill="#bfdbfe" font-family="monospace" font-size="11" alignment-baseline="middle">task_type</text></g></svg>'
+    code_template: |
+      from datasets import load_dataset
+      import pandas as pd
+
+      # ── Exemples de datasets ─────────────────────────────────────────
+      # "imdb"                    — sentiments (pos/neg)
+      # "ag_news"                 — classification actualités (4 classes)
+      # "glue", "sst2"            — sentiments Stanford
+      # "squad"                   — QA extractif
+      # "wikitext", "wikitext-103-raw-v1" — LM
+      # "mnist", "cifar10"        — vision
+      # "mozilla-foundation/common_voice_11_0", "fr" — audio FR
+
+      DATASET_NAME = "imdb"
+      SUBSET       = None        # ex: "sst2" pour glue
+      TEXT_COL     = "text"
+      LABEL_COL    = "label"
+
+      # Chargement complet
+      dataset = load_dataset(DATASET_NAME, SUBSET)
+      print(dataset)
+
+      # Streaming (évite de tout télécharger)
+      # dataset = load_dataset(DATASET_NAME, streaming=True)
+      # first_batch = list(dataset["train"].take(1000))
+
+      # Conversion en DataFrame
+      df_train = dataset["train"].to_pandas()
+      df_test  = dataset["test"].to_pandas()
+
+      X_train = df_train[TEXT_COL]
+      y_train = df_train[LABEL_COL]
+      X_test  = df_test[TEXT_COL]
+      y_test  = df_test[LABEL_COL]
+
+      texts_train = X_train.tolist()   # format attendu par NLP catalog
+      texts_test  = X_test.tolist()
+
+      feature_names = [TEXT_COL]
+      target_name   = LABEL_COL
+      task_type     = "nlp"
+      meta = {
+          "dataset": DATASET_NAME,
+          "n_classes": y_train.nunique(),
+          "label_names": dataset["train"].features[LABEL_COL].names
+                         if hasattr(dataset["train"].features[LABEL_COL], "names") else None
+      }
+
+  - id: openml
+    name: "OpenML"
+    enabled: true
+    category: "Benchmark"
+    format: "ARFF / numpy"
+    description: "Plateforme collaborative de datasets ML avec métadonnées riches. Milliers de datasets référencés."
+    use_cases: ["benchmark reproductible", "datasets standards ML", "meta-learning"]
+    pros: ["métadonnées riches", "versioning", "millions de runs référencés", "sklearn natif"]
+    cons: ["nécessite connexion internet", "qualité variable selon dataset"]
+    output_contract:
+      df: "pd.DataFrame"
+      X: "pd.DataFrame"
+      y: "pd.Series"
+      feature_names: "list[str]"
+      task_type: "classification | regression"
+    illustration_svg: '<svg viewBox="0 0 600 260" xmlns="http://www.w3.org/2000/svg" class="w-full h-auto drop-shadow-xl rounded-xl"><rect width="600" height="260" fill="#0A0A0A" rx="12"/><!-- Grid pattern --><pattern id="grid" width="40" height="40" patternUnits="userSpaceOnUse">  <path d="M 40 0 L 0 0 0 40" fill="none" stroke="#222222" stroke-width="0.5"/></pattern><rect width="600" height="260" fill="url(#grid)" rx="12"/><!-- Inputs --><g transform="translate(20, 40)">    <rect y="0" width="140" height="28" fill="#1a1a1a" stroke="#333333" rx="6"/>    <text x="10" y="18" fill="#A0A0A0" font-family="monospace" font-size="11" alignment-baseline="middle">Config/Params</text>    <path d="M 140 14 C 180 14, 200 130, 230 130" fill="none" stroke="#555" stroke-width="1.5" stroke-dasharray="4"/></g><!-- Central Node --><rect x="230" y="90" width="140" height="80" fill="#1a1a1a" stroke="#444" rx="10" stroke-width="2"/><text x="300" y="120" fill="#EEEEEE" font-family="sans-serif" font-weight="bold" font-size="12" text-anchor="middle">OpenML</text><text x="300" y="140" fill="#888888" font-family="sans-serif" font-size="10" text-anchor="middle">Dataset Loader</text><!-- Outputs --><g transform="translate(440, 40)">    <path d="M 370 130 C 400 130, 420 14, 440 14" fill="none" stroke="#555" stroke-width="1.5" stroke-dasharray="4"/>    <rect y="0" width="140" height="28" fill="#0A0A0A" stroke="#3b82f6" stroke-width="1.5" rx="6"/>    <text x="10" y="18" fill="#bfdbfe" font-family="monospace" font-size="11" alignment-baseline="middle">df</text>    <path d="M 370 130 C 400 130, 420 50, 440 50" fill="none" stroke="#555" stroke-width="1.5" stroke-dasharray="4"/>    <rect y="36" width="140" height="28" fill="#0A0A0A" stroke="#3b82f6" stroke-width="1.5" rx="6"/>    <text x="10" y="54" fill="#bfdbfe" font-family="monospace" font-size="11" alignment-baseline="middle">X</text>    <path d="M 370 130 C 400 130, 420 86, 440 86" fill="none" stroke="#555" stroke-width="1.5" stroke-dasharray="4"/>    <rect y="72" width="140" height="28" fill="#0A0A0A" stroke="#3b82f6" stroke-width="1.5" rx="6"/>    <text x="10" y="90" fill="#bfdbfe" font-family="monospace" font-size="11" alignment-baseline="middle">y</text>    <path d="M 370 130 C 400 130, 420 122, 440 122" fill="none" stroke="#555" stroke-width="1.5" stroke-dasharray="4"/>    <rect y="108" width="140" height="28" fill="#0A0A0A" stroke="#3b82f6" stroke-width="1.5" rx="6"/>    <text x="10" y="126" fill="#bfdbfe" font-family="monospace" font-size="11" alignment-baseline="middle">feature_names</text>    <path d="M 370 130 C 400 130, 420 158, 440 158" fill="none" stroke="#555" stroke-width="1.5" stroke-dasharray="4"/>    <rect y="144" width="140" height="28" fill="#0A0A0A" stroke="#3b82f6" stroke-width="1.5" rx="6"/>    <text x="10" y="162" fill="#bfdbfe" font-family="monospace" font-size="11" alignment-baseline="middle">task_type</text></g></svg>'
+    code_template: |
+      import openml
+      import pandas as pd
+
+      # Rechercher un dataset
+      # openml.datasets.list_datasets(output_format="dataframe").head(50)
+
+      DATASET_ID = 31   # ex: 31=credit-g, 40=sonar, 44=spambase, 1590=adult
+      TARGET_COL = None  # None = utiliser la cible officielle du dataset
+
+      dataset = openml.datasets.get_dataset(DATASET_ID)
+      print(f"Dataset : {dataset.name}")
+      print(f"Description : {dataset.description[:200]}")
+
+      X, y, categorical_indicator, feature_names = dataset.get_data(
+          dataset_format="dataframe",
+          target=dataset.default_target_attribute
+      )
+
+      df = X.copy()
+      df["target"] = y
+
+      task_type = "classification" if y.dtype == object or y.nunique() < 20 else "regression"
+      target_name = dataset.default_target_attribute
+
+      meta = {
+          "openml_id": DATASET_ID,
+          "name": dataset.name,
+          "n_features": X.shape[1],
+          "categorical_features": [feature_names[i] for i, c in enumerate(categorical_indicator) if c]
+      }
+
+
+# ──────────────────────────────────────────────────────────────────────────
+timeseries_sources:
+# ──────────────────────────────────────────────────────────────────────────
+
+  - id: timeseries_csv
+    name: "Séries Temporelles (CSV Indexé)"
+    enabled: true
+    category: "Séries Temporelles"
+    format: "csv / parquet avec index datetime"
+    description: "Chargement et préparation d'une série temporelle avec index DatetimeIndex et fréquence régulière."
+    use_cases: ["prévision de ventes", "données financières", "capteurs IoT", "énergie"]
+    pros: ["format universel", "pandas natif", "gestion des fuseaux horaires"]
+    cons: ["fréquence irrégulière à gérer", "fuseaux horaires piégeux"]
+    output_contract:
+      df: "pd.DataFrame avec DatetimeIndex"
+      y_train: "pd.Series (split temporel)"
+      y_test: "pd.Series"
+      dates_train: "pd.DatetimeIndex"
+      dates_future: "pd.DatetimeIndex"
+      task_type: "timeseries"
+    illustration_svg: '<svg viewBox="0 0 600 296" xmlns="http://www.w3.org/2000/svg" class="w-full h-auto drop-shadow-xl rounded-xl"><rect width="600" height="296" fill="#0A0A0A" rx="12"/><!-- Grid pattern --><pattern id="grid" width="40" height="40" patternUnits="userSpaceOnUse">  <path d="M 40 0 L 0 0 0 40" fill="none" stroke="#222222" stroke-width="0.5"/></pattern><rect width="600" height="296" fill="url(#grid)" rx="12"/><!-- Inputs --><g transform="translate(20, 40)">    <rect y="0" width="140" height="28" fill="#1a1a1a" stroke="#333333" rx="6"/>    <text x="10" y="18" fill="#A0A0A0" font-family="monospace" font-size="11" alignment-baseline="middle">Config/Params</text>    <path d="M 140 14 C 180 14, 200 148, 230 148" fill="none" stroke="#555" stroke-width="1.5" stroke-dasharray="4"/></g><!-- Central Node --><rect x="230" y="108" width="140" height="80" fill="#1a1a1a" stroke="#444" rx="10" stroke-width="2"/><text x="300" y="138" fill="#EEEEEE" font-family="sans-serif" font-weight="bold" font-size="12" text-anchor="middle">Séries Temporelles</text><text x="300" y="158" fill="#888888" font-family="sans-serif" font-size="10" text-anchor="middle">Dataset Loader</text><!-- Outputs --><g transform="translate(440, 40)">    <path d="M 370 148 C 400 148, 420 14, 440 14" fill="none" stroke="#555" stroke-width="1.5" stroke-dasharray="4"/>    <rect y="0" width="140" height="28" fill="#0A0A0A" stroke="#3b82f6" stroke-width="1.5" rx="6"/>    <text x="10" y="18" fill="#bfdbfe" font-family="monospace" font-size="11" alignment-baseline="middle">df</text>    <path d="M 370 148 C 400 148, 420 50, 440 50" fill="none" stroke="#555" stroke-width="1.5" stroke-dasharray="4"/>    <rect y="36" width="140" height="28" fill="#0A0A0A" stroke="#3b82f6" stroke-width="1.5" rx="6"/>    <text x="10" y="54" fill="#bfdbfe" font-family="monospace" font-size="11" alignment-baseline="middle">y_train</text>    <path d="M 370 148 C 400 148, 420 86, 440 86" fill="none" stroke="#555" stroke-width="1.5" stroke-dasharray="4"/>    <rect y="72" width="140" height="28" fill="#0A0A0A" stroke="#3b82f6" stroke-width="1.5" rx="6"/>    <text x="10" y="90" fill="#bfdbfe" font-family="monospace" font-size="11" alignment-baseline="middle">y_test</text>    <path d="M 370 148 C 400 148, 420 122, 440 122" fill="none" stroke="#555" stroke-width="1.5" stroke-dasharray="4"/>    <rect y="108" width="140" height="28" fill="#0A0A0A" stroke="#3b82f6" stroke-width="1.5" rx="6"/>    <text x="10" y="126" fill="#bfdbfe" font-family="monospace" font-size="11" alignment-baseline="middle">dates_train</text>    <path d="M 370 148 C 400 148, 420 158, 440 158" fill="none" stroke="#555" stroke-width="1.5" stroke-dasharray="4"/>    <rect y="144" width="140" height="28" fill="#0A0A0A" stroke="#3b82f6" stroke-width="1.5" rx="6"/>    <text x="10" y="162" fill="#bfdbfe" font-family="monospace" font-size="11" alignment-baseline="middle">dates_future</text>    <path d="M 370 148 C 400 148, 420 194, 440 194" fill="none" stroke="#555" stroke-width="1.5" stroke-dasharray="4"/>    <rect y="180" width="140" height="28" fill="#0A0A0A" stroke="#3b82f6" stroke-width="1.5" rx="6"/>    <text x="10" y="198" fill="#bfdbfe" font-family="monospace" font-size="11" alignment-baseline="middle">task_type</text></g></svg>'
+    code_template: |
+      import pandas as pd
+      import numpy as np
+      import matplotlib.pyplot as plt
+
+      FILE_PATH   = "data/timeseries.csv"
+      DATE_COL    = "date"
+      TARGET_COL  = "value"
+      FREQ        = "D"         # "D"=day, "W"=week, "M"=month, "H"=hour
+      TEST_RATIO  = 0.2
+      HORIZON     = 30          # nombre de pas à prévoir
+
+      df = pd.read_csv(FILE_PATH, parse_dates=[DATE_COL])
+      df = df.set_index(DATE_COL).sort_index()
+
+      # Ré-échantillonnage à fréquence régulière (si irrégulier)
+      df = df.resample(FREQ).agg({TARGET_COL: "sum"}).fillna(method="ffill")
+
+      # Vérification de la stationnarité (optionnel)
+      # from statsmodels.tsa.stattools import adfuller
+      # print(adfuller(df[TARGET_COL].dropna()))
+
+      # Visualisation rapide
+      df[TARGET_COL].plot(figsize=(14, 4), title="Série temporelle")
+      plt.tight_layout(); plt.show()
+
+      # Split temporel (pas de shuffle !)
+      n_test = int(len(df) * TEST_RATIO)
+      y_train = df[TARGET_COL].iloc[:-n_test]
+      y_test  = df[TARGET_COL].iloc[-n_test:]
+      dates_train  = y_train.index
+      dates_future = pd.date_range(start=y_test.index[0], periods=HORIZON, freq=FREQ)
+
+      task_type   = "timeseries"
+      target_name = TARGET_COL
+      meta = {"freq": FREQ, "horizon": HORIZON, "n_train": len(y_train), "n_test": len(y_test)}
+
+  - id: financial_data
+    name: "Données Financières (yfinance)"
+    enabled: true
+    category: "Séries Temporelles"
+    format: "API / DataFrame OHLCV"
+    description: "Téléchargement de cours boursiers, cryptos et forex via yfinance (Yahoo Finance)."
+    use_cases: ["prévision de prix", "détection d'anomalies financières", "features pour ML finance"]
+    pros: ["gratuit", "historique long", "données ajustées disponibles", "multi-actifs"]
+    cons: ["qualité variable", "pas de données intraday longues gratuitement", "délai ~15min"]
+    output_contract:
+      df: "pd.DataFrame OHLCV avec DatetimeIndex"
+      y_train: "pd.Series"
+      y_test: "pd.Series"
+      task_type: "timeseries | regression"
+    illustration_svg: '<svg viewBox="0 0 600 224" xmlns="http://www.w3.org/2000/svg" class="w-full h-auto drop-shadow-xl rounded-xl"><rect width="600" height="224" fill="#0A0A0A" rx="12"/><!-- Grid pattern --><pattern id="grid" width="40" height="40" patternUnits="userSpaceOnUse">  <path d="M 40 0 L 0 0 0 40" fill="none" stroke="#222222" stroke-width="0.5"/></pattern><rect width="600" height="224" fill="url(#grid)" rx="12"/><!-- Inputs --><g transform="translate(20, 40)">    <rect y="0" width="140" height="28" fill="#1a1a1a" stroke="#333333" rx="6"/>    <text x="10" y="18" fill="#A0A0A0" font-family="monospace" font-size="11" alignment-baseline="middle">Config/Params</text>    <path d="M 140 14 C 180 14, 200 112, 230 112" fill="none" stroke="#555" stroke-width="1.5" stroke-dasharray="4"/></g><!-- Central Node --><rect x="230" y="72" width="140" height="80" fill="#1a1a1a" stroke="#444" rx="10" stroke-width="2"/><text x="300" y="102" fill="#EEEEEE" font-family="sans-serif" font-weight="bold" font-size="12" text-anchor="middle">Données Financière</text><text x="300" y="122" fill="#888888" font-family="sans-serif" font-size="10" text-anchor="middle">Dataset Loader</text><!-- Outputs --><g transform="translate(440, 40)">    <path d="M 370 112 C 400 112, 420 14, 440 14" fill="none" stroke="#555" stroke-width="1.5" stroke-dasharray="4"/>    <rect y="0" width="140" height="28" fill="#0A0A0A" stroke="#3b82f6" stroke-width="1.5" rx="6"/>    <text x="10" y="18" fill="#bfdbfe" font-family="monospace" font-size="11" alignment-baseline="middle">df</text>    <path d="M 370 112 C 400 112, 420 50, 440 50" fill="none" stroke="#555" stroke-width="1.5" stroke-dasharray="4"/>    <rect y="36" width="140" height="28" fill="#0A0A0A" stroke="#3b82f6" stroke-width="1.5" rx="6"/>    <text x="10" y="54" fill="#bfdbfe" font-family="monospace" font-size="11" alignment-baseline="middle">y_train</text>    <path d="M 370 112 C 400 112, 420 86, 440 86" fill="none" stroke="#555" stroke-width="1.5" stroke-dasharray="4"/>    <rect y="72" width="140" height="28" fill="#0A0A0A" stroke="#3b82f6" stroke-width="1.5" rx="6"/>    <text x="10" y="90" fill="#bfdbfe" font-family="monospace" font-size="11" alignment-baseline="middle">y_test</text>    <path d="M 370 112 C 400 112, 420 122, 440 122" fill="none" stroke="#555" stroke-width="1.5" stroke-dasharray="4"/>    <rect y="108" width="140" height="28" fill="#0A0A0A" stroke="#3b82f6" stroke-width="1.5" rx="6"/>    <text x="10" y="126" fill="#bfdbfe" font-family="monospace" font-size="11" alignment-baseline="middle">task_type</text></g></svg>'
+    code_template: |
+      import yfinance as yf
+      import pandas as pd
+      import numpy as np
+
+      TICKER     = "AAPL"       # ou ["AAPL","MSFT","GOOG"] pour multi
+      START_DATE = "2020-01-01"
+      END_DATE   = "2024-12-31"
+      INTERVAL   = "1d"         # "1m","5m","1h","1d","1wk","1mo"
+      TARGET     = "Close"
+
+      ticker = yf.Ticker(TICKER)
+      df = ticker.history(start=START_DATE, end=END_DATE, interval=INTERVAL)
+
+      # Multi-tickers
+      # df = yf.download(["AAPL", "MSFT"], start=START_DATE, end=END_DATE)
+
+      # Features techniques de base
+      df["returns"]     = df["Close"].pct_change()
+      df["log_returns"] = np.log(df["Close"] / df["Close"].shift(1))
+      df["MA_20"]       = df["Close"].rolling(20).mean()
+      df["MA_50"]       = df["Close"].rolling(50).mean()
+      df["volatility"]  = df["returns"].rolling(20).std()
+      df["RSI"]         = 100 - (100 / (1 + df["returns"].clip(lower=0).rolling(14).mean()
+                                          / (-df["returns"].clip(upper=0)).rolling(14).mean()))
+      df = df.dropna()
+
+      n_test  = int(len(df) * 0.2)
+      y_train = df[TARGET].iloc[:-n_test]
+      y_test  = df[TARGET].iloc[-n_test:]
+
+      task_type   = "timeseries"
+      feature_names = ["Open","High","Low","Close","Volume","MA_20","MA_50","volatility","RSI"]
+      X = df[feature_names]
+      meta = {"ticker": TICKER, "interval": INTERVAL}
+
+
+# ──────────────────────────────────────────────────────────────────────────
+images_and_media:
+# ──────────────────────────────────────────────────────────────────────────
+
+  - id: image_folder
+    name: "Images (Dossier Local)"
+    enabled: true
+    category: "Vision"
+    format: "jpg / png / bmp"
+    description: "Chargement d'images depuis un dossier structuré par classe. Prépare tenseurs PyTorch / numpy."
+    use_cases: ["classification d'images", "détection d'anomalies visuelles", "segmentation"]
+    pros: ["flexibilité totale", "augmentation facile", "compatible torchvision/tf"]
+    cons: ["gestion manuelle du split", "gros volumes lents sans optimisation"]
+    output_contract:
+      X: "np.ndarray (N, H, W, C) ou tenseur PyTorch"
+      y: "np.ndarray (N,)"
+      feature_names: "['pixels']"
+      task_type: "classification"
+    illustration_svg: '<svg viewBox="0 0 600 224" xmlns="http://www.w3.org/2000/svg" class="w-full h-auto drop-shadow-xl rounded-xl"><rect width="600" height="224" fill="#0A0A0A" rx="12"/><!-- Grid pattern --><pattern id="grid" width="40" height="40" patternUnits="userSpaceOnUse">  <path d="M 40 0 L 0 0 0 40" fill="none" stroke="#222222" stroke-width="0.5"/></pattern><rect width="600" height="224" fill="url(#grid)" rx="12"/><!-- Inputs --><g transform="translate(20, 40)">    <rect y="0" width="140" height="28" fill="#1a1a1a" stroke="#333333" rx="6"/>    <text x="10" y="18" fill="#A0A0A0" font-family="monospace" font-size="11" alignment-baseline="middle">Config/Params</text>    <path d="M 140 14 C 180 14, 200 112, 230 112" fill="none" stroke="#555" stroke-width="1.5" stroke-dasharray="4"/></g><!-- Central Node --><rect x="230" y="72" width="140" height="80" fill="#1a1a1a" stroke="#444" rx="10" stroke-width="2"/><text x="300" y="102" fill="#EEEEEE" font-family="sans-serif" font-weight="bold" font-size="12" text-anchor="middle">Images (Dossier Lo</text><text x="300" y="122" fill="#888888" font-family="sans-serif" font-size="10" text-anchor="middle">Dataset Loader</text><!-- Outputs --><g transform="translate(440, 40)">    <path d="M 370 112 C 400 112, 420 14, 440 14" fill="none" stroke="#555" stroke-width="1.5" stroke-dasharray="4"/>    <rect y="0" width="140" height="28" fill="#0A0A0A" stroke="#3b82f6" stroke-width="1.5" rx="6"/>    <text x="10" y="18" fill="#bfdbfe" font-family="monospace" font-size="11" alignment-baseline="middle">X</text>    <path d="M 370 112 C 400 112, 420 50, 440 50" fill="none" stroke="#555" stroke-width="1.5" stroke-dasharray="4"/>    <rect y="36" width="140" height="28" fill="#0A0A0A" stroke="#3b82f6" stroke-width="1.5" rx="6"/>    <text x="10" y="54" fill="#bfdbfe" font-family="monospace" font-size="11" alignment-baseline="middle">y</text>    <path d="M 370 112 C 400 112, 420 86, 440 86" fill="none" stroke="#555" stroke-width="1.5" stroke-dasharray="4"/>    <rect y="72" width="140" height="28" fill="#0A0A0A" stroke="#3b82f6" stroke-width="1.5" rx="6"/>    <text x="10" y="90" fill="#bfdbfe" font-family="monospace" font-size="11" alignment-baseline="middle">feature_names</text>    <path d="M 370 112 C 400 112, 420 122, 440 122" fill="none" stroke="#555" stroke-width="1.5" stroke-dasharray="4"/>    <rect y="108" width="140" height="28" fill="#0A0A0A" stroke="#3b82f6" stroke-width="1.5" rx="6"/>    <text x="10" y="126" fill="#bfdbfe" font-family="monospace" font-size="11" alignment-baseline="middle">task_type</text></g></svg>'
+    code_template: |
+      import torch
+      from torchvision import datasets, transforms
+      from torch.utils.data import DataLoader, random_split
+      import numpy as np
+
+      # ── Structure attendue du dossier ─────────────────────────────────
+      # data/
+      #   ├── class_A/  *.jpg
+      #   ├── class_B/  *.jpg
+      #   └── class_C/  *.jpg
+
+      DATA_DIR    = "data/images/"
+      IMG_SIZE    = 224
+      BATCH_SIZE  = 32
+      VAL_RATIO   = 0.2
+      NUM_WORKERS = 4
+
+      train_transforms = transforms.Compose([
+          transforms.Resize((IMG_SIZE, IMG_SIZE)),
+          transforms.RandomHorizontalFlip(),
+          transforms.RandomRotation(15),
+          transforms.ColorJitter(brightness=0.2, contrast=0.2),
+          transforms.ToTensor(),
+          transforms.Normalize(mean=[0.485, 0.456, 0.406],
+                               std=[0.229, 0.224, 0.225]),
+      ])
+      val_transforms = transforms.Compose([
+          transforms.Resize((IMG_SIZE, IMG_SIZE)),
+          transforms.ToTensor(),
+          transforms.Normalize(mean=[0.485, 0.456, 0.406],
+                               std=[0.229, 0.224, 0.225]),
+      ])
+
+      full_dataset = datasets.ImageFolder(DATA_DIR, transform=train_transforms)
+      class_names  = full_dataset.classes
+      print(f"Classes : {class_names} | Total images : {len(full_dataset)}")
+
+      n_val   = int(len(full_dataset) * VAL_RATIO)
+      n_train = len(full_dataset) - n_val
+      train_dataset, val_dataset = random_split(full_dataset, [n_train, n_val])
+      val_dataset.dataset.transform = val_transforms
+
+      train_loader = DataLoader(train_dataset, batch_size=BATCH_SIZE,
+                                shuffle=True, num_workers=NUM_WORKERS, pin_memory=True)
+      val_loader   = DataLoader(val_dataset,   batch_size=BATCH_SIZE,
+                                shuffle=False, num_workers=NUM_WORKERS, pin_memory=True)
+
+      # Extraction numpy pour pipeline sklearn (petits datasets)
+      X = np.concatenate([b[0].numpy() for b in train_loader], axis=0)
+      y = np.concatenate([b[1].numpy() for b in train_loader], axis=0)
+      X_flat = X.reshape(X.shape[0], -1)  # pour sklearn : (N, H*W*C)
+
+      feature_names = ["pixels"]
+      task_type     = "classification"
+      meta = {"classes": class_names, "img_size": IMG_SIZE}
+
+
+# ──────────────────────────────────────────────────────────────────────────
+text_and_nlp_sources:
+# ──────────────────────────────────────────────────────────────────────────
+
+  - id: text_files
+    name: "Corpus Texte (fichiers / dossier)"
+    enabled: true
+    category: "NLP"
+    format: "txt / csv / jsonl"
+    description: "Chargement d'un corpus texte depuis des fichiers ou un CSV avec colonne texte."
+    use_cases: ["analyse de sentiment", "classification de documents", "embedding", "LLM fine-tuning"]
+    pros: ["flexible", "format universel"]
+    cons: ["prétraitement nécessaire", "tokenisation selon modèle"]
+    output_contract:
+      texts_train: "list[str]"
+      texts_test: "list[str]"
+      y_train: "np.ndarray"
+      y_test: "np.ndarray"
+      task_type: "nlp"
+    illustration_svg: '<svg viewBox="0 0 600 260" xmlns="http://www.w3.org/2000/svg" class="w-full h-auto drop-shadow-xl rounded-xl"><rect width="600" height="260" fill="#0A0A0A" rx="12"/><!-- Grid pattern --><pattern id="grid" width="40" height="40" patternUnits="userSpaceOnUse">  <path d="M 40 0 L 0 0 0 40" fill="none" stroke="#222222" stroke-width="0.5"/></pattern><rect width="600" height="260" fill="url(#grid)" rx="12"/><!-- Inputs --><g transform="translate(20, 40)">    <rect y="0" width="140" height="28" fill="#1a1a1a" stroke="#333333" rx="6"/>    <text x="10" y="18" fill="#A0A0A0" font-family="monospace" font-size="11" alignment-baseline="middle">Config/Params</text>    <path d="M 140 14 C 180 14, 200 130, 230 130" fill="none" stroke="#555" stroke-width="1.5" stroke-dasharray="4"/></g><!-- Central Node --><rect x="230" y="90" width="140" height="80" fill="#1a1a1a" stroke="#444" rx="10" stroke-width="2"/><text x="300" y="120" fill="#EEEEEE" font-family="sans-serif" font-weight="bold" font-size="12" text-anchor="middle">Corpus Texte (fich</text><text x="300" y="140" fill="#888888" font-family="sans-serif" font-size="10" text-anchor="middle">Dataset Loader</text><!-- Outputs --><g transform="translate(440, 40)">    <path d="M 370 130 C 400 130, 420 14, 440 14" fill="none" stroke="#555" stroke-width="1.5" stroke-dasharray="4"/>    <rect y="0" width="140" height="28" fill="#0A0A0A" stroke="#3b82f6" stroke-width="1.5" rx="6"/>    <text x="10" y="18" fill="#bfdbfe" font-family="monospace" font-size="11" alignment-baseline="middle">texts_train</text>    <path d="M 370 130 C 400 130, 420 50, 440 50" fill="none" stroke="#555" stroke-width="1.5" stroke-dasharray="4"/>    <rect y="36" width="140" height="28" fill="#0A0A0A" stroke="#3b82f6" stroke-width="1.5" rx="6"/>    <text x="10" y="54" fill="#bfdbfe" font-family="monospace" font-size="11" alignment-baseline="middle">texts_test</text>    <path d="M 370 130 C 400 130, 420 86, 440 86" fill="none" stroke="#555" stroke-width="1.5" stroke-dasharray="4"/>    <rect y="72" width="140" height="28" fill="#0A0A0A" stroke="#3b82f6" stroke-width="1.5" rx="6"/>    <text x="10" y="90" fill="#bfdbfe" font-family="monospace" font-size="11" alignment-baseline="middle">y_train</text>    <path d="M 370 130 C 400 130, 420 122, 440 122" fill="none" stroke="#555" stroke-width="1.5" stroke-dasharray="4"/>    <rect y="108" width="140" height="28" fill="#0A0A0A" stroke="#3b82f6" stroke-width="1.5" rx="6"/>    <text x="10" y="126" fill="#bfdbfe" font-family="monospace" font-size="11" alignment-baseline="middle">y_test</text>    <path d="M 370 130 C 400 130, 420 158, 440 158" fill="none" stroke="#555" stroke-width="1.5" stroke-dasharray="4"/>    <rect y="144" width="140" height="28" fill="#0A0A0A" stroke="#3b82f6" stroke-width="1.5" rx="6"/>    <text x="10" y="162" fill="#bfdbfe" font-family="monospace" font-size="11" alignment-baseline="middle">task_type</text></g></svg>'
+    code_template: |
+      import pandas as pd
+      import numpy as np
+      from sklearn.model_selection import train_test_split
+      import os, re
+
+      FILE_PATH  = "data/texts.csv"   # ou dossier
+      TEXT_COL   = "text"
+      LABEL_COL  = "label"
+      TEST_SIZE  = 0.2
+      MIN_LENGTH = 20  # caractères minimum
+
+      # ── Option 1 : CSV ────────────────────────────────────────────────
+      df = pd.read_csv(FILE_PATH)
+
+      # ── Option 2 : dossier structuré (une classe = un sous-dossier) ──
+      # records = []
+      # for label in os.listdir("data/corpus/"):
+      #     for fname in os.listdir(f"data/corpus/{label}/"):
+      #         with open(f"data/corpus/{label}/{fname}", encoding="utf-8") as f:
+      #             records.append({"text": f.read(), "label": label})
+      # df = pd.DataFrame(records)
+
+      # Nettoyage de base
+      df[TEXT_COL] = (df[TEXT_COL]
+                       .astype(str)
+                       .str.strip()
+                       .str.replace(r"\s+", " ", regex=True))
+      df = df[df[TEXT_COL].str.len() >= MIN_LENGTH].dropna(subset=[TEXT_COL])
+
+      X_raw = df[TEXT_COL].values
+      y     = df[LABEL_COL].values if LABEL_COL in df.columns else None
+
+      texts_train, texts_test, y_train, y_test = train_test_split(
+          X_raw, y, test_size=TEST_SIZE, stratify=y, random_state=42
+      )
+
+      task_type     = "nlp"
+      feature_names = [TEXT_COL]
+      target_name   = LABEL_COL
+      meta = {"n_classes": len(np.unique(y)) if y is not None else None,
+               "avg_length": int(df[TEXT_COL].str.len().mean())}
+
+
+# ──────────────────────────────────────────────────────────────────────────
+streaming_and_realtime:
+# ──────────────────────────────────────────────────────────────────────────
+
+  - id: kafka_stream
+    name: "Kafka (Streaming)"
+    enabled: true
+    category: "Streaming"
+    format: "Kafka Messages / JSON"
+    description: "Consommation d'un flux Kafka et accumulation en mini-batches pour inférence ou entraînement incrémental."
+    use_cases: ["détection de fraude temps réel", "monitoring de capteurs", "scoring à faible latence"]
+    pros: ["temps réel", "scalable", "durable", "multi-consommateurs"]
+    cons: ["infrastructure lourde", "complexité opérationnelle", "pas de replay facile en prod"]
+    output_contract:
+      df: "pd.DataFrame (mini-batch)"
+      X: "pd.DataFrame"
+      task_type: "anomaly | classification"
+    illustration_svg: '<svg viewBox="0 0 600 188" xmlns="http://www.w3.org/2000/svg" class="w-full h-auto drop-shadow-xl rounded-xl"><rect width="600" height="188" fill="#0A0A0A" rx="12"/><!-- Grid pattern --><pattern id="grid" width="40" height="40" patternUnits="userSpaceOnUse">  <path d="M 40 0 L 0 0 0 40" fill="none" stroke="#222222" stroke-width="0.5"/></pattern><rect width="600" height="188" fill="url(#grid)" rx="12"/><!-- Inputs --><g transform="translate(20, 40)">    <rect y="0" width="140" height="28" fill="#1a1a1a" stroke="#333333" rx="6"/>    <text x="10" y="18" fill="#A0A0A0" font-family="monospace" font-size="11" alignment-baseline="middle">Config/Params</text>    <path d="M 140 14 C 180 14, 200 94, 230 94" fill="none" stroke="#555" stroke-width="1.5" stroke-dasharray="4"/></g><!-- Central Node --><rect x="230" y="54" width="140" height="80" fill="#1a1a1a" stroke="#444" rx="10" stroke-width="2"/><text x="300" y="84" fill="#EEEEEE" font-family="sans-serif" font-weight="bold" font-size="12" text-anchor="middle">Kafka (Streaming)</text><text x="300" y="104" fill="#888888" font-family="sans-serif" font-size="10" text-anchor="middle">Dataset Loader</text><!-- Outputs --><g transform="translate(440, 40)">    <path d="M 370 94 C 400 94, 420 14, 440 14" fill="none" stroke="#555" stroke-width="1.5" stroke-dasharray="4"/>    <rect y="0" width="140" height="28" fill="#0A0A0A" stroke="#3b82f6" stroke-width="1.5" rx="6"/>    <text x="10" y="18" fill="#bfdbfe" font-family="monospace" font-size="11" alignment-baseline="middle">df</text>    <path d="M 370 94 C 400 94, 420 50, 440 50" fill="none" stroke="#555" stroke-width="1.5" stroke-dasharray="4"/>    <rect y="36" width="140" height="28" fill="#0A0A0A" stroke="#3b82f6" stroke-width="1.5" rx="6"/>    <text x="10" y="54" fill="#bfdbfe" font-family="monospace" font-size="11" alignment-baseline="middle">X</text>    <path d="M 370 94 C 400 94, 420 86, 440 86" fill="none" stroke="#555" stroke-width="1.5" stroke-dasharray="4"/>    <rect y="72" width="140" height="28" fill="#0A0A0A" stroke="#3b82f6" stroke-width="1.5" rx="6"/>    <text x="10" y="90" fill="#bfdbfe" font-family="monospace" font-size="11" alignment-baseline="middle">task_type</text></g></svg>'
+    code_template: |
+      from kafka import KafkaConsumer
+      import pandas as pd
+      import json
+      from collections import deque
+
+      BOOTSTRAP_SERVERS = ["localhost:9092"]
+      TOPIC             = "ml-events"
+      GROUP_ID          = "ml-consumer-group"
+      BATCH_SIZE        = 1000     # taille du mini-batch pour inférence
+      TIMEOUT_MS        = 1000
+
+      consumer = KafkaConsumer(
+          TOPIC,
+          bootstrap_servers=BOOTSTRAP_SERVERS,
+          group_id=GROUP_ID,
+          auto_offset_reset="latest",
+          enable_auto_commit=True,
+          value_deserializer=lambda m: json.loads(m.decode("utf-8")),
+          consumer_timeout_ms=TIMEOUT_MS
+      )
+
+      buffer = deque(maxlen=BATCH_SIZE)
+
+      def process_batch(records: list) -> pd.DataFrame:
+          df = pd.json_normalize(records)
+          # Appliquer ici le preprocessor sauvegardé
+          return df
+
+      print(f"Écoute du topic '{TOPIC}'...")
+      try:
+          for message in consumer:
+              buffer.append(message.value)
+              if len(buffer) >= BATCH_SIZE:
+                  df = process_batch(list(buffer))
+                  X  = df.drop(columns=["event_id", "timestamp"], errors="ignore")
+                  # scores = model.predict(X)  ← inférence
+                  print(f"Batch de {len(df)} messages traité.")
+                  buffer.clear()
+      finally:
+          consumer.close()
+
+      task_type = "anomaly"
+      meta = {"topic": TOPIC, "batch_size": BATCH_SIZE}
+
+
+# ──────────────────────────────────────────────────────────────────────────
+synthetic_data:
+# ──────────────────────────────────────────────────────────────────────────
+
+  - id: synthetic_tabular
+    name: "Données Synthétiques Tabulaires"
+    enabled: true
+    category: "Synthétique"
+    format: "numpy / DataFrame"
+    description: "Génération de datasets synthétiques réalistes avec sdv (GAN/Copula) ou Faker pour les tests."
+    use_cases: ["test de pipelines", "augmentation de données", "données sensibles (privacy)", "démo"]
+    pros: ["contrôle total", "privacy-safe", "reproductible", "volumes infinis"]
+    cons: ["ne remplace pas les vraies données", "distribution artificielle"]
+    output_contract:
+      df: "pd.DataFrame"
+      X: "pd.DataFrame"
+      y: "pd.Series"
+      feature_names: "list[str]"
+      task_type: "classification | regression | clustering"
+    illustration_svg: '<svg viewBox="0 0 600 260" xmlns="http://www.w3.org/2000/svg" class="w-full h-auto drop-shadow-xl rounded-xl"><rect width="600" height="260" fill="#0A0A0A" rx="12"/><!-- Grid pattern --><pattern id="grid" width="40" height="40" patternUnits="userSpaceOnUse">  <path d="M 40 0 L 0 0 0 40" fill="none" stroke="#222222" stroke-width="0.5"/></pattern><rect width="600" height="260" fill="url(#grid)" rx="12"/><!-- Inputs --><g transform="translate(20, 40)">    <rect y="0" width="140" height="28" fill="#1a1a1a" stroke="#333333" rx="6"/>    <text x="10" y="18" fill="#A0A0A0" font-family="monospace" font-size="11" alignment-baseline="middle">Config/Params</text>    <path d="M 140 14 C 180 14, 200 130, 230 130" fill="none" stroke="#555" stroke-width="1.5" stroke-dasharray="4"/></g><!-- Central Node --><rect x="230" y="90" width="140" height="80" fill="#1a1a1a" stroke="#444" rx="10" stroke-width="2"/><text x="300" y="120" fill="#EEEEEE" font-family="sans-serif" font-weight="bold" font-size="12" text-anchor="middle">Données Synthétiqu</text><text x="300" y="140" fill="#888888" font-family="sans-serif" font-size="10" text-anchor="middle">Dataset Loader</text><!-- Outputs --><g transform="translate(440, 40)">    <path d="M 370 130 C 400 130, 420 14, 440 14" fill="none" stroke="#555" stroke-width="1.5" stroke-dasharray="4"/>    <rect y="0" width="140" height="28" fill="#0A0A0A" stroke="#3b82f6" stroke-width="1.5" rx="6"/>    <text x="10" y="18" fill="#bfdbfe" font-family="monospace" font-size="11" alignment-baseline="middle">df</text>    <path d="M 370 130 C 400 130, 420 50, 440 50" fill="none" stroke="#555" stroke-width="1.5" stroke-dasharray="4"/>    <rect y="36" width="140" height="28" fill="#0A0A0A" stroke="#3b82f6" stroke-width="1.5" rx="6"/>    <text x="10" y="54" fill="#bfdbfe" font-family="monospace" font-size="11" alignment-baseline="middle">X</text>    <path d="M 370 130 C 400 130, 420 86, 440 86" fill="none" stroke="#555" stroke-width="1.5" stroke-dasharray="4"/>    <rect y="72" width="140" height="28" fill="#0A0A0A" stroke="#3b82f6" stroke-width="1.5" rx="6"/>    <text x="10" y="90" fill="#bfdbfe" font-family="monospace" font-size="11" alignment-baseline="middle">y</text>    <path d="M 370 130 C 400 130, 420 122, 440 122" fill="none" stroke="#555" stroke-width="1.5" stroke-dasharray="4"/>    <rect y="108" width="140" height="28" fill="#0A0A0A" stroke="#3b82f6" stroke-width="1.5" rx="6"/>    <text x="10" y="126" fill="#bfdbfe" font-family="monospace" font-size="11" alignment-baseline="middle">feature_names</text>    <path d="M 370 130 C 400 130, 420 158, 440 158" fill="none" stroke="#555" stroke-width="1.5" stroke-dasharray="4"/>    <rect y="144" width="140" height="28" fill="#0A0A0A" stroke="#3b82f6" stroke-width="1.5" rx="6"/>    <text x="10" y="162" fill="#bfdbfe" font-family="monospace" font-size="11" alignment-baseline="middle">task_type</text></g></svg>'
+    code_template: |
+      import numpy as np
+      import pandas as pd
+      from sklearn.datasets import make_classification, make_regression, make_blobs
+
+      np.random.seed(42)
+      N = 10000
+
+      # ── Classification tabulaire réaliste ────────────────────────────
+      X_num, y = make_classification(
+          n_samples=N, n_features=15, n_informative=8,
+          n_redundant=4, n_clusters_per_class=2, n_classes=3,
+          weights=[0.6, 0.3, 0.1], flip_y=0.02, random_state=42
+      )
+      # Ajout de features catégorielles et manquantes
+      df = pd.DataFrame(X_num, columns=[f"num_{i}" for i in range(15)])
+      df["cat_A"] = np.random.choice(["low","medium","high"], size=N, p=[0.3,0.5,0.2])
+      df["cat_B"] = np.random.choice(["X","Y","Z"], size=N)
+      mask_nan = np.random.rand(N, 3) < 0.08
+      for i, col in enumerate(["num_0","num_5","cat_A"]):
+          df.loc[mask_nan[:, i], col] = np.nan
+      df["target"] = y
+
+      # ── Régression ───────────────────────────────────────────────────
+      # X_r, y_r = make_regression(n_samples=N, n_features=20, noise=15, random_state=42)
+
+      # ── Clustering (blobs) ───────────────────────────────────────────
+      # X_b, y_b = make_blobs(n_samples=N, centers=5, n_features=8, random_state=42)
+
+      # ── SDV : données synthétiques à partir d'un vrai dataset ────────
+      # from sdv.single_table import GaussianCopulaSynthesizer
+      # synthesizer = GaussianCopulaSynthesizer(metadata)
+      # synthesizer.fit(real_df)
+      # synthetic_df = synthesizer.sample(num_rows=N)
+
+      X = df.drop(columns=["target"])
+      y_series = df["target"]
+      feature_names = X.columns.tolist()
+      target_name   = "target"
+      task_type     = "classification"
+      meta = {"n_samples": N, "synthetic": True}
+
+  - id: survival_dataset
+    name: "Dataset de Survie (Durée de Vie)"
+    enabled: true
+    category: "Analyse de Survie"
+    format: "csv / DataFrame"
+    description: "Chargement et préparation d'un dataset de survie avec durées, événements et covariables."
+    use_cases: ["churn prediction", "durée de vie produit", "études cliniques", "time-to-event"]
+    pros: ["gère la censure", "lifelines natif", "interprétable"]
+    cons: ["nécessite durée + événement", "hypothèses à vérifier"]
+    output_contract:
+      df_survival: "pd.DataFrame avec colonnes duration + event + features"
+      durations: "pd.Series"
+      events: "pd.Series (0/1)"
+      groups: "pd.Series | None"
+      task_type: "survival"
+    illustration_svg: '<svg viewBox="0 0 600 260" xmlns="http://www.w3.org/2000/svg" class="w-full h-auto drop-shadow-xl rounded-xl"><rect width="600" height="260" fill="#0A0A0A" rx="12"/><!-- Grid pattern --><pattern id="grid" width="40" height="40" patternUnits="userSpaceOnUse">  <path d="M 40 0 L 0 0 0 40" fill="none" stroke="#222222" stroke-width="0.5"/></pattern><rect width="600" height="260" fill="url(#grid)" rx="12"/><!-- Inputs --><g transform="translate(20, 40)">    <rect y="0" width="140" height="28" fill="#1a1a1a" stroke="#333333" rx="6"/>    <text x="10" y="18" fill="#A0A0A0" font-family="monospace" font-size="11" alignment-baseline="middle">Config/Params</text>    <path d="M 140 14 C 180 14, 200 130, 230 130" fill="none" stroke="#555" stroke-width="1.5" stroke-dasharray="4"/></g><!-- Central Node --><rect x="230" y="90" width="140" height="80" fill="#1a1a1a" stroke="#444" rx="10" stroke-width="2"/><text x="300" y="120" fill="#EEEEEE" font-family="sans-serif" font-weight="bold" font-size="12" text-anchor="middle">Dataset de Survie </text><text x="300" y="140" fill="#888888" font-family="sans-serif" font-size="10" text-anchor="middle">Dataset Loader</text><!-- Outputs --><g transform="translate(440, 40)">    <path d="M 370 130 C 400 130, 420 14, 440 14" fill="none" stroke="#555" stroke-width="1.5" stroke-dasharray="4"/>    <rect y="0" width="140" height="28" fill="#0A0A0A" stroke="#3b82f6" stroke-width="1.5" rx="6"/>    <text x="10" y="18" fill="#bfdbfe" font-family="monospace" font-size="11" alignment-baseline="middle">df_survival</text>    <path d="M 370 130 C 400 130, 420 50, 440 50" fill="none" stroke="#555" stroke-width="1.5" stroke-dasharray="4"/>    <rect y="36" width="140" height="28" fill="#0A0A0A" stroke="#3b82f6" stroke-width="1.5" rx="6"/>    <text x="10" y="54" fill="#bfdbfe" font-family="monospace" font-size="11" alignment-baseline="middle">durations</text>    <path d="M 370 130 C 400 130, 420 86, 440 86" fill="none" stroke="#555" stroke-width="1.5" stroke-dasharray="4"/>    <rect y="72" width="140" height="28" fill="#0A0A0A" stroke="#3b82f6" stroke-width="1.5" rx="6"/>    <text x="10" y="90" fill="#bfdbfe" font-family="monospace" font-size="11" alignment-baseline="middle">events</text>    <path d="M 370 130 C 400 130, 420 122, 440 122" fill="none" stroke="#555" stroke-width="1.5" stroke-dasharray="4"/>    <rect y="108" width="140" height="28" fill="#0A0A0A" stroke="#3b82f6" stroke-width="1.5" rx="6"/>    <text x="10" y="126" fill="#bfdbfe" font-family="monospace" font-size="11" alignment-baseline="middle">groups</text>    <path d="M 370 130 C 400 130, 420 158, 440 158" fill="none" stroke="#555" stroke-width="1.5" stroke-dasharray="4"/>    <rect y="144" width="140" height="28" fill="#0A0A0A" stroke="#3b82f6" stroke-width="1.5" rx="6"/>    <text x="10" y="162" fill="#bfdbfe" font-family="monospace" font-size="11" alignment-baseline="middle">task_type</text></g></svg>'
+    code_template: |
+      import pandas as pd
+      import numpy as np
+      from lifelines.datasets import load_rossi, load_lung
+
+      # ── Datasets de survie intégrés à lifelines ──────────────────────
+      # load_rossi()   — récidive criminelle (N=432)
+      # load_lung()    — cancer du poumon NCCTG (N=228)
+      # load_dd()      — dictatures (N=1808)
+      # load_stanford_heart_transplants() — greffes cardiaques
+
+      df = load_rossi()    # 'week'=durée, 'arrest'=événement (1=observé, 0=censuré)
+      print(df.head())
+      print(df.dtypes)
+
+      DURATION_COL = "week"
+      EVENT_COL    = "arrest"
+      GROUP_COL    = "prio"   # pour comparer des groupes (ou None)
+
+      durations = df[DURATION_COL]
+      events    = df[EVENT_COL]
+      groups    = df[GROUP_COL] if GROUP_COL else None
+
+      # Features pour Cox PH
+      feature_cols = [c for c in df.columns if c not in [DURATION_COL, EVENT_COL]]
+      df_survival  = df.copy()   # lifelines attend le df complet avec duration+event+features
+
+      # ── Chargement depuis CSV ─────────────────────────────────────────
+      # df = pd.read_csv("survival_data.csv")
+      # durations = df["time"]
+      # events    = df["event"].astype(int)
+      # df_survival = df
+
+      task_type   = "survival"
+      target_name = EVENT_COL
+      meta = {"duration_col": DURATION_COL, "event_col": EVENT_COL,
+               "censoring_rate": f"{(1 - events.mean())*100:.1f}%"}

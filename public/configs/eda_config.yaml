@@ -1,0 +1,1385 @@
+# ══════════════════════════════════════════════════════════════════════════
+# CONTRAT I/O GLOBAL DU PIPELINE ML
+# ══════════════════════════════════════════════════════════════════════════
+#
+#  BLOC 1 — datasets_config.yaml
+#    INPUT  : paramètres utilisateur (FILE_PATH, TARGET_COL, …)
+#    OUTPUT : df, X, y, feature_names, target_name, task_type, meta
+#             + texts_train / texts_test  (NLP)
+#             + y_train / y_test / dates_train / dates_future  (timeseries)
+#
+#  BLOC 2 — eda_config.yaml
+#    INPUT  : df, X, y, feature_names, target_name, task_type, meta
+#             + texts_train / texts_test  (NLP)
+#             + TARGET_COL  (param local à préciser)
+#    OUTPUT : X_train, X_test, y_train, y_test
+#             preprocessor  (sklearn Pipeline/ColumnTransformer — fitted)
+#             feature_names_out  (list[str] — après OHE/poly/selection)
+#             task_type  (confirmé / inchangé)
+#             + dates_train / dates_future  (timeseries, pass-through)
+#             + texts_train / texts_test    (NLP, pass-through)
+#
+#  BLOC 3 — model_config.yaml
+#    INPUT  : X_train, X_test, y_train, y_test
+#             feature_names  (= feature_names_out du bloc 2)
+#             task_type, preprocessor
+#             + texts_train / texts_test     (NLP)
+#             + dates_train / dates_future   (timeseries)
+#    OUTPUT : model, y_pred, y_proba, metrics, shap_values
+#             + labels  (clustering)
+#             + forecast  (timeseries)
+#             + scores   (anomaly)
+#
+#  RÈGLE D'OR : ne jamais renommer ces variables entre les blocs.
+#  Seuls les paramètres en MAJUSCULES (FILE_PATH, TARGET_COL, etc.)
+#  sont à adapter selon le projet — tout le reste est câblé.
+# ══════════════════════════════════════════════════════════════════════════
+
+
+# ──────────────────────────────────────────────────────────────────────────
+# CONTRAT I/O — BLOC 2 : eda_config.yaml
+# ──────────────────────────────────────────────────────────────────────────
+
+pipeline_contract:
+  bloc: 2
+  role: "EDA · Preprocessing · Feature Engineering — transforme les données brutes en données prêtes au modèle"
+
+  input_variables:
+    # Variables câblées — produites par datasets_config.yaml (bloc 1)
+    df:               "pd.DataFrame — données brutes"
+    X:                "pd.DataFrame — features brutes"
+    y:                "pd.Series | None — target"
+    feature_names:    "list[str]"
+    target_name:      "str | None"
+    task_type:        "str — détermine quels blocs EDA/preprocessing s'appliquent"
+    meta:             "dict"
+    texts_train:      "list[str] — NLP uniquement"
+    texts_test:       "list[str] — NLP uniquement"
+    y_train:          "pd.Series — timeseries uniquement"
+    y_test:           "pd.Series — timeseries uniquement"
+    dates_train:      "pd.DatetimeIndex — timeseries uniquement"
+    dates_future:     "pd.DatetimeIndex — timeseries uniquement"
+
+    # Paramètres utilisateur locaux à définir dans chaque bloc EDA
+    TARGET_COL:       "str — colonne cible (à répéter localement dans chaque snippet)"
+    TEXT_COL:         "str | None — colonne texte (EDA NLP, FE texte)"
+    DATE_COL:         "str | None — colonne datetime (FE temporel)"
+    GROUP_COL:        "str | None — identifiant de groupe (agrégations)"
+    HIGH_NA_THRESHOLD: "float — seuil % NaN pour suppression colonne (défaut : 60)"
+    ALPHA:            "float — lissage target encoding (défaut : 10)"
+    K:                "int — nombre de features à conserver (feature selection)"
+    THRESHOLD:        "float — seuil importance features embedded (défaut : 0.005)"
+    TEST_SIZE:        "float — ratio test split (défaut : 0.2)"
+    PERIOD:           "int — période saisonnalité STL/ACF (timeseries)"
+
+  output_variables:
+    # Variables TOUJOURS produites après preprocessing
+    X_train:          "np.ndarray | pd.DataFrame — features preprocessées (train)"
+    X_test:           "np.ndarray | pd.DataFrame — features preprocessées (test)"
+    y_train:          "pd.Series | np.ndarray — target train"
+    y_test:           "pd.Series | np.ndarray — target test"
+    preprocessor:     "sklearn ColumnTransformer | Pipeline — fitted sur X_train"
+    feature_names_out: "list[str] — noms après OHE / poly / sélection"
+    task_type:        "str — confirmé / inchangé"
+
+    # Variables supplémentaires selon task_type
+    texts_train:      "list[str] — NLP (pass-through ou nettoyé)"
+    texts_test:       "list[str] — NLP (pass-through ou nettoyé)"
+    dates_train:      "pd.DatetimeIndex — timeseries (pass-through)"
+    dates_future:     "pd.DatetimeIndex — timeseries (pass-through)"
+
+
+# ══════════════════════════════════════════════════════════════════════════
+# EDA · PREPROCESSING · FEATURE ENGINEERING CATALOG
+#   Analyse Exploratoire · Nettoyage · Encodage · Scaling · Imputation
+#   Sélection de Features · Transformation · Augmentation
+# ══════════════════════════════════════════════════════════════════════════
+#
+# Structure de chaque entrée :
+#   id, name, enabled, category, description,
+#   applies_to, when_to_use, output_contract, code_template
+#
+# Convention d'entrée (variables standards issues du catalog_datasets) :
+#   df            : pd.DataFrame brut
+#   X             : pd.DataFrame features (avant split ou post-split)
+#   y             : pd.Series target
+#   feature_names : list[str]
+#   task_type     : "classification" | "regression" | "clustering" | ...
+#   texts_train   : list[str] pour NLP
+#
+# Convention de sortie (variables standards vers catalog_models) :
+#   X_train / X_test    : np.ndarray ou pd.DataFrame preprocessés
+#   y_train / y_test    : pd.Series ou np.ndarray
+#   preprocessor        : sklearn Pipeline / ColumnTransformer (fitted)
+#   feature_names_out   : list[str] après transformation
+# ══════════════════════════════════════════════════════════════════════════
+
+
+# ──────────────────────────────────────────────────────────────────────────
+eda:  # Analyse Exploratoire des Données
+# ──────────────────────────────────────────────────────────────────────────
+
+  - id: eda_overview
+    name: "Vue d'Ensemble du Dataset"
+    enabled: true
+    category: "EDA — Structure"
+    description: "Inspection rapide : shape, types, mémoire, valeurs manquantes, cardinalités, doublons."
+    applies_to: ["classification", "regression", "clustering", "timeseries", "nlp"]
+    when_to_use: "Toujours en premier. Donne un diagnostic global avant tout traitement."
+    illustration_svg: '<svg viewBox="0 0 600 160" xmlns="http://www.w3.org/2000/svg" class="w-full h-auto drop-shadow-xl rounded-xl"><rect width="600" height="160" fill="#0A0A0A" rx="12"/><!-- Grid pattern --><pattern id="grid" width="40" height="40" patternUnits="userSpaceOnUse">  <path d="M 40 0 L 0 0 0 40" fill="none" stroke="#222222" stroke-width="0.5"/></pattern><rect width="600" height="160" fill="url(#grid)" rx="12"/><!-- Inputs --><g transform="translate(20, 40)"></g><!-- Central Node --><rect x="230" y="40" width="140" height="80" fill="#1a1a1a" stroke="#444" rx="10" stroke-width="2"/><text x="300" y="70" fill="#EEEEEE" font-family="sans-serif" font-weight="bold" font-size="12" text-anchor="middle">Vue d''Ensemble du </text><text x="300" y="90" fill="#888888" font-family="sans-serif" font-size="10" text-anchor="middle">EDA/Transformer</text><!-- Outputs --><g transform="translate(440, 40)"></g></svg>'
+    code_template: |
+      import pandas as pd
+      import numpy as np
+
+      # ── 1. Infos générales ────────────────────────────────────────────
+      print("=" * 60)
+      print(f"SHAPE        : {df.shape[0]:,} lignes × {df.shape[1]} colonnes")
+      print(f"MÉMOIRE      : {df.memory_usage(deep=True).sum() / 1024**2:.1f} MB")
+      print(f"DOUBLONS     : {df.duplicated().sum():,} ({df.duplicated().mean()*100:.1f}%)")
+
+      # ── 2. Types et cardinalités ──────────────────────────────────────
+      type_summary = pd.DataFrame({
+          "dtype"      : df.dtypes,
+          "n_unique"   : df.nunique(),
+          "n_missing"  : df.isnull().sum(),
+          "pct_missing": (df.isnull().mean() * 100).round(2),
+          "sample"     : [df[c].dropna().iloc[0] if df[c].notna().any() else None for c in df.columns]
+      })
+      print("\n" + type_summary.to_string())
+
+      # ── 3. Colonnes par type ──────────────────────────────────────────
+      num_cols  = df.select_dtypes(include=["number"]).columns.tolist()
+      cat_cols  = df.select_dtypes(include=["object", "category"]).columns.tolist()
+      date_cols = df.select_dtypes(include=["datetime"]).columns.tolist()
+      bool_cols = df.select_dtypes(include=["bool"]).columns.tolist()
+
+      print(f"\nNumériques   ({len(num_cols)}) : {num_cols}")
+      print(f"Catégorielles({len(cat_cols)}) : {cat_cols}")
+      print(f"Dates        ({len(date_cols)}): {date_cols}")
+
+      # ── 4. Résumé statistique ─────────────────────────────────────────
+      print("\n── Numériques ──")
+      print(df[num_cols].describe(percentiles=[.01, .05, .25, .5, .75, .95, .99]).T.to_string())
+
+      print("\n── Catégorielles ──")
+      for col in cat_cols[:10]:
+          print(f"  {col}: {df[col].value_counts().head(5).to_dict()}")
+
+  - id: eda_distributions
+    name: "Distributions & Outliers"
+    enabled: true
+    category: "EDA — Univarié"
+    description: "Histogrammes, boxplots, tests de normalité, détection des valeurs aberrantes par IQR et Z-score."
+    applies_to: ["classification", "regression", "clustering"]
+    when_to_use: "Pour comprendre la distribution de chaque feature avant scaling/transformation."
+    illustration_svg: '<svg viewBox="0 0 600 160" xmlns="http://www.w3.org/2000/svg" class="w-full h-auto drop-shadow-xl rounded-xl"><rect width="600" height="160" fill="#0A0A0A" rx="12"/><!-- Grid pattern --><pattern id="grid" width="40" height="40" patternUnits="userSpaceOnUse">  <path d="M 40 0 L 0 0 0 40" fill="none" stroke="#222222" stroke-width="0.5"/></pattern><rect width="600" height="160" fill="url(#grid)" rx="12"/><!-- Inputs --><g transform="translate(20, 40)"></g><!-- Central Node --><rect x="230" y="40" width="140" height="80" fill="#1a1a1a" stroke="#444" rx="10" stroke-width="2"/><text x="300" y="70" fill="#EEEEEE" font-family="sans-serif" font-weight="bold" font-size="12" text-anchor="middle">Distributions & Ou</text><text x="300" y="90" fill="#888888" font-family="sans-serif" font-size="10" text-anchor="middle">EDA/Transformer</text><!-- Outputs --><g transform="translate(440, 40)"></g></svg>'
+    code_template: |
+      import pandas as pd
+      import numpy as np
+      import matplotlib.pyplot as plt
+      import seaborn as sns
+      from scipy import stats
+
+      num_cols = df.select_dtypes(include="number").columns.tolist()
+      if TARGET_COL in num_cols:
+          num_cols.remove(TARGET_COL)
+
+      # ── Histogrammes + KDE ────────────────────────────────────────────
+      n_cols = 4
+      n_rows = int(np.ceil(len(num_cols) / n_cols))
+      fig, axes = plt.subplots(n_rows, n_cols, figsize=(5 * n_cols, 3 * n_rows))
+      axes = axes.flatten()
+      for i, col in enumerate(num_cols):
+          df[col].dropna().plot.hist(bins=40, ax=axes[i], alpha=0.7, color="steelblue")
+          axes[i].set_title(col, fontsize=9)
+          axes[i].axvline(df[col].mean(),   color="r", linestyle="--", linewidth=1, label="mean")
+          axes[i].axvline(df[col].median(), color="g", linestyle="--", linewidth=1, label="median")
+      for j in range(i + 1, len(axes)): axes[j].set_visible(False)
+      plt.suptitle("Distributions des features numériques", fontsize=12)
+      plt.tight_layout(); plt.show()
+
+      # ── Boxplots ──────────────────────────────────────────────────────
+      fig, axes = plt.subplots(n_rows, n_cols, figsize=(5 * n_cols, 3 * n_rows))
+      axes = axes.flatten()
+      for i, col in enumerate(num_cols):
+          df[col].dropna().plot.box(ax=axes[i])
+          axes[i].set_title(col, fontsize=9)
+      plt.suptitle("Boxplots (outliers visibles)"); plt.tight_layout(); plt.show()
+
+      # ── Détection des outliers ────────────────────────────────────────
+      outlier_report = {}
+      for col in num_cols:
+          s = df[col].dropna()
+          Q1, Q3  = s.quantile(0.25), s.quantile(0.75)
+          IQR     = Q3 - Q1
+          n_iqr   = ((s < Q1 - 1.5 * IQR) | (s > Q3 + 1.5 * IQR)).sum()
+          z_scores = np.abs(stats.zscore(s))
+          n_z3    = (z_scores > 3).sum()
+          sk      = stats.skew(s)
+          _, pval = stats.shapiro(s.sample(min(len(s), 5000), random_state=42))
+          outlier_report[col] = {
+              "IQR_outliers": n_iqr, "Z3_outliers": n_z3,
+              "skewness": round(sk, 3), "shapiro_p": round(pval, 4),
+              "normal?": pval > 0.05
+          }
+      print(pd.DataFrame(outlier_report).T.to_string())
+
+  - id: eda_target
+    name: "Analyse de la Target"
+    enabled: true
+    category: "EDA — Target"
+    description: "Distribution de la variable cible, déséquilibre de classes, valeurs extrêmes pour régression."
+    applies_to: ["classification", "regression"]
+    when_to_use: "Comprendre la cible avant tout modèle. Détecte le déséquilibre de classes et les outliers."
+    illustration_svg: '<svg viewBox="0 0 600 160" xmlns="http://www.w3.org/2000/svg" class="w-full h-auto drop-shadow-xl rounded-xl"><rect width="600" height="160" fill="#0A0A0A" rx="12"/><!-- Grid pattern --><pattern id="grid" width="40" height="40" patternUnits="userSpaceOnUse">  <path d="M 40 0 L 0 0 0 40" fill="none" stroke="#222222" stroke-width="0.5"/></pattern><rect width="600" height="160" fill="url(#grid)" rx="12"/><!-- Inputs --><g transform="translate(20, 40)"></g><!-- Central Node --><rect x="230" y="40" width="140" height="80" fill="#1a1a1a" stroke="#444" rx="10" stroke-width="2"/><text x="300" y="70" fill="#EEEEEE" font-family="sans-serif" font-weight="bold" font-size="12" text-anchor="middle">Analyse de la Targ</text><text x="300" y="90" fill="#888888" font-family="sans-serif" font-size="10" text-anchor="middle">EDA/Transformer</text><!-- Outputs --><g transform="translate(440, 40)"></g></svg>'
+    code_template: |
+      import pandas as pd
+      import numpy as np
+      import matplotlib.pyplot as plt
+      import seaborn as sns
+      from scipy import stats
+
+      y = df[TARGET_COL]
+      IS_CLASSIFICATION = y.dtype == object or y.nunique() < 20
+
+      if IS_CLASSIFICATION:
+          # ── Distribution des classes ──────────────────────────────────
+          counts = y.value_counts()
+          pcts   = y.value_counts(normalize=True) * 100
+
+          print("Distribution des classes :")
+          for cls, cnt in counts.items():
+              print(f"  {cls:>15} : {cnt:>6,} ({pcts[cls]:.1f}%)")
+
+          imbalance_ratio = counts.max() / counts.min()
+          print(f"\nRatio déséquilibre (max/min) : {imbalance_ratio:.1f}x")
+          if imbalance_ratio > 5:
+              print("⚠ Déséquilibre sévère → SMOTE, class_weight, ou seuil ajusté")
+
+          fig, axes = plt.subplots(1, 2, figsize=(12, 4))
+          counts.plot.bar(ax=axes[0], color="steelblue")
+          axes[0].set_title("Comptage par classe")
+          counts.plot.pie(ax=axes[1], autopct="%1.1f%%", startangle=90)
+          axes[1].set_title("Répartition")
+          plt.tight_layout(); plt.show()
+
+      else:
+          # ── Distribution de la target numérique ──────────────────────
+          fig, axes = plt.subplots(1, 3, figsize=(15, 4))
+          y.hist(bins=50, ax=axes[0], color="steelblue", alpha=0.8)
+          axes[0].set_title("Distribution de la target")
+          stats.probplot(y.dropna(), dist="norm", plot=axes[1])
+          axes[1].set_title("Q-Q Plot (normalité)")
+          np.log1p(y.clip(lower=0)).hist(bins=50, ax=axes[2], color="tomato", alpha=0.8)
+          axes[2].set_title("Distribution log(target+1)")
+          plt.tight_layout(); plt.show()
+
+          print(f"Skewness   : {stats.skew(y.dropna()):.3f}")
+          print(f"Kurtosis   : {stats.kurtosis(y.dropna()):.3f}")
+          print(y.describe(percentiles=[.01, .05, .25, .5, .75, .95, .99]))
+
+  - id: eda_correlations
+    name: "Corrélations & Relations"
+    enabled: true
+    category: "EDA — Multivarié"
+    description: "Heatmap de corrélation, pairplot, corrélation features/target, multicolinéarité (VIF)."
+    applies_to: ["classification", "regression", "clustering"]
+    when_to_use: "Avant feature selection pour détecter la redondance et les features prédictives."
+    illustration_svg: '<svg viewBox="0 0 600 160" xmlns="http://www.w3.org/2000/svg" class="w-full h-auto drop-shadow-xl rounded-xl"><rect width="600" height="160" fill="#0A0A0A" rx="12"/><!-- Grid pattern --><pattern id="grid" width="40" height="40" patternUnits="userSpaceOnUse">  <path d="M 40 0 L 0 0 0 40" fill="none" stroke="#222222" stroke-width="0.5"/></pattern><rect width="600" height="160" fill="url(#grid)" rx="12"/><!-- Inputs --><g transform="translate(20, 40)"></g><!-- Central Node --><rect x="230" y="40" width="140" height="80" fill="#1a1a1a" stroke="#444" rx="10" stroke-width="2"/><text x="300" y="70" fill="#EEEEEE" font-family="sans-serif" font-weight="bold" font-size="12" text-anchor="middle">Corrélations & Rel</text><text x="300" y="90" fill="#888888" font-family="sans-serif" font-size="10" text-anchor="middle">EDA/Transformer</text><!-- Outputs --><g transform="translate(440, 40)"></g></svg>'
+    code_template: |
+      import pandas as pd
+      import numpy as np
+      import matplotlib.pyplot as plt
+      import seaborn as sns
+      from scipy.stats import spearmanr, pointbiserialr
+
+      num_cols = df.select_dtypes(include="number").columns.tolist()
+
+      # ── 1. Heatmap de corrélation ─────────────────────────────────────
+      corr_matrix = df[num_cols].corr(method="pearson")
+      mask = np.triu(np.ones_like(corr_matrix, dtype=bool))
+      plt.figure(figsize=(min(20, len(num_cols)), min(16, len(num_cols))))
+      sns.heatmap(corr_matrix, mask=mask, cmap="RdBu_r", center=0,
+                  vmin=-1, vmax=1, annot=len(num_cols) <= 15,
+                  fmt=".2f", linewidths=0.5)
+      plt.title("Corrélation de Pearson"); plt.tight_layout(); plt.show()
+
+      # ── 2. Corrélation avec la target ─────────────────────────────────
+      if TARGET_COL in df.columns:
+          target_corr = (df[num_cols]
+                          .corr()[TARGET_COL]
+                          .drop(TARGET_COL)
+                          .abs()
+                          .sort_values(ascending=False))
+          print("Corrélation |Pearson| avec la target :")
+          print(target_corr.head(20).to_string())
+
+          target_corr.head(20).plot.barh(figsize=(8, 6))
+          plt.title("Features les plus corrélées avec la target")
+          plt.tight_layout(); plt.show()
+
+      # ── 3. Paires très corrélées (multicolinéarité) ───────────────────
+      corr_abs = corr_matrix.abs()
+      np.fill_diagonal(corr_abs.values, 0)
+      high_corr = [(i, j, corr_abs.loc[i, j])
+                   for i in corr_abs.index
+                   for j in corr_abs.columns
+                   if corr_abs.loc[i, j] > 0.85 and i < j]
+      high_corr.sort(key=lambda x: -x[2])
+      if high_corr:
+          print(f"\n⚠ Paires fortement corrélées (>0.85) : {len(high_corr)}")
+          for i, j, v in high_corr[:10]:
+              print(f"  {i} ↔ {j} : {v:.3f}")
+
+      # ── 4. VIF (Variance Inflation Factor) ────────────────────────────
+      from statsmodels.stats.outliers_influence import variance_inflation_factor
+      X_num = df[num_cols].dropna()
+      vif_data = pd.DataFrame({
+          "feature": num_cols,
+          "VIF": [variance_inflation_factor(X_num.values, i) for i in range(len(num_cols))]
+      }).sort_values("VIF", ascending=False)
+      print("\nVIF (>10 = multicolinéarité problématique) :")
+      print(vif_data.to_string(index=False))
+
+  - id: eda_timeseries_analysis
+    name: "Analyse EDA Séries Temporelles"
+    enabled: true
+    category: "EDA — Séries Temporelles"
+    description: "Décomposition, stationnarité (ADF, KPSS), autocorrélation (ACF/PACF), saisonnalité."
+    applies_to: ["timeseries"]
+    when_to_use: "Avant ARIMA/Prophet/XGBoost TS. Révèle la tendance, saisonnalité et ordre des modèles."
+    illustration_svg: '<svg viewBox="0 0 600 160" xmlns="http://www.w3.org/2000/svg" class="w-full h-auto drop-shadow-xl rounded-xl"><rect width="600" height="160" fill="#0A0A0A" rx="12"/><!-- Grid pattern --><pattern id="grid" width="40" height="40" patternUnits="userSpaceOnUse">  <path d="M 40 0 L 0 0 0 40" fill="none" stroke="#222222" stroke-width="0.5"/></pattern><rect width="600" height="160" fill="url(#grid)" rx="12"/><!-- Inputs --><g transform="translate(20, 40)"></g><!-- Central Node --><rect x="230" y="40" width="140" height="80" fill="#1a1a1a" stroke="#444" rx="10" stroke-width="2"/><text x="300" y="70" fill="#EEEEEE" font-family="sans-serif" font-weight="bold" font-size="12" text-anchor="middle">Analyse EDA Séries</text><text x="300" y="90" fill="#888888" font-family="sans-serif" font-size="10" text-anchor="middle">EDA/Transformer</text><!-- Outputs --><g transform="translate(440, 40)"></g></svg>'
+    code_template: |
+      import pandas as pd
+      import numpy as np
+      import matplotlib.pyplot as plt
+      from statsmodels.tsa.seasonal import seasonal_decompose, STL
+      from statsmodels.tsa.stattools import adfuller, kpss, acf, pacf
+      from statsmodels.graphics.tsaplots import plot_acf, plot_pacf
+
+      series = df[TARGET_COL].dropna()
+      PERIOD = 12   # 12=mensuel, 7=hebdo, 4=trimestriel, 52=hebdo annuel
+
+      # ── 1. Décomposition (STL robuste) ─────────────────────────────────
+      stl = STL(series, period=PERIOD, robust=True)
+      result = stl.fit()
+      result.plot(); plt.suptitle("Décomposition STL"); plt.tight_layout(); plt.show()
+
+      trend    = result.trend
+      seasonal = result.seasonal
+      residual = result.resid
+      print(f"Tendance    — min: {trend.min():.2f}, max: {trend.max():.2f}")
+      print(f"Saisonnalité— amplitude: {seasonal.max() - seasonal.min():.2f}")
+      print(f"Résidus     — std: {residual.std():.4f}")
+
+      # ── 2. Test de stationnarité ──────────────────────────────────────
+      adf = adfuller(series, autolag="AIC")
+      print(f"\nADF  stat={adf[0]:.4f}  p={adf[1]:.4f}  {'✓ Stationnaire' if adf[1] < 0.05 else '✗ Non-stationnaire'}")
+
+      kpss_stat, kpss_p, _, _ = kpss(series, regression="c", nlags="auto")
+      print(f"KPSS stat={kpss_stat:.4f}  p={kpss_p:.4f}  {'✓ Stationnaire' if kpss_p > 0.05 else '✗ Non-stationnaire'}")
+
+      # ── 3. ACF / PACF ─────────────────────────────────────────────────
+      fig, axes = plt.subplots(1, 2, figsize=(14, 4))
+      plot_acf(series,  lags=min(50, len(series)//2), ax=axes[0])
+      plot_pacf(series, lags=min(50, len(series)//2), ax=axes[1])
+      plt.suptitle("ACF / PACF — lecture des ordres p, q")
+      plt.tight_layout(); plt.show()
+
+      # ── 4. Saisonnalité par période ───────────────────────────────────
+      df_ts = df[[TARGET_COL]].copy()
+      df_ts["month"]   = df_ts.index.month
+      df_ts["weekday"] = df_ts.index.dayofweek
+      df_ts.groupby("month")[TARGET_COL].mean().plot.bar(
+          figsize=(10, 3), title="Moyenne par mois"
+      )
+      plt.tight_layout(); plt.show()
+
+  - id: eda_nlp_corpus
+    name: "Analyse EDA Corpus NLP"
+    enabled: true
+    category: "EDA — NLP"
+    description: "Statistiques corpus, fréquences de tokens, longueur des textes, nuage de mots."
+    applies_to: ["nlp"]
+    when_to_use: "Avant vectorisation TF-IDF ou embeddings. Révèle le vocabulaire, les stopwords dominants."
+    illustration_svg: '<svg viewBox="0 0 600 160" xmlns="http://www.w3.org/2000/svg" class="w-full h-auto drop-shadow-xl rounded-xl"><rect width="600" height="160" fill="#0A0A0A" rx="12"/><!-- Grid pattern --><pattern id="grid" width="40" height="40" patternUnits="userSpaceOnUse">  <path d="M 40 0 L 0 0 0 40" fill="none" stroke="#222222" stroke-width="0.5"/></pattern><rect width="600" height="160" fill="url(#grid)" rx="12"/><!-- Inputs --><g transform="translate(20, 40)"></g><!-- Central Node --><rect x="230" y="40" width="140" height="80" fill="#1a1a1a" stroke="#444" rx="10" stroke-width="2"/><text x="300" y="70" fill="#EEEEEE" font-family="sans-serif" font-weight="bold" font-size="12" text-anchor="middle">Analyse EDA Corpus</text><text x="300" y="90" fill="#888888" font-family="sans-serif" font-size="10" text-anchor="middle">EDA/Transformer</text><!-- Outputs --><g transform="translate(440, 40)"></g></svg>'
+    code_template: |
+      import pandas as pd
+      import numpy as np
+      import matplotlib.pyplot as plt
+      from collections import Counter
+      import re
+
+      texts = df[TEXT_COL].astype(str).tolist()
+
+      # ── 1. Statistiques de base ────────────────────────────────────────
+      lengths_char = [len(t) for t in texts]
+      lengths_word = [len(t.split()) for t in texts]
+      print(f"Corpus         : {len(texts):,} documents")
+      print(f"Longueur chars : min={min(lengths_char)} | moy={np.mean(lengths_char):.0f} | max={max(lengths_char)}")
+      print(f"Longueur mots  : min={min(lengths_word)} | moy={np.mean(lengths_word):.0f} | max={max(lengths_word)}")
+
+      fig, axes = plt.subplots(1, 2, figsize=(12, 4))
+      pd.Series(lengths_char).hist(bins=50, ax=axes[0], color="steelblue")
+      axes[0].set_title("Distribution longueur (caractères)")
+      pd.Series(lengths_word).hist(bins=50, ax=axes[1], color="tomato")
+      axes[1].set_title("Distribution longueur (mots)")
+      plt.tight_layout(); plt.show()
+
+      # ── 2. Fréquences des tokens ──────────────────────────────────────
+      all_tokens = []
+      for text in texts:
+          tokens = re.findall(r"\b[a-zA-ZÀ-ÿ]{3,}\b", text.lower())
+          all_tokens.extend(tokens)
+
+      freq = Counter(all_tokens)
+      print(f"\nVocabulaire unique : {len(freq):,}")
+      print("Top 30 tokens :", freq.most_common(30))
+
+      pd.Series(dict(freq.most_common(30))).plot.barh(figsize=(8, 7))
+      plt.title("Top 30 tokens (fréquence brute)")
+      plt.tight_layout(); plt.show()
+
+      # ── 3. Nuage de mots ──────────────────────────────────────────────
+      try:
+          from wordcloud import WordCloud
+          wc = WordCloud(width=800, height=400, background_color="white",
+                         max_words=200).generate_from_frequencies(freq)
+          plt.figure(figsize=(14, 6))
+          plt.imshow(wc, interpolation="bilinear")
+          plt.axis("off"); plt.title("Nuage de mots"); plt.show()
+      except ImportError:
+          print("wordcloud non installé : pip install wordcloud")
+
+      # ── 4. Analyse par classe (si supervisé) ──────────────────────────
+      if TARGET_COL in df.columns:
+          for label in df[TARGET_COL].unique():
+              sub_texts = df.loc[df[TARGET_COL] == label, TEXT_COL].astype(str).tolist()
+              tokens = [t for text in sub_texts
+                          for t in re.findall(r"\b[a-zA-ZÀ-ÿ]{3,}\b", text.lower())]
+              print(f"\nClasse '{label}' — top 10 : {Counter(tokens).most_common(10)}")
+
+
+# ──────────────────────────────────────────────────────────────────────────
+missing_values:  # Gestion des valeurs manquantes
+# ──────────────────────────────────────────────────────────────────────────
+
+  - id: missing_analysis
+    name: "Analyse des Valeurs Manquantes"
+    enabled: true
+    category: "Valeurs Manquantes — Analyse"
+    description: "Heatmap des NaN, patterns de manquants, test MCAR/MAR/MNAR, seuils de suppression."
+    applies_to: ["classification", "regression", "clustering"]
+    when_to_use: "Avant toute imputation. Révèle si les NaN sont aléatoires (MCAR) ou structurels (MNAR)."
+    illustration_svg: '<svg viewBox="0 0 600 160" xmlns="http://www.w3.org/2000/svg" class="w-full h-auto drop-shadow-xl rounded-xl"><rect width="600" height="160" fill="#0A0A0A" rx="12"/><!-- Grid pattern --><pattern id="grid" width="40" height="40" patternUnits="userSpaceOnUse">  <path d="M 40 0 L 0 0 0 40" fill="none" stroke="#222222" stroke-width="0.5"/></pattern><rect width="600" height="160" fill="url(#grid)" rx="12"/><!-- Inputs --><g transform="translate(20, 40)"></g><!-- Central Node --><rect x="230" y="40" width="140" height="80" fill="#1a1a1a" stroke="#444" rx="10" stroke-width="2"/><text x="300" y="70" fill="#EEEEEE" font-family="sans-serif" font-weight="bold" font-size="12" text-anchor="middle">Analyse des Valeur</text><text x="300" y="90" fill="#888888" font-family="sans-serif" font-size="10" text-anchor="middle">EDA/Transformer</text><!-- Outputs --><g transform="translate(440, 40)"></g></svg>'
+    code_template: |
+      import pandas as pd
+      import numpy as np
+      import matplotlib.pyplot as plt
+      import seaborn as sns
+
+      # ── 1. Résumé des NaN ─────────────────────────────────────────────
+      miss = pd.DataFrame({
+          "n_missing" : df.isnull().sum(),
+          "pct_missing": df.isnull().mean() * 100
+      }).sort_values("pct_missing", ascending=False)
+      miss = miss[miss["n_missing"] > 0]
+      print("Colonnes avec valeurs manquantes :")
+      print(miss.to_string())
+
+      # ── 2. Heatmap des patterns de NaN ────────────────────────────────
+      if miss.shape[0] > 0:
+          cols_with_na = miss.index.tolist()
+          plt.figure(figsize=(max(8, len(cols_with_na)), 4))
+          sns.heatmap(df[cols_with_na].isnull().T, cbar=False,
+                      cmap="viridis", yticklabels=True)
+          plt.title("Heatmap des NaN (lignes=features, colonnes=observations)")
+          plt.tight_layout(); plt.show()
+
+      # ── 3. Corrélation entre patterns de NaN ─────────────────────────
+      if len(cols_with_na) > 1:
+          na_corr = df[cols_with_na].isnull().corr()
+          sns.heatmap(na_corr, annot=True, fmt=".2f", cmap="coolwarm", center=0)
+          plt.title("Corrélation entre patterns de NaN"); plt.show()
+
+      # ── 4. Recommandations ────────────────────────────────────────────
+      for col, row in miss.iterrows():
+          pct = row["pct_missing"]
+          if pct > 60:
+              print(f"  ❌ {col} ({pct:.1f}%) → envisager suppression")
+          elif pct > 20:
+              print(f"  ⚠  {col} ({pct:.1f}%) → imputation avancée (KNN/iterative) ou flag binaire")
+          else:
+              print(f"  ✓  {col} ({pct:.1f}%) → imputation simple (médiane/mode)")
+
+      HIGH_NA_THRESHOLD = 60
+      cols_to_drop = miss[miss["pct_missing"] > HIGH_NA_THRESHOLD].index.tolist()
+      print(f"\nColonnes à supprimer (>{HIGH_NA_THRESHOLD}% NaN) : {cols_to_drop}")
+
+  - id: imputation_simple
+    name: "Imputation Simple (Médiane / Mode / Constante)"
+    enabled: true
+    category: "Valeurs Manquantes — Imputation"
+    description: "Imputation par médiane (numériques), mode (catégorielles), constante, ou indicateur binaire."
+    applies_to: ["classification", "regression", "clustering"]
+    when_to_use: "Quand NaN < 20% et données MCAR. Rapide et intégré dans sklearn Pipeline."
+    output_contract:
+      preprocessor: "sklearn ColumnTransformer avec SimpleImputer"
+      X_train: "np.ndarray preprocessé"
+      X_test: "np.ndarray preprocessé"
+    illustration_svg: '<svg viewBox="0 0 600 188" xmlns="http://www.w3.org/2000/svg" class="w-full h-auto drop-shadow-xl rounded-xl"><rect width="600" height="188" fill="#0A0A0A" rx="12"/><!-- Grid pattern --><pattern id="grid" width="40" height="40" patternUnits="userSpaceOnUse">  <path d="M 40 0 L 0 0 0 40" fill="none" stroke="#222222" stroke-width="0.5"/></pattern><rect width="600" height="188" fill="url(#grid)" rx="12"/><!-- Inputs --><g transform="translate(20, 40)"></g><!-- Central Node --><rect x="230" y="54" width="140" height="80" fill="#1a1a1a" stroke="#444" rx="10" stroke-width="2"/><text x="300" y="84" fill="#EEEEEE" font-family="sans-serif" font-weight="bold" font-size="12" text-anchor="middle">Imputation Simple </text><text x="300" y="104" fill="#888888" font-family="sans-serif" font-size="10" text-anchor="middle">EDA/Transformer</text><!-- Outputs --><g transform="translate(440, 40)">    <path d="M 370 94 C 400 94, 420 14, 440 14" fill="none" stroke="#555" stroke-width="1.5" stroke-dasharray="4"/>    <rect y="0" width="140" height="28" fill="#0A0A0A" stroke="#3b82f6" stroke-width="1.5" rx="6"/>    <text x="10" y="18" fill="#bfdbfe" font-family="monospace" font-size="11" alignment-baseline="middle">preprocessor</text>    <path d="M 370 94 C 400 94, 420 50, 440 50" fill="none" stroke="#555" stroke-width="1.5" stroke-dasharray="4"/>    <rect y="36" width="140" height="28" fill="#0A0A0A" stroke="#3b82f6" stroke-width="1.5" rx="6"/>    <text x="10" y="54" fill="#bfdbfe" font-family="monospace" font-size="11" alignment-baseline="middle">X_train</text>    <path d="M 370 94 C 400 94, 420 86, 440 86" fill="none" stroke="#555" stroke-width="1.5" stroke-dasharray="4"/>    <rect y="72" width="140" height="28" fill="#0A0A0A" stroke="#3b82f6" stroke-width="1.5" rx="6"/>    <text x="10" y="90" fill="#bfdbfe" font-family="monospace" font-size="11" alignment-baseline="middle">X_test</text></g></svg>'
+    code_template: |
+      import pandas as pd
+      import numpy as np
+      from sklearn.impute import SimpleImputer
+      from sklearn.compose import ColumnTransformer
+      from sklearn.pipeline import Pipeline
+      from sklearn.preprocessing import StandardScaler, OneHotEncoder
+      from sklearn.model_selection import train_test_split
+
+      num_cols = X.select_dtypes(include="number").columns.tolist()
+      cat_cols = X.select_dtypes(include=["object", "category"]).columns.tolist()
+
+      X_train, X_test, y_train, y_test = train_test_split(
+          X, y, test_size=0.2, stratify=y if task_type == "classification" else None,
+          random_state=42
+      )
+
+      # Imputation + Scaling pour les numériques
+      num_pipeline = Pipeline([
+          ("imputer", SimpleImputer(strategy="median")),   # ou "mean", "most_frequent"
+          ("scaler",  StandardScaler()),
+      ])
+
+      # Imputation + Encodage pour les catégorielles
+      cat_pipeline = Pipeline([
+          ("imputer", SimpleImputer(strategy="most_frequent")),  # ou strategy="constant", fill_value="missing"
+          ("encoder", OneHotEncoder(handle_unknown="ignore", sparse_output=False)),
+      ])
+
+      preprocessor = ColumnTransformer([
+          ("num", num_pipeline, num_cols),
+          ("cat", cat_pipeline, cat_cols),
+      ], remainder="drop")
+
+      X_train_prep = preprocessor.fit_transform(X_train)
+      X_test_prep  = preprocessor.transform(X_test)
+
+      # Noms des features après encodage
+      ohe_features = preprocessor.named_transformers_["cat"]["encoder"] \
+                                  .get_feature_names_out(cat_cols).tolist()
+      feature_names_out = num_cols + ohe_features
+
+      print(f"Shape avant : {X_train.shape} → après : {X_train_prep.shape}")
+
+  - id: imputation_advanced
+    name: "Imputation Avancée (KNN / Iterative)"
+    enabled: true
+    category: "Valeurs Manquantes — Imputation"
+    description: "Imputation par KNN (similarité locale) ou IterativeImputer (MICE, régression multivariée)."
+    applies_to: ["classification", "regression"]
+    when_to_use: "Quand NaN > 20% ou structure MAR. Plus précis que la médiane mais plus lent."
+    illustration_svg: '<svg viewBox="0 0 600 160" xmlns="http://www.w3.org/2000/svg" class="w-full h-auto drop-shadow-xl rounded-xl"><rect width="600" height="160" fill="#0A0A0A" rx="12"/><!-- Grid pattern --><pattern id="grid" width="40" height="40" patternUnits="userSpaceOnUse">  <path d="M 40 0 L 0 0 0 40" fill="none" stroke="#222222" stroke-width="0.5"/></pattern><rect width="600" height="160" fill="url(#grid)" rx="12"/><!-- Inputs --><g transform="translate(20, 40)"></g><!-- Central Node --><rect x="230" y="40" width="140" height="80" fill="#1a1a1a" stroke="#444" rx="10" stroke-width="2"/><text x="300" y="70" fill="#EEEEEE" font-family="sans-serif" font-weight="bold" font-size="12" text-anchor="middle">Imputation Avancée</text><text x="300" y="90" fill="#888888" font-family="sans-serif" font-size="10" text-anchor="middle">EDA/Transformer</text><!-- Outputs --><g transform="translate(440, 40)"></g></svg>'
+    code_template: |
+      import pandas as pd
+      import numpy as np
+      from sklearn.impute import KNNImputer
+      from sklearn.experimental import enable_iterative_imputer
+      from sklearn.impute import IterativeImputer
+      from sklearn.preprocessing import StandardScaler
+      from sklearn.model_selection import train_test_split
+
+      num_cols = X.select_dtypes(include="number").columns.tolist()
+      X_num    = X[num_cols].copy()
+
+      X_train, X_test, y_train, y_test = train_test_split(
+          X_num, y, test_size=0.2, random_state=42
+      )
+
+      # ── Option 1 : KNN Imputer ─────────────────────────────────────────
+      knn_imputer = KNNImputer(n_neighbors=5, weights="uniform", metric="nan_euclidean")
+
+      # ── Option 2 : MICE (Multiple Imputation by Chained Equations) ─────
+      mice_imputer = IterativeImputer(
+          estimator=None,      # None = BayesianRidge par défaut
+          max_iter=10,
+          random_state=42,
+          imputation_order="ascending"
+      )
+
+      # Choisir l'une ou l'autre
+      imputer = knn_imputer   # ou mice_imputer
+
+      scaler = StandardScaler()
+      X_train_scaled = scaler.fit_transform(X_train)
+      X_test_scaled  = scaler.transform(X_test)
+
+      X_train_prep = imputer.fit_transform(X_train_scaled)
+      X_test_prep  = imputer.transform(X_test_scaled)
+
+      feature_names_out = num_cols
+      print(f"NaN restants après imputation : {np.isnan(X_train_prep).sum()}")
+      print(f"Shape : {X_train_prep.shape}")
+
+
+# ──────────────────────────────────────────────────────────────────────────
+encoding:  # Encodage des variables catégorielles
+# ──────────────────────────────────────────────────────────────────────────
+
+  - id: encoding_ohe
+    name: "One-Hot Encoding"
+    enabled: true
+    category: "Encodage — Catégoriel"
+    description: "Crée une colonne binaire par modalité. Standard pour les catégorielles nominales peu cardinalistes."
+    applies_to: ["classification", "regression"]
+    when_to_use: "Cardinalité < 15 modalités. Pour modèles linéaires et réseaux de neurones."
+    illustration_svg: '<svg viewBox="0 0 600 160" xmlns="http://www.w3.org/2000/svg" class="w-full h-auto drop-shadow-xl rounded-xl"><rect width="600" height="160" fill="#0A0A0A" rx="12"/><!-- Grid pattern --><pattern id="grid" width="40" height="40" patternUnits="userSpaceOnUse">  <path d="M 40 0 L 0 0 0 40" fill="none" stroke="#222222" stroke-width="0.5"/></pattern><rect width="600" height="160" fill="url(#grid)" rx="12"/><!-- Inputs --><g transform="translate(20, 40)"></g><!-- Central Node --><rect x="230" y="40" width="140" height="80" fill="#1a1a1a" stroke="#444" rx="10" stroke-width="2"/><text x="300" y="70" fill="#EEEEEE" font-family="sans-serif" font-weight="bold" font-size="12" text-anchor="middle">One-Hot Encoding</text><text x="300" y="90" fill="#888888" font-family="sans-serif" font-size="10" text-anchor="middle">EDA/Transformer</text><!-- Outputs --><g transform="translate(440, 40)"></g></svg>'
+    code_template: |
+      from sklearn.preprocessing import OneHotEncoder
+      import pandas as pd
+
+      cat_cols = X.select_dtypes(include=["object", "category"]).columns.tolist()
+      LOW_CARD = [c for c in cat_cols if X[c].nunique() <= 15]
+
+      ohe = OneHotEncoder(
+          drop="first",          # évite la multicolinéarité (k-1 colonnes)
+          handle_unknown="ignore",
+          sparse_output=False,
+          dtype=float
+      )
+      X_encoded = ohe.fit_transform(X[LOW_CARD])
+      X_encoded_df = pd.DataFrame(
+          X_encoded,
+          columns=ohe.get_feature_names_out(LOW_CARD),
+          index=X.index
+      )
+      X_final = pd.concat([X.drop(columns=LOW_CARD), X_encoded_df], axis=1)
+      print(f"Shape : {X.shape} → {X_final.shape}")
+      print(f"Nouvelles colonnes OHE : {X_encoded_df.columns.tolist()[:10]}...")
+
+  - id: encoding_ordinal
+    name: "Ordinal Encoding"
+    enabled: true
+    category: "Encodage — Catégoriel"
+    description: "Encode les catégorielles ordinales selon un ordre explicite défini manuellement."
+    applies_to: ["classification", "regression"]
+    when_to_use: "Variables avec ordre naturel : low/medium/high, bronze/silver/gold, etc."
+    illustration_svg: '<svg viewBox="0 0 600 160" xmlns="http://www.w3.org/2000/svg" class="w-full h-auto drop-shadow-xl rounded-xl"><rect width="600" height="160" fill="#0A0A0A" rx="12"/><!-- Grid pattern --><pattern id="grid" width="40" height="40" patternUnits="userSpaceOnUse">  <path d="M 40 0 L 0 0 0 40" fill="none" stroke="#222222" stroke-width="0.5"/></pattern><rect width="600" height="160" fill="url(#grid)" rx="12"/><!-- Inputs --><g transform="translate(20, 40)"></g><!-- Central Node --><rect x="230" y="40" width="140" height="80" fill="#1a1a1a" stroke="#444" rx="10" stroke-width="2"/><text x="300" y="70" fill="#EEEEEE" font-family="sans-serif" font-weight="bold" font-size="12" text-anchor="middle">Ordinal Encoding</text><text x="300" y="90" fill="#888888" font-family="sans-serif" font-size="10" text-anchor="middle">EDA/Transformer</text><!-- Outputs --><g transform="translate(440, 40)"></g></svg>'
+    code_template: |
+      from sklearn.preprocessing import OrdinalEncoder
+      import pandas as pd
+
+      # Définir l'ordre explicitement (crucial pour l'ordinalité)
+      ORDINAL_MAPPINGS = {
+          "education_level": ["primary", "secondary", "bachelor", "master", "phd"],
+          "satisfaction"   : ["very_low", "low", "medium", "high", "very_high"],
+          "size"           : ["XS", "S", "M", "L", "XL", "XXL"],
+      }
+
+      ordinal_cols = [c for c in ORDINAL_MAPPINGS if c in X.columns]
+      categories   = [ORDINAL_MAPPINGS[c] for c in ordinal_cols]
+
+      encoder = OrdinalEncoder(
+          categories=categories,
+          handle_unknown="use_encoded_value",
+          unknown_value=-1
+      )
+      X[ordinal_cols] = encoder.fit_transform(X[ordinal_cols])
+      print(f"Colonnes ordinales encodées : {ordinal_cols}")
+      print(X[ordinal_cols].head())
+
+  - id: encoding_target
+    name: "Target Encoding (Mean Encoding)"
+    enabled: true
+    category: "Encodage — Catégoriel"
+    description: "Remplace chaque modalité par la moyenne de la target. Efficace pour la haute cardinalité."
+    applies_to: ["classification", "regression"]
+    when_to_use: "Cardinalité élevée (>15 modalités). Excellente pour les boosting (XGB, LGB, CatBoost)."
+    illustration_svg: '<svg viewBox="0 0 600 160" xmlns="http://www.w3.org/2000/svg" class="w-full h-auto drop-shadow-xl rounded-xl"><rect width="600" height="160" fill="#0A0A0A" rx="12"/><!-- Grid pattern --><pattern id="grid" width="40" height="40" patternUnits="userSpaceOnUse">  <path d="M 40 0 L 0 0 0 40" fill="none" stroke="#222222" stroke-width="0.5"/></pattern><rect width="600" height="160" fill="url(#grid)" rx="12"/><!-- Inputs --><g transform="translate(20, 40)"></g><!-- Central Node --><rect x="230" y="40" width="140" height="80" fill="#1a1a1a" stroke="#444" rx="10" stroke-width="2"/><text x="300" y="70" fill="#EEEEEE" font-family="sans-serif" font-weight="bold" font-size="12" text-anchor="middle">Target Encoding (M</text><text x="300" y="90" fill="#888888" font-family="sans-serif" font-size="10" text-anchor="middle">EDA/Transformer</text><!-- Outputs --><g transform="translate(440, 40)"></g></svg>'
+    code_template: |
+      import pandas as pd
+      import numpy as np
+      from sklearn.model_selection import KFold
+
+      HIGH_CARD_COLS = [c for c in X.select_dtypes("object").columns if X[c].nunique() > 15]
+      ALPHA = 10    # paramètre de lissage (évite l'overfitting sur les petits groupes)
+
+      def target_encode_smooth(X_tr, X_val, y_tr, cols, alpha=10):
+          """Target encoding avec lissage bayésien (évite le data leakage)."""
+          global_mean = y_tr.mean()
+          for col in cols:
+              stats = y_tr.groupby(X_tr[col]).agg(["mean", "count"])
+              stats["smoothed"] = (stats["mean"] * stats["count"] + global_mean * alpha) \
+                                   / (stats["count"] + alpha)
+              X_tr[col + "_te"] = X_tr[col].map(stats["smoothed"]).fillna(global_mean)
+              X_val[col + "_te"] = X_val[col].map(stats["smoothed"]).fillna(global_mean)
+          return X_tr.drop(columns=cols), X_val.drop(columns=cols)
+
+      # Encodage avec cross-validation pour éviter le leakage sur train
+      from sklearn.model_selection import train_test_split
+      X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
+
+      kf = KFold(n_splits=5, shuffle=True, random_state=42)
+      global_mean = y_train.mean()
+      oof_encoded = pd.DataFrame(index=X_train.index)
+
+      for col in HIGH_CARD_COLS:
+          oof_encoded[col + "_te"] = global_mean
+          for tr_idx, val_idx in kf.split(X_train):
+              stats = y_train.iloc[tr_idx].groupby(X_train[col].iloc[tr_idx]).agg(["mean", "count"])
+              stats["smoothed"] = (stats["mean"] * stats["count"] + global_mean * ALPHA) \
+                                   / (stats["count"] + ALPHA)
+              oof_encoded.loc[X_train.index[val_idx], col + "_te"] = \
+                  X_train[col].iloc[val_idx].map(stats["smoothed"]).values
+
+      X_train = pd.concat([X_train.drop(columns=HIGH_CARD_COLS), oof_encoded], axis=1)
+      X_train, X_test = target_encode_smooth(X_train, X_test, y_train, HIGH_CARD_COLS)
+      print(f"Colonnes target-encodées : {HIGH_CARD_COLS}")
+
+
+# ──────────────────────────────────────────────────────────────────────────
+scaling:  # Normalisation et Standardisation
+# ──────────────────────────────────────────────────────────────────────────
+
+  - id: scaling_standard
+    name: "StandardScaler (Z-Score)"
+    enabled: true
+    category: "Scaling"
+    description: "Centre et réduit à moyenne=0, std=1. Standard pour modèles linéaires, SVM, réseaux de neurones."
+    applies_to: ["classification", "regression"]
+    when_to_use: "Features normalement distribuées. Obligatoire pour SVM, KNN, PCA, MLP."
+    illustration_svg: '<svg viewBox="0 0 600 160" xmlns="http://www.w3.org/2000/svg" class="w-full h-auto drop-shadow-xl rounded-xl"><rect width="600" height="160" fill="#0A0A0A" rx="12"/><!-- Grid pattern --><pattern id="grid" width="40" height="40" patternUnits="userSpaceOnUse">  <path d="M 40 0 L 0 0 0 40" fill="none" stroke="#222222" stroke-width="0.5"/></pattern><rect width="600" height="160" fill="url(#grid)" rx="12"/><!-- Inputs --><g transform="translate(20, 40)"></g><!-- Central Node --><rect x="230" y="40" width="140" height="80" fill="#1a1a1a" stroke="#444" rx="10" stroke-width="2"/><text x="300" y="70" fill="#EEEEEE" font-family="sans-serif" font-weight="bold" font-size="12" text-anchor="middle">StandardScaler (Z-</text><text x="300" y="90" fill="#888888" font-family="sans-serif" font-size="10" text-anchor="middle">EDA/Transformer</text><!-- Outputs --><g transform="translate(440, 40)"></g></svg>'
+    code_template: |
+      from sklearn.preprocessing import StandardScaler
+      from sklearn.pipeline import Pipeline
+
+      # Usage direct
+      scaler = StandardScaler()
+      X_train_scaled = scaler.fit_transform(X_train)
+      X_test_scaled  = scaler.transform(X_test)
+
+      # Dans un Pipeline (recommandé)
+      from sklearn.linear_model import LogisticRegression
+      pipeline = Pipeline([
+          ("scaler", StandardScaler()),
+          ("model",  LogisticRegression(random_state=42)),
+      ])
+      pipeline.fit(X_train, y_train)
+
+      feature_names_out = feature_names  # inchangé (même espace)
+      print(f"Moyenne train après scaling : {X_train_scaled.mean(axis=0)[:5].round(5)}")
+      print(f"Std train après scaling     : {X_train_scaled.std(axis=0)[:5].round(5)}")
+
+  - id: scaling_minmax
+    name: "MinMaxScaler"
+    enabled: true
+    category: "Scaling"
+    description: "Normalise dans [0, 1]. Préserve les zéros. Préféré pour les réseaux de neurones et les images."
+    applies_to: ["classification", "regression"]
+    when_to_use: "Distributions non gaussiennes. Réseaux de neurones, données images, algos basés distances."
+    illustration_svg: '<svg viewBox="0 0 600 160" xmlns="http://www.w3.org/2000/svg" class="w-full h-auto drop-shadow-xl rounded-xl"><rect width="600" height="160" fill="#0A0A0A" rx="12"/><!-- Grid pattern --><pattern id="grid" width="40" height="40" patternUnits="userSpaceOnUse">  <path d="M 40 0 L 0 0 0 40" fill="none" stroke="#222222" stroke-width="0.5"/></pattern><rect width="600" height="160" fill="url(#grid)" rx="12"/><!-- Inputs --><g transform="translate(20, 40)"></g><!-- Central Node --><rect x="230" y="40" width="140" height="80" fill="#1a1a1a" stroke="#444" rx="10" stroke-width="2"/><text x="300" y="70" fill="#EEEEEE" font-family="sans-serif" font-weight="bold" font-size="12" text-anchor="middle">MinMaxScaler</text><text x="300" y="90" fill="#888888" font-family="sans-serif" font-size="10" text-anchor="middle">EDA/Transformer</text><!-- Outputs --><g transform="translate(440, 40)"></g></svg>'
+    code_template: |
+      from sklearn.preprocessing import MinMaxScaler
+
+      scaler = MinMaxScaler(feature_range=(0, 1))
+      X_train_scaled = scaler.fit_transform(X_train)
+      X_test_scaled  = scaler.transform(X_test)
+
+      print(f"Min  : {X_train_scaled.min(axis=0)[:5]}")
+      print(f"Max  : {X_train_scaled.max(axis=0)[:5]}")
+
+  - id: scaling_robust
+    name: "RobustScaler"
+    enabled: true
+    category: "Scaling"
+    description: "Utilise la médiane et l'IQR. Résistant aux outliers. Préféré quand les outliers sont maintenus."
+    applies_to: ["classification", "regression"]
+    when_to_use: "Données avec outliers inévitables (données financières, logs, IoT). Alternatives : Winsorizing."
+    illustration_svg: '<svg viewBox="0 0 600 160" xmlns="http://www.w3.org/2000/svg" class="w-full h-auto drop-shadow-xl rounded-xl"><rect width="600" height="160" fill="#0A0A0A" rx="12"/><!-- Grid pattern --><pattern id="grid" width="40" height="40" patternUnits="userSpaceOnUse">  <path d="M 40 0 L 0 0 0 40" fill="none" stroke="#222222" stroke-width="0.5"/></pattern><rect width="600" height="160" fill="url(#grid)" rx="12"/><!-- Inputs --><g transform="translate(20, 40)"></g><!-- Central Node --><rect x="230" y="40" width="140" height="80" fill="#1a1a1a" stroke="#444" rx="10" stroke-width="2"/><text x="300" y="70" fill="#EEEEEE" font-family="sans-serif" font-weight="bold" font-size="12" text-anchor="middle">RobustScaler</text><text x="300" y="90" fill="#888888" font-family="sans-serif" font-size="10" text-anchor="middle">EDA/Transformer</text><!-- Outputs --><g transform="translate(440, 40)"></g></svg>'
+    code_template: |
+      from sklearn.preprocessing import RobustScaler
+
+      scaler = RobustScaler(quantile_range=(25, 75))
+      X_train_scaled = scaler.fit_transform(X_train)
+      X_test_scaled  = scaler.transform(X_test)
+
+      # Winsorizing alternatif (cap outliers avant scaling)
+      import numpy as np
+      def winsorize(X, lower=0.01, upper=0.99):
+          X_w = X.copy()
+          for col in X_w.columns if hasattr(X_w, "columns") else range(X_w.shape[1]):
+              lo, hi = np.quantile(X_train[:, col] if hasattr(X_train, "shape") else X_train[col],
+                                   [lower, upper])
+              if hasattr(X_w, "iloc"):
+                  X_w[col] = X_w[col].clip(lo, hi)
+              else:
+                  X_w[:, col] = X_w[:, col].clip(lo, hi)
+          return X_w
+
+
+# ──────────────────────────────────────────────────────────────────────────
+feature_engineering:  # Création de nouvelles features
+# ──────────────────────────────────────────────────────────────────────────
+
+  - id: fe_datetime
+    name: "Feature Engineering — Dates & Temps"
+    enabled: true
+    category: "Feature Engineering — Temporel"
+    description: "Extraction de composantes temporelles : heure, jour, mois, saison, jours fériés, lags."
+    applies_to: ["classification", "regression", "timeseries"]
+    when_to_use: "Dès qu'une colonne datetime est présente. Encode cyclicité (sin/cos) pour les modèles linéaires."
+    illustration_svg: '<svg viewBox="0 0 600 160" xmlns="http://www.w3.org/2000/svg" class="w-full h-auto drop-shadow-xl rounded-xl"><rect width="600" height="160" fill="#0A0A0A" rx="12"/><!-- Grid pattern --><pattern id="grid" width="40" height="40" patternUnits="userSpaceOnUse">  <path d="M 40 0 L 0 0 0 40" fill="none" stroke="#222222" stroke-width="0.5"/></pattern><rect width="600" height="160" fill="url(#grid)" rx="12"/><!-- Inputs --><g transform="translate(20, 40)"></g><!-- Central Node --><rect x="230" y="40" width="140" height="80" fill="#1a1a1a" stroke="#444" rx="10" stroke-width="2"/><text x="300" y="70" fill="#EEEEEE" font-family="sans-serif" font-weight="bold" font-size="12" text-anchor="middle">Feature Engineerin</text><text x="300" y="90" fill="#888888" font-family="sans-serif" font-size="10" text-anchor="middle">EDA/Transformer</text><!-- Outputs --><g transform="translate(440, 40)"></g></svg>'
+    code_template: |
+      import pandas as pd
+      import numpy as np
+
+      DATE_COL = "created_at"
+      df[DATE_COL] = pd.to_datetime(df[DATE_COL])
+
+      # ── Composantes basiques ──────────────────────────────────────────
+      df["hour"]        = df[DATE_COL].dt.hour
+      df["dayofweek"]   = df[DATE_COL].dt.dayofweek    # 0=lundi
+      df["dayofmonth"]  = df[DATE_COL].dt.day
+      df["dayofyear"]   = df[DATE_COL].dt.dayofyear
+      df["weekofyear"]  = df[DATE_COL].dt.isocalendar().week.astype(int)
+      df["month"]       = df[DATE_COL].dt.month
+      df["quarter"]     = df[DATE_COL].dt.quarter
+      df["year"]        = df[DATE_COL].dt.year
+      df["is_weekend"]  = df["dayofweek"].isin([5, 6]).astype(int)
+      df["is_monthend"] = df[DATE_COL].dt.is_month_end.astype(int)
+
+      # ── Encodage cyclique (sin/cos) — crucial pour les modèles linéaires ─
+      df["hour_sin"]   = np.sin(2 * np.pi * df["hour"]      / 24)
+      df["hour_cos"]   = np.cos(2 * np.pi * df["hour"]      / 24)
+      df["dow_sin"]    = np.sin(2 * np.pi * df["dayofweek"] / 7)
+      df["dow_cos"]    = np.cos(2 * np.pi * df["dayofweek"] / 7)
+      df["month_sin"]  = np.sin(2 * np.pi * df["month"]     / 12)
+      df["month_cos"]  = np.cos(2 * np.pi * df["month"]     / 12)
+
+      # ── Jours fériés ──────────────────────────────────────────────────
+      try:
+          import holidays
+          fr_holidays = holidays.France()
+          df["is_holiday"] = df[DATE_COL].dt.date.map(lambda d: int(d in fr_holidays))
+      except ImportError:
+          print("pip install holidays pour les jours fériés")
+
+      # ── Délais depuis un événement de référence ────────────────────────
+      REF_DATE = pd.Timestamp("2020-01-01")
+      df["days_since_ref"] = (df[DATE_COL] - REF_DATE).dt.days
+
+      new_feat_cols = ["hour_sin","hour_cos","dow_sin","dow_cos","month_sin","month_cos",
+                       "is_weekend","is_monthend","quarter","dayofyear","days_since_ref"]
+      print(f"Features temporelles ajoutées : {new_feat_cols}")
+
+  - id: fe_interactions
+    name: "Feature Engineering — Interactions & Polynomiales"
+    enabled: true
+    category: "Feature Engineering — Numérique"
+    description: "Ratios, produits, polynômes. Capture les interactions entre features pour les modèles linéaires."
+    applies_to: ["classification", "regression"]
+    when_to_use: "Quand on suspecte des interactions non linéaires. Attention à l'explosion dimensionnelle."
+    illustration_svg: '<svg viewBox="0 0 600 160" xmlns="http://www.w3.org/2000/svg" class="w-full h-auto drop-shadow-xl rounded-xl"><rect width="600" height="160" fill="#0A0A0A" rx="12"/><!-- Grid pattern --><pattern id="grid" width="40" height="40" patternUnits="userSpaceOnUse">  <path d="M 40 0 L 0 0 0 40" fill="none" stroke="#222222" stroke-width="0.5"/></pattern><rect width="600" height="160" fill="url(#grid)" rx="12"/><!-- Inputs --><g transform="translate(20, 40)"></g><!-- Central Node --><rect x="230" y="40" width="140" height="80" fill="#1a1a1a" stroke="#444" rx="10" stroke-width="2"/><text x="300" y="70" fill="#EEEEEE" font-family="sans-serif" font-weight="bold" font-size="12" text-anchor="middle">Feature Engineerin</text><text x="300" y="90" fill="#888888" font-family="sans-serif" font-size="10" text-anchor="middle">EDA/Transformer</text><!-- Outputs --><g transform="translate(440, 40)"></g></svg>'
+    code_template: |
+      import pandas as pd
+      import numpy as np
+      from sklearn.preprocessing import PolynomialFeatures
+
+      num_cols = X.select_dtypes(include="number").columns.tolist()
+
+      # ── Ratios manuels (domaine-spécifique) ──────────────────────────
+      # Exemples finance / e-commerce :
+      if "revenue" in X.columns and "n_orders" in X.columns:
+          X["avg_order_value"]   = X["revenue"] / (X["n_orders"] + 1)
+      if "clicks" in X.columns and "impressions" in X.columns:
+          X["ctr"]               = X["clicks"] / (X["impressions"] + 1)
+      if "revenue" in X.columns and "cost" in X.columns:
+          X["margin"]            = (X["revenue"] - X["cost"]) / (X["revenue"] + 1)
+
+      # ── Features polynomiales (automatique) ──────────────────────────
+      SELECTED_FEATS = num_cols[:5]  # limiter pour éviter l'explosion
+      poly = PolynomialFeatures(degree=2, interaction_only=False,
+                                include_bias=False)
+      X_poly = poly.fit_transform(X[SELECTED_FEATS])
+      poly_feature_names = poly.get_feature_names_out(SELECTED_FEATS).tolist()
+      X_poly_df = pd.DataFrame(X_poly, columns=poly_feature_names, index=X.index)
+      X = pd.concat([X, X_poly_df.drop(columns=SELECTED_FEATS)], axis=1)
+
+      print(f"Features après polynomiales (deg=2) : {X.shape[1]}")
+
+      # ── Transformations mathématiques ─────────────────────────────────
+      for col in num_cols:
+          if X[col].min() > 0:
+              X[f"{col}_log"]  = np.log(X[col])
+              X[f"{col}_sqrt"] = np.sqrt(X[col])
+          X[f"{col}_sq"] = X[col] ** 2
+
+  - id: fe_aggregations
+    name: "Feature Engineering — Agrégations (Group-By)"
+    enabled: true
+    category: "Feature Engineering — Aggrégation"
+    description: "Features statistiques agrégées par groupe (client, produit, région). Très puissant pour le ML tabulaire."
+    applies_to: ["classification", "regression"]
+    when_to_use: "Quand il existe un identifiant de groupe (user_id, store_id, etc.) avec des lignes historiques."
+    illustration_svg: '<svg viewBox="0 0 600 160" xmlns="http://www.w3.org/2000/svg" class="w-full h-auto drop-shadow-xl rounded-xl"><rect width="600" height="160" fill="#0A0A0A" rx="12"/><!-- Grid pattern --><pattern id="grid" width="40" height="40" patternUnits="userSpaceOnUse">  <path d="M 40 0 L 0 0 0 40" fill="none" stroke="#222222" stroke-width="0.5"/></pattern><rect width="600" height="160" fill="url(#grid)" rx="12"/><!-- Inputs --><g transform="translate(20, 40)"></g><!-- Central Node --><rect x="230" y="40" width="140" height="80" fill="#1a1a1a" stroke="#444" rx="10" stroke-width="2"/><text x="300" y="70" fill="#EEEEEE" font-family="sans-serif" font-weight="bold" font-size="12" text-anchor="middle">Feature Engineerin</text><text x="300" y="90" fill="#888888" font-family="sans-serif" font-size="10" text-anchor="middle">EDA/Transformer</text><!-- Outputs --><g transform="translate(440, 40)"></g></svg>'
+    code_template: |
+      import pandas as pd
+      import numpy as np
+
+      GROUP_COL  = "customer_id"   # identifiant du groupe
+      NUM_COLS   = ["amount", "duration", "n_items"]   # colonnes à agréger
+      DATE_COL   = "created_at"
+
+      # ── Agrégations statistiques par groupe ───────────────────────────
+      agg_funcs = {col: ["mean", "std", "min", "max", "median",
+                          lambda x: x.quantile(0.25),
+                          lambda x: x.quantile(0.75)]
+                   for col in NUM_COLS}
+
+      group_stats = df.groupby(GROUP_COL).agg(agg_funcs)
+      group_stats.columns = ["_".join(str(c) for c in col).strip("_")
+                              for col in group_stats.columns]
+
+      # ── Comptages et fréquences ───────────────────────────────────────
+      group_stats["n_transactions"]    = df.groupby(GROUP_COL).size()
+      group_stats["recency"]           = (df.groupby(GROUP_COL)[DATE_COL]
+                                            .max()
+                                            .apply(lambda d: (pd.Timestamp.now() - d).days))
+
+      # ── Jointure sur le DataFrame principal ──────────────────────────
+      df = df.join(group_stats, on=GROUP_COL, rsuffix="_grp")
+
+      # ── Lag features (historique glissant anti-leakage) ───────────────
+      # Tri par date avant de calculer les lags
+      df = df.sort_values(DATE_COL)
+      for lag in [1, 7, 30]:
+          df[f"amount_lag_{lag}"] = (df.groupby(GROUP_COL)["amount"]
+                                        .shift(lag))
+          df[f"amount_rolling_{lag}_mean"] = (df.groupby(GROUP_COL)["amount"]
+                                                  .transform(lambda x: x.shift(1).rolling(lag).mean()))
+
+      print(f"Shape après agrégations : {df.shape}")
+
+  - id: fe_text_features
+    name: "Feature Engineering — Features Texte"
+    enabled: true
+    category: "Feature Engineering — NLP"
+    description: "Extraction de méta-features depuis des colonnes texte : longueur, ponctuation, sentiments, entités."
+    applies_to: ["classification", "regression", "nlp"]
+    when_to_use: "Pour enrichir un modèle tabulaire avec des colonnes texte. Complément aux embeddings."
+    illustration_svg: '<svg viewBox="0 0 600 160" xmlns="http://www.w3.org/2000/svg" class="w-full h-auto drop-shadow-xl rounded-xl"><rect width="600" height="160" fill="#0A0A0A" rx="12"/><!-- Grid pattern --><pattern id="grid" width="40" height="40" patternUnits="userSpaceOnUse">  <path d="M 40 0 L 0 0 0 40" fill="none" stroke="#222222" stroke-width="0.5"/></pattern><rect width="600" height="160" fill="url(#grid)" rx="12"/><!-- Inputs --><g transform="translate(20, 40)"></g><!-- Central Node --><rect x="230" y="40" width="140" height="80" fill="#1a1a1a" stroke="#444" rx="10" stroke-width="2"/><text x="300" y="70" fill="#EEEEEE" font-family="sans-serif" font-weight="bold" font-size="12" text-anchor="middle">Feature Engineerin</text><text x="300" y="90" fill="#888888" font-family="sans-serif" font-size="10" text-anchor="middle">EDA/Transformer</text><!-- Outputs --><g transform="translate(440, 40)"></g></svg>'
+    code_template: |
+      import pandas as pd
+      import numpy as np
+      import re
+
+      TEXT_COL = "description"
+
+      # ── Features de structure ─────────────────────────────────────────
+      df[f"{TEXT_COL}_len_char"]  = df[TEXT_COL].str.len()
+      df[f"{TEXT_COL}_len_words"] = df[TEXT_COL].str.split().str.len()
+      df[f"{TEXT_COL}_n_sent"]    = df[TEXT_COL].str.count(r"[.!?]+")
+      df[f"{TEXT_COL}_n_caps"]    = df[TEXT_COL].str.count(r"[A-Z]")
+      df[f"{TEXT_COL}_n_digits"]  = df[TEXT_COL].str.count(r"\d")
+      df[f"{TEXT_COL}_n_punct"]   = df[TEXT_COL].str.count(r"[!?,;]")
+      df[f"{TEXT_COL}_avg_word_len"] = (df[TEXT_COL]
+                                          .apply(lambda t: np.mean([len(w) for w in t.split()])
+                                                 if isinstance(t, str) and t.strip() else 0))
+
+      # ── Analyse de sentiment (TextBlob) ───────────────────────────────
+      try:
+          from textblob import TextBlob
+          df[f"{TEXT_COL}_polarity"]    = df[TEXT_COL].apply(
+              lambda t: TextBlob(str(t)).sentiment.polarity if t else 0)
+          df[f"{TEXT_COL}_subjectivity"] = df[TEXT_COL].apply(
+              lambda t: TextBlob(str(t)).sentiment.subjectivity if t else 0)
+      except ImportError:
+          print("pip install textblob")
+
+      # ── Présence de mots-clés ─────────────────────────────────────────
+      KEYWORDS = ["urgent", "gratuit", "promo", "officiel", "erreur"]
+      for kw in KEYWORDS:
+          df[f"has_{kw}"] = df[TEXT_COL].str.lower().str.contains(kw, regex=False).astype(int)
+
+      new_text_feats = [c for c in df.columns if c.startswith(TEXT_COL)]
+      print(f"Features texte ajoutées : {new_text_feats}")
+
+
+# ──────────────────────────────────────────────────────────────────────────
+feature_selection:  # Sélection des features pertinentes
+# ──────────────────────────────────────────────────────────────────────────
+
+  - id: fs_filter_methods
+    name: "Sélection par Filtre (Statistique)"
+    enabled: true
+    category: "Sélection de Features — Filtre"
+    description: "SelectKBest, ANOVA F-test, Chi², Mutual Information. Rapide, indépendant du modèle."
+    applies_to: ["classification", "regression"]
+    when_to_use: "Premier filtre pour réduire la dimensionnalité avant des méthodes plus lourdes."
+    illustration_svg: '<svg viewBox="0 0 600 160" xmlns="http://www.w3.org/2000/svg" class="w-full h-auto drop-shadow-xl rounded-xl"><rect width="600" height="160" fill="#0A0A0A" rx="12"/><!-- Grid pattern --><pattern id="grid" width="40" height="40" patternUnits="userSpaceOnUse">  <path d="M 40 0 L 0 0 0 40" fill="none" stroke="#222222" stroke-width="0.5"/></pattern><rect width="600" height="160" fill="url(#grid)" rx="12"/><!-- Inputs --><g transform="translate(20, 40)"></g><!-- Central Node --><rect x="230" y="40" width="140" height="80" fill="#1a1a1a" stroke="#444" rx="10" stroke-width="2"/><text x="300" y="70" fill="#EEEEEE" font-family="sans-serif" font-weight="bold" font-size="12" text-anchor="middle">Sélection par Filt</text><text x="300" y="90" fill="#888888" font-family="sans-serif" font-size="10" text-anchor="middle">EDA/Transformer</text><!-- Outputs --><g transform="translate(440, 40)"></g></svg>'
+    code_template: |
+      from sklearn.feature_selection import (SelectKBest, SelectPercentile,
+                                              f_classif, f_regression,
+                                              chi2, mutual_info_classif,
+                                              mutual_info_regression)
+      import pandas as pd
+      import numpy as np
+
+      IS_CLASSIFICATION = task_type == "classification"
+
+      # ── ANOVA F-test (numériques → classification) ou F-regression ─────
+      score_func = f_classif if IS_CLASSIFICATION else f_regression
+      selector_f = SelectKBest(score_func=score_func, k=20)
+      selector_f.fit(X_train, y_train)
+      f_scores = pd.Series(selector_f.scores_, index=feature_names).sort_values(ascending=False)
+      print("Top 20 features (F-score) :")
+      print(f_scores.head(20).to_string())
+
+      # ── Mutual Information (non-linéaire) ─────────────────────────────
+      mi_func = mutual_info_classif if IS_CLASSIFICATION else mutual_info_regression
+      mi_scores = mi_func(X_train, y_train, random_state=42)
+      mi_series = pd.Series(mi_scores, index=feature_names).sort_values(ascending=False)
+      print("\nTop 20 features (Mutual Information) :")
+      print(mi_series.head(20).to_string())
+
+      # ── Application du seuil ──────────────────────────────────────────
+      K          = 20
+      selected   = mi_series.head(K).index.tolist()
+      X_train    = X_train[selected] if hasattr(X_train, "columns") else X_train[:, [feature_names.index(f) for f in selected]]
+      X_test     = X_test[selected]  if hasattr(X_test, "columns")  else X_test[:,  [feature_names.index(f) for f in selected]]
+      feature_names_out = selected
+      print(f"\nShape : {X_train.shape[1]} features sélectionnées sur {len(feature_names)}")
+
+  - id: fs_wrapper_rfe
+    name: "Sélection par Wrapper (RFE)"
+    enabled: true
+    category: "Sélection de Features — Wrapper"
+    description: "Recursive Feature Elimination : élimine itérativement les features les moins importantes."
+    applies_to: ["classification", "regression"]
+    when_to_use: "Quand le modèle final est connu. Plus précis que le filtre mais plus lent."
+    illustration_svg: '<svg viewBox="0 0 600 160" xmlns="http://www.w3.org/2000/svg" class="w-full h-auto drop-shadow-xl rounded-xl"><rect width="600" height="160" fill="#0A0A0A" rx="12"/><!-- Grid pattern --><pattern id="grid" width="40" height="40" patternUnits="userSpaceOnUse">  <path d="M 40 0 L 0 0 0 40" fill="none" stroke="#222222" stroke-width="0.5"/></pattern><rect width="600" height="160" fill="url(#grid)" rx="12"/><!-- Inputs --><g transform="translate(20, 40)"></g><!-- Central Node --><rect x="230" y="40" width="140" height="80" fill="#1a1a1a" stroke="#444" rx="10" stroke-width="2"/><text x="300" y="70" fill="#EEEEEE" font-family="sans-serif" font-weight="bold" font-size="12" text-anchor="middle">Sélection par Wrap</text><text x="300" y="90" fill="#888888" font-family="sans-serif" font-size="10" text-anchor="middle">EDA/Transformer</text><!-- Outputs --><g transform="translate(440, 40)"></g></svg>'
+    code_template: |
+      from sklearn.feature_selection import RFE, RFECV
+      from sklearn.ensemble import RandomForestClassifier, RandomForestRegressor
+      import pandas as pd
+
+      IS_CLASSIFICATION = task_type == "classification"
+      estimator = (RandomForestClassifier(n_estimators=100, random_state=42, n_jobs=-1)
+                   if IS_CLASSIFICATION else
+                   RandomForestRegressor(n_estimators=100, random_state=42, n_jobs=-1))
+
+      # ── RFE simple ────────────────────────────────────────────────────
+      N_FEATURES = 15
+      rfe = RFE(estimator=estimator, n_features_to_select=N_FEATURES, step=1)
+      rfe.fit(X_train, y_train)
+      selected = [f for f, s in zip(feature_names, rfe.support_) if s]
+      ranks    = pd.Series(rfe.ranking_, index=feature_names).sort_values()
+      print("Ranking RFE :")
+      print(ranks.head(20).to_string())
+
+      # ── RFECV (sélection automatique avec cross-validation) ───────────
+      rfecv = RFECV(estimator=estimator, cv=5, step=1,
+                    scoring="f1_weighted" if IS_CLASSIFICATION else "r2",
+                    n_jobs=-1, min_features_to_select=5)
+      rfecv.fit(X_train, y_train)
+      print(f"\nNombre optimal de features (RFECV) : {rfecv.n_features_}")
+      selected = [f for f, s in zip(feature_names, rfecv.support_) if s]
+      feature_names_out = selected
+      X_train = X_train[selected] if hasattr(X_train, "columns") else X_train[:, rfecv.support_]
+      X_test  = X_test[selected]  if hasattr(X_test, "columns")  else X_test[:,  rfecv.support_]
+
+  - id: fs_embedded_importance
+    name: "Sélection Embedded (Feature Importance)"
+    enabled: true
+    category: "Sélection de Features — Embedded"
+    description: "Importance des features depuis un modèle arbre ou Lasso. Rapide et souvent très efficace."
+    applies_to: ["classification", "regression"]
+    when_to_use: "Méthode de référence pour les données tabulaires. Combinée à SHAP pour la validation."
+    illustration_svg: '<svg viewBox="0 0 600 160" xmlns="http://www.w3.org/2000/svg" class="w-full h-auto drop-shadow-xl rounded-xl"><rect width="600" height="160" fill="#0A0A0A" rx="12"/><!-- Grid pattern --><pattern id="grid" width="40" height="40" patternUnits="userSpaceOnUse">  <path d="M 40 0 L 0 0 0 40" fill="none" stroke="#222222" stroke-width="0.5"/></pattern><rect width="600" height="160" fill="url(#grid)" rx="12"/><!-- Inputs --><g transform="translate(20, 40)"></g><!-- Central Node --><rect x="230" y="40" width="140" height="80" fill="#1a1a1a" stroke="#444" rx="10" stroke-width="2"/><text x="300" y="70" fill="#EEEEEE" font-family="sans-serif" font-weight="bold" font-size="12" text-anchor="middle">Sélection Embedded</text><text x="300" y="90" fill="#888888" font-family="sans-serif" font-size="10" text-anchor="middle">EDA/Transformer</text><!-- Outputs --><g transform="translate(440, 40)"></g></svg>'
+    code_template: |
+      import pandas as pd
+      import numpy as np
+      import matplotlib.pyplot as plt
+      from sklearn.ensemble import RandomForestClassifier
+      from sklearn.inspection import permutation_importance
+      import shap
+
+      # ── Feature Importance native RF ──────────────────────────────────
+      rf = RandomForestClassifier(n_estimators=200, random_state=42, n_jobs=-1)
+      rf.fit(X_train, y_train)
+
+      fi = pd.Series(rf.feature_importances_, index=feature_names).sort_values(ascending=False)
+      fi.head(20).plot.barh(figsize=(8, 7))
+      plt.title("Feature Importance (MDI — Random Forest)")
+      plt.tight_layout(); plt.show()
+
+      # ── Permutation Importance (plus fiable, moins biaisé) ────────────
+      perm_imp = permutation_importance(rf, X_test, y_test,
+                                        n_repeats=10, random_state=42, n_jobs=-1)
+      perm_fi = pd.Series(perm_imp.importances_mean, index=feature_names).sort_values(ascending=False)
+      print("\nPermutation Importance (top 20) :")
+      print(perm_fi.head(20).to_string())
+
+      # ── SHAP Values ───────────────────────────────────────────────────
+      explainer   = shap.TreeExplainer(rf)
+      shap_values = explainer.shap_values(X_test)
+      shap.summary_plot(shap_values, X_test,
+                        feature_names=feature_names, plot_type="bar")
+
+      # Sélection par seuil d'importance
+      THRESHOLD  = 0.005
+      selected   = fi[fi >= THRESHOLD].index.tolist()
+      X_train    = X_train[selected] if hasattr(X_train, "columns") else X_train[:, [feature_names.index(f) for f in selected]]
+      X_test     = X_test[selected]  if hasattr(X_test,  "columns") else X_test[:,  [feature_names.index(f) for f in selected]]
+      feature_names_out = selected
+      print(f"\nFeatures retenues : {len(selected)} / {len(feature_names)}")
+
+
+# ──────────────────────────────────────────────────────────────────────────
+class_imbalance:  # Déséquilibre de classes
+# ──────────────────────────────────────────────────────────────────────────
+
+  - id: imbalance_resampling
+    name: "Rééchantillonnage (SMOTE / UnderSampling)"
+    enabled: true
+    category: "Déséquilibre de Classes"
+    description: "SMOTE (sur-échantillonnage synthétique), Random UnderSampling, et combinaison SMOTETomek."
+    applies_to: ["classification"]
+    when_to_use: "Ratio déséquilibre > 5:1. Appliquer UNIQUEMENT sur X_train (jamais X_test)."
+    illustration_svg: '<svg viewBox="0 0 600 160" xmlns="http://www.w3.org/2000/svg" class="w-full h-auto drop-shadow-xl rounded-xl"><rect width="600" height="160" fill="#0A0A0A" rx="12"/><!-- Grid pattern --><pattern id="grid" width="40" height="40" patternUnits="userSpaceOnUse">  <path d="M 40 0 L 0 0 0 40" fill="none" stroke="#222222" stroke-width="0.5"/></pattern><rect width="600" height="160" fill="url(#grid)" rx="12"/><!-- Inputs --><g transform="translate(20, 40)"></g><!-- Central Node --><rect x="230" y="40" width="140" height="80" fill="#1a1a1a" stroke="#444" rx="10" stroke-width="2"/><text x="300" y="70" fill="#EEEEEE" font-family="sans-serif" font-weight="bold" font-size="12" text-anchor="middle">Rééchantillonnage </text><text x="300" y="90" fill="#888888" font-family="sans-serif" font-size="10" text-anchor="middle">EDA/Transformer</text><!-- Outputs --><g transform="translate(440, 40)"></g></svg>'
+    code_template: |
+      from imblearn.over_sampling import SMOTE, ADASYN
+      from imblearn.under_sampling import RandomUnderSampler, TomekLinks
+      from imblearn.combine import SMOTETomek, SMOTEENN
+      from imblearn.pipeline import Pipeline as ImbPipeline
+      from sklearn.preprocessing import StandardScaler
+      from collections import Counter
+
+      print(f"Distribution avant : {Counter(y_train)}")
+
+      # ── Option 1 : SMOTE (sur-échantillonnage) ────────────────────────
+      smote = SMOTE(sampling_strategy="auto", k_neighbors=5, random_state=42)
+      X_res, y_res = smote.fit_resample(X_train, y_train)
+
+      # ── Option 2 : Under-sampling aléatoire ───────────────────────────
+      # rus = RandomUnderSampler(sampling_strategy=0.5, random_state=42)
+      # X_res, y_res = rus.fit_resample(X_train, y_train)
+
+      # ── Option 3 : SMOTETomek (combiné) ──────────────────────────────
+      # smt = SMOTETomek(random_state=42)
+      # X_res, y_res = smt.fit_resample(X_train, y_train)
+
+      print(f"Distribution après  : {Counter(y_res)}")
+      print(f"Shape : {X_train.shape} → {X_res.shape}")
+
+      X_train, y_train = X_res, y_res   # remplacer pour la suite
+
+      # ── Alternative : class_weight (sans rééchantillonnage) ──────────
+      # Dans le modèle : LogisticRegression(class_weight="balanced")
+      #                  RandomForestClassifier(class_weight="balanced")
+      #                  XGBClassifier(scale_pos_weight=ratio)
+
+
+# ──────────────────────────────────────────────────────────────────────────
+full_pipelines:  # Pipelines complets prêts à l'emploi
+# ──────────────────────────────────────────────────────────────────────────
+
+  - id: pipeline_tabular_classification
+    name: "Pipeline Complet — Classification Tabulaire"
+    enabled: true
+    category: "Pipeline Complet"
+    description: "Pipeline sklearn bout-en-bout : imputation + encoding + scaling + modèle. Prêt pour GridSearch."
+    applies_to: ["classification"]
+    when_to_use: "Template de référence pour tout projet de classification tabulaire. Personnaliser selon les besoins."
+    output_contract:
+      preprocessor: "ColumnTransformer fitted"
+      X_train: "np.ndarray"
+      X_test: "np.ndarray"
+      y_train: "pd.Series"
+      y_test: "pd.Series"
+      feature_names_out: "list[str]"
+    illustration_svg: '<svg viewBox="0 0 600 296" xmlns="http://www.w3.org/2000/svg" class="w-full h-auto drop-shadow-xl rounded-xl"><rect width="600" height="296" fill="#0A0A0A" rx="12"/><!-- Grid pattern --><pattern id="grid" width="40" height="40" patternUnits="userSpaceOnUse">  <path d="M 40 0 L 0 0 0 40" fill="none" stroke="#222222" stroke-width="0.5"/></pattern><rect width="600" height="296" fill="url(#grid)" rx="12"/><!-- Inputs --><g transform="translate(20, 40)"></g><!-- Central Node --><rect x="230" y="108" width="140" height="80" fill="#1a1a1a" stroke="#444" rx="10" stroke-width="2"/><text x="300" y="138" fill="#EEEEEE" font-family="sans-serif" font-weight="bold" font-size="12" text-anchor="middle">Pipeline Complet —</text><text x="300" y="158" fill="#888888" font-family="sans-serif" font-size="10" text-anchor="middle">EDA/Transformer</text><!-- Outputs --><g transform="translate(440, 40)">    <path d="M 370 148 C 400 148, 420 14, 440 14" fill="none" stroke="#555" stroke-width="1.5" stroke-dasharray="4"/>    <rect y="0" width="140" height="28" fill="#0A0A0A" stroke="#3b82f6" stroke-width="1.5" rx="6"/>    <text x="10" y="18" fill="#bfdbfe" font-family="monospace" font-size="11" alignment-baseline="middle">preprocessor</text>    <path d="M 370 148 C 400 148, 420 50, 440 50" fill="none" stroke="#555" stroke-width="1.5" stroke-dasharray="4"/>    <rect y="36" width="140" height="28" fill="#0A0A0A" stroke="#3b82f6" stroke-width="1.5" rx="6"/>    <text x="10" y="54" fill="#bfdbfe" font-family="monospace" font-size="11" alignment-baseline="middle">X_train</text>    <path d="M 370 148 C 400 148, 420 86, 440 86" fill="none" stroke="#555" stroke-width="1.5" stroke-dasharray="4"/>    <rect y="72" width="140" height="28" fill="#0A0A0A" stroke="#3b82f6" stroke-width="1.5" rx="6"/>    <text x="10" y="90" fill="#bfdbfe" font-family="monospace" font-size="11" alignment-baseline="middle">X_test</text>    <path d="M 370 148 C 400 148, 420 122, 440 122" fill="none" stroke="#555" stroke-width="1.5" stroke-dasharray="4"/>    <rect y="108" width="140" height="28" fill="#0A0A0A" stroke="#3b82f6" stroke-width="1.5" rx="6"/>    <text x="10" y="126" fill="#bfdbfe" font-family="monospace" font-size="11" alignment-baseline="middle">y_train</text>    <path d="M 370 148 C 400 148, 420 158, 440 158" fill="none" stroke="#555" stroke-width="1.5" stroke-dasharray="4"/>    <rect y="144" width="140" height="28" fill="#0A0A0A" stroke="#3b82f6" stroke-width="1.5" rx="6"/>    <text x="10" y="162" fill="#bfdbfe" font-family="monospace" font-size="11" alignment-baseline="middle">y_test</text>    <path d="M 370 148 C 400 148, 420 194, 440 194" fill="none" stroke="#555" stroke-width="1.5" stroke-dasharray="4"/>    <rect y="180" width="140" height="28" fill="#0A0A0A" stroke="#3b82f6" stroke-width="1.5" rx="6"/>    <text x="10" y="198" fill="#bfdbfe" font-family="monospace" font-size="11" alignment-baseline="middle">feature_names_out</text></g></svg>'
+    code_template: |
+      import pandas as pd
+      import numpy as np
+      from sklearn.model_selection import train_test_split, StratifiedKFold, cross_val_score
+      from sklearn.pipeline import Pipeline
+      from sklearn.compose import ColumnTransformer
+      from sklearn.impute import SimpleImputer
+      from sklearn.preprocessing import StandardScaler, OneHotEncoder, LabelEncoder
+      from sklearn.ensemble import RandomForestClassifier
+      from sklearn.metrics import classification_report, ConfusionMatrixDisplay
+      import matplotlib.pyplot as plt
+
+      TARGET_COL = "target"
+
+      # ── 1. Séparation features / target ──────────────────────────────
+      X = df.drop(columns=[TARGET_COL])
+      y = df[TARGET_COL]
+
+      # Encodage de la target si catégorielle
+      if y.dtype == object:
+          le = LabelEncoder()
+          y  = pd.Series(le.fit_transform(y), index=y.index, name=TARGET_COL)
+
+      # ── 2. Identification des types de colonnes ───────────────────────
+      num_cols  = X.select_dtypes(include="number").columns.tolist()
+      cat_cols  = X.select_dtypes(include=["object", "category"]).columns.tolist()
+      bool_cols = X.select_dtypes(include="bool").columns.tolist()
+      # Convertir bool en int
+      X[bool_cols] = X[bool_cols].astype(int)
+      num_cols += bool_cols
+
+      # ── 3. Split stratifié ────────────────────────────────────────────
+      X_train, X_test, y_train, y_test = train_test_split(
+          X, y, test_size=0.2, stratify=y, random_state=42
+      )
+      print(f"Train : {X_train.shape} | Test : {X_test.shape}")
+
+      # ── 4. Preprocessor ───────────────────────────────────────────────
+      num_pipeline = Pipeline([
+          ("imputer", SimpleImputer(strategy="median")),
+          ("scaler",  StandardScaler()),
+      ])
+      cat_pipeline = Pipeline([
+          ("imputer", SimpleImputer(strategy="most_frequent")),
+          ("encoder", OneHotEncoder(handle_unknown="ignore", sparse_output=False, drop="first")),
+      ])
+      preprocessor = ColumnTransformer([
+          ("num", num_pipeline, num_cols),
+          ("cat", cat_pipeline, cat_cols),
+      ], remainder="drop", verbose_feature_names_out=True)
+
+      # ── 5. Pipeline complet ───────────────────────────────────────────
+      full_pipeline = Pipeline([
+          ("preprocessor", preprocessor),
+          ("classifier",   RandomForestClassifier(n_estimators=200, class_weight="balanced",
+                                                   n_jobs=-1, random_state=42)),
+      ])
+
+      # ── 6. Cross-validation ───────────────────────────────────────────
+      cv = StratifiedKFold(n_splits=5, shuffle=True, random_state=42)
+      cv_scores = cross_val_score(full_pipeline, X_train, y_train,
+                                  cv=cv, scoring="f1_weighted", n_jobs=-1)
+      print(f"CV F1 : {cv_scores.mean():.4f} ± {cv_scores.std():.4f}")
+
+      # ── 7. Entraînement final + évaluation ────────────────────────────
+      full_pipeline.fit(X_train, y_train)
+      y_pred = full_pipeline.predict(X_test)
+      print(classification_report(y_test, y_pred))
+
+      ConfusionMatrixDisplay.from_predictions(y_test, y_pred)
+      plt.show()
+
+      # ── 8. Export des variables standards pour catalog_models ─────────
+      preprocessor_fitted = full_pipeline.named_steps["preprocessor"]
+      X_train_prep = preprocessor_fitted.transform(X_train)
+      X_test_prep  = preprocessor_fitted.transform(X_test)
+
+      ohe_feats = (preprocessor_fitted.named_transformers_["cat"]["encoder"]
+                                      .get_feature_names_out(cat_cols).tolist())
+      feature_names_out = num_cols + ohe_feats
+
+  - id: pipeline_tabular_regression
+    name: "Pipeline Complet — Régression Tabulaire"
+    enabled: true
+    category: "Pipeline Complet"
+    description: "Pipeline sklearn bout-en-bout pour régression. Transformations de la target incluses."
+    applies_to: ["regression"]
+    output_contract:
+      preprocessor: "ColumnTransformer fitted"
+      X_train: "np.ndarray"
+      X_test: "np.ndarray"
+      y_train: "pd.Series"
+      y_test: "pd.Series"
+      feature_names_out: "list[str]"
+    illustration_svg: '<svg viewBox="0 0 600 296" xmlns="http://www.w3.org/2000/svg" class="w-full h-auto drop-shadow-xl rounded-xl"><rect width="600" height="296" fill="#0A0A0A" rx="12"/><!-- Grid pattern --><pattern id="grid" width="40" height="40" patternUnits="userSpaceOnUse">  <path d="M 40 0 L 0 0 0 40" fill="none" stroke="#222222" stroke-width="0.5"/></pattern><rect width="600" height="296" fill="url(#grid)" rx="12"/><!-- Inputs --><g transform="translate(20, 40)"></g><!-- Central Node --><rect x="230" y="108" width="140" height="80" fill="#1a1a1a" stroke="#444" rx="10" stroke-width="2"/><text x="300" y="138" fill="#EEEEEE" font-family="sans-serif" font-weight="bold" font-size="12" text-anchor="middle">Pipeline Complet —</text><text x="300" y="158" fill="#888888" font-family="sans-serif" font-size="10" text-anchor="middle">EDA/Transformer</text><!-- Outputs --><g transform="translate(440, 40)">    <path d="M 370 148 C 400 148, 420 14, 440 14" fill="none" stroke="#555" stroke-width="1.5" stroke-dasharray="4"/>    <rect y="0" width="140" height="28" fill="#0A0A0A" stroke="#3b82f6" stroke-width="1.5" rx="6"/>    <text x="10" y="18" fill="#bfdbfe" font-family="monospace" font-size="11" alignment-baseline="middle">preprocessor</text>    <path d="M 370 148 C 400 148, 420 50, 440 50" fill="none" stroke="#555" stroke-width="1.5" stroke-dasharray="4"/>    <rect y="36" width="140" height="28" fill="#0A0A0A" stroke="#3b82f6" stroke-width="1.5" rx="6"/>    <text x="10" y="54" fill="#bfdbfe" font-family="monospace" font-size="11" alignment-baseline="middle">X_train</text>    <path d="M 370 148 C 400 148, 420 86, 440 86" fill="none" stroke="#555" stroke-width="1.5" stroke-dasharray="4"/>    <rect y="72" width="140" height="28" fill="#0A0A0A" stroke="#3b82f6" stroke-width="1.5" rx="6"/>    <text x="10" y="90" fill="#bfdbfe" font-family="monospace" font-size="11" alignment-baseline="middle">X_test</text>    <path d="M 370 148 C 400 148, 420 122, 440 122" fill="none" stroke="#555" stroke-width="1.5" stroke-dasharray="4"/>    <rect y="108" width="140" height="28" fill="#0A0A0A" stroke="#3b82f6" stroke-width="1.5" rx="6"/>    <text x="10" y="126" fill="#bfdbfe" font-family="monospace" font-size="11" alignment-baseline="middle">y_train</text>    <path d="M 370 148 C 400 148, 420 158, 440 158" fill="none" stroke="#555" stroke-width="1.5" stroke-dasharray="4"/>    <rect y="144" width="140" height="28" fill="#0A0A0A" stroke="#3b82f6" stroke-width="1.5" rx="6"/>    <text x="10" y="162" fill="#bfdbfe" font-family="monospace" font-size="11" alignment-baseline="middle">y_test</text>    <path d="M 370 148 C 400 148, 420 194, 440 194" fill="none" stroke="#555" stroke-width="1.5" stroke-dasharray="4"/>    <rect y="180" width="140" height="28" fill="#0A0A0A" stroke="#3b82f6" stroke-width="1.5" rx="6"/>    <text x="10" y="198" fill="#bfdbfe" font-family="monospace" font-size="11" alignment-baseline="middle">feature_names_out</text></g></svg>'
+    code_template: |
+      import pandas as pd
+      import numpy as np
+      from sklearn.model_selection import train_test_split, KFold, cross_val_score
+      from sklearn.pipeline import Pipeline
+      from sklearn.compose import ColumnTransformer, TransformedTargetRegressor
+      from sklearn.impute import SimpleImputer
+      from sklearn.preprocessing import StandardScaler, OneHotEncoder, PowerTransformer
+      from sklearn.ensemble import GradientBoostingRegressor
+      from sklearn.metrics import mean_squared_error, mean_absolute_error, r2_score
+      import matplotlib.pyplot as plt
+
+      TARGET_COL = "target"
+
+      X = df.drop(columns=[TARGET_COL])
+      y = df[TARGET_COL].astype(float)
+
+      # ── Transformation de la target (si skewée) ───────────────────────
+      from scipy.stats import skew
+      TARGET_SKEW = skew(y.dropna())
+      print(f"Skewness target : {TARGET_SKEW:.3f}")
+      USE_LOG_TARGET = TARGET_SKEW > 1.0 and y.min() > 0
+
+      num_cols = X.select_dtypes(include="number").columns.tolist()
+      cat_cols = X.select_dtypes(include=["object", "category"]).columns.tolist()
+
+      X_train, X_test, y_train, y_test = train_test_split(
+          X, y, test_size=0.2, random_state=42
+      )
+
+      num_pipeline = Pipeline([
+          ("imputer", SimpleImputer(strategy="median")),
+          ("scaler",  StandardScaler()),
+      ])
+      cat_pipeline = Pipeline([
+          ("imputer", SimpleImputer(strategy="most_frequent")),
+          ("encoder", OneHotEncoder(handle_unknown="ignore", sparse_output=False, drop="first")),
+      ])
+      preprocessor = ColumnTransformer([
+          ("num", num_pipeline, num_cols),
+          ("cat", cat_pipeline, cat_cols),
+      ], remainder="drop")
+
+      base_model = GradientBoostingRegressor(n_estimators=300, learning_rate=0.05,
+                                              max_depth=4, subsample=0.8, random_state=42)
+
+      # TransformedTargetRegressor : applique log sur target, expm1 après prédiction
+      if USE_LOG_TARGET:
+          model = TransformedTargetRegressor(regressor=base_model,
+                                             func=np.log1p, inverse_func=np.expm1)
+      else:
+          model = base_model
+
+      full_pipeline = Pipeline([
+          ("preprocessor", preprocessor),
+          ("regressor",    model),
+      ])
+
+      cv = KFold(n_splits=5, shuffle=True, random_state=42)
+      cv_rmse = -cross_val_score(full_pipeline, X_train, y_train,
+                                  cv=cv, scoring="neg_root_mean_squared_error", n_jobs=-1)
+      print(f"CV RMSE : {cv_rmse.mean():.4f} ± {cv_rmse.std():.4f}")
+
+      full_pipeline.fit(X_train, y_train)
+      y_pred = full_pipeline.predict(X_test)
+
+      rmse = np.sqrt(mean_squared_error(y_test, y_pred))
+      mae  = mean_absolute_error(y_test, y_pred)
+      r2   = r2_score(y_test, y_pred)
+      mape = np.mean(np.abs((y_test - y_pred) / (y_test + 1e-8))) * 100
+      print(f"RMSE={rmse:.4f} | MAE={mae:.4f} | R²={r2:.4f} | MAPE={mape:.2f}%")
+
+      # Plot résidus
+      residuals = y_test - y_pred
+      fig, axes = plt.subplots(1, 2, figsize=(12, 4))
+      axes[0].scatter(y_pred, residuals, alpha=0.3, s=10)
+      axes[0].axhline(0, color="r", linestyle="--")
+      axes[0].set_xlabel("Prédictions"); axes[0].set_ylabel("Résidus")
+      residuals.hist(bins=50, ax=axes[1], color="steelblue")
+      axes[1].set_title("Distribution des résidus")
+      plt.tight_layout(); plt.show()
+
+      # Variables standards pour catalog_models
+      preprocessor_fitted = full_pipeline.named_steps["preprocessor"]
+      X_train_prep = preprocessor_fitted.transform(X_train)
+      X_test_prep  = preprocessor_fitted.transform(X_test)
+      ohe_feats = (preprocessor_fitted.named_transformers_["cat"]["encoder"]
+                                      .get_feature_names_out(cat_cols).tolist())
+      feature_names_out = num_cols + ohe_feats
