@@ -120,8 +120,9 @@ flat_files:
                                  description="TARGET_COL:", style={"description_width": "130px"},
                                  layout=widgets.Layout(width="400px"),
                                  placeholder="Laisser vide = non supervisé")
-      w_sep       = widgets.Dropdown(options=[(",", "Virgule ,"), (";", "Point-virgule ;"),
-                                              ("\t", "Tabulation \\t"), ("|", "Pipe |")],
+      # FIX : ordre (label, valeur) corrigé
+      w_sep       = widgets.Dropdown(options=[("Virgule ,", ","), ("Point-virgule ;", ";"),
+                                              ("Tabulation \\t", "\t"), ("Pipe |", "|")],
                                      value=",", description="SEPARATOR:",
                                      style={"description_width": "130px"})
       w_encoding  = widgets.Dropdown(options=["utf-8", "latin-1", "utf-16", "cp1252"],
@@ -481,6 +482,7 @@ databases:
       from IPython.display import display, clear_output
 
       # ── Interface ipywidgets ───────────────────────────────────────────
+      # FIX : ordre (label, valeur) corrigé
       w_dialect  = widgets.Dropdown(
           options=[
               ("PostgreSQL", "postgresql+psycopg2://{user}:{pwd}@{host}:5432/{db}"),
@@ -1316,6 +1318,7 @@ timeseries_sources:
                                   description="DATE_COL:", style={"description_width": "140px"})
       w_target     = widgets.Text(value="value",
                                   description="TARGET_COL:", style={"description_width": "140px"})
+      # FIX : ordre (label, valeur) corrigé
       w_freq       = widgets.Dropdown(
           options=[("Journalière (D)", "D"), ("Hebdomadaire (W)", "W"),
                    ("Mensuelle (M)", "ME"), ("Horaire (H)", "h"),
@@ -1415,6 +1418,7 @@ timeseries_sources:
                                   description="START_DATE:", style={"description_width": "140px"})
       w_end        = widgets.Text(value="2024-12-31",
                                   description="END_DATE:", style={"description_width": "140px"})
+      # FIX : ordre (label, valeur) corrigé
       w_interval   = widgets.Dropdown(
           options=[("1 jour (1d)", "1d"), ("1 semaine (1wk)", "1wk"),
                    ("1 mois (1mo)", "1mo"), ("1 heure (1h)", "1h"),
@@ -2004,7 +2008,6 @@ synthetic_data:
           w_csv_path.layout.visibility = "visible" if loader == "csv" else "hidden"
 
       w_dataset.observe(on_dataset_change, names="value")
-      # init defaults
       _, dur0, evt0 = BUILTIN_DATASETS[w_dataset.value]
       w_duration.value = dur0
       w_event.value    = evt0
@@ -2381,8 +2384,10 @@ ontology_knowledge:
       w_rdf_file  = widgets.Text(value="data/ontology.ttl",
                                  description="RDF_FILE:", style={"description_width": "160px"},
                                  layout=widgets.Layout(width="450px"))
+      # FIX : ordre (label, valeur) corrigé
       w_rdf_format = widgets.Dropdown(
-          options=["turtle", "xml", "n3", "nt", "json-ld"],
+          options=[("Turtle", "turtle"), ("XML", "xml"), ("N3", "n3"),
+                   ("N-Triples", "nt"), ("JSON-LD", "json-ld")],
           value="turtle", description="RDF_FORMAT:", style={"description_width": "160px"})
       w_endpoint  = widgets.Text(value="http://dbpedia.org/sparql",
                                  description="SPARQL_ENDPOINT:", style={"description_width": "160px"},
@@ -3241,9 +3246,12 @@ cloud_platforms:
       w_mode      = widgets.ToggleButtons(
           options=["Lecture directe S3", "Requête Athena"],
           description="MODE:", style={"description_width": "130px"})
+      # FIX : ordre (label, valeur) corrigé
       w_region    = widgets.Dropdown(
-          options=["eu-west-1", "eu-west-3", "us-east-1", "us-west-2",
-                   "ap-southeast-1", "ap-northeast-1"],
+          options=[("EU West 1 (Irlande)", "eu-west-1"), ("EU West 3 (Paris)", "eu-west-3"),
+                   ("US East 1 (Virginie)", "us-east-1"), ("US West 2 (Oregon)", "us-west-2"),
+                   ("AP Southeast 1 (Singapour)", "ap-southeast-1"),
+                   ("AP Northeast 1 (Tokyo)", "ap-northeast-1")],
           value="eu-west-1", description="AWS_REGION:", style={"description_width": "160px"})
       w_bucket    = widgets.Text(value="my-data-lake",
                                  description="S3_BUCKET:", style={"description_width": "160px"})
@@ -3759,6 +3767,7 @@ geospatial:
       w_target    = widgets.Text(value="land_use",
                                  description="TARGET_COL:", style={"description_width": "160px"},
                                  placeholder="Laisser vide = clustering")
+      # FIX : ordre (label, valeur) corrigé
       w_crs       = widgets.Combobox(
           value="EPSG:4326",
           options=["EPSG:4326", "EPSG:3857", "EPSG:2154", "EPSG:32630", "EPSG:32632"],
@@ -4014,10 +4023,13 @@ audio:
                                         description="SR:", style={"description_width": "150px"})
       w_n_mfcc      = widgets.IntSlider(value=40, min=13, max=128, step=1,
                                         description="N_MFCC:", style={"description_width": "150px"})
-      w_n_fft       = widgets.Dropdown(options=[512, 1024, 2048, 4096],
+      # FIX : ordre (label, valeur) corrigé
+      w_n_fft       = widgets.Dropdown(options=[("512", 512), ("1024", 1024),
+                                                ("2048", 2048), ("4096", 4096)],
                                        value=2048, description="N_FFT:",
                                        style={"description_width": "150px"})
-      w_hop         = widgets.Dropdown(options=[128, 256, 512, 1024],
+      w_hop         = widgets.Dropdown(options=[("128", 128), ("256", 256),
+                                                ("512", 512), ("1024", 1024)],
                                        value=512, description="HOP_LENGTH:",
                                        style={"description_width": "150px"})
       w_duration    = widgets.FloatText(value=0.0, description="DURATION (s, 0=tout):",
@@ -4309,7 +4321,6 @@ synthetic_advanced:
           description="GRAPH_MODEL:", style={"description_width": "140px"})
       w_n_nodes = widgets.IntText(value=1000, description="N_NODES:",
                                   style={"description_width": "140px"})
-      # SBM params
       w_n_comm  = widgets.IntSlider(value=4, min=2, max=20, step=1,
                                     description="N_COMMUNITIES:", style={"description_width": "140px"})
       w_p_intra = widgets.FloatSlider(value=0.3, min=0.0, max=1.0, step=0.01,
@@ -4318,7 +4329,6 @@ synthetic_advanced:
       w_p_inter = widgets.FloatSlider(value=0.01, min=0.0, max=0.5, step=0.001,
                                       description="P_INTER:", style={"description_width": "140px"},
                                       readout_format=".3f")
-      # BA params
       w_m_ba    = widgets.IntSlider(value=3, min=1, max=20, step=1,
                                     description="M_BA:", style={"description_width": "140px"})
       w_sbm_box = widgets.VBox([w_n_comm, w_p_intra, w_p_inter])
@@ -4446,6 +4456,7 @@ synthetic_advanced:
           description="TS_MODEL:", style={"description_width": "140px"})
       w_n_points   = widgets.IntText(value=1000, description="N_POINTS:",
                                      style={"description_width": "160px"})
+      # FIX : ordre (label, valeur) corrigé
       w_freq       = widgets.Dropdown(
           options=[("Journalière (D)", "D"), ("Hebdomadaire (W)", "W"),
                    ("Mensuelle (M)", "ME"), ("Horaire (H)", "h")],
@@ -4457,7 +4468,6 @@ synthetic_advanced:
                                      style={"description_width": "160px"})
       w_seed       = widgets.IntText(value=42, description="RANDOM_SEED:",
                                      style={"description_width": "160px"})
-      # GBM params
       w_mu         = widgets.FloatText(value=0.0005, description="MU (drift):",
                                        style={"description_width": "160px"})
       w_sigma      = widgets.FloatText(value=0.02,   description="SIGMA (vol):",
@@ -4596,10 +4606,13 @@ free_source:
       w_target    = widgets.Text(value="target",
                                  description="TARGET_COL:", style={"description_width": "140px"},
                                  placeholder="Laisser vide = non supervisé")
+      # FIX : ordre (label, valeur) corrigé
       w_task_type = widgets.Dropdown(
-          options=["classification", "regression", "clustering", "timeseries",
-                   "nlp", "anomaly", "survival", "graph", "node_classification",
-                   "knowledge_graph", "geospatial"],
+          options=[("Classification", "classification"), ("Régression", "regression"),
+                   ("Clustering", "clustering"), ("Timeseries", "timeseries"),
+                   ("NLP", "nlp"), ("Anomalie", "anomaly"), ("Survie", "survival"),
+                   ("Graphe", "graph"), ("Node Classification", "node_classification"),
+                   ("Knowledge Graph", "knowledge_graph"), ("Géospatial", "geospatial")],
           value="classification", description="TASK_TYPE:", style={"description_width": "140px"})
       w_n_rows    = widgets.IntText(value=100, description="N_ROWS (demo):",
                                     style={"description_width": "140px"})
@@ -4653,7 +4666,6 @@ free_source:
               target_name   = TARGET_COL
               meta          = {"source": "free_source", "shape": df.shape}
 
-              # ── Initialisation OBLIGATOIRE de toutes les variables optionnelles ──
               texts_train  = []
               texts_test   = []
               y_train      = None
