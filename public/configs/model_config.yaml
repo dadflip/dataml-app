@@ -1938,3 +1938,766 @@ calibration_and_evaluation:  # utilitaires transverses
       plt.legend(); plt.show()
 
       print(f"Brier Score : {brier_score_loss(y_test, proba_cal):.4f}")
+
+# ──────────────────────────────────────────────────────────────────────────
+# EXTENSION — Modèles recherche, open-source émergents & code libre
+# ──────────────────────────────────────────────────────────────────────────
+
+
+# ──────────────────────────────────────────────────────────────────────────
+tabular_deep_learning:
+# ──────────────────────────────────────────────────────────────────────────
+
+  - id: tabnet_clf
+    name: "TabNet (Google Brain)"
+    enabled: true
+    library: pytorch_tabnet
+    class: pytorch_tabnet.tab_model.TabNetClassifier
+    category: "Deep Learning — Tabular"
+    description: >
+      Architecture attention-based pour données tabulaires. Sélection séquentielle
+      de features par masques d'attention sparses (Sparsemax). Interprétabilité
+      native : importance des features par instance et globale. Concurrent aux
+      boosting methods sur tabular data.
+    use_cases:
+      - "tabular data avec interactions complexes non capturées par boosting"
+      - "besoin d'interprétabilité au niveau instance (masques attention)"
+      - "fine-tuning avec données non-labellisées (self-supervised pretraining)"
+    pros:
+      - "interprétabilité native par step d'attention"
+      - "self-supervised pretraining possible (TabNet Pretrainer)"
+      - "pas besoin de feature engineering extensif"
+      - "GPU natif"
+    cons:
+      - "sensible aux hyperparamètres — tuning plus délicat que XGBoost"
+      - "généralement sous-performe vs LightGBM sans tuning long"
+      - "dépendance à pytorch (overhead d'installation)"
+    hyperparameters:
+      n_d:             { type: int,   range: [8, 64],    default: 32,
+                         description: "Largeur des couches de décision." }
+      n_a:             { type: int,   range: [8, 64],    default: 32,
+                         description: "Largeur des couches d'attention (généralement = n_d)." }
+      n_steps:         { type: int,   range: [3, 10],    default: 5,
+                         description: "Nombre de steps séquentiels d'attention." }
+      gamma:           { type: float, range: [1.0, 2.0], default: 1.5,
+                         description: "Coefficient de réutilisation des features entre steps." }
+      lambda_sparse:   { type: float, range: [1e-6, 1e-3], default: 1e-3,
+                         description: "Régularisation de la sparsité des masques." }
+      n_shared:        { type: int,   range: [1, 5],     default: 2 }
+      momentum:        { type: float, range: [0.01, 0.4], default: 0.02 }
+      mask_type:       { type: str,   choices: ["sparsemax","entmax"], default: "sparsemax" }
+      max_epochs:      { type: int,   range: [50, 1000], default: 200 }
+      patience:        { type: int,   range: [10, 50],   default: 30 }
+      batch_size:      { type: int,   choices: [256, 512, 1024, 4096], default: 1024 }
+      virtual_batch_size: { type: int, default: 128 }
+    eval_metrics: ["accuracy", "f1_weighted", "roc_auc"]
+    io_contract:
+      inputs:  [X_train, X_test, y_train, y_test, feature_names]
+      outputs: [model, y_pred, y_proba, metrics, feature_importances, fit_time_s]
+      notes:   "X_train doit être np.ndarray float32. feature_importances = feature_importances_ global."
+    references:
+      paper: "Arik & Pfister, 2021 — TabNet: Attentive Interpretable Tabular Learning (AAAI)"
+      code:  "https://github.com/dreamquark-ai/tabnet"
+    code_template: |
+      import time
+      import numpy as np
+      import pandas as pd
+      from pytorch_tabnet.tab_model import TabNetClassifier
+      from sklearn.metrics import f1_score, accuracy_score, roc_auc_score, classification_report
+      from sklearn.preprocessing import LabelEncoder
+
+      # ── Préparation (TabNet requiert float32 + labels entiers) ─────────
+      _X_tr = np.array(X_train, dtype=np.float32)
+      _X_te = np.array(X_test,  dtype=np.float32)
+      _le   = LabelEncoder()
+      _y_tr = _le.fit_transform(y_train)
+      _y_te = _le.transform(y_test)
+
+      # ── Entraînement ───────────────────────────────────────────────────
+      _t0 = time.perf_counter()
+      model = TabNetClassifier(
+          n_d=32, n_a=32, n_steps=5, gamma=1.5,
+          lambda_sparse=1e-3, mask_type="sparsemax",
+          optimizer_fn=torch.optim.Adam,
+          optimizer_params=dict(lr=2e-2, weight_decay=1e-5),
+          scheduler_params={"step_size": 50, "gamma": 0.9},
+          scheduler_fn=torch.optim.lr_scheduler.StepLR,
+          verbose=10, seed=random_state
+      )
+      model.fit(
+          _X_tr, _y_tr,
+          eval_set=[(_X_te, _y_te)],
+          eval_metric=["accuracy"],
+          max_epochs=200,
+          patience=30,
+          batch_size=1024,
+          virtual_batch_size=128,
+      )
+      fit_time_s = time.perf_counter() - _t0
+
+      # ── Sorties garanties ──────────────────────────────────────────────
+      y_pred  = _le.inverse_transform(model.predict(_X_te))
+      y_proba = model.predict_proba(_X_te)
+      feature_importances = pd.Series(
+          model.feature_importances_, index=feature_names
+      ).sort_values(ascending=False)
+
+      _is_binary = len(np.unique(_y_tr)) == 2
+      metrics = {
+          "accuracy"   : accuracy_score(y_test, y_pred),
+          "f1_weighted": f1_score(y_test, y_pred, average="weighted"),
+          "roc_auc"    : roc_auc_score(y_test, y_proba[:,1] if _is_binary else y_proba,
+                                        multi_class="ovr", average="weighted"),
+          "fit_time_s" : fit_time_s,
+      }
+      print(classification_report(y_test, y_pred))
+
+      # ── Masques d'attention par instance ───────────────────────────────
+      _explain, _masks = model.explain(_X_te[:100])
+      print("Feature importance global (top 10):")
+      print(feature_importances.head(10).to_string())
+
+
+  - id: node_clf
+    name: "NODE (Neural Oblivious Decision Ensembles)"
+    enabled: true
+    library: nodegam  # ou implémentation manuelle PyTorch
+    class: nodegam.NODE
+    category: "Deep Learning — Tabular"
+    description: >
+      Différencie des ensembles d'arbres de décision oblivious (ODT) via
+      entmax (α-sparsemax). Chaque couche est un ensemble d'arbres différentiables.
+      Architecture hybride entre gradient boosting et deep learning.
+      Souvent compétitif ou supérieur à XGBoost sur grands datasets.
+    use_cases:
+      - "tabular data où XGBoost ne converge pas bien"
+      - "recherche : comprendre les limites des architectures tabular DL"
+      - "datasets > 100k lignes avec GPU disponible"
+    pros:
+      - "différentiable → fine-tuning et transfer learning possible"
+      - "architecture interprétable par design (ODT)"
+      - "performances proches ou supérieures aux GBDT sur large data"
+    cons:
+      - "library peu maintenue (nodegam / implémentations tierces)"
+      - "complexe à setup sans GPU"
+      - "nécessite plus de tuning que XGBoost"
+    hyperparameters:
+      num_trees:    { type: int, range: [512, 4096], default: 2048 }
+      depth:        { type: int, range: [4, 8],      default: 6 }
+      num_layers:   { type: int, range: [1, 8],      default: 2 }
+      tree_dim:     { type: int, range: [2, 6],      default: 3 }
+      learning_rate: { type: float, range: [0.001, 0.1], default: 0.001 }
+    eval_metrics: ["accuracy", "f1_weighted", "roc_auc"]
+    io_contract:
+      inputs:  [X_train, X_test, y_train, y_test, feature_names]
+      outputs: [model, y_pred, y_proba, metrics, fit_time_s]
+    references:
+      paper: "Popov et al., 2019 — Neural Oblivious Decision Ensembles (NeurIPS)"
+      code:  "https://github.com/anonimous-author/NODE"
+    code_template: |
+      # ⚠ NODE n'a pas de package pip stable — deux options :
+      # Option A : utiliser nodegam (GAM-compatible fork)
+      #   pip install nodegam
+      # Option B : implémentation PyTorch maison via le repo officiel
+
+      import time
+      import numpy as np
+      import pandas as pd
+      # pip install nodegam
+      from nodegam.sklearn import NodeGAMClassifier
+      from sklearn.metrics import f1_score, accuracy_score, roc_auc_score, classification_report
+
+      _t0 = time.perf_counter()
+      model = NodeGAMClassifier(
+          arch="NODE",
+          num_trees=2048, depth=6, num_layers=2,
+          learning_rate=1e-3,
+          max_steps=10000, patience=500,
+          random_state=random_state
+      )
+      model.fit(X_train, y_train)
+      fit_time_s = time.perf_counter() - _t0
+
+      y_pred  = model.predict(X_test)
+      y_proba = model.predict_proba(X_test)
+      feature_importances = None  # dépend de la variante
+
+      _is_binary = len(np.unique(y_train)) == 2
+      metrics = {
+          "accuracy"   : accuracy_score(y_test, y_pred),
+          "f1_weighted": f1_score(y_test, y_pred, average="weighted"),
+          "roc_auc"    : roc_auc_score(y_test, y_proba[:,1] if _is_binary else y_proba,
+                                        multi_class="ovr", average="weighted"),
+          "fit_time_s" : fit_time_s,
+      }
+      print(classification_report(y_test, y_pred))
+
+
+  - id: ft_transformer_clf
+    name: "FT-Transformer (Feature Tokenizer + Transformer)"
+    enabled: true
+    library: rtdl  # ou implémentation torch manuelle
+    class: rtdl.FTTransformer
+    category: "Deep Learning — Tabular"
+    description: >
+      Tokenise chaque feature numérique ou catégorielle en embedding,
+      puis applique un Transformer standard (attention multi-head).
+      Souvent meilleur que les GBDT sur datasets avec nombreuses catégorielles
+      et interactions complexes. Référence NeurIPS 2021.
+    use_cases:
+      - "tabular data avec nombreuses features catégorielles à haute cardinalité"
+      - "datasets où les interactions d'ordre supérieur sont importantes"
+      - "recherche de la limite des transformers sur tabular data"
+    pros:
+      - "capture des interactions longue portée entre features"
+      - "gère catégorielles et numériques nativement"
+      - "prétraining possible sur données non-labellisées"
+    cons:
+      - "plus lent que GBDT sur CPU"
+      - "nécessite GPU pour être compétitif"
+      - "sensible au tuning (lr, dropout, dim)"
+      - "library rtdl peu active — préférer reimplementations (e.g. pytorch-tabular)"
+    hyperparameters:
+      n_blocks:     { type: int,   range: [1, 6],   default: 3,
+                      description: "Nombre de blocs Transformer." }
+      d_token:      { type: int,   range: [64, 512], default: 192,
+                      description: "Dimension des embeddings de tokens." }
+      attention_n_heads: { type: int, range: [4, 16], default: 8 }
+      attention_dropout: { type: float, range: [0.0, 0.5], default: 0.2 }
+      ffn_d_hidden:  { type: int,   range: [64, 512], default: 256 }
+      ffn_dropout:   { type: float, range: [0.0, 0.5], default: 0.1 }
+      residual_dropout: { type: float, range: [0.0, 0.3], default: 0.0 }
+      learning_rate: { type: float, range: [1e-5, 1e-3], default: 1e-4 }
+      max_epochs:    { type: int,   range: [50, 500],  default: 200 }
+    eval_metrics: ["accuracy", "f1_weighted", "roc_auc"]
+    io_contract:
+      inputs:  [X_train, X_test, y_train, y_test, feature_names]
+      inputs_optional: [cat_features]
+      outputs: [model, y_pred, y_proba, metrics, fit_time_s]
+    references:
+      paper: "Gorishniy et al., 2021 — Revisiting Deep Learning Models for Tabular Data (NeurIPS)"
+      code:  "https://github.com/yandex-research/rtdl"
+    code_template: |
+      # pip install rtdl torch
+      # Alternative recommandée en production : pytorch-tabular
+      #   pip install pytorch-tabular
+
+      import time
+      import numpy as np
+      import pandas as pd
+      import torch
+      import rtdl
+      from sklearn.metrics import f1_score, accuracy_score, roc_auc_score
+
+      # ── Séparation numériques / catégorielles ──────────────────────────
+      _cat_idx = cat_features if "cat_features" in dir() and cat_features else []
+      _num_idx = [i for i in range(X_train.shape[1]) if i not in _cat_idx]
+
+      _X_num_tr = torch.tensor(X_train[:, _num_idx], dtype=torch.float32)
+      _X_num_te = torch.tensor(X_test[:,  _num_idx], dtype=torch.float32)
+      _n_classes = len(np.unique(y_train))
+
+      # ── Modèle ────────────────────────────────────────────────────────
+      _t0 = time.perf_counter()
+      model = rtdl.FTTransformer.make_default(
+          n_num_features=len(_num_idx),
+          cat_cardinalities=[],   # remplir si catégorielles
+          d_out=_n_classes,
+          n_blocks=3
+      )
+      _optimizer = model.make_default_optimizer()
+      _loss_fn = torch.nn.CrossEntropyLoss()
+
+      # Boucle d'entraînement simplifiée
+      _y_tr_t = torch.tensor(y_train if isinstance(y_train, np.ndarray)
+                              else y_train.values, dtype=torch.long)
+      for _epoch in range(100):
+          model.train()
+          _optimizer.zero_grad()
+          _logits = model(_X_num_tr, None)
+          _loss = _loss_fn(_logits, _y_tr_t)
+          _loss.backward()
+          _optimizer.step()
+          if _epoch % 20 == 0:
+              print(f"Epoch {_epoch} | loss: {_loss.item():.4f}")
+      fit_time_s = time.perf_counter() - _t0
+
+      # ── Sorties garanties ──────────────────────────────────────────────
+      model.eval()
+      with torch.no_grad():
+          _logits_te = model(_X_num_te, None)
+          y_proba = torch.softmax(_logits_te, dim=1).numpy()
+      y_pred = y_proba.argmax(axis=1)
+      feature_importances = None
+
+      _is_binary = _n_classes == 2
+      metrics = {
+          "accuracy"   : accuracy_score(y_test, y_pred),
+          "f1_weighted": f1_score(y_test, y_pred, average="weighted"),
+          "roc_auc"    : roc_auc_score(y_test, y_proba[:,1] if _is_binary else y_proba,
+                                        multi_class="ovr", average="weighted"),
+          "fit_time_s" : fit_time_s,
+      }
+      print(metrics)
+
+
+# ──────────────────────────────────────────────────────────────────────────
+gaussian_processes:
+# ──────────────────────────────────────────────────────────────────────────
+
+  - id: gp_classifier
+    name: "Gaussian Process Classifier"
+    enabled: true
+    library: sklearn
+    class: sklearn.gaussian_process.GaussianProcessClassifier
+    category: "Bayésien — Processus Gaussien"
+    description: >
+      Classificateur non-paramétrique bayésien. Définit une distribution sur
+      les fonctions via un noyau (kernel). Produit des probabilités bien
+      calibrées et des incertitudes épistémiques par construction.
+      Scalabilité limitée (O(n³) exact) — variantes sparses pour grands datasets.
+    use_cases:
+      - "petits datasets (< 5k) où l'incertitude est critique"
+      - "expériences actives (active learning) — query par max incertitude"
+      - "optimisation bayésienne (surrogate model)"
+      - "recherche en ML : benchmarks d'incertitude"
+    pros:
+      - "incertitude de prédiction native (épistémique)"
+      - "probabilités bien calibrées"
+      - "interprétable via les hyperparamètres du kernel"
+      - "flexible — choisir le kernel selon les priors"
+    cons:
+      - "O(n³) en mémoire et calcul — inutilisable > 5k lignes"
+      - "choix du kernel non trivial"
+      - "sensible au scaling"
+    hyperparameters:
+      kernel:       { type: object, default: "RBF(1.0)",
+                      choices: ["RBF","Matern","DotProduct","RationalQuadratic","ExpSineSquared"],
+                      description: "Noyau = prior sur la fonction. RBF = isotrope lisse." }
+      n_restarts_optimizer: { type: int, range: [0, 10], default: 3,
+                              description: "Redémarrages pour optimisation des hyperparamètres du kernel." }
+      max_iter_predict: { type: int, range: [50, 500], default: 100 }
+      warm_start:   { type: bool, default: false }
+      multi_class:  { type: str, choices: ["one_vs_rest","one_vs_one"], default: "one_vs_rest" }
+    eval_metrics: ["accuracy", "f1_weighted", "roc_auc", "log_loss", "brier_score"]
+    io_contract:
+      inputs:  [X_train, X_test, y_train, y_test, feature_names]
+      outputs: [model, y_pred, y_proba, metrics, fit_time_s]
+      notes:   "feature_importances = length_scales du kernel RBF (si applicable).
+                ⚠ Utiliser uniquement si n_train < 5000."
+    code_template: |
+      import time
+      import numpy as np
+      import pandas as pd
+      from sklearn.gaussian_process import GaussianProcessClassifier
+      from sklearn.gaussian_process.kernels import RBF, Matern, ConstantKernel as C
+      from sklearn.preprocessing import StandardScaler
+      from sklearn.pipeline import Pipeline
+      from sklearn.metrics import (classification_report, f1_score, accuracy_score,
+                                   roc_auc_score, log_loss)
+
+      if len(X_train) > 5000:
+          print("⚠ GP Classifier : dataset trop grand (> 5000). Considérer un surrogate sparse.")
+
+      # ── Kernel ────────────────────────────────────────────────────────
+      _kernel = C(1.0) * RBF(length_scale=1.0, length_scale_bounds=(1e-2, 1e2))
+
+      # ── Entraînement ───────────────────────────────────────────────────
+      _t0 = time.perf_counter()
+      model = Pipeline([
+          ("scaler", StandardScaler()),
+          ("gpc", GaussianProcessClassifier(
+              kernel=_kernel,
+              n_restarts_optimizer=3,
+              max_iter_predict=100,
+              random_state=random_state,
+              n_jobs=n_jobs
+          ))
+      ])
+      model.fit(X_train, y_train)
+      fit_time_s = time.perf_counter() - _t0
+
+      # ── Sorties garanties ──────────────────────────────────────────────
+      y_pred  = model.predict(X_test)
+      y_proba = model.predict_proba(X_test)
+      feature_importances = None
+
+      # Extraire les length scales du kernel optimisé
+      _k = model["gpc"].kernel_
+      print("Kernel optimisé :", _k)
+
+      _is_binary = len(np.unique(y_train)) == 2
+      metrics = {
+          "accuracy"   : accuracy_score(y_test, y_pred),
+          "f1_weighted": f1_score(y_test, y_pred, average="weighted"),
+          "roc_auc"    : roc_auc_score(y_test, y_proba[:,1] if _is_binary else y_proba,
+                                        multi_class="ovr", average="weighted"),
+          "log_loss"   : log_loss(y_test, y_proba),
+          "fit_time_s" : fit_time_s,
+      }
+      print(classification_report(y_test, y_pred))
+
+
+# ──────────────────────────────────────────────────────────────────────────
+label_efficient:
+# ──────────────────────────────────────────────────────────────────────────
+
+  - id: label_propagation
+    name: "Label Propagation (Semi-Supervisé)"
+    enabled: true
+    library: sklearn
+    class: sklearn.semi_supervised.LabelPropagation
+    category: "Semi-Supervisé"
+    description: >
+      Propage les labels des exemples labellisés vers les non-labellisés via
+      un graphe de similarité (kernel RBF ou kNN). Utile quand les labels
+      sont rares et chers (annotation humaine). Exploite la structure
+      géométrique des données non-labellisées.
+    use_cases:
+      - "peu de données labellisées (<5%) mais beaucoup de non-labellisées"
+      - "annotation coûteuse (médical, légal)"
+      - "classification avec contraintes must-link / cannot-link"
+      - "NLP quand seule une fraction du corpus est annotée"
+    pros:
+      - "exploite les données non-labellisées gratuitement"
+      - "simple à mettre en place (sklearn natif)"
+      - "naturellement régularisé par la géométrie du graphe"
+    cons:
+      - "scalabilité limitée (matrice n×n)"
+      - "sensible à la qualité des labels bruités"
+      - "LabelSpreading plus robuste aux outliers"
+    hyperparameters:
+      kernel:   { type: str,   choices: ["rbf","knn"], default: "rbf",
+                  description: "rbf = affinité continue, knn = graphe sparse (plus scalable)." }
+      gamma:    { type: float, range: [0.01, 100],  default: 20,
+                  condition: "si kernel='rbf'",
+                  description: "Largeur du kernel RBF. Petit γ = voisinage large." }
+      n_neighbors: { type: int, range: [3, 30],     default: 7,
+                     condition: "si kernel='knn'" }
+      max_iter: { type: int,   range: [100, 2000],  default: 1000 }
+      tol:      { type: float, range: [1e-6, 1e-2], default: 1e-3 }
+    eval_metrics: ["accuracy", "f1_weighted"]
+    io_contract:
+      inputs:  [X_all, y_all_partial, X_test, y_test, feature_names]
+      outputs: [model, y_pred, y_proba, metrics, fit_time_s]
+      notes:   "y_all_partial : labels avec -1 pour les exemples non-labellisés.
+                X_all = concat(X_train_labelled, X_unlabelled).
+                y_pred sur X_test uniquement."
+    code_template: |
+      import time
+      import numpy as np
+      import pandas as pd
+      from sklearn.semi_supervised import LabelPropagation, LabelSpreading
+      from sklearn.preprocessing import StandardScaler
+      from sklearn.metrics import classification_report, f1_score, accuracy_score
+
+      # ── Convention d'entrée ────────────────────────────────────────────
+      # X_all         : toutes les données (labellisées + non-labellisées)
+      # y_all_partial : labels avec -1 pour les non-labellisés
+      # X_test, y_test: holdout de test (labellisé)
+
+      _scaler = StandardScaler()
+      X_all_scaled  = _scaler.fit_transform(X_all)
+      X_test_scaled = _scaler.transform(X_test)
+
+      _t0 = time.perf_counter()
+      model = LabelPropagation(kernel="rbf", gamma=20, max_iter=1000, tol=1e-3)
+      model.fit(X_all_scaled, y_all_partial)
+      fit_time_s = time.perf_counter() - _t0
+
+      # ── Prédiction sur le test set via kNN depuis le modèle ────────────
+      y_pred  = model.predict(X_test_scaled)
+      y_proba = model.predict_proba(X_test_scaled)
+      feature_importances = None
+
+      _pct_labeled = float(np.sum(np.array(y_all_partial) != -1) / len(y_all_partial) * 100)
+      metrics = {
+          "accuracy"    : accuracy_score(y_test, y_pred),
+          "f1_weighted" : f1_score(y_test, y_pred, average="weighted"),
+          "pct_labeled" : _pct_labeled,
+          "fit_time_s"  : fit_time_s,
+      }
+      print(f"Labels utilisés : {_pct_labeled:.1f}% du dataset total")
+      print(classification_report(y_test, y_pred))
+
+
+# ──────────────────────────────────────────────────────────────────────────
+conformal_prediction:
+# ──────────────────────────────────────────────────────────────────────────
+
+  - id: mapie_conformal
+    name: "MAPIE — Conformal Prediction (intervalles garantis)"
+    enabled: true
+    library: mapie
+    class: mapie.classification.MapieClassifier
+    category: "Incertitude Quantification"
+    description: >
+      Wraps n'importe quel modèle sklearn pour produire des intervalles de
+      prédiction (classification : ensembles de labels, régression : intervalles)
+      avec couverture marginale garantie — sans hypothèse distributionnelle.
+      Basé sur la théorie conformal prediction (Vovk et al.).
+    use_cases:
+      - "besoin de garanties formelles de couverture (médical, légal)"
+      - "quantifier l'incertitude sur n'importe quel modèle existant"
+      - "détection de l'ambiguïté (ensembles de taille > 1)"
+      - "audit et conformité ML"
+    pros:
+      - "couverture marginale garantie sans hypothèse"
+      - "agnostique au modèle (wraps sklearn)"
+      - "léger — juste un calibration set nécessaire"
+      - "interprétable : taille de l'ensemble = incertitude"
+    cons:
+      - "nécessite un calibration set dédié (réduit le train)"
+      - "couverture marginale ≠ couverture conditionnelle"
+      - "ensembles potentiellement grands si modèle incertain"
+    hyperparameters:
+      method:  { type: str, choices: ["score","cumulated_score","raps","top_k"],
+                 default: "score",
+                 description: "'score' = RAPS simplifié. 'cumulated_score' = APS." }
+      cv:      { type: str|int, choices: ["prefit","split",5,10], default: "prefit",
+                 description: "'prefit' = modèle déjà entraîné, MAPIE calibre uniquement." }
+      alpha:   { type: float, range: [0.01, 0.2], default: 0.1,
+                 description: "Niveau d'erreur cible. 0.1 → couverture ≥ 90%." }
+    eval_metrics: ["coverage", "mean_set_size", "accuracy"]
+    io_contract:
+      inputs:  [model_pretrained, X_calib, y_calib, X_test, y_test, feature_names]
+      outputs: [model, y_pred, y_pred_sets, metrics, fit_time_s]
+      notes:   "model_pretrained = modèle sklearn déjà .fit().
+                y_pred_sets : np.ndarray bool (n_test, n_classes, n_alpha).
+                feature_importances = None."
+    references:
+      paper: "Angelopoulos & Bates, 2021 — A Gentle Introduction to Conformal Prediction"
+      code:  "https://github.com/scikit-learn-contrib/MAPIE"
+    code_template: |
+      import time
+      import numpy as np
+      import pandas as pd
+      from mapie.classification import MapieClassifier
+      from mapie.metrics import classification_coverage_score, classification_mean_width_score
+      from sklearn.metrics import accuracy_score
+
+      # ── Pré-requis : model_pretrained déjà fit sur X_train ─────────────
+      # X_calib, y_calib : ~20% du train réservé pour la calibration conformal
+      # Ne PAS utiliser X_test pour calibrer (leakage)
+
+      _ALPHA = 0.1  # → couverture cible ≥ 90%
+
+      _t0 = time.perf_counter()
+      model = MapieClassifier(
+          estimator=model_pretrained,
+          method="score",
+          cv="prefit",
+          random_state=random_state
+      )
+      model.fit(X_calib, y_calib)
+      fit_time_s = time.perf_counter() - _t0
+
+      # ── Prédiction avec ensembles conformaux ──────────────────────────
+      y_pred, y_pred_sets = model.predict(X_test, alpha=_ALPHA, include_last_label=True)
+      # y_pred_sets.shape = (n_test, n_classes, 1) pour 1 alpha
+
+      _sets_1d = y_pred_sets[:, :, 0]  # (n_test, n_classes) bool
+      feature_importances = None
+      y_proba = model_pretrained.predict_proba(X_test)
+
+      metrics = {
+          "accuracy"       : float(accuracy_score(y_test, y_pred)),
+          "coverage"       : float(classification_coverage_score(y_test, _sets_1d)),
+          "mean_set_size"  : float(classification_mean_width_score(_sets_1d)),
+          "alpha_target"   : _ALPHA,
+          "fit_time_s"     : fit_time_s,
+      }
+      print(f"Couverture empirique : {metrics['coverage']:.3f} (cible : {1-_ALPHA:.2f})")
+      print(f"Taille moyenne des ensembles : {metrics['mean_set_size']:.2f}")
+      print(f"Accuracy ponctuelle : {metrics['accuracy']:.4f}")
+
+      # ── Exemples d'ensembles de prédiction ────────────────────────────
+      _classes = model_pretrained.classes_
+      for i in range(min(5, len(X_test))):
+          _set = _classes[_sets_1d[i]]
+          print(f"  Sample {i}: pred={y_pred[i]}, ensemble={_set.tolist()}, vrai={y_test[i] if hasattr(y_test,'__getitem__') else list(y_test)[i]}")
+
+
+# ──────────────────────────────────────────────────────────────────────────
+advanced_anomaly:
+# ──────────────────────────────────────────────────────────────────────────
+
+  - id: deep_svdd
+    name: "Deep SVDD (Deep One-Class Classification)"
+    enabled: true
+    library: pyod
+    class: pyod.models.deep_svdd.DeepSVDD
+    category: "Anomaly Detection — Deep"
+    description: >
+      Réseau de neurones qui apprend à mapper les données normales autour
+      d'un hypersphère minimal dans l'espace latent. Les anomalies sont
+      éloignées du centre de la sphère. Extension neurale du SVDD classique.
+    use_cases:
+      - "anomaly detection sur données tabulaires denses"
+      - "quand Isolation Forest sature (données haute dimension complexe)"
+      - "détection de nouveauté (novelty detection)"
+    pros:
+      - "apprend une représentation latente de la normalité"
+      - "performant sur données complexes (vs méthodes shallow)"
+      - "interface unifiée PyOD avec 40+ détecteurs"
+    cons:
+      - "plus lent qu'Isolation Forest"
+      - "hyperparamètres réseau à tuner"
+      - "instabilité possible si contamination mal estimée"
+    hyperparameters:
+      n_neurons:     { type: list, default: [64, 32],
+                       description: "Architecture du réseau encoder." }
+      epochs:        { type: int,   range: [20, 200],  default: 100 }
+      batch_size:    { type: int,   range: [32, 1024], default: 32 }
+      lr:            { type: float, range: [1e-5, 1e-2], default: 1e-4 }
+      contamination: { type: float, range: [0.01, 0.5], default: 0.1 }
+      use_ae:        { type: bool,  default: false,
+                       description: "True = Deep SVDD avec AutoEncoder pretraining." }
+    eval_metrics: ["roc_auc", "precision", "recall", "f1", "average_precision"]
+    io_contract:
+      inputs:  [X_train, feature_names]
+      inputs_optional: [y_true]
+      outputs: [model, anomaly_scores, labels, metrics, fit_time_s]
+    references:
+      paper: "Ruff et al., 2018 — Deep One-Class Classification (ICML)"
+      code:  "https://github.com/yzhao062/pyod"
+    code_template: |
+      import time
+      import numpy as np
+      import pandas as pd
+      from pyod.models.deep_svdd import DeepSVDD
+      from sklearn.preprocessing import StandardScaler
+
+      _scaler  = StandardScaler()
+      X_scaled = _scaler.fit_transform(X_train)
+
+      _t0 = time.perf_counter()
+      model = DeepSVDD(
+          n_features=X_scaled.shape[1],
+          c=None,               # centroïde estimé à l'init
+          use_ae=False,
+          epochs=100,
+          batch_size=32,
+          lr=1e-4,
+          contamination=0.1,
+          preprocessing=False,  # déjà scalé
+          random_state=random_state
+      )
+      model.fit(X_scaled)
+      fit_time_s = time.perf_counter() - _t0
+
+      anomaly_scores = model.decision_scores_  # bas = normal
+      labels         = model.labels_           # 0 = normal, 1 = anomalie
+      y_pred         = labels
+      y_proba        = None
+      feature_importances = None
+
+      _n_anom = int(np.sum(labels == 1))
+      metrics = {
+          "n_anomalies"  : _n_anom,
+          "pct_anomalies": float(_n_anom / len(labels) * 100),
+          "fit_time_s"   : fit_time_s,
+      }
+      if "y_true" in dir() and y_true is not None:
+          from sklearn.metrics import roc_auc_score, classification_report
+          metrics["roc_auc"] = float(roc_auc_score(y_true, anomaly_scores))
+          print(classification_report(y_true, labels, target_names=["Normal","Anomalie"]))
+
+      print(f"Anomalies : {_n_anom} ({metrics['pct_anomalies']:.1f}%)")
+
+
+# ──────────────────────────────────────────────────────────────────────────
+free_code:
+# ──────────────────────────────────────────────────────────────────────────
+
+  - id: free_code
+    name: "Nœud Code Libre"
+    enabled: true
+    library: any
+    class: null
+    category: "Générique"
+    description: >
+      Nœud d'échappement : code Python arbitraire hors catalogue.
+      Permet d'intégrer n'importe quelle logique custom, wrapper de modèle
+      exotique, appel d'API externe, ou traitement ad-hoc, tout en respectant
+      le contrat I/O du bloc 3 pour assurer la compatibilité avec le bloc 4.
+    use_cases:
+      - "modèle non répertorié dans le catalogue"
+      - "pipeline hybride (sklearn + torch + HuggingFace)"
+      - "wrapper autour d'un modèle propriétaire ou API (OpenAI, Vertex AI...)"
+      - "logique métier spécifique non générique"
+      - "prototypage rapide avant intégration formelle"
+    pros:
+      - "liberté totale"
+      - "compatible avec le contrat I/O du bloc 4 si les variables de sortie sont produites"
+    cons:
+      - "aucune validation automatique des hyperparamètres"
+      - "maintenabilité réduite"
+      - "pas de GridSearch natif via le catalogue"
+    hyperparameters: {}
+    eval_metrics: []
+    io_contract:
+      inputs:  [X_train, X_test, y_train, y_test, feature_names]
+      outputs: [model, y_pred, y_proba, metrics, feature_importances, fit_time_s]
+      notes:   >
+        OBLIGATION : produire au minimum model, y_pred, metrics (dict), fit_time_s.
+        y_proba = None si le modèle ne produit pas de probabilités.
+        feature_importances = None si non applicable.
+        Toute variable supplémentaire sera ignorée par le bloc 4 mais ne causera pas d'erreur.
+    code_template: |
+      # ══════════════════════════════════════════════════════════════════
+      # NŒUD CODE LIBRE — Remplacer ce bloc par votre code custom
+      # Contrat minimal : produire model, y_pred, metrics, fit_time_s
+      # ══════════════════════════════════════════════════════════════════
+      import time
+      import numpy as np
+      import pandas as pd
+
+      # ── Exemple : wrapper HuggingFace tabular via skops ────────────────
+      # pip install skops huggingface_hub
+      # from skops.hub_utils import download
+      # from skops.io import load as skops_load
+
+      # ── Exemple : appel API externe ────────────────────────────────────
+      # import openai, json
+      # ... formater X_test en prompt, appeler l'API, parser la réponse ...
+
+      # ── Exemple minimal — modèle fictif custom ─────────────────────────
+      class MyCustomModel:
+          """Remplacer par votre implémentation."""
+          def fit(self, X, y):
+              self._classes = np.unique(y)
+              self._majority = self._classes[np.bincount(
+                  np.searchsorted(self._classes, y)).argmax()]
+              return self
+          def predict(self, X):
+              return np.full(len(X), self._majority)
+          def predict_proba(self, X):
+              _n = len(self._classes)
+              return np.full((len(X), _n), 1.0 / _n)
+
+      # ── Entraînement ───────────────────────────────────────────────────
+      _t0 = time.perf_counter()
+      model = MyCustomModel()
+      model.fit(X_train, y_train)
+      fit_time_s = time.perf_counter() - _t0
+
+      # ── Sorties garanties (NE PAS SUPPRIMER CES LIGNES) ───────────────
+      y_pred  = model.predict(X_test)
+      y_proba = model.predict_proba(X_test) if hasattr(model, "predict_proba") else None
+      feature_importances = None  # ou pd.Series si disponible
+
+      from sklearn.metrics import accuracy_score, f1_score
+      metrics = {
+          "accuracy"   : float(accuracy_score(y_test, y_pred)),
+          "f1_weighted": float(f1_score(y_test, y_pred, average="weighted",
+                                         zero_division=0)),
+          "fit_time_s" : fit_time_s,
+          # ajouter ici vos métriques custom
+          # "custom_metric": ...,
+      }
+
+      # ── Code spécifique à votre modèle ────────────────────────────────
+      # ... tout ce que vous voulez ici ...
+      print(f"Custom model fit in {fit_time_s:.3f}s")
+      print(f"Accuracy: {metrics['accuracy']:.4f}")
