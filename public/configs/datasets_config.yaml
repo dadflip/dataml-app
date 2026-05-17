@@ -1301,3 +1301,2018 @@ synthetic_data:
       y_test       = None
       dates_train  = None
       dates_future = None
+      
+# ──────────────────────────────────────────────────────────────────────────
+graph_sources:
+# ──────────────────────────────────────────────────────────────────────────
+
+  - id: networkx_graph
+    name: "Graphe NetworkX (CSV edges / JSON)"
+    enabled: true
+    category: "Graphe"
+    format: "edge list / adjacency / GraphML / GML / GEXF"
+    description: >
+      Chargement d'un graphe depuis une liste d'arêtes CSV ou un format
+      natif NetworkX (GraphML, GML, GEXF). Extraction des features de
+      noeuds (degré, centralité, clustering) pour pipeline ML tabulaire.
+    use_cases:
+      - "réseaux sociaux — détection de communautés"
+      - "graphes de transactions — détection de fraude"
+      - "réseaux biologiques — protéines, gènes"
+      - "graphes de dépendances — supply chain"
+    pros:
+      - "bibliothèque Python native riche (300+ algorithmes)"
+      - "export vers PyG / DGL facile"
+      - "formats standards multiples"
+    cons:
+      - "non scalable > 10M arêtes (utiliser GraphX/Spark)"
+      - "représentation en mémoire non optimisée"
+    input_parameters:
+      EDGE_FILE:     "str — fichier CSV avec colonnes source, target [, weight]"
+      NODE_FILE:     "str | None — fichier CSV attributs noeuds (optionnel)"
+      SOURCE_COL:    "str — nom colonne source (défaut: 'source')"
+      TARGET_COL_G:  "str — nom colonne target arête (défaut: 'target')"
+      WEIGHT_COL:    "str | None — colonne poids (None = non pondéré)"
+      NODE_LABEL_COL: "str | None — colonne label noeuds pour classification"
+      DIRECTED:      "bool — True = DiGraph"
+      GRAPH_FILE:    "str | None — alternative : fichier GraphML/GML/GEXF"
+    code_template: |
+      import networkx as nx
+      import pandas as pd
+      import numpy as np
+
+      # ── Paramètres ────────────────────────────────────────────────────
+      EDGE_FILE      = "data/edges.csv"
+      NODE_FILE      = None              # "data/nodes.csv" ou None
+      SOURCE_COL     = "source"
+      TARGET_COL_G   = "target"
+      WEIGHT_COL     = "weight"          # None si non pondéré
+      NODE_LABEL_COL = "label"           # None si non supervisé
+      DIRECTED       = False
+      GRAPH_FILE     = None              # alternative: "data/graph.graphml"
+
+      # ── Chargement ────────────────────────────────────────────────────
+      if GRAPH_FILE:
+          ext = GRAPH_FILE.split(".")[-1].lower()
+          G = {"graphml": nx.read_graphml,
+               "gml"    : nx.read_gml,
+               "gexf"   : nx.read_gexf,
+               "json"   : lambda f: nx.node_link_graph(
+                               __import__("json").load(open(f)))
+               }.get(ext, nx.read_graphml)(GRAPH_FILE)
+      else:
+          df_edges = pd.read_csv(EDGE_FILE)
+          G = nx.DiGraph() if DIRECTED else nx.Graph()
+          for _, row in df_edges.iterrows():
+              kwargs = {"weight": row[WEIGHT_COL]} if WEIGHT_COL and WEIGHT_COL in row else {}
+              G.add_edge(row[SOURCE_COL], row[TARGET_COL_G], **kwargs)
+
+      if NODE_FILE:
+          df_nodes = pd.read_csv(NODE_FILE, index_col=0)
+          for node_id, attrs in df_nodes.iterrows():
+              if G.has_node(node_id):
+                  G.nodes[node_id].update(attrs.to_dict())
+
+      print(f"Noeuds : {G.number_of_nodes()} | Arêtes : {G.number_of_edges()}")
+      print(f"Connexe : {nx.is_connected(G) if not DIRECTED else nx.is_weakly_connected(G)}")
+
+      # ── Extraction features tabulaires par noeud ───────────────────────
+      nodes      = list(G.nodes())
+      degree     = dict(G.degree())
+      betweenness = nx.betweenness_centrality(G, normalized=True)
+      clustering  = nx.clustering(G)
+      pagerank    = nx.pagerank(G, alpha=0.85) if not DIRECTED else nx.pagerank(G)
+
+      rows = []
+      for n in nodes:
+          r = {
+              "node_id"         : n,
+              "degree"          : degree[n],
+              "betweenness_centrality": betweenness[n],
+              "clustering_coeff": clustering[n],
+              "pagerank"        : pagerank[n],
+          }
+          # Attributs natifs du noeud
+          r.update(G.nodes[n])
+          rows.append(r)
+
+      df = pd.DataFrame(rows).set_index("node_id")
+
+      # ── Variables standards ───────────────────────────────────────────
+      if NODE_LABEL_COL and NODE_LABEL_COL in df.columns:
+          y             = df[NODE_LABEL_COL]
+          X             = df.drop(columns=[NODE_LABEL_COL])
+          task_type     = "node_classification"
+      else:
+          X             = df.copy()
+          y             = None
+          task_type     = "graph"
+
+      feature_names = X.columns.tolist()
+      target_name   = NODE_LABEL_COL
+      meta = {
+          "n_nodes"   : G.number_of_nodes(),
+          "n_edges"   : G.number_of_edges(),
+          "directed"  : DIRECTED,
+          "density"   : nx.density(G),
+          "graph_obj" : G,           # disponible pour PyG/DGL en bloc 2
+      }
+
+      # ── Initialisation variables non applicables ──────────────────────
+      texts_train  = []
+      texts_test   = []
+      y_train      = None
+      y_test       = None
+      dates_train  = None
+      dates_future = None
+      durations    = None
+      events       = None
+      df_survival  = None
+
+
+  - id: pytorch_geometric
+    name: "Graphe PyTorch Geometric (PyG)"
+    enabled: true
+    category: "Graphe — Deep Learning"
+    format: "PyG Dataset / Data object"
+    description: >
+      Chargement de datasets de graphes natifs PyG (Cora, CiteSeer, OGB,
+      PPI, TUDataset…) ou conversion d'un graphe NetworkX vers PyG Data.
+      Produit les features tabulaires pour le pipeline sklearn ET expose
+      l'objet PyG Data pour les GNN.
+    use_cases:
+      - "classification de noeuds (Cora, CiteSeer, ogbn-arxiv)"
+      - "classification de graphes (TUDataset — molécules)"
+      - "prédiction de liens"
+      - "GNN : GCN, GAT, GraphSAGE, GIN"
+    pros:
+      - "accès direct à 100+ datasets benchmark"
+      - "transformations et mini-batch natifs"
+      - "compatible PyTorch"
+    cons:
+      - "CUDA requis pour l'entraînement rapide"
+      - "peu adapté aux données non-graphe"
+    input_parameters:
+      PYG_DATASET_NAME: "str — 'Cora'|'CiteSeer'|'PubMed'|'ogbn-arxiv'|'PROTEINS'|…"
+      PYG_ROOT:         "str — dossier de téléchargement"
+      SPLIT:            "str — 'train'|'val'|'test'|'all'"
+      NX_GRAPH:         "nx.Graph | None — alternative si graphe NetworkX existant"
+    code_template: |
+      import numpy as np
+      import pandas as pd
+      import torch
+
+      # ── Paramètres ────────────────────────────────────────────────────
+      PYG_DATASET_NAME = "Cora"
+      PYG_ROOT         = "./data/pyg"
+      SPLIT            = "all"
+      NX_GRAPH         = None  # nx.Graph ou None
+
+      # ── Option A : dataset PyG standard ───────────────────────────────
+      if NX_GRAPH is None:
+          from torch_geometric.datasets import Planetoid, TUDataset
+          from torch_geometric.utils import to_networkx
+          import torch_geometric
+
+          if PYG_DATASET_NAME in ["Cora", "CiteSeer", "PubMed"]:
+              dataset = Planetoid(root=PYG_ROOT, name=PYG_DATASET_NAME)
+              data    = dataset[0]
+          else:
+              dataset = TUDataset(root=PYG_ROOT, name=PYG_DATASET_NAME)
+              data    = dataset[0]
+
+          # Features tabulaires depuis les attributs de noeuds
+          X_arr = data.x.numpy() if data.x is not None else np.zeros((data.num_nodes, 1))
+          y_arr = data.y.numpy() if data.y is not None else None
+
+      # ── Option B : conversion depuis NetworkX ─────────────────────────
+      else:
+          from torch_geometric.utils import from_networkx
+          data  = from_networkx(NX_GRAPH)
+          X_arr = np.zeros((NX_GRAPH.number_of_nodes(), 1))
+          y_arr = None
+
+      # ── Variables standards ───────────────────────────────────────────
+      n_feat = X_arr.shape[1]
+      X      = pd.DataFrame(X_arr, columns=[f"feat_{i}" for i in range(n_feat)])
+      y      = pd.Series(y_arr, name="label") if y_arr is not None else None
+
+      feature_names = X.columns.tolist()
+      target_name   = "label"
+      task_type     = "node_classification" if y is not None else "graph"
+      df            = X.copy()
+      if y is not None:
+          df["label"] = y.values
+
+      meta = {
+          "dataset"     : PYG_DATASET_NAME,
+          "n_nodes"     : int(X_arr.shape[0]),
+          "n_features"  : n_feat,
+          "n_classes"   : int(y.nunique()) if y is not None else None,
+          "pyg_data"    : data,           # objet PyG pour GNN en bloc 3
+          "n_edges"     : int(data.num_edges) if hasattr(data, "num_edges") else None,
+      }
+
+      # ── Initialisation variables non applicables ──────────────────────
+      texts_train  = []
+      texts_test   = []
+      y_train      = None
+      y_test       = None
+      dates_train  = None
+      dates_future = None
+      durations    = None
+      events       = None
+      df_survival  = None
+
+
+# ──────────────────────────────────────────────────────────────────────────
+ontology_knowledge:
+# ──────────────────────────────────────────────────────────────────────────
+
+  - id: rdf_owl_ontology
+    name: "Ontologie RDF / OWL / SPARQL"
+    enabled: true
+    category: "Graphe de Connaissances"
+    format: "RDF/XML · Turtle · N-Triples · JSON-LD"
+    description: >
+      Chargement d'une ontologie ou d'un graphe de connaissances RDF/OWL.
+      Requêtage SPARQL pour extraire des triplets (sujet, prédicat, objet)
+      et construction d'un DataFrame tabulaire ou d'un graphe NetworkX.
+      Utile pour le raisonnement symbolique, l'enrichissement de features,
+      et les pipelines Knowledge Graph Embedding (TransE, RotatE…).
+    use_cases:
+      - "DBpedia, Wikidata, YAGO, Freebase"
+      - "ontologies médicales (SNOMED, MeSH, ICD)"
+      - "graphes de connaissances d'entreprise"
+      - "enrichissement de features par KG embedding"
+    pros:
+      - "standard W3C — interopérabilité maximale"
+      - "raisonnement OWL natif (rdflib + owlrl)"
+      - "SPARQL = SQL pour les triplets"
+    cons:
+      - "verbeux et complexe à modéliser"
+      - "lent sur grands graphes (> 10M triplets)"
+      - "requiert une compréhension des ontologies"
+    input_parameters:
+      RDF_FILE:     "str | None — fichier local (.ttl, .rdf, .owl, .nt, .jsonld)"
+      SPARQL_ENDPOINT: "str | None — endpoint SPARQL distant (ex: DBpedia)"
+      RDF_FORMAT:   "str — 'turtle'|'xml'|'n3'|'nt'|'json-ld' (défaut: 'turtle')"
+      SPARQL_QUERY: "str — requête SPARQL SELECT"
+      TARGET_PREDICATE: "str | None — prédicat à prédire (ex: 'rdf:type')"
+    code_template: |
+      import rdflib
+      from rdflib import Graph, Namespace, RDF, RDFS, OWL, URIRef, Literal
+      from rdflib.plugins.sparql import prepareQuery
+      import pandas as pd
+      import numpy as np
+      import networkx as nx
+
+      # ── Paramètres ────────────────────────────────────────────────────
+      RDF_FILE          = "data/ontology.ttl"     # None si endpoint distant
+      SPARQL_ENDPOINT   = None   # "http://dbpedia.org/sparql"
+      RDF_FORMAT        = "turtle"
+      TARGET_PREDICATE  = None   # ex: "http://www.w3.org/1999/02/22-rdf-syntax-ns#type"
+
+      SPARQL_QUERY = """
+          PREFIX rdf:  <http://www.w3.org/1999/02/22-rdf-syntax-ns#>
+          PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>
+          SELECT ?subject ?predicate ?object
+          WHERE {
+              ?subject ?predicate ?object .
+              FILTER(isIRI(?subject) && isIRI(?object))
+          }
+          LIMIT 100000
+      """
+
+      # ── Chargement ────────────────────────────────────────────────────
+      g = Graph()
+      if RDF_FILE:
+          g.parse(RDF_FILE, format=RDF_FORMAT)
+          print(f"Triplets chargés : {len(g)}")
+      elif SPARQL_ENDPOINT:
+          from SPARQLWrapper import SPARQLWrapper, JSON
+          sparql = SPARQLWrapper(SPARQL_ENDPOINT)
+          sparql.setQuery(SPARQL_QUERY)
+          sparql.setReturnFormat(JSON)
+          results = sparql.query().convert()
+          rows_raw = [
+              {k: r[k]["value"] for k in r}
+              for r in results["results"]["bindings"]
+          ]
+          df_triplets = pd.DataFrame(rows_raw)
+          g = None  # pas d'objet rdflib dans ce cas
+      else:
+          raise ValueError("Fournir RDF_FILE ou SPARQL_ENDPOINT")
+
+      # ── Extraction des triplets → DataFrame ───────────────────────────
+      if g is not None:
+          results_q = g.query(SPARQL_QUERY)
+          df_triplets = pd.DataFrame(
+              [(str(r.subject), str(r.predicate), str(r.object))
+               for r in results_q],
+              columns=["subject", "predicate", "object"]
+          )
+
+      print(f"Triplets extraits : {len(df_triplets)}")
+      print(df_triplets.head())
+
+      # ── Construction graphe NetworkX ──────────────────────────────────
+      G_kg = nx.DiGraph()
+      for _, row in df_triplets.iterrows():
+          G_kg.add_edge(row["subject"], row["object"],
+                        relation=row["predicate"])
+
+      # ── Pivot : features tabulaires par sujet ─────────────────────────
+      # One-hot des prédicats sortants de chaque sujet
+      preds = df_triplets["predicate"].value_counts().head(50).index.tolist()
+      subjects = df_triplets["subject"].unique()
+      feat_rows = []
+      for s in subjects:
+          sub_df = df_triplets[df_triplets["subject"] == s]
+          row_d  = {"entity": s}
+          for p in preds:
+              row_d[f"pred_{p.split('/')[-1][:30]}"] = int(p in sub_df["predicate"].values)
+          row_d["out_degree"] = len(sub_df)
+          feat_rows.append(row_d)
+
+      df = pd.DataFrame(feat_rows).set_index("entity").fillna(0)
+
+      # ── Variables standards ───────────────────────────────────────────
+      if TARGET_PREDICATE:
+          _target_col = f"pred_{TARGET_PREDICATE.split('/')[-1][:30]}"
+          y         = df[_target_col] if _target_col in df.columns else None
+          X         = df.drop(columns=[_target_col], errors="ignore")
+          task_type = "node_classification"
+      else:
+          X         = df.copy()
+          y         = None
+          task_type = "knowledge_graph"
+
+      feature_names = X.columns.tolist()
+      target_name   = TARGET_PREDICATE
+      meta = {
+          "n_triplets": len(df_triplets),
+          "n_entities": len(subjects),
+          "n_relations": df_triplets["predicate"].nunique(),
+          "graph_obj"  : G_kg,
+          "rdf_graph"  : g,
+          "triplets_df": df_triplets,
+      }
+
+      # ── Initialisation variables non applicables ──────────────────────
+      texts_train  = []
+      texts_test   = []
+      y_train      = None
+      y_test       = None
+      dates_train  = None
+      dates_future = None
+      durations    = None
+      events       = None
+      df_survival  = None
+
+
+  - id: wikidata_sparql
+    name: "Wikidata (SPARQL Live)"
+    enabled: true
+    category: "Graphe de Connaissances"
+    format: "SPARQL / JSON"
+    description: >
+      Requêtage direct du endpoint SPARQL public de Wikidata.
+      Extraction de propriétés structurées sur des entités pour
+      enrichissement de datasets ML.
+    use_cases:
+      - "enrichissement de features (pays, entreprises, personnes)"
+      - "datasets ouverts structurés"
+      - "alignement d'entités"
+    pros:
+      - "endpoint public gratuit"
+      - "80M+ entités"
+      - "données fraîches"
+    cons:
+      - "timeout à 60s — requêtes à optimiser"
+      - "rate limiting"
+    input_parameters:
+      WIKIDATA_QUERY: "str — requête SPARQL Wikidata"
+      TARGET_COL:     "str | None"
+      LANG:           "str — langue des labels (défaut: 'fr')"
+    code_template: |
+      import requests
+      import pandas as pd
+      import numpy as np
+      import time
+
+      # ── Paramètres ────────────────────────────────────────────────────
+      TARGET_COL  = None
+      LANG        = "fr"
+
+      WIKIDATA_QUERY = """
+      SELECT ?item ?itemLabel ?population ?area ?capital ?capitalLabel WHERE {
+        ?item wdt:P31 wd:Q6256 .              # instance de : pays
+        OPTIONAL { ?item wdt:P1082 ?population . }
+        OPTIONAL { ?item wdt:P2046 ?area . }
+        OPTIONAL { ?item wdt:P36 ?capital . }
+        SERVICE wikibase:label {
+          bd:serviceParam wikibase:language "fr,en" .
+        }
+      }
+      LIMIT 500
+      """
+
+      # ── Chargement ────────────────────────────────────────────────────
+      ENDPOINT = "https://query.wikidata.org/sparql"
+      headers  = {
+          "Accept"    : "application/sparql-results+json",
+          "User-Agent": "ML-Pipeline/1.0 (research)"
+      }
+      for attempt in range(3):
+          try:
+              r = requests.get(ENDPOINT,
+                               params={"query": WIKIDATA_QUERY, "format": "json"},
+                               headers=headers, timeout=55)
+              r.raise_for_status()
+              break
+          except requests.RequestException as e:
+              print(f"Tentative {attempt+1}/3 : {e}")
+              time.sleep(5 * (attempt + 1))
+
+      data    = r.json()
+      cols    = data["results"]["head"]["vars"]
+      records = [{c: row.get(c, {}).get("value", None) for c in cols}
+                 for row in data["results"]["bindings"]]
+      df      = pd.DataFrame(records)
+
+      # ── Nettoyage types ───────────────────────────────────────────────
+      for col in ["population", "area"]:
+          if col in df.columns:
+              df[col] = pd.to_numeric(df[col], errors="coerce")
+
+      # Extraire l'ID Wikidata depuis l'URI
+      if "item" in df.columns:
+          df["wikidata_id"] = df["item"].str.extract(r"(Q\d+)")
+
+      print(f"Shape : {df.shape}")
+
+      # ── Variables standards ───────────────────────────────────────────
+      _exclude = ["item", "itemLabel", "capitalLabel", "wikidata_id"]
+      if TARGET_COL and TARGET_COL in df.columns:
+          X         = df.drop(columns=[c for c in _exclude + [TARGET_COL] if c in df.columns])
+          y         = df[TARGET_COL]
+          task_type = "classification" if y.nunique() < 20 else "regression"
+      else:
+          X         = df.drop(columns=[c for c in _exclude if c in df.columns])
+          y         = None
+          task_type = "knowledge_graph"
+
+      feature_names = X.columns.tolist()
+      target_name   = TARGET_COL
+      meta          = {"n_entities": len(df), "query_vars": cols, "shape": df.shape}
+
+      # ── Initialisation variables non applicables ──────────────────────
+      texts_train  = []
+      texts_test   = []
+      y_train      = None
+      y_test       = None
+      dates_train  = None
+      dates_future = None
+      durations    = None
+      events       = None
+      df_survival  = None
+
+
+# ──────────────────────────────────────────────────────────────────────────
+vector_databases:
+# ──────────────────────────────────────────────────────────────────────────
+
+  - id: chroma_vectordb
+    name: "ChromaDB (Vector Store)"
+    enabled: true
+    category: "Base Vectorielle"
+    format: "Embeddings / numpy"
+    description: >
+      Extraction de vecteurs d'embeddings et métadonnées depuis ChromaDB.
+      Les embeddings deviennent les features X pour le pipeline ML
+      (clustering, classification, anomaly detection, réduction dimensionnelle).
+    use_cases:
+      - "clustering sémantique de documents"
+      - "anomaly detection dans l'espace sémantique"
+      - "classification sur représentations latentes"
+      - "visualisation t-SNE/UMAP d'embeddings"
+    pros:
+      - "embeddings pré-calculés — pas de recompute"
+      - "métadonnées riches récupérables"
+      - "local et cloud"
+    cons:
+      - "embeddings = boîte noire (moins interprétable)"
+      - "dépendance au modèle d'embedding"
+    input_parameters:
+      CHROMA_PATH:        "str — dossier de persistance ou ':memory:'"
+      COLLECTION_NAME:    "str — nom de la collection"
+      CHROMA_HOST:        "str | None — host si mode serveur"
+      CHROMA_PORT:        "int — port serveur (défaut: 8000)"
+      TARGET_METADATA_KEY: "str | None — clé de métadonnée à utiliser comme target"
+      N_MAX:              "int | None — nombre max de vecteurs à charger"
+    code_template: |
+      import chromadb
+      import numpy as np
+      import pandas as pd
+
+      # ── Paramètres ────────────────────────────────────────────────────
+      CHROMA_PATH         = "./chroma_db"
+      COLLECTION_NAME     = "documents"
+      CHROMA_HOST         = None      # None = mode local
+      CHROMA_PORT         = 8000
+      TARGET_METADATA_KEY = "label"   # None si non supervisé
+      N_MAX               = None      # None = tout charger
+
+      # ── Connexion ─────────────────────────────────────────────────────
+      if CHROMA_HOST:
+          client = chromadb.HttpClient(host=CHROMA_HOST, port=CHROMA_PORT)
+      else:
+          client = chromadb.PersistentClient(path=CHROMA_PATH)
+
+      collection = client.get_collection(COLLECTION_NAME)
+      print(f"Collection '{COLLECTION_NAME}' : {collection.count()} vecteurs")
+
+      # ── Extraction ────────────────────────────────────────────────────
+      query_kwargs = {"include": ["embeddings", "metadatas", "documents"]}
+      if N_MAX:
+          query_kwargs["limit"] = N_MAX
+
+      results = collection.get(**query_kwargs)
+      embeddings = np.array(results["embeddings"])
+      metadatas  = results["metadatas"] or [{}] * len(embeddings)
+      documents  = results.get("documents") or [""] * len(embeddings)
+
+      df_meta = pd.DataFrame(metadatas)
+      dim     = embeddings.shape[1]
+
+      # ── Variables standards ───────────────────────────────────────────
+      feat_cols = [f"emb_{i}" for i in range(dim)]
+      X         = pd.DataFrame(embeddings, columns=feat_cols)
+      df        = X.copy()
+
+      if df_meta.shape[1] > 0:
+          for col in df_meta.columns:
+              df[col] = df_meta[col].values
+
+      if TARGET_METADATA_KEY and TARGET_METADATA_KEY in df_meta.columns:
+          y         = df_meta[TARGET_METADATA_KEY]
+          task_type = "classification" if y.nunique() < 20 else "regression"
+      else:
+          y         = None
+          task_type = "clustering"
+
+      feature_names = feat_cols
+      target_name   = TARGET_METADATA_KEY
+      meta = {
+          "collection"   : COLLECTION_NAME,
+          "n_vectors"    : len(embeddings),
+          "embedding_dim": dim,
+          "documents"    : documents,
+          "shape"        : embeddings.shape,
+      }
+
+      # ── Initialisation variables non applicables ──────────────────────
+      texts_train  = []
+      texts_test   = []
+      y_train      = None
+      y_test       = None
+      dates_train  = None
+      dates_future = None
+      durations    = None
+      events       = None
+      df_survival  = None
+
+
+  - id: pinecone_vectordb
+    name: "Pinecone (Vector Store Cloud)"
+    enabled: true
+    category: "Base Vectorielle"
+    format: "Embeddings / JSON"
+    description: >
+      Extraction d'embeddings et métadonnées depuis Pinecone.
+      Même convention de sortie que ChromaDB — X = matrice d'embeddings.
+    use_cases:
+      - "clustering sémantique à grande échelle"
+      - "classification sur embeddings LLM"
+    pros:
+      - "scalable à des milliards de vecteurs"
+      - "filtrage par métadonnées natif"
+    cons:
+      - "payant", "nécessite API key"
+    input_parameters:
+      PINECONE_API_KEY: "str — clé API Pinecone"
+      PINECONE_INDEX:   "str — nom de l'index"
+      PINECONE_ENV:     "str — environnement (ex: 'us-east1-gcp')"
+      TARGET_METADATA_KEY: "str | None"
+      FETCH_N:          "int — vecteurs à récupérer par batch (défaut: 1000)"
+    code_template: |
+      import numpy as np
+      import pandas as pd
+      from pinecone import Pinecone
+
+      # ── Paramètres ────────────────────────────────────────────────────
+      PINECONE_API_KEY     = "YOUR_API_KEY"
+      PINECONE_INDEX       = "my-index"
+      TARGET_METADATA_KEY  = "category"
+      FETCH_N              = 1000
+
+      # ── Connexion ─────────────────────────────────────────────────────
+      pc    = Pinecone(api_key=PINECONE_API_KEY)
+      index = pc.Index(PINECONE_INDEX)
+      stats = index.describe_index_stats()
+      print(f"Index '{PINECONE_INDEX}' : {stats['total_vector_count']} vecteurs, "
+            f"dim={stats['dimension']}")
+
+      # ── Récupération par fetch sur IDs connus ou via query dummy ──────
+      # Note : Pinecone n'a pas de "scan" — on utilise une requête nulle
+      dim         = stats["dimension"]
+      dummy_query = np.zeros(dim).tolist()
+      result      = index.query(vector=dummy_query, top_k=FETCH_N,
+                                include_metadata=True, include_values=True)
+
+      vectors   = np.array([m["values"]            for m in result["matches"]])
+      metadatas = [m.get("metadata", {})            for m in result["matches"]]
+      ids_list  = [m["id"]                          for m in result["matches"]]
+
+      df_meta   = pd.DataFrame(metadatas)
+      feat_cols = [f"emb_{i}" for i in range(dim)]
+      X         = pd.DataFrame(vectors, columns=feat_cols)
+      df        = X.copy()
+      df["vector_id"] = ids_list
+
+      if TARGET_METADATA_KEY and TARGET_METADATA_KEY in df_meta.columns:
+          y         = df_meta[TARGET_METADATA_KEY].reset_index(drop=True)
+          task_type = "classification" if y.nunique() < 20 else "regression"
+      else:
+          y         = None
+          task_type = "clustering"
+
+      feature_names = feat_cols
+      target_name   = TARGET_METADATA_KEY
+      meta = {
+          "index"        : PINECONE_INDEX,
+          "n_vectors"    : len(vectors),
+          "embedding_dim": dim,
+          "shape"        : vectors.shape,
+      }
+
+      # ── Initialisation variables non applicables ──────────────────────
+      texts_train  = []
+      texts_test   = []
+      y_train      = None
+      y_test       = None
+      dates_train  = None
+      dates_future = None
+      durations    = None
+      events       = None
+      df_survival  = None
+
+
+# ──────────────────────────────────────────────────────────────────────────
+multi_table_db:
+# ──────────────────────────────────────────────────────────────────────────
+
+  - id: multi_table_relational
+    name: "Base Relationnelle Multi-Tables (Feature Engineering Automatique)"
+    enabled: true
+    category: "Base Relationnelle Multi-Tables"
+    format: "SQL — schéma complet"
+    description: >
+      Charge l'intégralité d'un schéma relationnel (toutes tables, toutes
+      colonnes), détecte automatiquement les clés étrangères et effectue
+      le feature engineering cross-table via Featuretools (Deep Feature
+      Synthesis — DFS). Produit un DataFrame tabulaire unique utilisable
+      par tout modèle sklearn.
+    use_cases:
+      - "CRM — clients, commandes, produits, interactions"
+      - "ERP — transactions, stocks, fournisseurs"
+      - "tout schéma relationnel complexe"
+      - "AutoML sur données multi-tables"
+    pros:
+      - "zéro jointure manuelle"
+      - "features agrégées automatiques (max, min, mean, count, last…)"
+      - "DFS discover des features cachées dans les relations"
+    cons:
+      - "explosion du nombre de features (feature selection requise ensuite)"
+      - "lent sur grands volumes"
+      - "featuretools requis"
+    input_parameters:
+      DB_URL:        "str — chaîne SQLAlchemy"
+      TARGET_TABLE:  "str — table principale (entité cible)"
+      TARGET_COL:    "str — colonne cible dans TARGET_TABLE"
+      ENTITY_ID_COL: "str — clé primaire de TARGET_TABLE"
+      EXCLUDE_TABLES: "list[str] — tables à exclure (logs, audit…)"
+      MAX_DEPTH:     "int — profondeur DFS (défaut: 2)"
+      N_JOBS:        "int — parallélisme featuretools (défaut: -1)"
+    code_template: |
+      import pandas as pd
+      import numpy as np
+      from sqlalchemy import create_engine, inspect
+      import featuretools as ft
+
+      # ── Paramètres ────────────────────────────────────────────────────
+      DB_URL         = "postgresql+psycopg2://user:pwd@localhost:5432/mydb"
+      TARGET_TABLE   = "customers"
+      TARGET_COL     = "churn"
+      ENTITY_ID_COL  = "customer_id"
+      EXCLUDE_TABLES = ["alembic_version", "django_migrations", "audit_log"]
+      MAX_DEPTH      = 2
+      N_JOBS         = -1
+
+      # ── Introspection complète du schéma ──────────────────────────────
+      engine    = create_engine(DB_URL, pool_pre_ping=True)
+      inspector = inspect(engine)
+      all_tables = [t for t in inspector.get_table_names()
+                    if t not in EXCLUDE_TABLES]
+      print(f"Tables détectées : {all_tables}")
+
+      # ── Chargement de toutes les tables ───────────────────────────────
+      dfs_dict = {}
+      with engine.connect() as conn:
+          for table in all_tables:
+              try:
+                  dfs_dict[table] = pd.read_sql_table(table, conn)
+                  print(f"  {table} : {dfs_dict[table].shape}")
+              except Exception as e:
+                  print(f"  ⚠ {table} ignorée : {e}")
+
+      # ── Détection automatique des relations (FK) ───────────────────────
+      relationships = []
+      for table in all_tables:
+          for fk in inspector.get_foreign_keys(table):
+              if fk["referred_table"] in dfs_dict:
+                  relationships.append(
+                      ft.Relationship(
+                          parent_dataframe_name=fk["referred_table"],
+                          parent_column_name=fk["referred_columns"][0],
+                          child_dataframe_name=table,
+                          child_column_name=fk["constrained_columns"][0],
+                      )
+                  )
+                  print(f"  FK : {table}.{fk['constrained_columns'][0]} "
+                        f"→ {fk['referred_table']}.{fk['referred_columns'][0]}")
+
+      # ── EntitySet Featuretools ─────────────────────────────────────────
+      es = ft.EntitySet(id="multi_table_db")
+      for table, df_t in dfs_dict.items():
+          pk_cols = [c["name"] for c in inspector.get_pk_constraint(table)["constrained_columns"]]
+          idx_col = pk_cols[0] if pk_cols else None
+          if idx_col and idx_col in df_t.columns:
+              es.add_dataframe(dataframe_name=table,
+                               dataframe=df_t,
+                               index=idx_col)
+          else:
+              df_t = df_t.copy()
+              df_t["_id"] = range(len(df_t))
+              es.add_dataframe(dataframe_name=table,
+                               dataframe=df_t,
+                               index="_id")
+
+      for rel in relationships:
+          try:
+              es.add_relationship(rel)
+          except Exception as e:
+              print(f"  ⚠ Relation ignorée : {e}")
+
+      # ── Deep Feature Synthesis ────────────────────────────────────────
+      feature_matrix, feature_defs = ft.dfs(
+          entityset=es,
+          target_dataframe_name=TARGET_TABLE,
+          max_depth=MAX_DEPTH,
+          n_jobs=N_JOBS,
+          verbose=True,
+      )
+      print(f"\nFeatures DFS générées : {feature_matrix.shape[1]}")
+
+      # ── Variables standards ───────────────────────────────────────────
+      df = feature_matrix.copy()
+      if TARGET_COL in dfs_dict[TARGET_TABLE].columns:
+          _target_series = dfs_dict[TARGET_TABLE].set_index(ENTITY_ID_COL)[TARGET_COL]
+          df[TARGET_COL] = df.index.map(_target_series)
+          y         = df.pop(TARGET_COL)
+          task_type = "classification" if y.nunique() < 20 else "regression"
+      else:
+          y         = None
+          task_type = "clustering"
+
+      X             = df.select_dtypes(include=[np.number]).fillna(0)
+      feature_names = X.columns.tolist()
+      target_name   = TARGET_COL
+      meta = {
+          "tables_loaded" : list(dfs_dict.keys()),
+          "n_relationships": len(relationships),
+          "n_dfs_features" : len(feature_defs),
+          "feature_defs"  : feature_defs,
+          "shape"         : X.shape,
+      }
+
+      # ── Initialisation variables non applicables ──────────────────────
+      texts_train  = []
+      texts_test   = []
+      y_train      = None
+      y_test       = None
+      dates_train  = None
+      dates_future = None
+      durations    = None
+      events       = None
+      df_survival  = None
+
+
+# ──────────────────────────────────────────────────────────────────────────
+cloud_platforms:
+# ──────────────────────────────────────────────────────────────────────────
+
+  - id: supabase
+    name: "Supabase (PostgreSQL + API REST)"
+    enabled: true
+    category: "Cloud BaaS"
+    format: "REST JSON / PostgREST / psycopg2"
+    description: >
+      Chargement depuis Supabase via le client Python officiel (PostgREST)
+      ou via connexion directe PostgreSQL. Supabase = PostgreSQL managé +
+      Auth + Storage + Realtime. Support des requêtes filtrées, joins et
+      Row Level Security (RLS désactivé en service_role).
+    use_cases:
+      - "applications web/mobile avec backend Supabase"
+      - "données utilisateur + transactions + events"
+      - "prototypage rapide BaaS"
+    pros:
+      - "SDK Python officiel"
+      - "accès direct PostgreSQL disponible"
+      - "RLS configurable"
+      - "gratuit tier généreux"
+    cons:
+      - "RLS peut masquer des données si mal configuré"
+      - "latence réseau vs local"
+    input_parameters:
+      SUPABASE_URL:         "str — URL du projet (https://xxx.supabase.co)"
+      SUPABASE_SERVICE_KEY: "str — service_role key (contourne RLS)"
+      SUPABASE_TABLE:       "str — table principale"
+      TARGET_COL:           "str | None"
+      SELECT_COLS:          "str — colonnes à sélectionner (défaut: '*')"
+      FILTERS:              "dict — {colonne: valeur} filtres simples"
+      PG_DSN:               "str | None — DSN PostgreSQL direct (optionnel)"
+    code_template: |
+      import pandas as pd
+      import numpy as np
+
+      # ── Paramètres ────────────────────────────────────────────────────
+      SUPABASE_URL         = "https://xxxxxxxxxxxx.supabase.co"
+      SUPABASE_SERVICE_KEY = "eyJ..."   # service_role key
+      SUPABASE_TABLE       = "users"
+      TARGET_COL           = "churn"
+      SELECT_COLS          = "*"
+      FILTERS              = {}         # ex: {"status": "active"}
+      PG_DSN               = None       # "postgresql://postgres:pwd@db.xxx.supabase.co:5432/postgres"
+
+      # ── Option A : client Python Supabase (PostgREST) ─────────────────
+      if PG_DSN is None:
+          from supabase import create_client
+          client = create_client(SUPABASE_URL, SUPABASE_SERVICE_KEY)
+
+          query = client.table(SUPABASE_TABLE).select(SELECT_COLS)
+          for col, val in FILTERS.items():
+              query = query.eq(col, val)
+
+          # Pagination automatique (max 1000 par page PostgREST)
+          all_records = []
+          page_size   = 1000
+          offset      = 0
+          while True:
+              resp = query.range(offset, offset + page_size - 1).execute()
+              if not resp.data:
+                  break
+              all_records.extend(resp.data)
+              if len(resp.data) < page_size:
+                  break
+              offset += page_size
+              print(f"Chargés : {len(all_records)}")
+
+          df = pd.json_normalize(all_records)
+
+      # ── Option B : connexion PostgreSQL directe (plus rapide) ─────────
+      else:
+          from sqlalchemy import create_engine
+          engine = create_engine(PG_DSN)
+          _where = " AND ".join(f"{k}='{v}'" for k, v in FILTERS.items())
+          _query = (f"SELECT {SELECT_COLS} FROM {SUPABASE_TABLE}"
+                    + (f" WHERE {_where}" if _where else ""))
+          with engine.connect() as conn:
+              df = pd.read_sql(_query, conn)
+
+      print(f"Shape : {df.shape}")
+
+      # ── Variables standards ───────────────────────────────────────────
+      _id_cols = [c for c in ["id", "uuid", "created_at", "updated_at"] if c in df.columns]
+      if TARGET_COL and TARGET_COL in df.columns:
+          X         = df.drop(columns=_id_cols + [TARGET_COL])
+          y         = df[TARGET_COL]
+          task_type = "classification" if (y.dtype == object or y.nunique() < 20) else "regression"
+      else:
+          X         = df.drop(columns=_id_cols)
+          y         = None
+          task_type = "clustering"
+
+      feature_names = X.columns.tolist()
+      target_name   = TARGET_COL
+      meta = {
+          "supabase_url" : SUPABASE_URL,
+          "table"        : SUPABASE_TABLE,
+          "n_records"    : len(df),
+          "filters"      : FILTERS,
+          "shape"        : df.shape,
+      }
+
+      # ── Initialisation variables non applicables ──────────────────────
+      texts_train  = []
+      texts_test   = []
+      y_train      = None
+      y_test       = None
+      dates_train  = None
+      dates_future = None
+      durations    = None
+      events       = None
+      df_survival  = None
+
+
+  - id: aws_s3_athena
+    name: "AWS S3 + Athena"
+    enabled: true
+    category: "Cloud Data Lake"
+    format: "Parquet / CSV sur S3 + SQL Athena"
+    description: >
+      Requêtage de données stockées sur S3 via Athena (SQL serverless).
+      Ou lecture directe de fichiers S3 via s3fs + pandas.
+    use_cases:
+      - "data lake AWS"
+      - "logs CloudWatch, CloudTrail"
+      - "données Kinesis Firehose archivées"
+    pros:
+      - "SQL sur fichiers S3 sans infrastructure"
+      - "coût très bas (scan)"
+      - "intégration AWS native"
+    cons:
+      - "latence 1-30s par requête"
+      - "coût au scan (compresser en Parquet)"
+    input_parameters:
+      AWS_REGION:     "str — région AWS (ex: 'eu-west-1')"
+      S3_BUCKET:      "str — nom du bucket"
+      S3_KEY:         "str | None — clé objet ou préfixe"
+      ATHENA_DATABASE: "str | None — database Athena"
+      ATHENA_QUERY:   "str | None — requête SQL Athena"
+      ATHENA_S3_OUTPUT: "str — s3://bucket/output/ pour résultats Athena"
+      TARGET_COL:     "str | None"
+    code_template: |
+      import pandas as pd
+      import numpy as np
+      import boto3
+      import io
+      import time
+
+      # ── Paramètres ────────────────────────────────────────────────────
+      AWS_REGION       = "eu-west-1"
+      S3_BUCKET        = "my-data-lake"
+      S3_KEY           = "datasets/processed/data.parquet"  # None si Athena
+      ATHENA_DATABASE  = None            # "my_glue_database"
+      ATHENA_S3_OUTPUT = "s3://my-data-lake/athena-results/"
+      TARGET_COL       = "label"
+
+      ATHENA_QUERY = """
+          SELECT *
+          FROM my_table
+          WHERE year = '2024' AND month = '12'
+          LIMIT 500000
+      """
+
+      session = boto3.Session(region_name=AWS_REGION)
+
+      # ── Option A : lecture directe S3 ─────────────────────────────────
+      if S3_KEY and not ATHENA_DATABASE:
+          s3  = session.client("s3")
+          obj = s3.get_object(Bucket=S3_BUCKET, Key=S3_KEY)
+          buf = io.BytesIO(obj["Body"].read())
+          df  = (pd.read_parquet(buf) if S3_KEY.endswith(".parquet")
+                 else pd.read_csv(buf))
+
+      # ── Option B : requête Athena ──────────────────────────────────────
+      elif ATHENA_DATABASE:
+          athena   = session.client("athena", region_name=AWS_REGION)
+          response = athena.start_query_execution(
+              QueryString=ATHENA_QUERY,
+              QueryExecutionContext={"Database": ATHENA_DATABASE},
+              ResultConfiguration={"OutputLocation": ATHENA_S3_OUTPUT},
+          )
+          exec_id = response["QueryExecutionId"]
+          # Attente completion
+          for _ in range(60):
+              status = athena.get_query_execution(QueryExecutionId=exec_id)
+              state  = status["QueryExecution"]["Status"]["State"]
+              if state in ["SUCCEEDED", "FAILED", "CANCELLED"]:
+                  break
+              time.sleep(2)
+          if state != "SUCCEEDED":
+              raise RuntimeError(f"Athena query {state}")
+          # Lecture du résultat S3
+          s3_path = (status["QueryExecution"]["ResultConfiguration"]
+                     ["OutputLocation"].replace("s3://", ""))
+          bucket, key = s3_path.split("/", 1)
+          s3  = session.client("s3")
+          obj = s3.get_object(Bucket=bucket, Key=key)
+          df  = pd.read_csv(io.BytesIO(obj["Body"].read()))
+      else:
+          raise ValueError("Fournir S3_KEY ou ATHENA_DATABASE")
+
+      print(f"Shape : {df.shape}")
+
+      # ── Variables standards ───────────────────────────────────────────
+      if TARGET_COL and TARGET_COL in df.columns:
+          X         = df.drop(columns=[TARGET_COL])
+          y         = df[TARGET_COL]
+          task_type = "classification" if y.nunique() < 20 else "regression"
+      else:
+          X         = df.copy()
+          y         = None
+          task_type = "clustering"
+
+      feature_names = X.columns.tolist()
+      target_name   = TARGET_COL
+      meta = {"bucket": S3_BUCKET, "shape": df.shape,
+              "athena_exec_id": exec_id if ATHENA_DATABASE else None}
+
+      # ── Initialisation variables non applicables ──────────────────────
+      texts_train  = []
+      texts_test   = []
+      y_train      = None
+      y_test       = None
+      dates_train  = None
+      dates_future = None
+      durations    = None
+      events       = None
+      df_survival  = None
+
+
+  - id: azure_blob_synapse
+    name: "Azure Blob Storage + Synapse Analytics"
+    enabled: true
+    category: "Cloud Data Lake"
+    format: "Parquet / CSV / Delta sur ADLS Gen2 + SQL Synapse"
+    description: >
+      Lecture depuis Azure Blob / ADLS Gen2 et requêtage via Synapse
+      Serverless SQL Pool. Alternative : Azure ML Datasets.
+    use_cases:
+      - "data lake Azure"
+      - "pipelines Azure Data Factory"
+      - "données Synapse Spark"
+    input_parameters:
+      AZURE_CONNECTION_STRING: "str — connection string compte de stockage"
+      AZURE_CONTAINER:    "str — nom du container"
+      AZURE_BLOB_PATH:    "str — chemin du blob"
+      SYNAPSE_SERVER:     "str | None — serveur Synapse Serverless SQL"
+      SYNAPSE_DATABASE:   "str | None"
+      SYNAPSE_QUERY:      "str | None"
+      TARGET_COL:         "str | None"
+    code_template: |
+      import pandas as pd
+      import numpy as np
+      import io
+
+      # ── Paramètres ────────────────────────────────────────────────────
+      AZURE_CONNECTION_STRING = "DefaultEndpointsProtocol=https;AccountName=..."
+      AZURE_CONTAINER         = "raw-data"
+      AZURE_BLOB_PATH         = "2024/12/dataset.parquet"
+      SYNAPSE_SERVER          = None  # "xxx-ondemand.sql.azuresynapse.net"
+      SYNAPSE_DATABASE        = None  # "my_serverless_db"
+      SYNAPSE_QUERY           = None
+      TARGET_COL              = "label"
+
+      # ── Option A : Azure Blob Storage ─────────────────────────────────
+      if SYNAPSE_SERVER is None:
+          from azure.storage.blob import BlobServiceClient
+          blob_client = BlobServiceClient.from_connection_string(
+              AZURE_CONNECTION_STRING)
+          downloader = (blob_client
+                        .get_container_client(AZURE_CONTAINER)
+                        .get_blob_client(AZURE_BLOB_PATH)
+                        .download_blob())
+          buf = io.BytesIO(downloader.readall())
+          df  = (pd.read_parquet(buf) if AZURE_BLOB_PATH.endswith(".parquet")
+                 else pd.read_csv(buf))
+
+      # ── Option B : Synapse Serverless SQL ─────────────────────────────
+      else:
+          import pyodbc
+          conn_str = (
+              f"DRIVER={{ODBC Driver 18 for SQL Server}};"
+              f"SERVER={SYNAPSE_SERVER};DATABASE={SYNAPSE_DATABASE};"
+              f"Authentication=ActiveDirectoryInteractive"
+          )
+          with pyodbc.connect(conn_str) as conn:
+              df = pd.read_sql(SYNAPSE_QUERY, conn)
+
+      print(f"Shape : {df.shape}")
+
+      # ── Variables standards ───────────────────────────────────────────
+      if TARGET_COL and TARGET_COL in df.columns:
+          X         = df.drop(columns=[TARGET_COL])
+          y         = df[TARGET_COL]
+          task_type = "classification" if y.nunique() < 20 else "regression"
+      else:
+          X         = df.copy()
+          y         = None
+          task_type = "clustering"
+
+      feature_names = X.columns.tolist()
+      target_name   = TARGET_COL
+      meta = {"container": AZURE_CONTAINER, "blob": AZURE_BLOB_PATH, "shape": df.shape}
+
+      # ── Initialisation variables non applicables ──────────────────────
+      texts_train  = []
+      texts_test   = []
+      y_train      = None
+      y_test       = None
+      dates_train  = None
+      dates_future = None
+      durations    = None
+      events       = None
+      df_survival  = None
+
+
+# ──────────────────────────────────────────────────────────────────────────
+lakehouse:
+# ──────────────────────────────────────────────────────────────────────────
+
+  - id: delta_lake
+    name: "Delta Lake / Databricks"
+    enabled: true
+    category: "Lakehouse"
+    format: "Delta Table (Parquet + transaction log)"
+    description: >
+      Lecture d'une Delta Table (local ou Databricks) via delta-rs ou
+      PySpark. Support du time travel (lecture à une version passée),
+      Change Data Feed et schema evolution.
+    use_cases:
+      - "pipelines Databricks / Apache Spark"
+      - "data lakehouse sur S3, ADLS, GCS"
+      - "time travel — audit et reproductibilité"
+    pros:
+      - "ACID transactions sur data lake"
+      - "time travel natif"
+      - "lecture sans Spark (delta-rs)"
+    cons:
+      - "delta-rs ne supporte pas toutes les fonctionnalités DML"
+      - "Spark requis pour écriture haute perf"
+    input_parameters:
+      DELTA_TABLE_PATH: "str — chemin local ou s3://... ou abfss://..."
+      DELTA_VERSION:    "int | None — version pour time travel (None = latest)"
+      DELTA_TIMESTAMP:  "str | None — timestamp pour time travel"
+      TARGET_COL:       "str | None"
+      STORAGE_OPTIONS:  "dict — credentials S3/Azure/GCS"
+    code_template: |
+      import pandas as pd
+      import numpy as np
+
+      # ── Paramètres ────────────────────────────────────────────────────
+      DELTA_TABLE_PATH = "./data/delta_table"   # ou "s3://bucket/path/"
+      DELTA_VERSION    = None     # int ou None
+      DELTA_TIMESTAMP  = None     # "2024-12-01T00:00:00" ou None
+      TARGET_COL       = "label"
+      STORAGE_OPTIONS  = {}       # {"AWS_ACCESS_KEY_ID": "...", ...}
+
+      # ── Option A : delta-rs (sans Spark) ──────────────────────────────
+      try:
+          from deltalake import DeltaTable
+          dt_kwargs = {"storage_options": STORAGE_OPTIONS} if STORAGE_OPTIONS else {}
+          dt        = DeltaTable(DELTA_TABLE_PATH, **dt_kwargs)
+
+          if DELTA_VERSION is not None:
+              dt.load_as_version(DELTA_VERSION)
+          elif DELTA_TIMESTAMP is not None:
+              dt.load_as_version(DELTA_TIMESTAMP)
+
+          df = dt.to_pandas()
+          print(f"Delta version : {dt.version()} | Shape : {df.shape}")
+
+      # ── Option B : PySpark (si disponible) ────────────────────────────
+      except ImportError:
+          from pyspark.sql import SparkSession
+          spark = SparkSession.builder.appName("DeltaLoad").getOrCreate()
+          _opts = {"versionAsOf": str(DELTA_VERSION)} if DELTA_VERSION is not None else {}
+          if DELTA_TIMESTAMP:
+              _opts = {"timestampAsOf": DELTA_TIMESTAMP}
+          sdf = spark.read.format("delta").options(**_opts).load(DELTA_TABLE_PATH)
+          df  = sdf.toPandas()
+          print(f"Shape : {df.shape}")
+
+      # ── Variables standards ───────────────────────────────────────────
+      if TARGET_COL and TARGET_COL in df.columns:
+          X         = df.drop(columns=[TARGET_COL])
+          y         = df[TARGET_COL]
+          task_type = "classification" if y.nunique() < 20 else "regression"
+      else:
+          X         = df.copy()
+          y         = None
+          task_type = "clustering"
+
+      feature_names = X.columns.tolist()
+      target_name   = TARGET_COL
+      meta = {"path": DELTA_TABLE_PATH, "version": DELTA_VERSION,
+              "timestamp": DELTA_TIMESTAMP, "shape": df.shape}
+
+      # ── Initialisation variables non applicables ──────────────────────
+      texts_train  = []
+      texts_test   = []
+      y_train      = None
+      y_test       = None
+      dates_train  = None
+      dates_future = None
+      durations    = None
+      events       = None
+      df_survival  = None
+
+
+  - id: apache_iceberg
+    name: "Apache Iceberg"
+    enabled: true
+    category: "Lakehouse"
+    format: "Iceberg Table (Parquet + metadata JSON)"
+    description: >
+      Lecture d'une table Iceberg via PyIceberg (sans Spark).
+      Support des snapshots, schema evolution et hidden partitioning.
+      Standard ouvert concurrent à Delta Lake (utilisé par Snowflake, AWS Glue).
+    input_parameters:
+      ICEBERG_CATALOG_TYPE: "str — 'rest'|'hive'|'glue'|'sql'|'hadoop'"
+      ICEBERG_CATALOG_URI:  "str — URI du catalog"
+      ICEBERG_NAMESPACE:    "str — namespace (ex: 'default')"
+      ICEBERG_TABLE:        "str — nom de la table"
+      SNAPSHOT_ID:          "int | None — snapshot pour time travel"
+      TARGET_COL:           "str | None"
+    code_template: |
+      import pandas as pd
+      import numpy as np
+      from pyiceberg.catalog import load_catalog
+
+      # ── Paramètres ────────────────────────────────────────────────────
+      ICEBERG_CATALOG_TYPE = "rest"
+      ICEBERG_CATALOG_URI  = "http://localhost:8181"
+      ICEBERG_NAMESPACE    = "default"
+      ICEBERG_TABLE        = "my_table"
+      SNAPSHOT_ID          = None   # None = latest
+      TARGET_COL           = "label"
+
+      # ── Connexion ─────────────────────────────────────────────────────
+      catalog = load_catalog(
+          ICEBERG_CATALOG_TYPE,
+          **{"uri": ICEBERG_CATALOG_URI}
+      )
+      table = catalog.load_table(f"{ICEBERG_NAMESPACE}.{ICEBERG_TABLE}")
+      print(f"Schema : {table.schema()}")
+      print(f"Snapshots : {len(table.history())}")
+
+      # ── Lecture (avec time travel optionnel) ──────────────────────────
+      scan = table.scan()
+      if SNAPSHOT_ID is not None:
+          scan = table.scan(snapshot_id=SNAPSHOT_ID)
+
+      df = scan.to_arrow().to_pandas()
+      print(f"Shape : {df.shape}")
+
+      # ── Variables standards ───────────────────────────────────────────
+      if TARGET_COL and TARGET_COL in df.columns:
+          X         = df.drop(columns=[TARGET_COL])
+          y         = df[TARGET_COL]
+          task_type = "classification" if y.nunique() < 20 else "regression"
+      else:
+          X         = df.copy()
+          y         = None
+          task_type = "clustering"
+
+      feature_names = X.columns.tolist()
+      target_name   = TARGET_COL
+      meta = {"namespace": ICEBERG_NAMESPACE, "table": ICEBERG_TABLE,
+              "snapshot_id": SNAPSHOT_ID, "shape": df.shape}
+
+      # ── Initialisation variables non applicables ──────────────────────
+      texts_train  = []
+      texts_test   = []
+      y_train      = None
+      y_test       = None
+      dates_train  = None
+      dates_future = None
+      durations    = None
+      events       = None
+      df_survival  = None
+
+
+# ──────────────────────────────────────────────────────────────────────────
+geospatial:
+# ──────────────────────────────────────────────────────────────────────────
+
+  - id: geospatial_vector
+    name: "Données Géospatiales Vectorielles (GeoJSON / Shapefile / GeoParquet)"
+    enabled: true
+    category: "Géospatial"
+    format: "GeoJSON · Shapefile · GeoPackage · GeoParquet · WFS"
+    description: >
+      Chargement de données géospatiales vectorielles via GeoPandas.
+      Extraction de features géométriques (aire, périmètre, centroïde,
+      distance à un point de référence) pour pipeline ML tabulaire.
+      Compatible avec tout format OGR (Shapefile, GeoPackage, FlatGeobuf…).
+    use_cases:
+      - "prédiction de prix immobiliers (géolocalisation)"
+      - "classification de parcelles agricoles (polygones)"
+      - "détection d'anomalies géographiques"
+      - "clustering spatial"
+    pros:
+      - "geopandas = pandas pour la géométrie"
+      - "tous formats OGR supportés"
+      - "projections et reprojections simples"
+    cons:
+      - "géométries complexes → features non triviales"
+      - "CRS à harmoniser entre sources"
+    input_parameters:
+      GEO_FILE:     "str — GeoJSON, Shapefile (.shp), .gpkg, .parquet, WFS URL"
+      TARGET_COL:   "str | None — colonne cible (attribut)"
+      CRS_TARGET:   "str — projection cible EPSG (défaut: 'EPSG:4326')"
+      REF_POINT:    "tuple[float,float] | None — (lon, lat) point de référence"
+      LAYER:        "str | None — couche (GeoPackage multi-layer)"
+    code_template: |
+      import geopandas as gpd
+      import pandas as pd
+      import numpy as np
+      from shapely.geometry import Point
+
+      # ── Paramètres ────────────────────────────────────────────────────
+      GEO_FILE   = "data/parcels.geojson"   # .shp, .gpkg, .parquet, WFS URL
+      TARGET_COL = "land_use"               # None si clustering
+      CRS_TARGET = "EPSG:4326"
+      REF_POINT  = (2.3522, 48.8566)        # Paris (lon, lat) ou None
+      LAYER      = None
+
+      # ── Chargement ────────────────────────────────────────────────────
+      kwargs = {"layer": LAYER} if LAYER else {}
+      if GEO_FILE.endswith(".parquet"):
+          gdf = gpd.read_parquet(GEO_FILE)
+      else:
+          gdf = gpd.read_file(GEO_FILE, **kwargs)
+
+      print(f"Shape : {gdf.shape} | CRS : {gdf.crs}")
+
+      # ── Reprojection ──────────────────────────────────────────────────
+      if gdf.crs and str(gdf.crs) != CRS_TARGET:
+          gdf = gdf.to_crs(CRS_TARGET)
+
+      # ── Extraction features géométriques ──────────────────────────────
+      gdf_proj = gdf.to_crs("EPSG:3857")   # Web Mercator pour distances métriques
+      gdf["area_m2"]       = gdf_proj.geometry.area
+      gdf["perimeter_m"]   = gdf_proj.geometry.length
+      gdf["compactness"]   = (4 * np.pi * gdf["area_m2"]
+                              / (gdf["perimeter_m"] ** 2 + 1e-8))
+      gdf["centroid_lon"]  = gdf.geometry.centroid.x
+      gdf["centroid_lat"]  = gdf.geometry.centroid.y
+      gdf["is_valid"]      = gdf.geometry.is_valid.astype(int)
+      gdf["geom_type"]     = gdf.geometry.geom_type.astype("category").cat.codes
+
+      if REF_POINT:
+          ref  = gpd.GeoSeries([Point(REF_POINT)], crs="EPSG:4326").to_crs("EPSG:3857").iloc[0]
+          gdf["dist_ref_m"] = gdf_proj.geometry.centroid.distance(ref)
+
+      # ── Nettoyage ────────────────────────────────────────────────────
+      df = pd.DataFrame(gdf.drop(columns=["geometry"]))
+      df = df.select_dtypes(exclude=["object"]) if TARGET_COL not in df.columns \
+           else df
+
+      # ── Variables standards ───────────────────────────────────────────
+      GEO_FEAT = ["area_m2", "perimeter_m", "compactness",
+                  "centroid_lon", "centroid_lat", "is_valid",
+                  "geom_type"] + (["dist_ref_m"] if REF_POINT else [])
+
+      if TARGET_COL and TARGET_COL in df.columns:
+          X         = df[GEO_FEAT]
+          y         = df[TARGET_COL]
+          task_type = "classification" if (y.dtype == object or y.nunique() < 20) else "regression"
+      else:
+          X         = df[GEO_FEAT]
+          y         = None
+          task_type = "geospatial"
+
+      feature_names = X.columns.tolist()
+      target_name   = TARGET_COL
+      meta = {
+          "crs"       : str(gdf.crs),
+          "geom_types": gdf.geometry.geom_type.value_counts().to_dict(),
+          "bbox"      : list(gdf.total_bounds),
+          "shape"     : gdf.shape,
+          "gdf"       : gdf,       # GeoDataFrame complet pour visualisation
+      }
+
+      # ── Initialisation variables non applicables ──────────────────────
+      texts_train  = []
+      texts_test   = []
+      y_train      = None
+      y_test       = None
+      dates_train  = None
+      dates_future = None
+      durations    = None
+      events       = None
+      df_survival  = None
+
+
+  - id: geospatial_raster
+    name: "Données Géospatiales Raster (GeoTIFF / NetCDF / Zarr)"
+    enabled: true
+    category: "Géospatial"
+    format: "GeoTIFF · NetCDF · Zarr · HDF5"
+    description: >
+      Chargement de données raster (images satellite, MNT, météo, données
+      climatiques) via rasterio / xarray. Extraction de features statistiques
+      par bande ou par fenêtre spatiale pour pipeline ML tabulaire.
+    use_cases:
+      - "classification de couverture du sol (satellite)"
+      - "prévision météo (ERA5, CMIP6)"
+      - "détection de changement (avant/après)"
+      - "NDVI, indices spectraux"
+    input_parameters:
+      RASTER_FILE:   "str — GeoTIFF, .nc (NetCDF), .zarr, .h5"
+      BAND_NAMES:    "list[str] | None — noms des bandes (défaut: Band_1, Band_2…)"
+      VARIABLE:      "str | None — variable xarray (NetCDF/Zarr)"
+      WINDOW:        "tuple | None — (row_off, col_off, width, height)"
+      TARGET_COL:    "str | None — via shapefile joints (None = clustering)"
+    code_template: |
+      import numpy as np
+      import pandas as pd
+
+      # ── Paramètres ────────────────────────────────────────────────────
+      RASTER_FILE = "data/satellite.tif"   # ou .nc / .zarr
+      BAND_NAMES  = ["red", "green", "blue", "nir"]   # None = auto
+      VARIABLE    = None    # pour NetCDF/Zarr : ex "temperature"
+      TARGET_COL  = None
+
+      # ── Option A : GeoTIFF via rasterio ──────────────────────────────
+      if RASTER_FILE.endswith((".tif", ".tiff")):
+          import rasterio
+          from rasterio.windows import Window
+
+          with rasterio.open(RASTER_FILE) as src:
+              print(f"Bandes : {src.count} | CRS : {src.crs} | Shape : {src.shape}")
+              data    = src.read()  # (bands, height, width)
+              profile = src.profile
+
+          n_bands   = data.shape[0]
+          _names    = BAND_NAMES[:n_bands] if BAND_NAMES else [f"band_{i+1}" for i in range(n_bands)]
+          n_pixels  = data.shape[1] * data.shape[2]
+
+          # Reshape → tableau (n_pixels, n_bands)
+          X_arr = data.reshape(n_bands, -1).T
+          df    = pd.DataFrame(X_arr, columns=_names)
+
+          # Features dérivées (NDVI si bandes red/nir disponibles)
+          if "red" in df.columns and "nir" in df.columns:
+              df["ndvi"] = ((df["nir"] - df["red"]) /
+                            (df["nir"] + df["red"] + 1e-8))
+
+      # ── Option B : NetCDF / Zarr via xarray ──────────────────────────
+      else:
+          import xarray as xr
+          ds = (xr.open_zarr(RASTER_FILE)  if RASTER_FILE.endswith(".zarr")
+                else xr.open_dataset(RASTER_FILE))
+          print(ds)
+          var = VARIABLE or list(ds.data_vars)[0]
+          da  = ds[var]
+          df  = da.to_dataframe().reset_index().dropna(subset=[var])
+          _names = [var]
+
+      # ── Statistiques par bande ────────────────────────────────────────
+      feat_cols = [c for c in df.columns if c not in ["x", "y", "lat", "lon",
+                                                        "latitude", "longitude",
+                                                        "time", "spatial_ref"]]
+      df = df[feat_cols].replace([np.inf, -np.inf], np.nan).dropna()
+
+      # ── Variables standards ───────────────────────────────────────────
+      X             = df.copy()
+      y             = None
+      task_type     = "clustering"
+      feature_names = X.columns.tolist()
+      target_name   = None
+      meta = {"file": RASTER_FILE, "shape": df.shape, "bands": feat_cols}
+
+      # ── Initialisation variables non applicables ──────────────────────
+      texts_train  = []
+      texts_test   = []
+      y_train      = None
+      y_test       = None
+      dates_train  = None
+      dates_future = None
+      durations    = None
+      events       = None
+      df_survival  = None
+
+
+# ──────────────────────────────────────────────────────────────────────────
+audio:
+# ──────────────────────────────────────────────────────────────────────────
+
+  - id: audio_features
+    name: "Audio (WAV / MP3 / FLAC) → Features MFCC / Spectrogramme"
+    enabled: true
+    category: "Audio"
+    format: "WAV · MP3 · FLAC · OGG"
+    description: >
+      Extraction de features audio (MFCC, chroma, spectral centroid,
+      mel-spectrogramme, ZCR, RMS) depuis des fichiers audio ou un dossier.
+      Produit un DataFrame tabulaire par fichier pour classification / régression.
+    use_cases:
+      - "classification de sons / musique / parole"
+      - "détection d'anomalies sonores (maintenance)"
+      - "émotion vocale, qualité audio"
+      - "UrbanSound8K, GTZAN, ESC-50"
+    input_parameters:
+      AUDIO_DIR:    "str — dossier contenant les fichiers audio (structuré par classe)"
+      AUDIO_FILE:   "str | None — fichier audio unique"
+      SR:           "int — taux d'échantillonnage cible (défaut: 22050)"
+      N_MFCC:       "int — nombre de coefficients MFCC (défaut: 40)"
+      N_FFT:        "int — taille FFT (défaut: 2048)"
+      HOP_LENGTH:   "int — pas de la fenêtre (défaut: 512)"
+      DURATION:     "float | None — durée max en secondes (None = tout)"
+    code_template: |
+      import librosa
+      import numpy as np
+      import pandas as pd
+      import os
+
+      # ── Paramètres ────────────────────────────────────────────────────
+      AUDIO_DIR  = "data/audio_dataset/"   # dossier structuré par classe
+      AUDIO_FILE = None
+      SR         = 22050
+      N_MFCC     = 40
+      N_FFT      = 2048
+      HOP_LENGTH = 512
+      DURATION   = None
+
+      def extract_features(filepath, sr=SR, n_mfcc=N_MFCC):
+          y_audio, _sr = librosa.load(filepath, sr=sr, duration=DURATION, mono=True)
+          mfcc         = librosa.feature.mfcc(y=y_audio, sr=sr, n_mfcc=n_mfcc,
+                                               n_fft=N_FFT, hop_length=HOP_LENGTH)
+          chroma       = librosa.feature.chroma_stft(y=y_audio, sr=sr)
+          spec_cent    = librosa.feature.spectral_centroid(y=y_audio, sr=sr)
+          spec_bw      = librosa.feature.spectral_bandwidth(y=y_audio, sr=sr)
+          rolloff      = librosa.feature.spectral_rolloff(y=y_audio, sr=sr)
+          zcr          = librosa.feature.zero_crossing_rate(y_audio)
+          rms          = librosa.feature.rms(y=y_audio)
+
+          row = {}
+          for i in range(n_mfcc):
+              row[f"mfcc_{i}_mean"] = mfcc[i].mean()
+              row[f"mfcc_{i}_std"]  = mfcc[i].std()
+          row["chroma_mean"]    = chroma.mean()
+          row["chroma_std"]     = chroma.std()
+          row["spec_cent_mean"] = spec_cent.mean()
+          row["spec_bw_mean"]   = spec_bw.mean()
+          row["rolloff_mean"]   = rolloff.mean()
+          row["zcr_mean"]       = zcr.mean()
+          row["rms_mean"]       = rms.mean()
+          row["duration_s"]     = len(y_audio) / sr
+          return row
+
+      # ── Extraction batch ──────────────────────────────────────────────
+      records = []
+      if AUDIO_FILE:
+          records.append({**extract_features(AUDIO_FILE), "label": None,
+                          "filename": os.path.basename(AUDIO_FILE)})
+      else:
+          EXTS = (".wav", ".mp3", ".flac", ".ogg", ".m4a")
+          for label in sorted(os.listdir(AUDIO_DIR)):
+              label_dir = os.path.join(AUDIO_DIR, label)
+              if not os.path.isdir(label_dir):
+                  continue
+              for fname in os.listdir(label_dir):
+                  if not fname.lower().endswith(EXTS):
+                      continue
+                  try:
+                      row = extract_features(os.path.join(label_dir, fname))
+                      row["label"]    = label
+                      row["filename"] = fname
+                      records.append(row)
+                  except Exception as e:
+                      print(f"⚠ {fname} : {e}")
+
+      df = pd.DataFrame(records)
+      print(f"Shape : {df.shape} | Classes : {df['label'].unique() if 'label' in df else 'N/A'}")
+
+      # ── Variables standards ───────────────────────────────────────────
+      _excl = ["label", "filename"]
+      X     = df.drop(columns=[c for c in _excl if c in df.columns])
+      y     = df["label"] if "label" in df.columns and df["label"].notna().any() else None
+
+      feature_names = X.columns.tolist()
+      target_name   = "label"
+      task_type     = "classification" if y is not None else "clustering"
+      meta = {"n_files": len(records), "sr": SR, "n_mfcc": N_MFCC, "shape": df.shape}
+
+      # ── Initialisation variables non applicables ──────────────────────
+      texts_train  = []
+      texts_test   = []
+      y_train      = None
+      y_test       = None
+      dates_train  = None
+      dates_future = None
+      durations    = None
+      events       = None
+      df_survival  = None
+
+
+# ──────────────────────────────────────────────────────────────────────────
+federated_and_privacy:
+# ──────────────────────────────────────────────────────────────────────────
+
+  - id: federated_flower
+    name: "Apprentissage Fédéré (Flower / Flwr)"
+    enabled: true
+    category: "Federated Learning"
+    format: "Partitions distribuées NumPy"
+    description: >
+      Simule un apprentissage fédéré local avec Flower (flwr) :
+      partitionnement des données entre N clients simulés, entraînement
+      local, agrégation FedAvg. Produit les variables standards depuis
+      les données du client 0 (pour évaluation centralisée).
+    use_cases:
+      - "données sensibles non centralisables (médical, banque)"
+      - "simulation de scénarios fédérés"
+      - "recherche privacy-preserving ML"
+    input_parameters:
+      NUM_CLIENTS:   "int — nombre de clients simulés (défaut: 5)"
+      NUM_ROUNDS:    "int — rounds de fédération (défaut: 3)"
+      ALPHA_DIR:     "float — concentration Dirichlet (hétérogénéité, défaut: 0.5)"
+    code_template: |
+      import numpy as np
+      import pandas as pd
+      from sklearn.datasets import make_classification
+      from sklearn.model_selection import train_test_split
+      from sklearn.linear_model import LogisticRegression
+      from sklearn.metrics import accuracy_score
+
+      # ── Paramètres ────────────────────────────────────────────────────
+      NUM_CLIENTS = 5
+      NUM_ROUNDS  = 3
+      ALPHA_DIR   = 0.5    # petit alpha = forte hétérogénéité
+
+      TARGET_COL = "target"
+
+      # ── Dataset centralisé de base (remplacer par données réelles) ────
+      X_all, y_all = make_classification(n_samples=5000, n_features=20,
+                                          n_informative=10, random_state=42)
+
+      # ── Partitionnement Dirichlet (hétérogène) ─────────────────────────
+      n_classes = len(np.unique(y_all))
+      client_data = [[] for _ in range(NUM_CLIENTS)]
+      for c in range(n_classes):
+          idx_c     = np.where(y_all == c)[0]
+          np.random.shuffle(idx_c)
+          proportions = np.random.dirichlet([ALPHA_DIR] * NUM_CLIENTS)
+          splits      = (proportions * len(idx_c)).astype(int)
+          splits[-1] += len(idx_c) - splits.sum()
+          cum = 0
+          for k, s in enumerate(splits):
+              client_data[k].append(idx_c[cum:cum+s])
+              cum += s
+
+      clients = []
+      for k in range(NUM_CLIENTS):
+          idx_k = np.concatenate(client_data[k])
+          X_k, y_k = X_all[idx_k], y_all[idx_k]
+          X_tr, X_te, y_tr, y_te = train_test_split(X_k, y_k, test_size=0.2,
+                                                      random_state=42)
+          clients.append({"X_train": X_tr, "X_test": X_te,
+                          "y_train": y_tr, "y_test": y_te})
+          print(f"Client {k} : train={len(X_tr)}, classes={np.bincount(y_tr)}")
+
+      # ── Simulation FedAvg ─────────────────────────────────────────────
+      global_coef     = None
+      global_intercept = None
+
+      for rnd in range(NUM_ROUNDS):
+          local_coefs = []
+          local_ints  = []
+          for k, client in enumerate(clients):
+              clf = LogisticRegression(max_iter=200, random_state=42,
+                                       warm_start=True)
+              if global_coef is not None:
+                  clf.coef_      = global_coef.copy()
+                  clf.intercept_ = global_intercept.copy()
+                  clf.classes_   = np.unique(client["y_train"])
+              clf.fit(client["X_train"], client["y_train"])
+              local_coefs.append(clf.coef_)
+              local_ints.append(clf.intercept_)
+
+          weights      = [len(c["X_train"]) for c in clients]
+          total_w      = sum(weights)
+          global_coef  = sum(w * c / total_w for w, c in zip(weights, local_coefs))
+          global_intercept = sum(w * i / total_w for w, i in zip(weights, local_ints))
+          print(f"Round {rnd+1}/{NUM_ROUNDS} — FedAvg agrégé")
+
+      # ── Variables standards (depuis client 0 pour évaluation) ─────────
+      df = pd.DataFrame(clients[0]["X_train"],
+                        columns=[f"feat_{i}" for i in range(X_all.shape[1])])
+      df[TARGET_COL] = clients[0]["y_train"]
+
+      X             = df.drop(columns=[TARGET_COL])
+      y             = df[TARGET_COL]
+      feature_names = X.columns.tolist()
+      target_name   = TARGET_COL
+      task_type     = "classification"
+      meta = {
+          "num_clients"   : NUM_CLIENTS,
+          "num_rounds"    : NUM_ROUNDS,
+          "alpha_dir"     : ALPHA_DIR,
+          "global_coef"   : global_coef,
+          "global_intercept": global_intercept,
+          "clients"       : clients,    # accès à tous les partitions
+      }
+
+      # ── Initialisation variables non applicables ──────────────────────
+      texts_train  = []
+      texts_test   = []
+      y_train      = None
+      y_test       = None
+      dates_train  = None
+      dates_future = None
+      durations    = None
+      events       = None
+      df_survival  = None
+
+
+# ──────────────────────────────────────────────────────────────────────────
+synthetic_advanced:
+# ──────────────────────────────────────────────────────────────────────────
+
+  - id: synthetic_graph_data
+    name: "Données de Graphe Synthétiques (Stochastic Block Model / Barabási-Albert)"
+    enabled: true
+    category: "Synthétique — Graphe"
+    format: "NetworkX / numpy"
+    description: >
+      Génère des graphes synthétiques avec structure communautaire (SBM),
+      scale-free (Barabási-Albert), small-world (Watts-Strogatz) ou
+      aléatoire (Erdős-Rényi). Produit les features tabulaires par noeud
+      pour benchmark des algorithmes de graphe.
+    input_parameters:
+      GRAPH_MODEL:    "str — 'sbm'|'ba'|'ws'|'er'"
+      N_NODES:        "int — nombre de noeuds"
+      N_COMMUNITIES:  "int — communautés pour SBM (défaut: 4)"
+      P_INTRA:        "float — proba arête intra-communauté (SBM)"
+      P_INTER:        "float — proba arête inter-communauté (SBM)"
+      M_BA:           "int — arêtes par noeud nouveau (BA, défaut: 2)"
+    code_template: |
+      import networkx as nx
+      import numpy as np
+      import pandas as pd
+
+      # ── Paramètres ────────────────────────────────────────────────────
+      GRAPH_MODEL   = "sbm"
+      N_NODES       = 1000
+      N_COMMUNITIES = 4
+      P_INTRA       = 0.3
+      P_INTER       = 0.01
+      M_BA          = 3
+
+      # ── Génération ────────────────────────────────────────────────────
+      if GRAPH_MODEL == "sbm":
+          sizes = [N_NODES // N_COMMUNITIES] * N_COMMUNITIES
+          sizes[-1] += N_NODES - sum(sizes)
+          p_matrix = [[P_INTRA if i==j else P_INTER
+                       for j in range(N_COMMUNITIES)]
+                      for i in range(N_COMMUNITIES)]
+          G = nx.stochastic_block_model(sizes, p_matrix, seed=42)
+          # Attribut 'block' = label communauté (ground truth)
+          labels_gt = np.array([G.nodes[n]["block"] for n in G.nodes()])
+
+      elif GRAPH_MODEL == "ba":
+          G = nx.barabasi_albert_graph(N_NODES, M_BA, seed=42)
+          labels_gt = None
+
+      elif GRAPH_MODEL == "ws":
+          k = max(4, N_NODES // 50)
+          G = nx.watts_strogatz_graph(N_NODES, k, 0.1, seed=42)
+          labels_gt = None
+
+      else:  # er
+          G = nx.erdos_renyi_graph(N_NODES, 0.05, seed=42)
+          labels_gt = None
+
+      print(f"Graphe {GRAPH_MODEL} : {G.number_of_nodes()} noeuds, "
+            f"{G.number_of_edges()} arêtes | Densité : {nx.density(G):.4f}")
+
+      # ── Features par noeud ────────────────────────────────────────────
+      pagerank    = nx.pagerank(G, alpha=0.85)
+      betweenness = nx.betweenness_centrality(G, normalized=True)
+      clustering  = nx.clustering(G)
+      degree      = dict(G.degree())
+
+      rows = [{
+          "node_id"          : n,
+          "degree"           : degree[n],
+          "pagerank"         : pagerank[n],
+          "betweenness"      : betweenness[n],
+          "clustering_coeff" : clustering[n],
+      } for n in G.nodes()]
+
+      df = pd.DataFrame(rows).set_index("node_id")
+      if labels_gt is not None:
+          df["community"] = labels_gt
+
+      # ── Variables standards ───────────────────────────────────────────
+      if labels_gt is not None:
+          y         = df.pop("community")
+          task_type = "node_classification"
+      else:
+          y         = None
+          task_type = "graph"
+
+      X             = df.copy()
+      feature_names = X.columns.tolist()
+      target_name   = "community" if labels_gt is not None else None
+      meta = {
+          "model"   : GRAPH_MODEL,
+          "n_nodes" : G.number_of_nodes(),
+          "n_edges" : G.number_of_edges(),
+          "density" : nx.density(G),
+          "graph_obj": G,
+          "shape"   : df.shape,
+      }
+
+      # ── Initialisation variables non applicables ──────────────────────
+      texts_train  = []
+      texts_test   = []
+      y_train      = None
+      y_test       = None
+      dates_train  = None
+      dates_future = None
+      durations    = None
+      events       = None
+      df_survival  = None
+
+
+  - id: synthetic_time_series_advanced
+    name: "Séries Temporelles Synthétiques (ARIMA / GBM / Navier-Stokes)"
+    enabled: true
+    category: "Synthétique — Timeseries"
+    format: "numpy / pandas"
+    description: >
+      Génère des séries temporelles synthétiques réalistes avec différents
+      processus stochastiques : ARIMA, Geometric Brownian Motion (finance),
+      Ornstein-Uhlenbeck (retour à la moyenne), sinusoïdes + bruit.
+      Utile pour tester des modèles de prévision.
+    input_parameters:
+      TS_MODEL:    "str — 'arima'|'gbm'|'ou'|'seasonal_noise'|'regime_switch'"
+      N_POINTS:    "int — nombre de points temporels"
+      FREQ:        "str — fréquence (défaut: 'D')"
+      TEST_RATIO:  "float — ratio test (défaut: 0.2)"
+      HORIZON:     "int — horizon de prévision"
+    code_template: |
+      import numpy as np
+      import pandas as pd
+
+      # ── Paramètres ────────────────────────────────────────────────────
+      TS_MODEL   = "gbm"
+      N_POINTS   = 1000
+      FREQ       = "D"
+      TEST_RATIO = 0.2
+      HORIZON    = 30
+      np.random.seed(42)
+
+      dates = pd.date_range("2020-01-01", periods=N_POINTS, freq=FREQ)
+
+      # ── Génération ────────────────────────────────────────────────────
+      if TS_MODEL == "arima":
+          from statsmodels.tsa.arima_process import ArmaProcess
+          ar = np.array([1, -0.75, 0.25])
+          ma = np.array([1,  0.65])
+          values = ArmaProcess(ar, ma).generate_sample(nsample=N_POINTS,
+                                                        scale=1.0) + 100
+
+      elif TS_MODEL == "gbm":
+          mu, sigma, S0, dt = 0.0005, 0.02, 100.0, 1.0
+          log_returns = (mu - 0.5*sigma**2)*dt + sigma*np.sqrt(dt)*np.random.randn(N_POINTS)
+          values = S0 * np.exp(np.cumsum(log_returns))
+
+      elif TS_MODEL == "ou":
+          theta, mu_ou, sigma_ou = 0.1, 50.0, 2.0
+          values = np.zeros(N_POINTS)
+          values[0] = mu_ou
+          for t in range(1, N_POINTS):
+              values[t] = (values[t-1]
+                           + theta*(mu_ou - values[t-1])
+                           + sigma_ou*np.random.randn())
+
+      elif TS_MODEL == "regime_switch":
+          values = np.zeros(N_POINTS)
+          regime = 0
+          for t in range(N_POINTS):
+              if np.random.rand() < 0.02:
+                  regime = 1 - regime
+              values[t] = (100 + np.random.randn() * 2 if regime == 0
+                           else 120 + np.random.randn() * 5)
+
+      else:  # seasonal_noise
+          t_arr  = np.arange(N_POINTS)
+          values = (100 + 10*np.sin(2*np.pi*t_arr/365)
+                       + 5*np.sin(2*np.pi*t_arr/7)
+                       + np.random.randn(N_POINTS)*2)
+
+      series = pd.Series(values, index=dates, name="value")
+
+      # ── Variables standards timeseries ─────────────────────────────────
+      n_test       = int(N_POINTS * TEST_RATIO)
+      y_train      = series.iloc[:-n_test]
+      y_test       = series.iloc[-n_test:]
+      dates_train  = y_train.index
+      dates_future = pd.date_range(start=y_test.index[0],
+                                   periods=HORIZON, freq=FREQ)
+
+      X             = pd.DataFrame(index=series.index)
+      y             = series
+      df            = series.to_frame()
+      feature_names = []
+      target_name   = "value"
+      task_type     = "timeseries"
+      meta = {
+          "model"  : TS_MODEL,
+          "n_points": N_POINTS,
+          "freq"   : FREQ,
+          "horizon": HORIZON,
+          "shape"  : df.shape,
+          "synthetic": True,
+      }
+
+      # ── Initialisation variables non applicables ──────────────────────
+      texts_train = []
+      texts_test  = []
+      durations   = None
+      events      = None
+      df_survival = None
+
+
+# ──────────────────────────────────────────────────────────────────────────
+free_source:
+# ──────────────────────────────────────────────────────────────────────────
+
+  - id: free_source
+    name: "Nœud Source Libre"
+    enabled: true
+    category: "Générique"
+    format: "any"
+    description: >
+      Nœud d'échappement pour toute source de données hors catalogue.
+      OBLIGATION : produire toutes les variables du contrat I/O Bloc 1.
+      Toutes les variables non applicables DOIVENT être initialisées explicitement.
+    use_cases:
+      - "source propriétaire ou interne non répertoriée"
+      - "API custom, bus de messages, MQTT, OPC-UA (IoT)"
+      - "données en mémoire (pipeline en cours)"
+      - "source expérimentale"
+    input_parameters:
+      CUSTOM_PARAMS: "dict — paramètres libres de la source"
+    code_template: |
+      # ══════════════════════════════════════════════════════════════════
+      # NŒUD SOURCE LIBRE — Remplacer ce bloc par votre logique de chargement
+      #
+      # RÈGLE ABSOLUE : produire TOUTES les variables ci-dessous.
+      # Variables non applicables → valeur nulle listée, ne pas supprimer.
+      # ══════════════════════════════════════════════════════════════════
+      import pandas as pd
+      import numpy as np
+
+      # ── Paramètres libres ─────────────────────────────────────────────
+      CUSTOM_PARAMS = {}
+
+      # ── Votre logique de chargement ───────────────────────────────────
+      # Exemple minimal — remplacer par votre source
+      df = pd.DataFrame({
+          "feature_1": np.random.randn(100),
+          "feature_2": np.random.randint(0, 5, 100),
+          "target"   : np.random.randint(0, 2, 100),
+      })
+
+      # ── Variables obligatoires ─────────────────────────────────────────
+      TARGET_COL    = "target"    # adapter ou None
+      X             = df.drop(columns=[TARGET_COL]) if TARGET_COL in df.columns else df.copy()
+      y             = df[TARGET_COL] if TARGET_COL in df.columns else None
+      feature_names = X.columns.tolist()
+      target_name   = TARGET_COL
+      task_type     = "classification"   # adapter : voir liste task_type en tête de fichier
+      meta          = {"source": "free_source", "shape": df.shape,
+                       "custom_params": CUSTOM_PARAMS}
+
+      # ── Initialisation OBLIGATOIRE de toutes les variables optionnelles ─
+      # NLP
+      texts_train  = []
+      texts_test   = []
+      # Timeseries (split temporel — si task_type == "timeseries", remplir ces variables)
+      y_train      = None   # pd.Series si timeseries
+      y_test       = None   # pd.Series si timeseries
+      dates_train  = None   # pd.DatetimeIndex si timeseries
+      dates_future = None   # pd.DatetimeIndex si timeseries
+      # Survival
+      durations    = None   # pd.Series si survival
+      events       = None   # pd.Series si survival
+      df_survival  = None   # pd.DataFrame si survival
