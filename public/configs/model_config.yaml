@@ -1,106 +1,4 @@
 # ══════════════════════════════════════════════════════════════════════════
-# CONTRAT I/O GLOBAL DU PIPELINE ML
-# ══════════════════════════════════════════════════════════════════════════
-#
-#  BLOC 1 — datasets_config.yaml
-#    INPUT  : paramètres utilisateur (FILE_PATH, TARGET_COL, …)
-#    OUTPUT : df, X, y, feature_names, target_name, task_type, meta
-#             + texts_train / texts_test  (NLP)
-#             + y_train / y_test / dates_train / dates_future  (timeseries)
-#
-#  BLOC 2 — eda_config.yaml
-#    INPUT  : df, X, y, feature_names, target_name, task_type, meta
-#             + texts_train / texts_test  (NLP)
-#             + TARGET_COL  (param local à préciser)
-#    OUTPUT : X_train, X_test, y_train, y_test
-#             preprocessor  (sklearn Pipeline/ColumnTransformer — fitted)
-#             feature_names_out  (list[str] — après OHE/poly/selection)
-#             task_type  (confirmé / inchangé)
-#             + dates_train / dates_future  (timeseries, pass-through)
-#             + texts_train / texts_test    (NLP, pass-through)
-#
-#  BLOC 3 — model_config.yaml
-#    INPUT  : X_train, X_test, y_train, y_test
-#             feature_names  (= feature_names_out du bloc 2)
-#             task_type, preprocessor
-#             + texts_train / texts_test     (NLP)
-#             + dates_train / dates_future   (timeseries)
-#    OUTPUT : model, y_pred, y_proba, metrics, shap_values
-#             + labels  (clustering)
-#             + forecast  (timeseries)
-#             + scores   (anomaly)
-#
-#  RÈGLE D'OR : ne jamais renommer ces variables entre les blocs.
-#  Seuls les paramètres en MAJUSCULES (FILE_PATH, TARGET_COL, etc.)
-#  sont à adapter selon le projet — tout le reste est câblé.
-# ══════════════════════════════════════════════════════════════════════════
-
-
-# ──────────────────────────────────────────────────────────────────────────
-# CONTRAT I/O — BLOC 3 : model_config.yaml
-# ──────────────────────────────────────────────────────────────────────────
-
-pipeline_contract:
-  bloc: 3
-  role: "Entraînement · Évaluation · Inférence — consomme les données preprocessées et produit un modèle exploitable"
-
-  input_variables:
-    # Variables câblées — produites par eda_config.yaml (bloc 2)
-    X_train:          "np.ndarray | pd.DataFrame — features preprocessées train"
-    X_test:           "np.ndarray | pd.DataFrame — features preprocessées test"
-    y_train:          "pd.Series | np.ndarray — target train"
-    y_test:           "pd.Series | np.ndarray — target test"
-    feature_names:    "list[str] — renommer feature_names_out en feature_names ici"
-    task_type:        "str — détermine quel catalogue de modèles utiliser"
-    preprocessor:     "sklearn Pipeline/ColumnTransformer — pour pipeline complet"
-    texts_train:      "list[str] — NLP uniquement"
-    texts_test:       "list[str] — NLP uniquement"
-    dates_train:      "pd.DatetimeIndex — timeseries"
-    dates_future:     "pd.DatetimeIndex — timeseries"
-    durations:        "pd.Series — survival"
-    events:           "pd.Series — survival"
-    df_survival:      "pd.DataFrame — survival"
-
-    # Paramètres utilisateur locaux à configurer par modèle
-    RANDOM_STATE:     "int — graine aléatoire (défaut : 42)"
-    N_JOBS:           "int — parallélisme (défaut : -1)"
-    CV:               "int — nombre de folds cross-validation (défaut : 5)"
-    SCORING:          "str — métrique CV : 'f1_weighted', 'r2', 'neg_rmse'…"
-    N_ITER:           "int — itérations RandomizedSearchCV (défaut : 20)"
-    CONTAMINATION:    "float — taux anomalies estimé (anomaly, défaut : 0.05)"
-    LATENT_DIM:       "int — dimension latente autoencodeur (défaut : 16)"
-    EPOCHS:           "int — epochs deep learning (défaut : 100)"
-    BATCH_SIZE:       "int — taille batch DL (défaut : 128)"
-    LR:               "float — learning rate DL (défaut : 3e-4)"
-    THRESHOLD_PCT:    "int — percentile seuil erreur reconstruction AE (défaut : 95)"
-
-  output_variables:
-    # Variables TOUJOURS produites
-    model:            "objet entraîné — sklearn / xgboost / lightgbm / catboost / torch.nn.Module…"
-    y_pred:           "np.ndarray — prédictions sur X_test (labels ou valeurs)"
-    metrics:          "dict — métriques d'évaluation selon task_type"
-
-    # Variables supplémentaires selon task_type
-    y_proba:          "np.ndarray — probabilités par classe (classification)"
-    shap_values:      "np.ndarray — valeurs SHAP (si TreeExplainer applicable)"
-    labels:           "np.ndarray — affectation clusters (clustering)"
-    forecast:         "pd.Series | np.ndarray — prévisions (timeseries)"
-    scores:           "np.ndarray — anomaly scores (anomaly detection)"
-    recon_errors:     "np.ndarray — erreurs reconstruction (autoencodeur)"
-    X_reduced:        "np.ndarray — données projetées (dim reduction)"
-    survival_func:    "pd.DataFrame — fonctions de survie prédites (survival)"
-
-    # Métriques disponibles par task_type (clés dans metrics)
-    metrics_classification: ["accuracy", "f1_weighted", "f1_macro", "roc_auc", "precision", "recall", "brier_score"]
-    metrics_regression:     ["rmse", "mae", "r2", "mape", "smape", "pinball_loss"]
-    metrics_clustering:     ["silhouette", "davies_bouldin", "calinski_harabasz", "inertia"]
-    metrics_timeseries:     ["mae", "rmse", "mape", "smape", "coverage"]
-    metrics_anomaly:        ["precision", "recall", "f1", "roc_auc", "reconstruction_error"]
-    metrics_survival:       ["concordance_index", "log_rank_p", "median_survival_time"]
-    metrics_nlp:            ["accuracy", "f1_weighted", "roc_auc"]
-
-
-# ══════════════════════════════════════════════════════════════════════════
 # ML MODEL CATALOG — Classification · Regression · Clustering
 #                    Timeseries · Anomaly Detection · Dimensionality Reduction
 #                    Neural Networks · NLP · Survival · Bayesian
@@ -138,7 +36,6 @@ classification:
       solver: ["lbfgs", "saga", "liblinear"]
       max_iter: [100, 500, 1000]
     eval_metrics: ["accuracy", "f1_weighted", "roc_auc", "precision", "recall"]
-    illustration_svg: '<svg viewBox="0 0 600 160" xmlns="http://www.w3.org/2000/svg" class="w-full h-auto drop-shadow-xl rounded-xl"><rect width="600" height="160" fill="#0A0A0A" rx="12"/><!-- Grid pattern --><pattern id="grid" width="40" height="40" patternUnits="userSpaceOnUse">  <path d="M 40 0 L 0 0 0 40" fill="none" stroke="#222222" stroke-width="0.5"/></pattern><rect width="600" height="160" fill="url(#grid)" rx="12"/><!-- Inputs --><g transform="translate(20, 40)"></g><!-- Central Node --><rect x="230" y="40" width="140" height="80" fill="#1a1a1a" stroke="#444" rx="10" stroke-width="2"/><text x="300" y="70" fill="#EEEEEE" font-family="sans-serif" font-weight="bold" font-size="12" text-anchor="middle">Régression Logisti</text><text x="300" y="90" fill="#888888" font-family="sans-serif" font-size="10" text-anchor="middle">ML Model</text><!-- Outputs --><g transform="translate(440, 40)"></g></svg>'
     code_template: |
       from sklearn.linear_model import LogisticRegression
       from sklearn.pipeline import Pipeline
@@ -177,7 +74,6 @@ classification:
       weights: ["uniform", "distance"]
       metric: ["euclidean", "manhattan", "minkowski"]
     eval_metrics: ["accuracy", "f1_weighted"]
-    illustration_svg: '<svg viewBox="0 0 600 160" xmlns="http://www.w3.org/2000/svg" class="w-full h-auto drop-shadow-xl rounded-xl"><rect width="600" height="160" fill="#0A0A0A" rx="12"/><!-- Grid pattern --><pattern id="grid" width="40" height="40" patternUnits="userSpaceOnUse">  <path d="M 40 0 L 0 0 0 40" fill="none" stroke="#222222" stroke-width="0.5"/></pattern><rect width="600" height="160" fill="url(#grid)" rx="12"/><!-- Inputs --><g transform="translate(20, 40)"></g><!-- Central Node --><rect x="230" y="40" width="140" height="80" fill="#1a1a1a" stroke="#444" rx="10" stroke-width="2"/><text x="300" y="70" fill="#EEEEEE" font-family="sans-serif" font-weight="bold" font-size="12" text-anchor="middle">K-Nearest Neighbor</text><text x="300" y="90" fill="#888888" font-family="sans-serif" font-size="10" text-anchor="middle">ML Model</text><!-- Outputs --><g transform="translate(440, 40)"></g></svg>'
     code_template: |
       from sklearn.neighbors import KNeighborsClassifier
       from sklearn.pipeline import Pipeline
@@ -217,7 +113,6 @@ classification:
     hyperparameters:
       var_smoothing: [1.0e-9, 1.0e-8, 1.0e-7, 1.0e-6]
     eval_metrics: ["accuracy", "f1_weighted"]
-    illustration_svg: '<svg viewBox="0 0 600 160" xmlns="http://www.w3.org/2000/svg" class="w-full h-auto drop-shadow-xl rounded-xl"><rect width="600" height="160" fill="#0A0A0A" rx="12"/><!-- Grid pattern --><pattern id="grid" width="40" height="40" patternUnits="userSpaceOnUse">  <path d="M 40 0 L 0 0 0 40" fill="none" stroke="#222222" stroke-width="0.5"/></pattern><rect width="600" height="160" fill="url(#grid)" rx="12"/><!-- Inputs --><g transform="translate(20, 40)"></g><!-- Central Node --><rect x="230" y="40" width="140" height="80" fill="#1a1a1a" stroke="#444" rx="10" stroke-width="2"/><text x="300" y="70" fill="#EEEEEE" font-family="sans-serif" font-weight="bold" font-size="12" text-anchor="middle">Naive Bayes (Gauss</text><text x="300" y="90" fill="#888888" font-family="sans-serif" font-size="10" text-anchor="middle">ML Model</text><!-- Outputs --><g transform="translate(440, 40)"></g></svg>'
     code_template: |
       from sklearn.naive_bayes import GaussianNB
       from sklearn.metrics import classification_report
@@ -252,7 +147,6 @@ classification:
       min_samples_leaf: [1, 2, 5, 10]
       criterion: ["gini", "entropy"]
     eval_metrics: ["accuracy", "f1_weighted", "roc_auc"]
-    illustration_svg: '<svg viewBox="0 0 600 160" xmlns="http://www.w3.org/2000/svg" class="w-full h-auto drop-shadow-xl rounded-xl"><rect width="600" height="160" fill="#0A0A0A" rx="12"/><!-- Grid pattern --><pattern id="grid" width="40" height="40" patternUnits="userSpaceOnUse">  <path d="M 40 0 L 0 0 0 40" fill="none" stroke="#222222" stroke-width="0.5"/></pattern><rect width="600" height="160" fill="url(#grid)" rx="12"/><!-- Inputs --><g transform="translate(20, 40)"></g><!-- Central Node --><rect x="230" y="40" width="140" height="80" fill="#1a1a1a" stroke="#444" rx="10" stroke-width="2"/><text x="300" y="70" fill="#EEEEEE" font-family="sans-serif" font-weight="bold" font-size="12" text-anchor="middle">Arbre de Décision </text><text x="300" y="90" fill="#888888" font-family="sans-serif" font-size="10" text-anchor="middle">ML Model</text><!-- Outputs --><g transform="translate(440, 40)"></g></svg>'
     code_template: |
       from sklearn.tree import DecisionTreeClassifier, plot_tree
       from sklearn.metrics import classification_report
@@ -292,7 +186,6 @@ classification:
       min_samples_split: [2, 5, 10]
       max_features: ["sqrt", "log2", 0.5]
     eval_metrics: ["accuracy", "f1_weighted", "roc_auc"]
-    illustration_svg: '<svg viewBox="0 0 600 160" xmlns="http://www.w3.org/2000/svg" class="w-full h-auto drop-shadow-xl rounded-xl"><rect width="600" height="160" fill="#0A0A0A" rx="12"/><!-- Grid pattern --><pattern id="grid" width="40" height="40" patternUnits="userSpaceOnUse">  <path d="M 40 0 L 0 0 0 40" fill="none" stroke="#222222" stroke-width="0.5"/></pattern><rect width="600" height="160" fill="url(#grid)" rx="12"/><!-- Inputs --><g transform="translate(20, 40)"></g><!-- Central Node --><rect x="230" y="40" width="140" height="80" fill="#1a1a1a" stroke="#444" rx="10" stroke-width="2"/><text x="300" y="70" fill="#EEEEEE" font-family="sans-serif" font-weight="bold" font-size="12" text-anchor="middle">Random Forest</text><text x="300" y="90" fill="#888888" font-family="sans-serif" font-size="10" text-anchor="middle">ML Model</text><!-- Outputs --><g transform="translate(440, 40)"></g></svg>'
     code_template: |
       from sklearn.ensemble import RandomForestClassifier
       from sklearn.metrics import classification_report, ConfusionMatrixDisplay
@@ -333,7 +226,6 @@ classification:
       max_depth: [3, 4, 5, 6]
       subsample: [0.7, 0.8, 1.0]
     eval_metrics: ["accuracy", "f1_weighted", "roc_auc"]
-    illustration_svg: '<svg viewBox="0 0 600 160" xmlns="http://www.w3.org/2000/svg" class="w-full h-auto drop-shadow-xl rounded-xl"><rect width="600" height="160" fill="#0A0A0A" rx="12"/><!-- Grid pattern --><pattern id="grid" width="40" height="40" patternUnits="userSpaceOnUse">  <path d="M 40 0 L 0 0 0 40" fill="none" stroke="#222222" stroke-width="0.5"/></pattern><rect width="600" height="160" fill="url(#grid)" rx="12"/><!-- Inputs --><g transform="translate(20, 40)"></g><!-- Central Node --><rect x="230" y="40" width="140" height="80" fill="#1a1a1a" stroke="#444" rx="10" stroke-width="2"/><text x="300" y="70" fill="#EEEEEE" font-family="sans-serif" font-weight="bold" font-size="12" text-anchor="middle">Gradient Boosting </text><text x="300" y="90" fill="#888888" font-family="sans-serif" font-size="10" text-anchor="middle">ML Model</text><!-- Outputs --><g transform="translate(440, 40)"></g></svg>'
     code_template: |
       from sklearn.ensemble import GradientBoostingClassifier
       from sklearn.metrics import classification_report
@@ -371,7 +263,6 @@ classification:
       reg_alpha: [0, 0.1, 1]
       reg_lambda: [1, 5, 10]
     eval_metrics: ["accuracy", "f1_weighted", "roc_auc"]
-    illustration_svg: '<svg viewBox="0 0 600 160" xmlns="http://www.w3.org/2000/svg" class="w-full h-auto drop-shadow-xl rounded-xl"><rect width="600" height="160" fill="#0A0A0A" rx="12"/><!-- Grid pattern --><pattern id="grid" width="40" height="40" patternUnits="userSpaceOnUse">  <path d="M 40 0 L 0 0 0 40" fill="none" stroke="#222222" stroke-width="0.5"/></pattern><rect width="600" height="160" fill="url(#grid)" rx="12"/><!-- Inputs --><g transform="translate(20, 40)"></g><!-- Central Node --><rect x="230" y="40" width="140" height="80" fill="#1a1a1a" stroke="#444" rx="10" stroke-width="2"/><text x="300" y="70" fill="#EEEEEE" font-family="sans-serif" font-weight="bold" font-size="12" text-anchor="middle">XGBoost</text><text x="300" y="90" fill="#888888" font-family="sans-serif" font-size="10" text-anchor="middle">ML Model</text><!-- Outputs --><g transform="translate(440, 40)"></g></svg>'
     code_template: |
       import xgboost as xgb
       from sklearn.metrics import classification_report
@@ -412,7 +303,6 @@ classification:
       max_depth: [-1, 5, 10]
       subsample: [0.7, 0.8, 1.0]
     eval_metrics: ["accuracy", "f1_weighted", "roc_auc"]
-    illustration_svg: '<svg viewBox="0 0 600 160" xmlns="http://www.w3.org/2000/svg" class="w-full h-auto drop-shadow-xl rounded-xl"><rect width="600" height="160" fill="#0A0A0A" rx="12"/><!-- Grid pattern --><pattern id="grid" width="40" height="40" patternUnits="userSpaceOnUse">  <path d="M 40 0 L 0 0 0 40" fill="none" stroke="#222222" stroke-width="0.5"/></pattern><rect width="600" height="160" fill="url(#grid)" rx="12"/><!-- Inputs --><g transform="translate(20, 40)"></g><!-- Central Node --><rect x="230" y="40" width="140" height="80" fill="#1a1a1a" stroke="#444" rx="10" stroke-width="2"/><text x="300" y="70" fill="#EEEEEE" font-family="sans-serif" font-weight="bold" font-size="12" text-anchor="middle">LightGBM</text><text x="300" y="90" fill="#888888" font-family="sans-serif" font-size="10" text-anchor="middle">ML Model</text><!-- Outputs --><g transform="translate(440, 40)"></g></svg>'
     code_template: |
       import lightgbm as lgb
       from sklearn.metrics import classification_report
@@ -446,7 +336,6 @@ classification:
       depth: [4, 6, 8, 10]
       l2_leaf_reg: [1, 3, 5, 10]
     eval_metrics: ["accuracy", "f1_weighted", "roc_auc"]
-    illustration_svg: '<svg viewBox="0 0 600 160" xmlns="http://www.w3.org/2000/svg" class="w-full h-auto drop-shadow-xl rounded-xl"><rect width="600" height="160" fill="#0A0A0A" rx="12"/><!-- Grid pattern --><pattern id="grid" width="40" height="40" patternUnits="userSpaceOnUse">  <path d="M 40 0 L 0 0 0 40" fill="none" stroke="#222222" stroke-width="0.5"/></pattern><rect width="600" height="160" fill="url(#grid)" rx="12"/><!-- Inputs --><g transform="translate(20, 40)"></g><!-- Central Node --><rect x="230" y="40" width="140" height="80" fill="#1a1a1a" stroke="#444" rx="10" stroke-width="2"/><text x="300" y="70" fill="#EEEEEE" font-family="sans-serif" font-weight="bold" font-size="12" text-anchor="middle">CatBoost</text><text x="300" y="90" fill="#888888" font-family="sans-serif" font-size="10" text-anchor="middle">ML Model</text><!-- Outputs --><g transform="translate(440, 40)"></g></svg>'
     code_template: |
       from catboost import CatBoostClassifier, Pool
       from sklearn.metrics import classification_report
@@ -479,7 +368,6 @@ classification:
       kernel: ["rbf", "linear", "poly", "sigmoid"]
       gamma: ["scale", "auto", 0.001, 0.01, 0.1]
     eval_metrics: ["accuracy", "f1_weighted"]
-    illustration_svg: '<svg viewBox="0 0 600 160" xmlns="http://www.w3.org/2000/svg" class="w-full h-auto drop-shadow-xl rounded-xl"><rect width="600" height="160" fill="#0A0A0A" rx="12"/><!-- Grid pattern --><pattern id="grid" width="40" height="40" patternUnits="userSpaceOnUse">  <path d="M 40 0 L 0 0 0 40" fill="none" stroke="#222222" stroke-width="0.5"/></pattern><rect width="600" height="160" fill="url(#grid)" rx="12"/><!-- Inputs --><g transform="translate(20, 40)"></g><!-- Central Node --><rect x="230" y="40" width="140" height="80" fill="#1a1a1a" stroke="#444" rx="10" stroke-width="2"/><text x="300" y="70" fill="#EEEEEE" font-family="sans-serif" font-weight="bold" font-size="12" text-anchor="middle">Support Vector Mac</text><text x="300" y="90" fill="#888888" font-family="sans-serif" font-size="10" text-anchor="middle">ML Model</text><!-- Outputs --><g transform="translate(440, 40)"></g></svg>'
     code_template: |
       from sklearn.svm import SVC
       from sklearn.pipeline import Pipeline
@@ -516,7 +404,6 @@ classification:
       n_estimators: [50, 100, 200]
       learning_rate: [0.1, 0.5, 1.0]
     eval_metrics: ["accuracy", "f1_weighted"]
-    illustration_svg: '<svg viewBox="0 0 600 160" xmlns="http://www.w3.org/2000/svg" class="w-full h-auto drop-shadow-xl rounded-xl"><rect width="600" height="160" fill="#0A0A0A" rx="12"/><!-- Grid pattern --><pattern id="grid" width="40" height="40" patternUnits="userSpaceOnUse">  <path d="M 40 0 L 0 0 0 40" fill="none" stroke="#222222" stroke-width="0.5"/></pattern><rect width="600" height="160" fill="url(#grid)" rx="12"/><!-- Inputs --><g transform="translate(20, 40)"></g><!-- Central Node --><rect x="230" y="40" width="140" height="80" fill="#1a1a1a" stroke="#444" rx="10" stroke-width="2"/><text x="300" y="70" fill="#EEEEEE" font-family="sans-serif" font-weight="bold" font-size="12" text-anchor="middle">AdaBoost</text><text x="300" y="90" fill="#888888" font-family="sans-serif" font-size="10" text-anchor="middle">ML Model</text><!-- Outputs --><g transform="translate(440, 40)"></g></svg>'
     code_template: |
       from sklearn.ensemble import AdaBoostClassifier
       from sklearn.tree import DecisionTreeClassifier
@@ -542,7 +429,6 @@ classification:
     hyperparameters:
       solver: ["svd", "lsqr", "eigen"]
     eval_metrics: ["accuracy", "f1_weighted"]
-    illustration_svg: '<svg viewBox="0 0 600 160" xmlns="http://www.w3.org/2000/svg" class="w-full h-auto drop-shadow-xl rounded-xl"><rect width="600" height="160" fill="#0A0A0A" rx="12"/><!-- Grid pattern --><pattern id="grid" width="40" height="40" patternUnits="userSpaceOnUse">  <path d="M 40 0 L 0 0 0 40" fill="none" stroke="#222222" stroke-width="0.5"/></pattern><rect width="600" height="160" fill="url(#grid)" rx="12"/><!-- Inputs --><g transform="translate(20, 40)"></g><!-- Central Node --><rect x="230" y="40" width="140" height="80" fill="#1a1a1a" stroke="#444" rx="10" stroke-width="2"/><text x="300" y="70" fill="#EEEEEE" font-family="sans-serif" font-weight="bold" font-size="12" text-anchor="middle">Linear Discriminan</text><text x="300" y="90" fill="#888888" font-family="sans-serif" font-size="10" text-anchor="middle">ML Model</text><!-- Outputs --><g transform="translate(440, 40)"></g></svg>'
     code_template: |
       from sklearn.discriminant_analysis import LinearDiscriminantAnalysis
       from sklearn.metrics import classification_report
@@ -575,7 +461,6 @@ classification:
       min_samples_split: [2, 5, 10]
       max_features: ["sqrt", "log2", 0.5]
     eval_metrics: ["accuracy", "f1_weighted", "roc_auc"]
-    illustration_svg: '<svg viewBox="0 0 600 160" xmlns="http://www.w3.org/2000/svg" class="w-full h-auto drop-shadow-xl rounded-xl"><rect width="600" height="160" fill="#0A0A0A" rx="12"/><!-- Grid pattern --><pattern id="grid" width="40" height="40" patternUnits="userSpaceOnUse">  <path d="M 40 0 L 0 0 0 40" fill="none" stroke="#222222" stroke-width="0.5"/></pattern><rect width="600" height="160" fill="url(#grid)" rx="12"/><!-- Inputs --><g transform="translate(20, 40)"></g><!-- Central Node --><rect x="230" y="40" width="140" height="80" fill="#1a1a1a" stroke="#444" rx="10" stroke-width="2"/><text x="300" y="70" fill="#EEEEEE" font-family="sans-serif" font-weight="bold" font-size="12" text-anchor="middle">Extra Trees (Extre</text><text x="300" y="90" fill="#888888" font-family="sans-serif" font-size="10" text-anchor="middle">ML Model</text><!-- Outputs --><g transform="translate(440, 40)"></g></svg>'
     code_template: |
       from sklearn.ensemble import ExtraTreesClassifier
       from sklearn.metrics import classification_report
@@ -607,7 +492,6 @@ classification:
       max_leaf_nodes: [31, 63, 127]
       l2_regularization: [0, 0.1, 1]
     eval_metrics: ["accuracy", "f1_weighted", "roc_auc"]
-    illustration_svg: '<svg viewBox="0 0 600 160" xmlns="http://www.w3.org/2000/svg" class="w-full h-auto drop-shadow-xl rounded-xl"><rect width="600" height="160" fill="#0A0A0A" rx="12"/><!-- Grid pattern --><pattern id="grid" width="40" height="40" patternUnits="userSpaceOnUse">  <path d="M 40 0 L 0 0 0 40" fill="none" stroke="#222222" stroke-width="0.5"/></pattern><rect width="600" height="160" fill="url(#grid)" rx="12"/><!-- Inputs --><g transform="translate(20, 40)"></g><!-- Central Node --><rect x="230" y="40" width="140" height="80" fill="#1a1a1a" stroke="#444" rx="10" stroke-width="2"/><text x="300" y="70" fill="#EEEEEE" font-family="sans-serif" font-weight="bold" font-size="12" text-anchor="middle">HistGradientBoosti</text><text x="300" y="90" fill="#888888" font-family="sans-serif" font-size="10" text-anchor="middle">ML Model</text><!-- Outputs --><g transform="translate(440, 40)"></g></svg>'
     code_template: |
       from sklearn.ensemble import HistGradientBoostingClassifier
       from sklearn.metrics import classification_report
@@ -634,7 +518,6 @@ classification:
       voting: ["hard", "soft"]
       weights: ["uniform", "custom"]
     eval_metrics: ["accuracy", "f1_weighted", "roc_auc"]
-    illustration_svg: '<svg viewBox="0 0 600 160" xmlns="http://www.w3.org/2000/svg" class="w-full h-auto drop-shadow-xl rounded-xl"><rect width="600" height="160" fill="#0A0A0A" rx="12"/><!-- Grid pattern --><pattern id="grid" width="40" height="40" patternUnits="userSpaceOnUse">  <path d="M 40 0 L 0 0 0 40" fill="none" stroke="#222222" stroke-width="0.5"/></pattern><rect width="600" height="160" fill="url(#grid)" rx="12"/><!-- Inputs --><g transform="translate(20, 40)"></g><!-- Central Node --><rect x="230" y="40" width="140" height="80" fill="#1a1a1a" stroke="#444" rx="10" stroke-width="2"/><text x="300" y="70" fill="#EEEEEE" font-family="sans-serif" font-weight="bold" font-size="12" text-anchor="middle">Voting Classifier </text><text x="300" y="90" fill="#888888" font-family="sans-serif" font-size="10" text-anchor="middle">ML Model</text><!-- Outputs --><g transform="translate(440, 40)"></g></svg>'
     code_template: |
       from sklearn.ensemble import VotingClassifier, RandomForestClassifier, GradientBoostingClassifier
       from sklearn.linear_model import LogisticRegression
@@ -669,7 +552,6 @@ classification:
       cv: [5, 10]
       passthrough: [true, false]
     eval_metrics: ["accuracy", "f1_weighted", "roc_auc"]
-    illustration_svg: '<svg viewBox="0 0 600 160" xmlns="http://www.w3.org/2000/svg" class="w-full h-auto drop-shadow-xl rounded-xl"><rect width="600" height="160" fill="#0A0A0A" rx="12"/><!-- Grid pattern --><pattern id="grid" width="40" height="40" patternUnits="userSpaceOnUse">  <path d="M 40 0 L 0 0 0 40" fill="none" stroke="#222222" stroke-width="0.5"/></pattern><rect width="600" height="160" fill="url(#grid)" rx="12"/><!-- Inputs --><g transform="translate(20, 40)"></g><!-- Central Node --><rect x="230" y="40" width="140" height="80" fill="#1a1a1a" stroke="#444" rx="10" stroke-width="2"/><text x="300" y="70" fill="#EEEEEE" font-family="sans-serif" font-weight="bold" font-size="12" text-anchor="middle">Stacking Classifie</text><text x="300" y="90" fill="#888888" font-family="sans-serif" font-size="10" text-anchor="middle">ML Model</text><!-- Outputs --><g transform="translate(440, 40)"></g></svg>'
     code_template: |
       from sklearn.ensemble import StackingClassifier, RandomForestClassifier, GradientBoostingClassifier
       from sklearn.linear_model import LogisticRegression
@@ -708,7 +590,6 @@ regression:
     cons: ["linéaire uniquement", "sensible aux outliers et à la multicolinéarité"]
     hyperparameters: {}
     eval_metrics: ["rmse", "mae", "r2", "mape"]
-    illustration_svg: '<svg viewBox="0 0 600 160" xmlns="http://www.w3.org/2000/svg" class="w-full h-auto drop-shadow-xl rounded-xl"><rect width="600" height="160" fill="#0A0A0A" rx="12"/><!-- Grid pattern --><pattern id="grid" width="40" height="40" patternUnits="userSpaceOnUse">  <path d="M 40 0 L 0 0 0 40" fill="none" stroke="#222222" stroke-width="0.5"/></pattern><rect width="600" height="160" fill="url(#grid)" rx="12"/><!-- Inputs --><g transform="translate(20, 40)"></g><!-- Central Node --><rect x="230" y="40" width="140" height="80" fill="#1a1a1a" stroke="#444" rx="10" stroke-width="2"/><text x="300" y="70" fill="#EEEEEE" font-family="sans-serif" font-weight="bold" font-size="12" text-anchor="middle">Régression Linéair</text><text x="300" y="90" fill="#888888" font-family="sans-serif" font-size="10" text-anchor="middle">ML Model</text><!-- Outputs --><g transform="translate(440, 40)"></g></svg>'
     code_template: |
       from sklearn.linear_model import LinearRegression
       from sklearn.pipeline import Pipeline
@@ -745,7 +626,6 @@ regression:
     hyperparameters:
       alpha: [0.001, 0.01, 0.1, 1, 10, 100, 1000]
     eval_metrics: ["rmse", "mae", "r2"]
-    illustration_svg: '<svg viewBox="0 0 600 160" xmlns="http://www.w3.org/2000/svg" class="w-full h-auto drop-shadow-xl rounded-xl"><rect width="600" height="160" fill="#0A0A0A" rx="12"/><!-- Grid pattern --><pattern id="grid" width="40" height="40" patternUnits="userSpaceOnUse">  <path d="M 40 0 L 0 0 0 40" fill="none" stroke="#222222" stroke-width="0.5"/></pattern><rect width="600" height="160" fill="url(#grid)" rx="12"/><!-- Inputs --><g transform="translate(20, 40)"></g><!-- Central Node --><rect x="230" y="40" width="140" height="80" fill="#1a1a1a" stroke="#444" rx="10" stroke-width="2"/><text x="300" y="70" fill="#EEEEEE" font-family="sans-serif" font-weight="bold" font-size="12" text-anchor="middle">Ridge (L2)</text><text x="300" y="90" fill="#888888" font-family="sans-serif" font-size="10" text-anchor="middle">ML Model</text><!-- Outputs --><g transform="translate(440, 40)"></g></svg>'
     code_template: |
       from sklearn.linear_model import Ridge, RidgeCV
       from sklearn.preprocessing import StandardScaler
@@ -776,7 +656,6 @@ regression:
     hyperparameters:
       alpha: [0.001, 0.01, 0.1, 1, 10]
     eval_metrics: ["rmse", "mae", "r2"]
-    illustration_svg: '<svg viewBox="0 0 600 160" xmlns="http://www.w3.org/2000/svg" class="w-full h-auto drop-shadow-xl rounded-xl"><rect width="600" height="160" fill="#0A0A0A" rx="12"/><!-- Grid pattern --><pattern id="grid" width="40" height="40" patternUnits="userSpaceOnUse">  <path d="M 40 0 L 0 0 0 40" fill="none" stroke="#222222" stroke-width="0.5"/></pattern><rect width="600" height="160" fill="url(#grid)" rx="12"/><!-- Inputs --><g transform="translate(20, 40)"></g><!-- Central Node --><rect x="230" y="40" width="140" height="80" fill="#1a1a1a" stroke="#444" rx="10" stroke-width="2"/><text x="300" y="70" fill="#EEEEEE" font-family="sans-serif" font-weight="bold" font-size="12" text-anchor="middle">Lasso (L1)</text><text x="300" y="90" fill="#888888" font-family="sans-serif" font-size="10" text-anchor="middle">ML Model</text><!-- Outputs --><g transform="translate(440, 40)"></g></svg>'
     code_template: |
       from sklearn.linear_model import LassoCV
       from sklearn.preprocessing import StandardScaler
@@ -811,7 +690,6 @@ regression:
       alpha: [0.001, 0.01, 0.1, 1]
       l1_ratio: [0.1, 0.3, 0.5, 0.7, 0.9]
     eval_metrics: ["rmse", "mae", "r2"]
-    illustration_svg: '<svg viewBox="0 0 600 160" xmlns="http://www.w3.org/2000/svg" class="w-full h-auto drop-shadow-xl rounded-xl"><rect width="600" height="160" fill="#0A0A0A" rx="12"/><!-- Grid pattern --><pattern id="grid" width="40" height="40" patternUnits="userSpaceOnUse">  <path d="M 40 0 L 0 0 0 40" fill="none" stroke="#222222" stroke-width="0.5"/></pattern><rect width="600" height="160" fill="url(#grid)" rx="12"/><!-- Inputs --><g transform="translate(20, 40)"></g><!-- Central Node --><rect x="230" y="40" width="140" height="80" fill="#1a1a1a" stroke="#444" rx="10" stroke-width="2"/><text x="300" y="70" fill="#EEEEEE" font-family="sans-serif" font-weight="bold" font-size="12" text-anchor="middle">ElasticNet (L1 + L</text><text x="300" y="90" fill="#888888" font-family="sans-serif" font-size="10" text-anchor="middle">ML Model</text><!-- Outputs --><g transform="translate(440, 40)"></g></svg>'
     code_template: |
       from sklearn.linear_model import ElasticNetCV
       from sklearn.preprocessing import StandardScaler
@@ -844,7 +722,6 @@ regression:
       max_depth: [5, 10, 20, null]
       min_samples_split: [2, 5, 10]
     eval_metrics: ["rmse", "mae", "r2", "mape"]
-    illustration_svg: '<svg viewBox="0 0 600 160" xmlns="http://www.w3.org/2000/svg" class="w-full h-auto drop-shadow-xl rounded-xl"><rect width="600" height="160" fill="#0A0A0A" rx="12"/><!-- Grid pattern --><pattern id="grid" width="40" height="40" patternUnits="userSpaceOnUse">  <path d="M 40 0 L 0 0 0 40" fill="none" stroke="#222222" stroke-width="0.5"/></pattern><rect width="600" height="160" fill="url(#grid)" rx="12"/><!-- Inputs --><g transform="translate(20, 40)"></g><!-- Central Node --><rect x="230" y="40" width="140" height="80" fill="#1a1a1a" stroke="#444" rx="10" stroke-width="2"/><text x="300" y="70" fill="#EEEEEE" font-family="sans-serif" font-weight="bold" font-size="12" text-anchor="middle">Random Forest Regr</text><text x="300" y="90" fill="#888888" font-family="sans-serif" font-size="10" text-anchor="middle">ML Model</text><!-- Outputs --><g transform="translate(440, 40)"></g></svg>'
     code_template: |
       from sklearn.ensemble import RandomForestRegressor
       from sklearn.metrics import mean_squared_error, r2_score
@@ -875,7 +752,6 @@ regression:
       max_depth: [3, 5, 7]
       subsample: [0.7, 0.8, 1.0]
     eval_metrics: ["rmse", "mae", "r2", "mape"]
-    illustration_svg: '<svg viewBox="0 0 600 160" xmlns="http://www.w3.org/2000/svg" class="w-full h-auto drop-shadow-xl rounded-xl"><rect width="600" height="160" fill="#0A0A0A" rx="12"/><!-- Grid pattern --><pattern id="grid" width="40" height="40" patternUnits="userSpaceOnUse">  <path d="M 40 0 L 0 0 0 40" fill="none" stroke="#222222" stroke-width="0.5"/></pattern><rect width="600" height="160" fill="url(#grid)" rx="12"/><!-- Inputs --><g transform="translate(20, 40)"></g><!-- Central Node --><rect x="230" y="40" width="140" height="80" fill="#1a1a1a" stroke="#444" rx="10" stroke-width="2"/><text x="300" y="70" fill="#EEEEEE" font-family="sans-serif" font-weight="bold" font-size="12" text-anchor="middle">XGBoost Regressor</text><text x="300" y="90" fill="#888888" font-family="sans-serif" font-size="10" text-anchor="middle">ML Model</text><!-- Outputs --><g transform="translate(440, 40)"></g></svg>'
     code_template: |
       import xgboost as xgb
       from sklearn.metrics import mean_squared_error, r2_score
@@ -907,7 +783,6 @@ regression:
       learning_rate: [0.01, 0.05, 0.1]
       num_leaves: [31, 63, 127]
     eval_metrics: ["rmse", "mae", "r2"]
-    illustration_svg: '<svg viewBox="0 0 600 160" xmlns="http://www.w3.org/2000/svg" class="w-full h-auto drop-shadow-xl rounded-xl"><rect width="600" height="160" fill="#0A0A0A" rx="12"/><!-- Grid pattern --><pattern id="grid" width="40" height="40" patternUnits="userSpaceOnUse">  <path d="M 40 0 L 0 0 0 40" fill="none" stroke="#222222" stroke-width="0.5"/></pattern><rect width="600" height="160" fill="url(#grid)" rx="12"/><!-- Inputs --><g transform="translate(20, 40)"></g><!-- Central Node --><rect x="230" y="40" width="140" height="80" fill="#1a1a1a" stroke="#444" rx="10" stroke-width="2"/><text x="300" y="70" fill="#EEEEEE" font-family="sans-serif" font-weight="bold" font-size="12" text-anchor="middle">LightGBM Regressor</text><text x="300" y="90" fill="#888888" font-family="sans-serif" font-size="10" text-anchor="middle">ML Model</text><!-- Outputs --><g transform="translate(440, 40)"></g></svg>'
     code_template: |
       import lightgbm as lgb
       from sklearn.metrics import mean_squared_error, r2_score
@@ -938,7 +813,6 @@ regression:
       epsilon: [0.01, 0.1, 0.5]
       gamma: ["scale", "auto"]
     eval_metrics: ["rmse", "mae", "r2"]
-    illustration_svg: '<svg viewBox="0 0 600 160" xmlns="http://www.w3.org/2000/svg" class="w-full h-auto drop-shadow-xl rounded-xl"><rect width="600" height="160" fill="#0A0A0A" rx="12"/><!-- Grid pattern --><pattern id="grid" width="40" height="40" patternUnits="userSpaceOnUse">  <path d="M 40 0 L 0 0 0 40" fill="none" stroke="#222222" stroke-width="0.5"/></pattern><rect width="600" height="160" fill="url(#grid)" rx="12"/><!-- Inputs --><g transform="translate(20, 40)"></g><!-- Central Node --><rect x="230" y="40" width="140" height="80" fill="#1a1a1a" stroke="#444" rx="10" stroke-width="2"/><text x="300" y="70" fill="#EEEEEE" font-family="sans-serif" font-weight="bold" font-size="12" text-anchor="middle">Support Vector Reg</text><text x="300" y="90" fill="#888888" font-family="sans-serif" font-size="10" text-anchor="middle">ML Model</text><!-- Outputs --><g transform="translate(440, 40)"></g></svg>'
     code_template: |
       from sklearn.svm import SVR
       from sklearn.pipeline import Pipeline
@@ -976,7 +850,6 @@ regression:
       n_estimators: [100, 200, 300]
       learning_rate: [0.05, 0.1]
     eval_metrics: ["pinball_loss", "coverage", "interval_width"]
-    illustration_svg: '<svg viewBox="0 0 600 160" xmlns="http://www.w3.org/2000/svg" class="w-full h-auto drop-shadow-xl rounded-xl"><rect width="600" height="160" fill="#0A0A0A" rx="12"/><!-- Grid pattern --><pattern id="grid" width="40" height="40" patternUnits="userSpaceOnUse">  <path d="M 40 0 L 0 0 0 40" fill="none" stroke="#222222" stroke-width="0.5"/></pattern><rect width="600" height="160" fill="url(#grid)" rx="12"/><!-- Inputs --><g transform="translate(20, 40)"></g><!-- Central Node --><rect x="230" y="40" width="140" height="80" fill="#1a1a1a" stroke="#444" rx="10" stroke-width="2"/><text x="300" y="70" fill="#EEEEEE" font-family="sans-serif" font-weight="bold" font-size="12" text-anchor="middle">Quantile Regressio</text><text x="300" y="90" fill="#888888" font-family="sans-serif" font-size="10" text-anchor="middle">ML Model</text><!-- Outputs --><g transform="translate(440, 40)"></g></svg>'
     code_template: |
       from sklearn.ensemble import GradientBoostingRegressor
       import numpy as np
@@ -1011,7 +884,6 @@ regression:
       lambda_1: [1.0e-6]
       lambda_2: [1.0e-6]
     eval_metrics: ["rmse", "mae", "r2"]
-    illustration_svg: '<svg viewBox="0 0 600 160" xmlns="http://www.w3.org/2000/svg" class="w-full h-auto drop-shadow-xl rounded-xl"><rect width="600" height="160" fill="#0A0A0A" rx="12"/><!-- Grid pattern --><pattern id="grid" width="40" height="40" patternUnits="userSpaceOnUse">  <path d="M 40 0 L 0 0 0 40" fill="none" stroke="#222222" stroke-width="0.5"/></pattern><rect width="600" height="160" fill="url(#grid)" rx="12"/><!-- Inputs --><g transform="translate(20, 40)"></g><!-- Central Node --><rect x="230" y="40" width="140" height="80" fill="#1a1a1a" stroke="#444" rx="10" stroke-width="2"/><text x="300" y="70" fill="#EEEEEE" font-family="sans-serif" font-weight="bold" font-size="12" text-anchor="middle">Bayesian Ridge Reg</text><text x="300" y="90" fill="#888888" font-family="sans-serif" font-size="10" text-anchor="middle">ML Model</text><!-- Outputs --><g transform="translate(440, 40)"></g></svg>'
     code_template: |
       from sklearn.linear_model import BayesianRidge
       from sklearn.preprocessing import StandardScaler
@@ -1048,7 +920,6 @@ clustering:
       init: ["k-means++", "random"]
       max_iter: [300]
     eval_metrics: ["silhouette", "davies_bouldin", "calinski_harabasz", "inertia"]
-    illustration_svg: '<svg viewBox="0 0 600 160" xmlns="http://www.w3.org/2000/svg" class="w-full h-auto drop-shadow-xl rounded-xl"><rect width="600" height="160" fill="#0A0A0A" rx="12"/><!-- Grid pattern --><pattern id="grid" width="40" height="40" patternUnits="userSpaceOnUse">  <path d="M 40 0 L 0 0 0 40" fill="none" stroke="#222222" stroke-width="0.5"/></pattern><rect width="600" height="160" fill="url(#grid)" rx="12"/><!-- Inputs --><g transform="translate(20, 40)"></g><!-- Central Node --><rect x="230" y="40" width="140" height="80" fill="#1a1a1a" stroke="#444" rx="10" stroke-width="2"/><text x="300" y="70" fill="#EEEEEE" font-family="sans-serif" font-weight="bold" font-size="12" text-anchor="middle">K-Means</text><text x="300" y="90" fill="#888888" font-family="sans-serif" font-size="10" text-anchor="middle">ML Model</text><!-- Outputs --><g transform="translate(440, 40)"></g></svg>'
     code_template: |
       from sklearn.cluster import KMeans
       from sklearn.preprocessing import StandardScaler
@@ -1093,7 +964,6 @@ clustering:
       min_samples: [3, 5, 10]
       metric: ["euclidean", "manhattan"]
     eval_metrics: ["silhouette", "davies_bouldin"]
-    illustration_svg: '<svg viewBox="0 0 600 160" xmlns="http://www.w3.org/2000/svg" class="w-full h-auto drop-shadow-xl rounded-xl"><rect width="600" height="160" fill="#0A0A0A" rx="12"/><!-- Grid pattern --><pattern id="grid" width="40" height="40" patternUnits="userSpaceOnUse">  <path d="M 40 0 L 0 0 0 40" fill="none" stroke="#222222" stroke-width="0.5"/></pattern><rect width="600" height="160" fill="url(#grid)" rx="12"/><!-- Inputs --><g transform="translate(20, 40)"></g><!-- Central Node --><rect x="230" y="40" width="140" height="80" fill="#1a1a1a" stroke="#444" rx="10" stroke-width="2"/><text x="300" y="70" fill="#EEEEEE" font-family="sans-serif" font-weight="bold" font-size="12" text-anchor="middle">DBSCAN</text><text x="300" y="90" fill="#888888" font-family="sans-serif" font-size="10" text-anchor="middle">ML Model</text><!-- Outputs --><g transform="translate(440, 40)"></g></svg>'
     code_template: |
       from sklearn.cluster import DBSCAN
       from sklearn.preprocessing import StandardScaler
@@ -1133,7 +1003,6 @@ clustering:
       min_cluster_size: [5, 10, 20, 50]
       min_samples: [1, 5, 10]
     eval_metrics: ["silhouette", "davies_bouldin"]
-    illustration_svg: '<svg viewBox="0 0 600 160" xmlns="http://www.w3.org/2000/svg" class="w-full h-auto drop-shadow-xl rounded-xl"><rect width="600" height="160" fill="#0A0A0A" rx="12"/><!-- Grid pattern --><pattern id="grid" width="40" height="40" patternUnits="userSpaceOnUse">  <path d="M 40 0 L 0 0 0 40" fill="none" stroke="#222222" stroke-width="0.5"/></pattern><rect width="600" height="160" fill="url(#grid)" rx="12"/><!-- Inputs --><g transform="translate(20, 40)"></g><!-- Central Node --><rect x="230" y="40" width="140" height="80" fill="#1a1a1a" stroke="#444" rx="10" stroke-width="2"/><text x="300" y="70" fill="#EEEEEE" font-family="sans-serif" font-weight="bold" font-size="12" text-anchor="middle">HDBSCAN</text><text x="300" y="90" fill="#888888" font-family="sans-serif" font-size="10" text-anchor="middle">ML Model</text><!-- Outputs --><g transform="translate(440, 40)"></g></svg>'
     code_template: |
       import hdbscan
       from sklearn.preprocessing import StandardScaler
@@ -1167,7 +1036,6 @@ clustering:
       n_components: [2, 3, 4, 5, 6, 7, 8]
       covariance_type: ["full", "tied", "diag", "spherical"]
     eval_metrics: ["silhouette", "bic", "aic"]
-    illustration_svg: '<svg viewBox="0 0 600 160" xmlns="http://www.w3.org/2000/svg" class="w-full h-auto drop-shadow-xl rounded-xl"><rect width="600" height="160" fill="#0A0A0A" rx="12"/><!-- Grid pattern --><pattern id="grid" width="40" height="40" patternUnits="userSpaceOnUse">  <path d="M 40 0 L 0 0 0 40" fill="none" stroke="#222222" stroke-width="0.5"/></pattern><rect width="600" height="160" fill="url(#grid)" rx="12"/><!-- Inputs --><g transform="translate(20, 40)"></g><!-- Central Node --><rect x="230" y="40" width="140" height="80" fill="#1a1a1a" stroke="#444" rx="10" stroke-width="2"/><text x="300" y="70" fill="#EEEEEE" font-family="sans-serif" font-weight="bold" font-size="12" text-anchor="middle">Gaussian Mixture M</text><text x="300" y="90" fill="#888888" font-family="sans-serif" font-size="10" text-anchor="middle">ML Model</text><!-- Outputs --><g transform="translate(440, 40)"></g></svg>'
     code_template: |
       from sklearn.mixture import GaussianMixture
       from sklearn.preprocessing import StandardScaler
@@ -1211,7 +1079,6 @@ clustering:
       n_clusters: [2, 3, 4, 5, 6, 7, 8]
       linkage: ["ward", "complete", "average", "single"]
     eval_metrics: ["silhouette", "davies_bouldin"]
-    illustration_svg: '<svg viewBox="0 0 600 160" xmlns="http://www.w3.org/2000/svg" class="w-full h-auto drop-shadow-xl rounded-xl"><rect width="600" height="160" fill="#0A0A0A" rx="12"/><!-- Grid pattern --><pattern id="grid" width="40" height="40" patternUnits="userSpaceOnUse">  <path d="M 40 0 L 0 0 0 40" fill="none" stroke="#222222" stroke-width="0.5"/></pattern><rect width="600" height="160" fill="url(#grid)" rx="12"/><!-- Inputs --><g transform="translate(20, 40)"></g><!-- Central Node --><rect x="230" y="40" width="140" height="80" fill="#1a1a1a" stroke="#444" rx="10" stroke-width="2"/><text x="300" y="70" fill="#EEEEEE" font-family="sans-serif" font-weight="bold" font-size="12" text-anchor="middle">Clustering Agglomé</text><text x="300" y="90" fill="#888888" font-family="sans-serif" font-size="10" text-anchor="middle">ML Model</text><!-- Outputs --><g transform="translate(440, 40)"></g></svg>'
     code_template: |
       from sklearn.cluster import AgglomerativeClustering
       from sklearn.preprocessing import StandardScaler
@@ -1251,7 +1118,6 @@ timeseries:
       d: [0, 1, 2]
       q: [0, 1, 2, 3]
     eval_metrics: ["mae", "rmse", "mape", "smape"]
-    illustration_svg: '<svg viewBox="0 0 600 160" xmlns="http://www.w3.org/2000/svg" class="w-full h-auto drop-shadow-xl rounded-xl"><rect width="600" height="160" fill="#0A0A0A" rx="12"/><!-- Grid pattern --><pattern id="grid" width="40" height="40" patternUnits="userSpaceOnUse">  <path d="M 40 0 L 0 0 0 40" fill="none" stroke="#222222" stroke-width="0.5"/></pattern><rect width="600" height="160" fill="url(#grid)" rx="12"/><!-- Inputs --><g transform="translate(20, 40)"></g><!-- Central Node --><rect x="230" y="40" width="140" height="80" fill="#1a1a1a" stroke="#444" rx="10" stroke-width="2"/><text x="300" y="70" fill="#EEEEEE" font-family="sans-serif" font-weight="bold" font-size="12" text-anchor="middle">ARIMA</text><text x="300" y="90" fill="#888888" font-family="sans-serif" font-size="10" text-anchor="middle">ML Model</text><!-- Outputs --><g transform="translate(440, 40)"></g></svg>'
     code_template: |
       from statsmodels.tsa.arima.model import ARIMA
       from statsmodels.tsa.stattools import adfuller
@@ -1292,7 +1158,6 @@ timeseries:
       seasonal: [true, false]
       m: [1, 4, 7, 12]
     eval_metrics: ["mae", "rmse", "mape"]
-    illustration_svg: '<svg viewBox="0 0 600 160" xmlns="http://www.w3.org/2000/svg" class="w-full h-auto drop-shadow-xl rounded-xl"><rect width="600" height="160" fill="#0A0A0A" rx="12"/><!-- Grid pattern --><pattern id="grid" width="40" height="40" patternUnits="userSpaceOnUse">  <path d="M 40 0 L 0 0 0 40" fill="none" stroke="#222222" stroke-width="0.5"/></pattern><rect width="600" height="160" fill="url(#grid)" rx="12"/><!-- Inputs --><g transform="translate(20, 40)"></g><!-- Central Node --><rect x="230" y="40" width="140" height="80" fill="#1a1a1a" stroke="#444" rx="10" stroke-width="2"/><text x="300" y="70" fill="#EEEEEE" font-family="sans-serif" font-weight="bold" font-size="12" text-anchor="middle">Auto-ARIMA</text><text x="300" y="90" fill="#888888" font-family="sans-serif" font-size="10" text-anchor="middle">ML Model</text><!-- Outputs --><g transform="translate(440, 40)"></g></svg>'
     code_template: |
       import pmdarima as pm
       from sklearn.metrics import mean_absolute_error
@@ -1327,7 +1192,6 @@ timeseries:
       changepoint_prior_scale: [0.001, 0.01, 0.1, 0.5]
       yearly_seasonality: [true, false, "auto"]
     eval_metrics: ["mae", "rmse", "mape"]
-    illustration_svg: '<svg viewBox="0 0 600 160" xmlns="http://www.w3.org/2000/svg" class="w-full h-auto drop-shadow-xl rounded-xl"><rect width="600" height="160" fill="#0A0A0A" rx="12"/><!-- Grid pattern --><pattern id="grid" width="40" height="40" patternUnits="userSpaceOnUse">  <path d="M 40 0 L 0 0 0 40" fill="none" stroke="#222222" stroke-width="0.5"/></pattern><rect width="600" height="160" fill="url(#grid)" rx="12"/><!-- Inputs --><g transform="translate(20, 40)"></g><!-- Central Node --><rect x="230" y="40" width="140" height="80" fill="#1a1a1a" stroke="#444" rx="10" stroke-width="2"/><text x="300" y="70" fill="#EEEEEE" font-family="sans-serif" font-weight="bold" font-size="12" text-anchor="middle">Prophet (Meta)</text><text x="300" y="90" fill="#888888" font-family="sans-serif" font-size="10" text-anchor="middle">ML Model</text><!-- Outputs --><g transform="translate(440, 40)"></g></svg>'
     code_template: |
       from prophet import Prophet
       from prophet.diagnostics import cross_validation, performance_metrics
@@ -1370,7 +1234,6 @@ timeseries:
       learning_rate: [0.01, 0.05, 0.1]
       max_depth: [3, 5, 7]
     eval_metrics: ["mae", "rmse", "mape"]
-    illustration_svg: '<svg viewBox="0 0 600 160" xmlns="http://www.w3.org/2000/svg" class="w-full h-auto drop-shadow-xl rounded-xl"><rect width="600" height="160" fill="#0A0A0A" rx="12"/><!-- Grid pattern --><pattern id="grid" width="40" height="40" patternUnits="userSpaceOnUse">  <path d="M 40 0 L 0 0 0 40" fill="none" stroke="#222222" stroke-width="0.5"/></pattern><rect width="600" height="160" fill="url(#grid)" rx="12"/><!-- Inputs --><g transform="translate(20, 40)"></g><!-- Central Node --><rect x="230" y="40" width="140" height="80" fill="#1a1a1a" stroke="#444" rx="10" stroke-width="2"/><text x="300" y="70" fill="#EEEEEE" font-family="sans-serif" font-weight="bold" font-size="12" text-anchor="middle">XGBoost (Time Seri</text><text x="300" y="90" fill="#888888" font-family="sans-serif" font-size="10" text-anchor="middle">ML Model</text><!-- Outputs --><g transform="translate(440, 40)"></g></svg>'
     code_template: |
       import pandas as pd
       import numpy as np
@@ -1419,7 +1282,6 @@ timeseries:
       seasonal: ["add", "mul", null]
       seasonal_periods: [4, 7, 12, 52]
     eval_metrics: ["mae", "rmse", "mape"]
-    illustration_svg: '<svg viewBox="0 0 600 160" xmlns="http://www.w3.org/2000/svg" class="w-full h-auto drop-shadow-xl rounded-xl"><rect width="600" height="160" fill="#0A0A0A" rx="12"/><!-- Grid pattern --><pattern id="grid" width="40" height="40" patternUnits="userSpaceOnUse">  <path d="M 40 0 L 0 0 0 40" fill="none" stroke="#222222" stroke-width="0.5"/></pattern><rect width="600" height="160" fill="url(#grid)" rx="12"/><!-- Inputs --><g transform="translate(20, 40)"></g><!-- Central Node --><rect x="230" y="40" width="140" height="80" fill="#1a1a1a" stroke="#444" rx="10" stroke-width="2"/><text x="300" y="70" fill="#EEEEEE" font-family="sans-serif" font-weight="bold" font-size="12" text-anchor="middle">Exponential Smooth</text><text x="300" y="90" fill="#888888" font-family="sans-serif" font-size="10" text-anchor="middle">ML Model</text><!-- Outputs --><g transform="translate(440, 40)"></g></svg>'
     code_template: |
       from statsmodels.tsa.holtwinters import ExponentialSmoothing
       from sklearn.metrics import mean_absolute_error
@@ -1457,7 +1319,6 @@ anomaly_detection:
       contamination: [0.01, 0.05, 0.1, 0.2]
       max_features: [0.5, 0.7, 1.0]
     eval_metrics: ["precision", "recall", "f1", "roc_auc"]
-    illustration_svg: '<svg viewBox="0 0 600 160" xmlns="http://www.w3.org/2000/svg" class="w-full h-auto drop-shadow-xl rounded-xl"><rect width="600" height="160" fill="#0A0A0A" rx="12"/><!-- Grid pattern --><pattern id="grid" width="40" height="40" patternUnits="userSpaceOnUse">  <path d="M 40 0 L 0 0 0 40" fill="none" stroke="#222222" stroke-width="0.5"/></pattern><rect width="600" height="160" fill="url(#grid)" rx="12"/><!-- Inputs --><g transform="translate(20, 40)"></g><!-- Central Node --><rect x="230" y="40" width="140" height="80" fill="#1a1a1a" stroke="#444" rx="10" stroke-width="2"/><text x="300" y="70" fill="#EEEEEE" font-family="sans-serif" font-weight="bold" font-size="12" text-anchor="middle">Isolation Forest</text><text x="300" y="90" fill="#888888" font-family="sans-serif" font-size="10" text-anchor="middle">ML Model</text><!-- Outputs --><g transform="translate(440, 40)"></g></svg>'
     code_template: |
       from sklearn.ensemble import IsolationForest
       from sklearn.preprocessing import StandardScaler
@@ -1495,7 +1356,6 @@ anomaly_detection:
       n_neighbors: [5, 10, 20, 30]
       contamination: [0.05, 0.1, 0.15]
     eval_metrics: ["precision", "recall", "f1"]
-    illustration_svg: '<svg viewBox="0 0 600 160" xmlns="http://www.w3.org/2000/svg" class="w-full h-auto drop-shadow-xl rounded-xl"><rect width="600" height="160" fill="#0A0A0A" rx="12"/><!-- Grid pattern --><pattern id="grid" width="40" height="40" patternUnits="userSpaceOnUse">  <path d="M 40 0 L 0 0 0 40" fill="none" stroke="#222222" stroke-width="0.5"/></pattern><rect width="600" height="160" fill="url(#grid)" rx="12"/><!-- Inputs --><g transform="translate(20, 40)"></g><!-- Central Node --><rect x="230" y="40" width="140" height="80" fill="#1a1a1a" stroke="#444" rx="10" stroke-width="2"/><text x="300" y="70" fill="#EEEEEE" font-family="sans-serif" font-weight="bold" font-size="12" text-anchor="middle">Local Outlier Fact</text><text x="300" y="90" fill="#888888" font-family="sans-serif" font-size="10" text-anchor="middle">ML Model</text><!-- Outputs --><g transform="translate(440, 40)"></g></svg>'
     code_template: |
       from sklearn.neighbors import LocalOutlierFactor
       from sklearn.preprocessing import StandardScaler
@@ -1531,7 +1391,6 @@ anomaly_detection:
       kernel: ["rbf", "linear"]
       gamma: ["scale", "auto"]
     eval_metrics: ["precision", "recall", "f1"]
-    illustration_svg: '<svg viewBox="0 0 600 160" xmlns="http://www.w3.org/2000/svg" class="w-full h-auto drop-shadow-xl rounded-xl"><rect width="600" height="160" fill="#0A0A0A" rx="12"/><!-- Grid pattern --><pattern id="grid" width="40" height="40" patternUnits="userSpaceOnUse">  <path d="M 40 0 L 0 0 0 40" fill="none" stroke="#222222" stroke-width="0.5"/></pattern><rect width="600" height="160" fill="url(#grid)" rx="12"/><!-- Inputs --><g transform="translate(20, 40)"></g><!-- Central Node --><rect x="230" y="40" width="140" height="80" fill="#1a1a1a" stroke="#444" rx="10" stroke-width="2"/><text x="300" y="70" fill="#EEEEEE" font-family="sans-serif" font-weight="bold" font-size="12" text-anchor="middle">One-Class SVM</text><text x="300" y="90" fill="#888888" font-family="sans-serif" font-size="10" text-anchor="middle">ML Model</text><!-- Outputs --><g transform="translate(440, 40)"></g></svg>'
     code_template: |
       from sklearn.svm import OneClassSVM
       from sklearn.preprocessing import StandardScaler
@@ -1563,7 +1422,6 @@ anomaly_detection:
       epochs: [50, 100, 200]
       threshold_percentile: [90, 95, 99]
     eval_metrics: ["reconstruction_error", "roc_auc", "precision", "recall"]
-    illustration_svg: '<svg viewBox="0 0 600 160" xmlns="http://www.w3.org/2000/svg" class="w-full h-auto drop-shadow-xl rounded-xl"><rect width="600" height="160" fill="#0A0A0A" rx="12"/><!-- Grid pattern --><pattern id="grid" width="40" height="40" patternUnits="userSpaceOnUse">  <path d="M 40 0 L 0 0 0 40" fill="none" stroke="#222222" stroke-width="0.5"/></pattern><rect width="600" height="160" fill="url(#grid)" rx="12"/><!-- Inputs --><g transform="translate(20, 40)"></g><!-- Central Node --><rect x="230" y="40" width="140" height="80" fill="#1a1a1a" stroke="#444" rx="10" stroke-width="2"/><text x="300" y="70" fill="#EEEEEE" font-family="sans-serif" font-weight="bold" font-size="12" text-anchor="middle">Autoencodeur (Anom</text><text x="300" y="90" fill="#888888" font-family="sans-serif" font-size="10" text-anchor="middle">ML Model</text><!-- Outputs --><g transform="translate(440, 40)"></g></svg>'
     code_template: |
       import torch
       import torch.nn as nn
@@ -1632,7 +1490,6 @@ dimensionality_reduction:
       n_components: [2, 3, 5, 10, 0.95]
       whiten: [true, false]
     eval_metrics: ["explained_variance_ratio", "reconstruction_error"]
-    illustration_svg: '<svg viewBox="0 0 600 160" xmlns="http://www.w3.org/2000/svg" class="w-full h-auto drop-shadow-xl rounded-xl"><rect width="600" height="160" fill="#0A0A0A" rx="12"/><!-- Grid pattern --><pattern id="grid" width="40" height="40" patternUnits="userSpaceOnUse">  <path d="M 40 0 L 0 0 0 40" fill="none" stroke="#222222" stroke-width="0.5"/></pattern><rect width="600" height="160" fill="url(#grid)" rx="12"/><!-- Inputs --><g transform="translate(20, 40)"></g><!-- Central Node --><rect x="230" y="40" width="140" height="80" fill="#1a1a1a" stroke="#444" rx="10" stroke-width="2"/><text x="300" y="70" fill="#EEEEEE" font-family="sans-serif" font-weight="bold" font-size="12" text-anchor="middle">PCA (Analyse en Co</text><text x="300" y="90" fill="#888888" font-family="sans-serif" font-size="10" text-anchor="middle">ML Model</text><!-- Outputs --><g transform="translate(440, 40)"></g></svg>'
     code_template: |
       from sklearn.decomposition import PCA
       from sklearn.preprocessing import StandardScaler
@@ -1675,7 +1532,6 @@ dimensionality_reduction:
       learning_rate: [50, 100, 200, 500]
       n_iter: [1000]
     eval_metrics: ["trustworthiness"]
-    illustration_svg: '<svg viewBox="0 0 600 160" xmlns="http://www.w3.org/2000/svg" class="w-full h-auto drop-shadow-xl rounded-xl"><rect width="600" height="160" fill="#0A0A0A" rx="12"/><!-- Grid pattern --><pattern id="grid" width="40" height="40" patternUnits="userSpaceOnUse">  <path d="M 40 0 L 0 0 0 40" fill="none" stroke="#222222" stroke-width="0.5"/></pattern><rect width="600" height="160" fill="url(#grid)" rx="12"/><!-- Inputs --><g transform="translate(20, 40)"></g><!-- Central Node --><rect x="230" y="40" width="140" height="80" fill="#1a1a1a" stroke="#444" rx="10" stroke-width="2"/><text x="300" y="70" fill="#EEEEEE" font-family="sans-serif" font-weight="bold" font-size="12" text-anchor="middle">t-SNE</text><text x="300" y="90" fill="#888888" font-family="sans-serif" font-size="10" text-anchor="middle">ML Model</text><!-- Outputs --><g transform="translate(440, 40)"></g></svg>'
     code_template: |
       from sklearn.manifold import TSNE
       from sklearn.preprocessing import StandardScaler
@@ -1716,7 +1572,6 @@ dimensionality_reduction:
       n_neighbors: [5, 10, 15, 30]
       min_dist: [0.0, 0.1, 0.25, 0.5]
     eval_metrics: ["trustworthiness"]
-    illustration_svg: '<svg viewBox="0 0 600 160" xmlns="http://www.w3.org/2000/svg" class="w-full h-auto drop-shadow-xl rounded-xl"><rect width="600" height="160" fill="#0A0A0A" rx="12"/><!-- Grid pattern --><pattern id="grid" width="40" height="40" patternUnits="userSpaceOnUse">  <path d="M 40 0 L 0 0 0 40" fill="none" stroke="#222222" stroke-width="0.5"/></pattern><rect width="600" height="160" fill="url(#grid)" rx="12"/><!-- Inputs --><g transform="translate(20, 40)"></g><!-- Central Node --><rect x="230" y="40" width="140" height="80" fill="#1a1a1a" stroke="#444" rx="10" stroke-width="2"/><text x="300" y="70" fill="#EEEEEE" font-family="sans-serif" font-weight="bold" font-size="12" text-anchor="middle">UMAP</text><text x="300" y="90" fill="#888888" font-family="sans-serif" font-size="10" text-anchor="middle">ML Model</text><!-- Outputs --><g transform="translate(440, 40)"></g></svg>'
     code_template: |
       import umap
       from sklearn.preprocessing import StandardScaler
@@ -1753,7 +1608,6 @@ dimensionality_reduction:
       kernel: ["rbf", "poly", "cosine", "sigmoid"]
       gamma: ["scale", 0.01, 0.1, 1]
     eval_metrics: ["reconstruction_error"]
-    illustration_svg: '<svg viewBox="0 0 600 160" xmlns="http://www.w3.org/2000/svg" class="w-full h-auto drop-shadow-xl rounded-xl"><rect width="600" height="160" fill="#0A0A0A" rx="12"/><!-- Grid pattern --><pattern id="grid" width="40" height="40" patternUnits="userSpaceOnUse">  <path d="M 40 0 L 0 0 0 40" fill="none" stroke="#222222" stroke-width="0.5"/></pattern><rect width="600" height="160" fill="url(#grid)" rx="12"/><!-- Inputs --><g transform="translate(20, 40)"></g><!-- Central Node --><rect x="230" y="40" width="140" height="80" fill="#1a1a1a" stroke="#444" rx="10" stroke-width="2"/><text x="300" y="70" fill="#EEEEEE" font-family="sans-serif" font-weight="bold" font-size="12" text-anchor="middle">Kernel PCA</text><text x="300" y="90" fill="#888888" font-family="sans-serif" font-size="10" text-anchor="middle">ML Model</text><!-- Outputs --><g transform="translate(440, 40)"></g></svg>'
     code_template: |
       from sklearn.decomposition import KernelPCA
       from sklearn.preprocessing import StandardScaler
@@ -1791,7 +1645,6 @@ neural_networks:
       learning_rate: ["constant", "adaptive"]
       max_iter: [300, 500]
     eval_metrics: ["accuracy", "f1_weighted", "roc_auc"]
-    illustration_svg: '<svg viewBox="0 0 600 160" xmlns="http://www.w3.org/2000/svg" class="w-full h-auto drop-shadow-xl rounded-xl"><rect width="600" height="160" fill="#0A0A0A" rx="12"/><!-- Grid pattern --><pattern id="grid" width="40" height="40" patternUnits="userSpaceOnUse">  <path d="M 40 0 L 0 0 0 40" fill="none" stroke="#222222" stroke-width="0.5"/></pattern><rect width="600" height="160" fill="url(#grid)" rx="12"/><!-- Inputs --><g transform="translate(20, 40)"></g><!-- Central Node --><rect x="230" y="40" width="140" height="80" fill="#1a1a1a" stroke="#444" rx="10" stroke-width="2"/><text x="300" y="70" fill="#EEEEEE" font-family="sans-serif" font-weight="bold" font-size="12" text-anchor="middle">MLP Classifier (sk</text><text x="300" y="90" fill="#888888" font-family="sans-serif" font-size="10" text-anchor="middle">ML Model</text><!-- Outputs --><g transform="translate(440, 40)"></g></svg>'
     code_template: |
       from sklearn.neural_network import MLPClassifier
       from sklearn.pipeline import Pipeline
@@ -1835,7 +1688,6 @@ neural_networks:
       batch_size: [64, 128, 256]
       epochs: [50, 100, 200]
     eval_metrics: ["accuracy", "f1_weighted", "roc_auc"]
-    illustration_svg: '<svg viewBox="0 0 600 160" xmlns="http://www.w3.org/2000/svg" class="w-full h-auto drop-shadow-xl rounded-xl"><rect width="600" height="160" fill="#0A0A0A" rx="12"/><!-- Grid pattern --><pattern id="grid" width="40" height="40" patternUnits="userSpaceOnUse">  <path d="M 40 0 L 0 0 0 40" fill="none" stroke="#222222" stroke-width="0.5"/></pattern><rect width="600" height="160" fill="url(#grid)" rx="12"/><!-- Inputs --><g transform="translate(20, 40)"></g><!-- Central Node --><rect x="230" y="40" width="140" height="80" fill="#1a1a1a" stroke="#444" rx="10" stroke-width="2"/><text x="300" y="70" fill="#EEEEEE" font-family="sans-serif" font-weight="bold" font-size="12" text-anchor="middle">PyTorch MLP (Tabul</text><text x="300" y="90" fill="#888888" font-family="sans-serif" font-size="10" text-anchor="middle">ML Model</text><!-- Outputs --><g transform="translate(440, 40)"></g></svg>'
     code_template: |
       import torch
       import torch.nn as nn
@@ -1906,7 +1758,6 @@ nlp:
       C: [0.1, 1, 10]
       analyzer: ["word", "char_wb"]
     eval_metrics: ["accuracy", "f1_weighted", "roc_auc"]
-    illustration_svg: '<svg viewBox="0 0 600 160" xmlns="http://www.w3.org/2000/svg" class="w-full h-auto drop-shadow-xl rounded-xl"><rect width="600" height="160" fill="#0A0A0A" rx="12"/><!-- Grid pattern --><pattern id="grid" width="40" height="40" patternUnits="userSpaceOnUse">  <path d="M 40 0 L 0 0 0 40" fill="none" stroke="#222222" stroke-width="0.5"/></pattern><rect width="600" height="160" fill="url(#grid)" rx="12"/><!-- Inputs --><g transform="translate(20, 40)"></g><!-- Central Node --><rect x="230" y="40" width="140" height="80" fill="#1a1a1a" stroke="#444" rx="10" stroke-width="2"/><text x="300" y="70" fill="#EEEEEE" font-family="sans-serif" font-weight="bold" font-size="12" text-anchor="middle">TF-IDF + Logistic </text><text x="300" y="90" fill="#888888" font-family="sans-serif" font-size="10" text-anchor="middle">ML Model</text><!-- Outputs --><g transform="translate(440, 40)"></g></svg>'
     code_template: |
       from sklearn.feature_extraction.text import TfidfVectorizer
       from sklearn.linear_model import LogisticRegression
@@ -1945,7 +1796,6 @@ nlp:
       model_name: ["all-MiniLM-L6-v2", "all-mpnet-base-v2", "paraphrase-multilingual-MiniLM-L12-v2"]
       batch_size: [32, 64, 128]
     eval_metrics: ["accuracy", "f1_weighted", "roc_auc"]
-    illustration_svg: '<svg viewBox="0 0 600 160" xmlns="http://www.w3.org/2000/svg" class="w-full h-auto drop-shadow-xl rounded-xl"><rect width="600" height="160" fill="#0A0A0A" rx="12"/><!-- Grid pattern --><pattern id="grid" width="40" height="40" patternUnits="userSpaceOnUse">  <path d="M 40 0 L 0 0 0 40" fill="none" stroke="#222222" stroke-width="0.5"/></pattern><rect width="600" height="160" fill="url(#grid)" rx="12"/><!-- Inputs --><g transform="translate(20, 40)"></g><!-- Central Node --><rect x="230" y="40" width="140" height="80" fill="#1a1a1a" stroke="#444" rx="10" stroke-width="2"/><text x="300" y="70" fill="#EEEEEE" font-family="sans-serif" font-weight="bold" font-size="12" text-anchor="middle">Sentence Transform</text><text x="300" y="90" fill="#888888" font-family="sans-serif" font-size="10" text-anchor="middle">ML Model</text><!-- Outputs --><g transform="translate(440, 40)"></g></svg>'
     code_template: |
       from sentence_transformers import SentenceTransformer
       from sklearn.linear_model import LogisticRegression
@@ -1988,7 +1838,6 @@ survival_analysis:
     cons: ["univarié", "pas de covariables"]
     hyperparameters: {}
     eval_metrics: ["log_rank_test", "median_survival_time"]
-    illustration_svg: '<svg viewBox="0 0 600 160" xmlns="http://www.w3.org/2000/svg" class="w-full h-auto drop-shadow-xl rounded-xl"><rect width="600" height="160" fill="#0A0A0A" rx="12"/><!-- Grid pattern --><pattern id="grid" width="40" height="40" patternUnits="userSpaceOnUse">  <path d="M 40 0 L 0 0 0 40" fill="none" stroke="#222222" stroke-width="0.5"/></pattern><rect width="600" height="160" fill="url(#grid)" rx="12"/><!-- Inputs --><g transform="translate(20, 40)"></g><!-- Central Node --><rect x="230" y="40" width="140" height="80" fill="#1a1a1a" stroke="#444" rx="10" stroke-width="2"/><text x="300" y="70" fill="#EEEEEE" font-family="sans-serif" font-weight="bold" font-size="12" text-anchor="middle">Kaplan-Meier</text><text x="300" y="90" fill="#888888" font-family="sans-serif" font-size="10" text-anchor="middle">ML Model</text><!-- Outputs --><g transform="translate(440, 40)"></g></svg>'
     code_template: |
       from lifelines import KaplanMeierFitter
       from lifelines.statistics import logrank_test
@@ -2030,7 +1879,6 @@ survival_analysis:
       penalizer: [0, 0.1, 0.5, 1.0]
       l1_ratio: [0, 0.5, 1.0]
     eval_metrics: ["concordance_index", "log_likelihood", "AIC"]
-    illustration_svg: '<svg viewBox="0 0 600 160" xmlns="http://www.w3.org/2000/svg" class="w-full h-auto drop-shadow-xl rounded-xl"><rect width="600" height="160" fill="#0A0A0A" rx="12"/><!-- Grid pattern --><pattern id="grid" width="40" height="40" patternUnits="userSpaceOnUse">  <path d="M 40 0 L 0 0 0 40" fill="none" stroke="#222222" stroke-width="0.5"/></pattern><rect width="600" height="160" fill="url(#grid)" rx="12"/><!-- Inputs --><g transform="translate(20, 40)"></g><!-- Central Node --><rect x="230" y="40" width="140" height="80" fill="#1a1a1a" stroke="#444" rx="10" stroke-width="2"/><text x="300" y="70" fill="#EEEEEE" font-family="sans-serif" font-weight="bold" font-size="12" text-anchor="middle">Cox Proportional H</text><text x="300" y="90" fill="#888888" font-family="sans-serif" font-size="10" text-anchor="middle">ML Model</text><!-- Outputs --><g transform="translate(440, 40)"></g></svg>'
     code_template: |
       from lifelines import CoxPHFitter
       import pandas as pd
@@ -2069,7 +1917,6 @@ calibration_and_evaluation:  # utilitaires transverses
       method: ["sigmoid", "isotonic"]
       cv: [5, 10, "prefit"]
     eval_metrics: ["brier_score", "log_loss", "calibration_curve"]
-    illustration_svg: '<svg viewBox="0 0 600 160" xmlns="http://www.w3.org/2000/svg" class="w-full h-auto drop-shadow-xl rounded-xl"><rect width="600" height="160" fill="#0A0A0A" rx="12"/><!-- Grid pattern --><pattern id="grid" width="40" height="40" patternUnits="userSpaceOnUse">  <path d="M 40 0 L 0 0 0 40" fill="none" stroke="#222222" stroke-width="0.5"/></pattern><rect width="600" height="160" fill="url(#grid)" rx="12"/><!-- Inputs --><g transform="translate(20, 40)"></g><!-- Central Node --><rect x="230" y="40" width="140" height="80" fill="#1a1a1a" stroke="#444" rx="10" stroke-width="2"/><text x="300" y="70" fill="#EEEEEE" font-family="sans-serif" font-weight="bold" font-size="12" text-anchor="middle">Calibration des Pr</text><text x="300" y="90" fill="#888888" font-family="sans-serif" font-size="10" text-anchor="middle">ML Model</text><!-- Outputs --><g transform="translate(440, 40)"></g></svg>'
     code_template: |
       from sklearn.calibration import CalibratedClassifierCV, calibration_curve
       from sklearn.ensemble import GradientBoostingClassifier
