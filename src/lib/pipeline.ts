@@ -86,13 +86,40 @@ export function allBlocks(catalogs: ParsedCatalog[]): CatalogBlock[] {
 // ────────────────────────────────────────────────────────────
 // Param extraction from code_template (UPPER_SNAKE = X)
 // ────────────────────────────────────────────────────────────
+export type ParamKind =
+  | "file"
+  | "dir"
+  | "column"
+  | "boolean"
+  | "ratio"
+  | "int"
+  | "number"
+  | "string"
+  | "expr";
+
 export interface ParamDef {
   name: string;
   defaultLiteral: string;
   type: "string" | "number" | "boolean" | "expr";
+  kind: ParamKind;
 }
 
 const PARAM_RE = /^([A-Z][A-Z0-9_]{2,})\s*=\s*([^\n#]+?)\s*(?:#.*)?$/gm;
+
+function detectKind(name: string, type: ParamDef["type"]): ParamKind {
+  if (type === "boolean") return "boolean";
+  if (/(^|_)(FILE|PATH|CSV|JSON|PARQUET|URL)(_|$)/.test(name)) return "file";
+  if (/(^|_)(DIR|FOLDER)(_|$)/.test(name)) return "dir";
+  if (/(^|_)(COL|COLS|COLUMN|TARGET|FEATURE|FEATURES|LABEL)(_|$)/.test(name)) return "column";
+  if (type === "number") {
+    if (/(SIZE|RATIO|RATE|ALPHA|BETA|THRESHOLD|DROPOUT|MOMENTUM|GAMMA)/.test(name)) return "ratio";
+    if (/(SEED|RANDOM_STATE|N_|MAX_|MIN_|DEPTH|EPOCHS|BATCH|STEPS|FOLDS|JOBS|TOP_K)/.test(name))
+      return "int";
+    return "number";
+  }
+  if (type === "string") return "string";
+  return "expr";
+}
 
 export function extractParams(code: string): ParamDef[] {
   if (!code) return [];
@@ -109,7 +136,7 @@ export function extractParams(code: string): ParamDef[] {
     if (/^["'].*["']$/.test(lit)) type = "string";
     else if (/^-?\d+(\.\d+)?$/.test(lit)) type = "number";
     else if (/^(True|False)$/.test(lit)) type = "boolean";
-    out.push({ name, defaultLiteral: lit, type });
+    out.push({ name, defaultLiteral: lit, type, kind: detectKind(name, type) });
   }
   return out;
 }
