@@ -25,8 +25,10 @@ import {
   type NotebookCell,
   type ParsedCatalog,
 } from "@/lib/pipeline";
+import { executeCode, type ExecResult, type KernelConfig } from "@/lib/kernel";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
+import { ParamInput } from "@/components/ParamInput";
+import { KernelPanel, loadStoredCfg } from "@/components/KernelPanel";
 import {
   AlertTriangle,
   CheckCircle2,
@@ -34,11 +36,13 @@ import {
   Download,
   FileCode,
   GripVertical,
+  Loader2,
   Notebook,
-  RotateCcw,
+  Play,
+  PlayCircle,
   Sparkles,
+  Square,
   Trash2,
-  X,
 } from "lucide-react";
 
 interface Props {
@@ -49,6 +53,11 @@ interface Props {
 
 export function NotebookBuilder({ cells, setCells, catalogs }: Props) {
   const [openUid, setOpenUid] = useState<string | null>(null);
+  const [kernelCfg, setKernelCfg] = useState<KernelConfig>(() => loadStoredCfg());
+  const [kernelId, setKernelId] = useState<string | null>(null);
+  const [outputs, setOutputs] = useState<Record<string, ExecResult>>({});
+  const [running, setRunning] = useState<string | null>(null);
+
   const validations = useMemo(() => validateNotebook(cells, catalogs), [cells, catalogs]);
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 5 } }));
 
@@ -68,72 +77,137 @@ export function NotebookBuilder({ cells, setCells, catalogs }: Props) {
         c.uid === uid ? { ...c, overrides: { ...c.overrides, [name]: value } } : c,
       ),
     );
+  const resetOverride = (uid: string, name: string) =>
+    setCells(
+      cells.map((c) => {
+        if (c.uid !== uid) return c;
+        const next = { ...c.overrides };
+        delete next[name];
+        return { ...c, overrides: next };
+      }),
+    );
   const updateCode = (uid: string, code: string) =>
     setCells(
-      cells.map((c) =>
-        c.uid === uid ? { ...c, code, params: extractParams(code) } : c,
-      ),
+      cells.map((c) => (c.uid === uid ? { ...c, code, params: extractParams(code) } : c)),
     );
+
+  const runCell = async (cell: NotebookCell) => {
+    if (!kernelId) return;
+    setRunning(cell.uid);
+    setOutputs((o) => ({
+      ...o,
+      [cell.uid]: { status: "running", stdout: "", stderr: "", displays: [] },
+    }));
+    const code = applyParamOverrides(cell.code, cell.overrides);
+    try {
+      const { promise } = executeCode(kernelCfg, kernelId, code, (r) =>
+        setOutputs((o) => ({ ...o, [cell.uid]: r })),
+      );
+      const final = await promise;
+      setOutputs((o) => ({ ...o, [cell.uid]: final }));
+    } catch (e) {
+      setOutputs((o) => ({
+        ...o,
+        [cell.uid]: {
+          status: "error",
+          stdout: "",
+          stderr: (e as Error).message,
+          displays: [],
+        },
+      }));
+    } finally {
+      setRunning(null);
+    }
+  };
+
+  const runAll = async () => {
+    if (!kernelId) return;
+    for (const cell of cells) {
+      await runCell(cell);
+      const last = outputs[cell.uid];
+      if (last?.status === "error") break;
+    }
+  };
 
   const errorCount = validations.filter((v) => !v.ok).length;
 
   return (
     <div className="flex h-full min-h-0 flex-col">
-      <header className="flex shrink-0 flex-wrap items-center justify-between gap-3 border-b border-border bg-card/30 px-5 py-3">
-        <div className="flex items-center gap-3">
-          <span className="text-sm font-medium">Notebook</span>
-          <span className="font-mono text-xs text-muted-foreground">
-            {cells.length} {cells.length > 1 ? "cellules" : "cellule"}
-          </span>
-          {errorCount > 0 ? (
-            <span className="inline-flex items-center gap-1 rounded-full border border-destructive/40 bg-destructive/10 px-2.5 py-0.5 font-mono text-[10px] text-destructive">
-              <AlertTriangle className="h-3 w-3" />
-              {errorCount} I/O
+      <header className="flex shrink-0 flex-col gap-2.5 border-b border-border bg-card/30 px-5 py-3">
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <div className="flex items-center gap-3">
+            <span className="text-sm font-medium">Notebook</span>
+            <span className="font-mono text-xs text-muted-foreground">
+              {cells.length} {cells.length > 1 ? "cellules" : "cellule"}
             </span>
-          ) : cells.length > 0 ? (
-            <span className="inline-flex items-center gap-1 rounded-full border border-[color:var(--color-success)]/40 bg-[color:var(--color-success)]/10 px-2.5 py-0.5 font-mono text-[10px] text-[color:var(--color-success)]">
-              <CheckCircle2 className="h-3 w-3" />
-              I/O valide
-            </span>
-          ) : null}
+            {errorCount > 0 ? (
+              <span className="inline-flex items-center gap-1 rounded-full border border-destructive/40 bg-destructive/10 px-2.5 py-0.5 font-mono text-[10px] text-destructive">
+                <AlertTriangle className="h-3 w-3" />
+                {errorCount} I/O
+              </span>
+            ) : cells.length > 0 ? (
+              <span className="inline-flex items-center gap-1 rounded-full border border-[color:var(--color-success)]/40 bg-[color:var(--color-success)]/10 px-2.5 py-0.5 font-mono text-[10px] text-[color:var(--color-success)]">
+                <CheckCircle2 className="h-3 w-3" />
+                I/O valide
+              </span>
+            ) : null}
+          </div>
+          <div className="flex flex-wrap gap-1.5">
+            <Button
+              variant="outline"
+              size="sm"
+              className="rounded-full"
+              disabled={!cells.length || !kernelId || running !== null}
+              onClick={runAll}
+            >
+              <PlayCircle className="h-3.5 w-3.5" />
+              Run all
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              className="rounded-full"
+              disabled={!cells.length}
+              onClick={() =>
+                downloadText(
+                  "pipeline.ipynb",
+                  buildNotebookJSON(cells),
+                  "application/x-ipynb+json",
+                )
+              }
+            >
+              <Download className="h-3.5 w-3.5" />
+              .ipynb
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              className="rounded-full"
+              disabled={!cells.length}
+              onClick={() =>
+                downloadText("pipeline.py", buildPythonScript(cells), "text/x-python")
+              }
+            >
+              <FileCode className="h-3.5 w-3.5" />
+              .py
+            </Button>
+            <Button
+              size="sm"
+              className="rounded-full"
+              disabled={!cells.length}
+              onClick={() => openInColab(buildNotebookJSON(cells))}
+            >
+              <Sparkles className="h-3.5 w-3.5" />
+              Colab
+            </Button>
+          </div>
         </div>
-        <div className="flex flex-wrap gap-1.5">
-          <Button
-            variant="outline"
-            size="sm"
-            className="rounded-full"
-            disabled={!cells.length}
-            onClick={() =>
-              downloadText(
-                "pipeline.ipynb",
-                buildNotebookJSON(cells),
-                "application/x-ipynb+json",
-              )
-            }
-          >
-            <Download className="h-3.5 w-3.5" />
-            .ipynb
-          </Button>
-          <Button
-            variant="outline"
-            size="sm"
-            className="rounded-full"
-            disabled={!cells.length}
-            onClick={() => downloadText("pipeline.py", buildPythonScript(cells), "text/x-python")}
-          >
-            <FileCode className="h-3.5 w-3.5" />
-            .py
-          </Button>
-          <Button
-            size="sm"
-            className="rounded-full"
-            disabled={!cells.length}
-            onClick={() => openInColab(buildNotebookJSON(cells))}
-          >
-            <Sparkles className="h-3.5 w-3.5" />
-            Colab
-          </Button>
-        </div>
+        <KernelPanel
+          cfg={kernelCfg}
+          setCfg={setKernelCfg}
+          kernelId={kernelId}
+          setKernelId={setKernelId}
+        />
       </header>
 
       <div className="min-h-0 flex-1 overflow-y-auto">
@@ -151,7 +225,10 @@ export function NotebookBuilder({ cells, setCells, catalogs }: Props) {
             </div>
           ) : (
             <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={onDragEnd}>
-              <SortableContext items={cells.map((c) => c.uid)} strategy={verticalListSortingStrategy}>
+              <SortableContext
+                items={cells.map((c) => c.uid)}
+                strategy={verticalListSortingStrategy}
+              >
                 <ol className="space-y-2.5">
                   {cells.map((cell, i) => (
                     <SortableCell
@@ -163,7 +240,12 @@ export function NotebookBuilder({ cells, setCells, catalogs }: Props) {
                       onToggle={() => setOpenUid(openUid === cell.uid ? null : cell.uid)}
                       onRemove={() => remove(cell.uid)}
                       onOverride={(n, v) => updateOverride(cell.uid, n, v)}
+                      onResetOverride={(n) => resetOverride(cell.uid, n)}
                       onCode={(code) => updateCode(cell.uid, code)}
+                      canRun={kernelId !== null}
+                      isRunning={running === cell.uid}
+                      output={outputs[cell.uid]}
+                      onRun={() => runCell(cell)}
                     />
                   ))}
                 </ol>
@@ -184,7 +266,12 @@ function SortableCell({
   onToggle,
   onRemove,
   onOverride,
+  onResetOverride,
   onCode,
+  canRun,
+  isRunning,
+  output,
+  onRun,
 }: {
   cell: NotebookCell;
   index: number;
@@ -193,7 +280,12 @@ function SortableCell({
   onToggle: () => void;
   onRemove: () => void;
   onOverride: (name: string, value: string) => void;
+  onResetOverride: (name: string) => void;
   onCode: (code: string) => void;
+  canRun: boolean;
+  isRunning: boolean;
+  output?: ExecResult;
+  onRun: () => void;
 }) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
     id: cell.uid,
@@ -246,6 +338,27 @@ function SortableCell({
         <span className="hidden font-mono text-[10px] text-muted-foreground md:inline">
           {cell.section}
         </span>
+        {output && (
+          <span
+            className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 font-mono text-[10px] ${
+              output.status === "ok"
+                ? "bg-[color:var(--color-success)]/15 text-[color:var(--color-success)]"
+                : output.status === "error"
+                  ? "bg-destructive/15 text-destructive"
+                  : "bg-muted text-muted-foreground"
+            }`}
+            title={output.status}
+          >
+            {output.status === "running" ? (
+              <Loader2 className="h-3 w-3 animate-spin" />
+            ) : output.status === "ok" ? (
+              <CheckCircle2 className="h-3 w-3" />
+            ) : (
+              <AlertTriangle className="h-3 w-3" />
+            )}
+            {output.status}
+          </span>
+        )}
         {!validation.ok && (
           <span
             className="inline-flex items-center gap-1 rounded-full bg-destructive/15 px-2 py-0.5 font-mono text-[10px] text-destructive"
@@ -259,6 +372,19 @@ function SortableCell({
             {validation.outOfOrder ? "ordre" : validation.missing.length}
           </span>
         )}
+        <button
+          onClick={onRun}
+          disabled={!canRun || isRunning}
+          className="rounded-md p-1 text-muted-foreground enabled:hover:bg-[color:var(--color-success)]/15 enabled:hover:text-[color:var(--color-success)] disabled:opacity-30"
+          aria-label="Exécuter"
+          title={canRun ? "Exécuter cette cellule" : "Connectez un kernel"}
+        >
+          {isRunning ? (
+            <Square className="h-3.5 w-3.5" />
+          ) : (
+            <Play className="h-3.5 w-3.5" />
+          )}
+        </button>
         <button
           onClick={onRemove}
           className="rounded-md p-1 text-muted-foreground hover:bg-destructive/15 hover:text-destructive"
@@ -294,33 +420,15 @@ function SortableCell({
               <h4 className="mb-2 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
                 Paramètres
               </h4>
-              <div className="grid gap-1.5 sm:grid-cols-2">
+              <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
                 {cell.params.map((p) => (
-                  <label key={p.name} className="flex items-center gap-2 text-xs">
-                    <span
-                      className="w-32 shrink-0 truncate font-mono text-foreground"
-                      title={p.name}
-                    >
-                      {p.name}
-                    </span>
-                    <Input
-                      value={cell.overrides[p.name] ?? p.defaultLiteral}
-                      onChange={(e) => onOverride(p.name, e.target.value)}
-                      className="h-8 rounded-lg font-mono text-xs"
-                    />
-                    <span className="w-10 shrink-0 font-mono text-[10px] text-muted-foreground">
-                      {p.type}
-                    </span>
-                    {cell.overrides[p.name] !== undefined && (
-                      <button
-                        onClick={() => onOverride(p.name, "")}
-                        className="text-muted-foreground hover:text-destructive"
-                        aria-label="Reset"
-                      >
-                        <X className="h-3 w-3" />
-                      </button>
-                    )}
-                  </label>
+                  <ParamInput
+                    key={p.name}
+                    param={p}
+                    override={cell.overrides[p.name]}
+                    onChange={(v) => onOverride(p.name, v)}
+                    onReset={() => onResetOverride(p.name)}
+                  />
                 ))}
               </div>
             </div>
@@ -341,24 +449,12 @@ function SortableCell({
               <h4 className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
                 Code
               </h4>
-              <div className="flex gap-1.5">
-                {editing && (
-                  <button
-                    onClick={() => onCode(cell.code)}
-                    className="inline-flex items-center gap-1 rounded-full border border-border bg-card px-2.5 py-1 font-mono text-[10px] text-muted-foreground hover:text-foreground"
-                    title="La cellule est déjà éditée — utilisez Retirer pour revenir au catalogue"
-                  >
-                    <RotateCcw className="h-3 w-3" />
-                    reformat
-                  </button>
-                )}
-                <button
-                  onClick={() => setEditing((v) => !v)}
-                  className="inline-flex items-center gap-1 rounded-full border border-border bg-card px-2.5 py-1 font-mono text-[10px] text-muted-foreground hover:text-foreground"
-                >
-                  {editing ? "Aperçu" : "Éditer"}
-                </button>
-              </div>
+              <button
+                onClick={() => setEditing((v) => !v)}
+                className="inline-flex items-center gap-1 rounded-full border border-border bg-card px-2.5 py-1 font-mono text-[10px] text-muted-foreground hover:text-foreground"
+              >
+                {editing ? "Aperçu" : "Éditer"}
+              </button>
             </div>
             {editing ? (
               <textarea
@@ -374,9 +470,65 @@ function SortableCell({
               </pre>
             )}
           </div>
+
+          {output && (output.stdout || output.stderr || output.displays.length > 0) && (
+            <div>
+              <h4 className="mb-2 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
+                Sortie
+              </h4>
+              <div className="space-y-2 rounded-xl border border-border bg-[oklch(0.1_0.004_260)] p-3">
+                {output.stdout && (
+                  <pre className="overflow-auto whitespace-pre-wrap font-mono text-[11px] text-foreground/90">
+                    {output.stdout}
+                  </pre>
+                )}
+                {output.stderr && (
+                  <pre className="overflow-auto whitespace-pre-wrap font-mono text-[11px] text-destructive">
+                    {output.stderr}
+                  </pre>
+                )}
+                {output.displays.map((d, i) => (
+                  <DisplayOutput key={i} mime={d.mime} data={d.data} />
+                ))}
+              </div>
+            </div>
+          )}
         </div>
       )}
     </li>
+  );
+}
+
+function DisplayOutput({ mime, data }: { mime: string; data: string }) {
+  if (mime.startsWith("image/")) {
+    return (
+      <img
+        src={`data:${mime};base64,${data}`}
+        alt="output"
+        className="max-w-full rounded-lg border border-border"
+      />
+    );
+  }
+  if (mime === "text/html") {
+    return (
+      <div
+        className="overflow-auto text-xs"
+        // contenu généré par le kernel local de l'utilisateur
+        dangerouslySetInnerHTML={{ __html: data }}
+      />
+    );
+  }
+  if (mime === "text/plain") {
+    return (
+      <pre className="overflow-auto whitespace-pre-wrap font-mono text-[11px] text-foreground/90">
+        {data}
+      </pre>
+    );
+  }
+  return (
+    <pre className="overflow-auto font-mono text-[10px] text-muted-foreground">
+      [{mime}] {data.slice(0, 200)}
+    </pre>
   );
 }
 
