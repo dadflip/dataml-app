@@ -3,12 +3,12 @@
 # ══════════════════════════════════════════════════════════════════════════
 #
 #  BLOC 1 — datasets_config.yaml
-#    INPUT  : paramètres utilisateur (FILE_PATH, TARGET_COL, …)
+#    INPUT  : paramètres utilisateur (FILE_PATH, TARGET_COL, ...)
 #    OUTPUT : df, X, y, feature_names, target_name, task_type, meta
 #             + texts_train / texts_test  (NLP)
 #             + y_train / y_test / dates_train / dates_future  (timeseries)
 #
-#  RÈGLE D'OR : ne jamais renommer ces variables entre les blocs.
+#  REGLE D'OR : ne jamais renommer ces variables entre les blocs.
 #  Seuls les paramètres en MAJUSCULES sont à adapter — tout le reste est câblé.
 #
 #  NOTE BLOC 1 : le split train/test N'EST PAS effectué ici.
@@ -36,7 +36,7 @@ pipeline_contract:
     COLUMNS:          "list[str] | None — colonnes à lire (None = toutes)"
     TEXT_COL:         "str | None — colonne texte pour NLP"
     DATE_COL:         "str — colonne datetime pour timeseries"
-    FREQ:             "str — fréquence TS : 'D','W','M','H'…"
+    FREQ:             "str — fréquence TS : 'D','W','M','H'..."
     TEST_RATIO:       "float — ratio test pour split temporel timeseries (défaut : 0.2)"
     HORIZON:          "int — nombre de pas à prévoir (timeseries)"
     DB_URL:           "str — chaîne de connexion SQLAlchemy"
@@ -54,7 +54,7 @@ pipeline_contract:
     feature_names:    "list[str] — noms des colonnes features de X"
     target_name:      "str | None — nom de la colonne target"
     task_type:        "str — 'classification'|'regression'|'clustering'|'timeseries'|'nlp'|'anomaly'|'survival'"
-    meta:             "dict — métadonnées source (path, shape, encoding, ticker…)"
+    meta:             "dict — métadonnées source (path, shape, encoding, ticker...)"
 
     # ── Variables supplémentaires NLP ─────────────────────────────────
     texts_train:      "list[str] — corpus train NLP (= corpus entier si pas de split natif)"
@@ -90,6 +90,11 @@ pipeline_contract:
 #     durations    = durations    if task_type == "survival"    else None
 #     events       = events       if task_type == "survival"    else None
 #     df_survival  = df_survival  if task_type == "survival"    else None
+#
+#   MESSAGE DE SORTIE STANDARD (identique pour tous les snippets) :
+#     print(f"[OK] task_type='{task_type}' | features={len(feature_names)} | target='{target_name}'")
+#     print(f"     shape={df.shape}")
+#     print(df.head(3))
 # ══════════════════════════════════════════════════════════════════════════
 
 
@@ -123,7 +128,7 @@ flat_files:
           usecols=COLUMNS, low_memory=False,
           parse_dates=True, infer_datetime_format=True,
       )
-      print(f"Shape : {df.shape}")
+      print(f"Shape brut : {df.shape}")
       print(df.dtypes)
       print(df.isnull().sum())
 
@@ -152,7 +157,8 @@ flat_files:
       events       = None
       df_survival  = None
 
-      print(f"\n✅ task_type='{task_type}' | features={len(feature_names)} | target='{target_name}'")
+      print(f"[OK] task_type='{task_type}' | features={len(feature_names)} | target='{target_name}'")
+      print(f"     shape={df.shape}")
       print(df.head(3))
 
   - id: excel_local
@@ -185,7 +191,7 @@ flat_files:
       )
       df.columns = df.columns.str.strip().str.lower().str.replace(" ", "_")
       df = df.dropna(how="all").dropna(axis=1, how="all")
-      print(f"Shape : {df.shape}")
+      print(f"Shape brut : {df.shape}")
 
       if TARGET_COL and TARGET_COL in df.columns:
           X = df.drop(columns=[TARGET_COL])
@@ -210,7 +216,8 @@ flat_files:
       events       = None
       df_survival  = None
 
-      print(f"\n✅ task_type='{task_type}' | features={len(feature_names)} | target='{target_name}'")
+      print(f"[OK] task_type='{task_type}' | features={len(feature_names)} | target='{target_name}'")
+      print(f"     shape={df.shape}")
       print(df.head(3))
 
   - id: parquet_local
@@ -221,7 +228,7 @@ flat_files:
     description: "Format colonnaire compressé. Standard pour la data engineering et les gros volumes."
     use_cases: ["gros volumes (>1M lignes)", "données Spark/Databricks", "pipelines de production"]
     pros: ["très rapide en lecture", "compressé", "types stricts"]
-    cons: ["non lisible à l'œil nu", "nécessite pyarrow ou fastparquet"]
+    cons: ["non lisible à l'oeil nu", "nécessite pyarrow ou fastparquet"]
     code_template: |
       import pandas as pd
       import numpy as np
@@ -234,7 +241,7 @@ flat_files:
 
       # ── Chargement ────────────────────────────────────────────────────
       df = pd.read_parquet(FILE_PATH, columns=COLUMNS, engine=ENGINE)
-      print(f"Shape : {df.shape}")
+      print(f"Shape brut : {df.shape}")
       print(df.dtypes)
 
       if TARGET_COL and TARGET_COL in df.columns:
@@ -260,7 +267,8 @@ flat_files:
       events       = None
       df_survival  = None
 
-      print(f"\n✅ task_type='{task_type}' | features={len(feature_names)} | target='{target_name}'")
+      print(f"[OK] task_type='{task_type}' | features={len(feature_names)} | target='{target_name}'")
+      print(f"     shape={df.shape}")
       print(df.head(3))
 
   - id: json_local
@@ -300,7 +308,7 @@ flat_files:
           expanded.columns = [f"{col}.{c}" for c in expanded.columns]
           df = pd.concat([df.drop(columns=[col]), expanded], axis=1)
 
-      print(f"Shape : {df.shape}")
+      print(f"Shape brut : {df.shape}")
 
       if TARGET_COL and TARGET_COL in df.columns:
           X = df.drop(columns=[TARGET_COL] + ([TEXT_COL] if TEXT_COL and TEXT_COL in df.columns else []))
@@ -334,7 +342,8 @@ flat_files:
       events       = None
       df_survival  = None
 
-      print(f"\n✅ task_type='{task_type}' | features={len(feature_names)} | target='{target_name}'")
+      print(f"[OK] task_type='{task_type}' | features={len(feature_names)} | target='{target_name}'")
+      print(f"     shape={df.shape}")
       print(df.head(3))
 
 
@@ -372,7 +381,7 @@ databases:
       engine = create_engine(DB_URL, pool_pre_ping=True)
       with engine.connect() as conn:
           df = pd.read_sql(QUERY, conn, parse_dates=["created_at"])
-      print(f"Shape : {df.shape}")
+      print(f"Shape brut : {df.shape}")
 
       EXCLUDE = ["id", "created_at", "updated_at", TARGET_COL]
       X = df.drop(columns=[c for c in EXCLUDE if c in df.columns])
@@ -393,7 +402,8 @@ databases:
       events       = None
       df_survival  = None
 
-      print(f"\n✅ task_type='{task_type}' | features={len(feature_names)} | target='{target_name}'")
+      print(f"[OK] task_type='{task_type}' | features={len(feature_names)} | target='{target_name}'")
+      print(f"     shape={df.shape}")
       print(df.head(3))
 
   - id: mongodb
@@ -426,7 +436,7 @@ databases:
       cursor = db[COLLECTION].find(QUERY_FILTER, PROJECTION).limit(LIMIT)
       df = pd.json_normalize(list(cursor))
       client.close()
-      print(f"Shape : {df.shape}")
+      print(f"Shape brut : {df.shape}")
 
       if TARGET_COL and TARGET_COL in df.columns:
           X = df.drop(columns=[TARGET_COL])
@@ -451,7 +461,8 @@ databases:
       events       = None
       df_survival  = None
 
-      print(f"\n✅ task_type='{task_type}' | features={len(feature_names)} | target='{target_name}'")
+      print(f"[OK] task_type='{task_type}' | features={len(feature_names)} | target='{target_name}'")
+      print(f"     shape={df.shape}")
       print(df.head(3))
 
   - id: bigquery
@@ -485,7 +496,7 @@ databases:
           df = client.query(QUERY).to_dataframe(create_bqstorage_client=True)
       else:
           df = client.query(QUERY).to_dataframe()
-      print(f"Shape : {df.shape}")
+      print(f"Shape brut : {df.shape}")
 
       X = df.drop(columns=[TARGET_COL]) if TARGET_COL in df.columns else df.copy()
       y = df[TARGET_COL] if TARGET_COL in df.columns else None
@@ -505,7 +516,8 @@ databases:
       events       = None
       df_survival  = None
 
-      print(f"\n✅ task_type='{task_type}' | features={len(feature_names)} | target='{target_name}'")
+      print(f"[OK] task_type='{task_type}' | features={len(feature_names)} | target='{target_name}'")
+      print(f"     shape={df.shape}")
       print(df.head(3))
 
 
@@ -568,7 +580,7 @@ api_and_web:
 
       records = fetch_all_pages(ENDPOINT, {"limit": PAGE_SIZE, "format": "json"})
       df = pd.json_normalize(records)
-      print(f"Shape : {df.shape}")
+      print(f"Shape brut : {df.shape}")
 
       if TARGET_COL and TARGET_COL in df.columns:
           X = df.drop(columns=[TARGET_COL])
@@ -593,7 +605,8 @@ api_and_web:
       events       = None
       df_survival  = None
 
-      print(f"\n✅ task_type='{task_type}' | features={len(feature_names)} | target='{target_name}'")
+      print(f"[OK] task_type='{task_type}' | features={len(feature_names)} | target='{target_name}'")
+      print(f"     shape={df.shape}")
       print(df.head(3))
 
   - id: web_scraping
@@ -641,7 +654,7 @@ api_and_web:
 
       df.columns = df.columns.str.strip().str.lower().str.replace(" ", "_")
       df = df.drop_duplicates()
-      print(f"Shape : {df.shape}")
+      print(f"Shape brut : {df.shape}")
 
       if TARGET_COL and TARGET_COL in df.columns:
           X = df.drop(columns=[TARGET_COL])
@@ -667,7 +680,8 @@ api_and_web:
       events       = None
       df_survival  = None
 
-      print(f"\n✅ task_type='{task_type}' | features={len(feature_names)} | target='{target_name}'")
+      print(f"[OK] task_type='{task_type}' | features={len(feature_names)} | target='{target_name}'")
+      print(f"     shape={df.shape}")
       print(df.head(3))
 
 
@@ -754,8 +768,9 @@ scientific_and_benchmark:
       events       = None
       df_survival  = None
 
-      print(f"Shape : {df.shape}")
-      print(f"\n✅ task_type='{task_type}' | features={len(feature_names)} | target='{target_name}'")
+      print(f"Shape brut : {df.shape}")
+      print(f"[OK] task_type='{task_type}' | features={len(feature_names)} | target='{target_name}'")
+      print(f"     shape={df.shape}")
       print(df.head(3))
 
   - id: huggingface_datasets
@@ -784,7 +799,7 @@ scientific_and_benchmark:
       print(dataset)
 
       if STREAMING:
-          print("⚠ Mode streaming : conversion limitée aux 1000 premiers exemples")
+          print("Mode streaming : conversion limitée aux 1000 premiers exemples")
           df_train = pd.DataFrame(list(dataset["train"].take(1000)))
           df_test  = pd.DataFrame(list(dataset.get("test", dataset["train"]).take(200)))
       else:
@@ -820,7 +835,8 @@ scientific_and_benchmark:
       events       = None
       df_survival  = None
 
-      print(f"\n✅ task_type='{task_type}' | texts_train={len(texts_train)} | texts_test={len(texts_test)}")
+      print(f"[OK] task_type='{task_type}' | features={len(feature_names)} | target='{target_name}'")
+      print(f"     shape={df.shape} | texts_train={len(texts_train)} | texts_test={len(texts_test)}")
       print(df.head(3))
 
   - id: openml
@@ -879,7 +895,8 @@ scientific_and_benchmark:
       events       = None
       df_survival  = None
 
-      print(f"\n✅ task_type='{task_type}' | features={len(feature_names)} | target='{target_name}'")
+      print(f"[OK] task_type='{task_type}' | features={len(feature_names)} | target='{target_name}'")
+      print(f"     shape={df.shape}")
       print(df.head(3))
 
 
@@ -917,7 +934,7 @@ timeseries_sources:
       df = pd.read_csv(FILE_PATH, parse_dates=[DATE_COL])
       df = df.set_index(DATE_COL).sort_index()
       df = df.resample(FREQ).agg({TARGET_COL: AGG}).ffill()
-      print(f"Shape : {df.shape} | Plage : {df.index.min()} → {df.index.max()}")
+      print(f"Shape brut : {df.shape} | Plage : {df.index.min()} a {df.index.max()}")
 
       X = df.drop(columns=[TARGET_COL]) if df.shape[1] > 1 else pd.DataFrame(index=df.index)
       y = df[TARGET_COL]
@@ -925,6 +942,8 @@ timeseries_sources:
       target_name   = TARGET_COL
       task_type     = "timeseries"
 
+      # Split temporel : n_test derniers points réservés pour l'évaluation.
+      # Formule : n_test = floor(N * TEST_RATIO), le reste constitue l'entraînement.
       n_test       = int(len(df) * TEST_RATIO)
       y_train      = df[TARGET_COL].iloc[:-n_test]
       y_test       = df[TARGET_COL].iloc[-n_test:]
@@ -945,7 +964,8 @@ timeseries_sources:
       events      = None
       df_survival = None
 
-      print(f"\n✅ task_type='{task_type}' | n_train={len(y_train)} | n_test={len(y_test)} | horizon={HORIZON}")
+      print(f"[OK] task_type='{task_type}' | features={len(feature_names)} | target='{target_name}'")
+      print(f"     shape={df.shape} | n_train={len(y_train)} | n_test={len(y_test)} | horizon={HORIZON}")
       print(df.tail(5))
 
   - id: financial_data
@@ -957,6 +977,12 @@ timeseries_sources:
     use_cases: ["prévision de prix", "détection d'anomalies financières", "features finance"]
     pros: ["gratuit", "historique long", "données ajustées", "multi-actifs"]
     cons: ["qualité variable", "délai ~15min"]
+    # Indicateurs calculés :
+    #   Rendement simple   : r_t = (P_t - P_{t-1}) / P_{t-1}
+    #   Log-rendement      : ln(P_t / P_{t-1})  — additivité temporelle
+    #   Moyenne mobile     : MA_k(t) = (1/k) * sum_{i=0}^{k-1} P_{t-i}
+    #   Volatilité réalisée: sigma_k = std({ r_{t-k+1}, ..., r_t })
+    #   RSI (14 périodes)  : RSI = 100 - 100 / (1 + RS),  RS = mean_gain / mean_loss
     code_template: |
       import yfinance as yf
       import pandas as pd
@@ -980,6 +1006,7 @@ timeseries_sources:
           ticker = yf.Ticker(TICKER)
           df = ticker.history(start=START_DATE, end=END_DATE, interval=INTERVAL)
 
+      # Indicateurs techniques — voir formules dans le commentaire YAML ci-dessus
       df["returns"]     = df["Close"].pct_change() if "Close" in df.columns else df.iloc[:, 3].pct_change()
       df["log_returns"] = np.log(df["Close"] / df["Close"].shift(1)) if "Close" in df.columns else 0
       df["MA_20"]       = df["Close"].rolling(20).mean() if "Close" in df.columns else 0
@@ -998,6 +1025,8 @@ timeseries_sources:
       target_name   = TARGET_COL
       task_type     = "timeseries"
 
+      # Split temporel strict : les n_test derniers pas sont réservés au test.
+      # dates_future couvre les HORIZON pas suivant la fin du test (prévision hors-échantillon).
       n_test       = int(len(df) * TEST_RATIO)
       y_train      = y.iloc[:-n_test]
       y_test       = y.iloc[-n_test:]
@@ -1018,8 +1047,9 @@ timeseries_sources:
       events      = None
       df_survival = None
 
-      print(f"Shape : {df.shape}")
-      print(f"\n✅ task_type='{task_type}' | n_train={len(y_train)} | n_test={len(y_test)} | horizon={HORIZON}")
+      print(f"Shape brut : {df.shape}")
+      print(f"[OK] task_type='{task_type}' | features={len(feature_names)} | target='{target_name}'")
+      print(f"     shape={df.shape} | n_train={len(y_train)} | n_test={len(y_test)} | horizon={HORIZON}")
       print(df.tail(5))
 
 
@@ -1036,6 +1066,9 @@ images_and_media:
     use_cases: ["classification d'images", "détection d'anomalies visuelles"]
     pros: ["flexibilité totale", "augmentation facile"]
     cons: ["gros volumes lents sans optimisation"]
+    # Normalisation ImageNet :
+    #   x_norm = (x - mean) / std  avec mean=[0.485, 0.456, 0.406],
+    #                                    std =[0.229, 0.224, 0.225]  (canal RGB, valeurs [0,1])
     code_template: |
       import torch
       from torchvision import datasets, transforms
@@ -1048,7 +1081,7 @@ images_and_media:
       IMG_SIZE    = 224
       BATCH_SIZE  = 32
       NUM_WORKERS = 4
-      NORMALIZE   = True             # normalisation ImageNet
+      NORMALIZE   = True             # normalisation ImageNet (voir formule dans commentaire YAML)
       FLATTEN     = True             # aplatir vers X tabulaire
 
       # ── Chargement ────────────────────────────────────────────────────
@@ -1101,8 +1134,9 @@ images_and_media:
       events       = None
       df_survival  = None
 
-      print(f"X shape : {X.shape}")
-      print(f"\n✅ task_type='{task_type}' | classes={class_names} | target='{target_name}'")
+      print(f"[OK] task_type='{task_type}' | features={len(feature_names)} | target='{target_name}'")
+      print(f"     shape={X.shape}")
+      print(df.head(3))
 
 
 # ──────────────────────────────────────────────────────────────────────────
@@ -1178,8 +1212,9 @@ text_and_nlp_sources:
       events       = None
       df_survival  = None
 
-      print(f"Shape : {df.shape}")
-      print(f"\n✅ task_type='{task_type}' | texts_train={len(texts_train)} | target='{target_name}'")
+      print(f"Shape brut : {df.shape}")
+      print(f"[OK] task_type='{task_type}' | features={len(feature_names)} | target='{target_name}'")
+      print(f"     shape={df.shape} | texts_train={len(texts_train)}")
       print(df.head(3))
 
 
@@ -1254,8 +1289,9 @@ streaming_and_realtime:
       events       = None
       df_survival  = None
 
-      print(f"Shape : {df.shape}")
-      print(f"\n✅ task_type='{task_type}' | features={len(feature_names)} | records={len(records_collected)}")
+      print(f"Shape brut : {df.shape}")
+      print(f"[OK] task_type='{task_type}' | features={len(feature_names)} | target='{target_name}'")
+      print(f"     shape={df.shape} | records={len(records_collected)}")
       print(df.head(3))
 
 
@@ -1340,8 +1376,9 @@ synthetic_data:
       events       = None
       df_survival  = None
 
-      print(f"Shape : {df.shape}")
-      print(f"\n✅ task_type='{task_type}' | features={len(feature_names)} | target='target'")
+      print(f"Shape brut : {df.shape}")
+      print(f"[OK] task_type='{task_type}' | features={len(feature_names)} | target='{target_name}'")
+      print(f"     shape={df.shape}")
       print(df.head(3))
 
   - id: survival_dataset
@@ -1353,6 +1390,14 @@ synthetic_data:
     use_cases: ["churn prediction", "durée de vie produit", "études cliniques", "time-to-event"]
     pros: ["gère la censure", "lifelines natif", "interprétable"]
     cons: ["nécessite durée + événement", "hypothèses à vérifier"]
+    # Concepts fondamentaux de l'analyse de survie :
+    #   Fonction de survie  : S(t) = P(T > t)  — probabilité de survivre au-delà de t
+    #   Fonction de hasard  : h(t) = lim_{dt->0} P(t <= T < t+dt | T >= t) / dt
+    #   Censure à droite    : un individu quitte l'étude avant l'événement ;
+    #                         on observe sa durée min(T, C) et l'indicateur event=1_{T<=C}
+    #   Taux de censure     : proportion d'individus pour lesquels event=0
+    #   Estimateur Kaplan-Meier : estimateur non-paramétrique de S(t)
+    #   Modèle de Cox       : log h(t) = log h_0(t) + beta^T * x  (hasard proportionnel)
     code_template: |
       import pandas as pd
       import numpy as np
@@ -1373,8 +1418,8 @@ synthetic_data:
           loader = getattr(lds, LOADER_NAME)
           df = loader()
 
+      print(f"Shape brut : {df.shape}")
       print(df.head())
-      print(f"Shape : {df.shape}")
 
       durations   = df[DURATION_COL]
       events      = df[EVENT_COL].astype(int)
@@ -1400,7 +1445,8 @@ synthetic_data:
       dates_train  = None
       dates_future = None
 
-      print(f"\n✅ task_type='{task_type}' | censoring={meta['censoring_rate']} | features={len(feature_names)}")
+      print(f"[OK] task_type='{task_type}' | features={len(feature_names)} | target='{target_name}'")
+      print(f"     shape={df.shape} | censoring={meta['censoring_rate']}")
       print(df.head(3))
 
 
@@ -1429,6 +1475,13 @@ graph_sources:
     cons:
       - "non scalable > 10M arêtes (utiliser GraphX/Spark)"
       - "représentation en mémoire non optimisée"
+    # Métriques de graphe extraites comme features :
+    #   Degré d'un noeud v   : deg(v) = nombre d'arêtes incidentes
+    #   Centralité betweenness : C_B(v) = sum_{s != v != t} sigma(s,t|v) / sigma(s,t)
+    #                           où sigma(s,t) = nb de plus courts chemins s->t
+    #   Coefficient de clustering : C(v) = (nb triangles passant par v) / (deg(v)*(deg(v)-1)/2)
+    #   PageRank (alpha=0.85) : PR(v) = (1-alpha)/N + alpha * sum_{u->v} PR(u)/deg(u)
+    #                           — itération jusqu'à convergence (L1 < 1e-6)
     code_template: |
       import networkx as nx
       import pandas as pd
@@ -1471,6 +1524,7 @@ graph_sources:
       is_conn = nx.is_connected(G) if not DIRECTED else nx.is_weakly_connected(G)
       print(f"Connexe : {is_conn}")
 
+      # Features par noeud — voir formules dans le commentaire YAML ci-dessus
       nodes       = list(G.nodes())
       degree      = dict(G.degree())
       betweenness = nx.betweenness_centrality(G, normalized=True)
@@ -1520,7 +1574,8 @@ graph_sources:
       events       = None
       df_survival  = None
 
-      print(f"\n✅ task_type='{task_type}' | features={len(feature_names)} | nodes={G.number_of_nodes()}")
+      print(f"[OK] task_type='{task_type}' | features={len(feature_names)} | target='{target_name}'")
+      print(f"     shape={df.shape} | nodes={G.number_of_nodes()}")
       print(df.head(3))
 
   - id: pytorch_geometric
@@ -1530,7 +1585,7 @@ graph_sources:
     format: "PyG Dataset / Data object"
     description: >
       Chargement de datasets de graphes natifs PyG (Cora, CiteSeer, OGB,
-      PPI, TUDataset…) ou conversion d'un graphe NetworkX vers PyG Data.
+      PPI, TUDataset...) ou conversion d'un graphe NetworkX vers PyG Data.
     use_cases:
       - "classification de noeuds (Cora, CiteSeer, ogbn-arxiv)"
       - "classification de graphes (TUDataset — molécules)"
@@ -1567,7 +1622,7 @@ graph_sources:
           X_arr = data.x.numpy() if data.x is not None else np.zeros((data.num_nodes, 1))
           y_arr = data.y.numpy() if data.y is not None else None
       else:
-          print("⚠ Fournir NX_GRAPH dans la cellule précédente, puis relancer.")
+          print("Fournir NX_GRAPH dans la cellule précédente, puis relancer.")
           raise SystemExit
 
       n_feat = X_arr.shape[1]
@@ -1600,8 +1655,8 @@ graph_sources:
       events       = None
       df_survival  = None
 
-      print(f"Shape X : {X.shape}")
-      print(f"\n✅ task_type='{task_type}' | features={n_feat} | nodes={X_arr.shape[0]}")
+      print(f"[OK] task_type='{task_type}' | features={n_feat} | target='{target_name}'")
+      print(f"     shape={X.shape} | nodes={X_arr.shape[0]}")
       print(df.head(3))
 
 
@@ -1613,7 +1668,7 @@ ontology_knowledge:
     name: "Ontologie RDF / OWL / SPARQL"
     enabled: true
     category: "Graphe de Connaissances"
-    format: "RDF/XML · Turtle · N-Triples · JSON-LD"
+    format: "RDF/XML . Turtle . N-Triples . JSON-LD"
     description: >
       Chargement d'une ontologie ou d'un graphe de connaissances RDF/OWL.
       Requêtage SPARQL pour extraire des triplets (sujet, prédicat, objet).
@@ -1726,7 +1781,8 @@ ontology_knowledge:
       events       = None
       df_survival  = None
 
-      print(f"\n✅ task_type='{task_type}' | features={len(feature_names)} | entities={len(subjects)}")
+      print(f"[OK] task_type='{task_type}' | features={len(feature_names)} | target='{target_name}'")
+      print(f"     shape={df.shape} | entities={len(subjects)}")
 
   - id: wikidata_sparql
     name: "Wikidata (SPARQL Live)"
@@ -1790,7 +1846,7 @@ ontology_knowledge:
               time.sleep(5 * (attempt + 1))
 
       if r is None:
-          print("❌ Échec de la requête Wikidata")
+          print("Echec de la requête Wikidata après toutes les tentatives")
           raise SystemExit
 
       data    = r.json()
@@ -1806,7 +1862,7 @@ ontology_knowledge:
       if "item" in df.columns:
           df["wikidata_id"] = df["item"].str.extract(r"(Q\d+)")
 
-      print(f"Shape : {df.shape}")
+      print(f"Shape brut : {df.shape}")
 
       _exclude = ["item", "itemLabel", "capitalLabel", "wikidata_id"]
       if TARGET_COL and TARGET_COL in df.columns:
@@ -1832,7 +1888,8 @@ ontology_knowledge:
       events       = None
       df_survival  = None
 
-      print(f"\n✅ task_type='{task_type}' | features={len(feature_names)} | entities={len(df)}")
+      print(f"[OK] task_type='{task_type}' | features={len(feature_names)} | target='{target_name}'")
+      print(f"     shape={df.shape} | entities={len(df)}")
       print(df.head(3))
 
 
@@ -1928,7 +1985,8 @@ vector_databases:
       events       = None
       df_survival  = None
 
-      print(f"\n✅ task_type='{task_type}' | dim={dim} | n_vectors={len(embeddings)}")
+      print(f"[OK] task_type='{task_type}' | features={len(feature_names)} | target='{target_name}'")
+      print(f"     shape={df.shape} | dim={dim} | n_vectors={len(embeddings)}")
       print(df.head(3))
 
   - id: pinecone_vectordb
@@ -2005,7 +2063,8 @@ vector_databases:
       events       = None
       df_survival  = None
 
-      print(f"\n✅ task_type='{task_type}' | dim={dim} | n_vectors={len(vectors)}")
+      print(f"[OK] task_type='{task_type}' | features={len(feature_names)} | target='{target_name}'")
+      print(f"     shape={df.shape} | dim={dim} | n_vectors={len(vectors)}")
       print(df.head(3))
 
 
@@ -2029,12 +2088,18 @@ multi_table_db:
       - "AutoML sur données multi-tables"
     pros:
       - "zéro jointure manuelle"
-      - "features agrégées automatiques (max, min, mean, count, last…)"
+      - "features agrégées automatiques (max, min, mean, count, last...)"
       - "DFS discover des features cachées dans les relations"
     cons:
       - "explosion du nombre de features (feature selection requise ensuite)"
       - "lent sur grands volumes"
       - "featuretools requis"
+    # Deep Feature Synthesis (DFS) :
+    #   Pour chaque entité-cible e, DFS remonte les relations étrangères jusqu'à
+    #   une profondeur MAX_DEPTH et applique des primitives d'agrégation
+    #   (sum, count, mean, std, max, min, last, n_unique) sur les tables enfants.
+    #   Profondeur 1 : features directes de la table parente.
+    #   Profondeur 2 : features agrégées d'une relation enfant-petite-enfant.
     code_template: |
       import pandas as pd
       import numpy as np
@@ -2064,7 +2129,7 @@ multi_table_db:
                   dfs_dict[table] = pd.read_sql_table(table, conn)
                   print(f"  {table} : {dfs_dict[table].shape}")
               except Exception as e:
-                  print(f"  ⚠ {table} ignorée : {e}")
+                  print(f"  Table ignorée ({table}) : {e}")
 
       relationships = []
       for table in all_tables:
@@ -2078,7 +2143,7 @@ multi_table_db:
                           child_column_name=fk["constrained_columns"][0],
                       ))
                   print(f"  FK : {table}.{fk['constrained_columns'][0]} "
-                        f"→ {fk['referred_table']}.{fk['referred_columns'][0]}")
+                        f"-> {fk['referred_table']}.{fk['referred_columns'][0]}")
 
       es = ft.EntitySet(id="multi_table_db")
       for table, df_t in dfs_dict.items():
@@ -2095,7 +2160,7 @@ multi_table_db:
           try:
               es.add_relationship(rel)
           except Exception as e:
-              print(f"  ⚠ Relation ignorée : {e}")
+              print(f"  Relation ignorée : {e}")
 
       feature_matrix, feature_defs = ft.dfs(
           entityset=es,
@@ -2137,7 +2202,8 @@ multi_table_db:
       events       = None
       df_survival  = None
 
-      print(f"\n✅ task_type='{task_type}' | features={len(feature_names)}")
+      print(f"[OK] task_type='{task_type}' | features={len(feature_names)} | target='{target_name}'")
+      print(f"     shape={X.shape}")
       print(X.head(3))
 
 
@@ -2209,7 +2275,7 @@ cloud_platforms:
           with engine.connect() as conn:
               df = pd.read_sql(_query, conn)
 
-      print(f"Shape : {df.shape}")
+      print(f"Shape brut : {df.shape}")
 
       _id_cols = [c for c in ["id", "uuid", "created_at", "updated_at"] if c in df.columns]
       if TARGET_COL and TARGET_COL in df.columns:
@@ -2241,7 +2307,8 @@ cloud_platforms:
       events       = None
       df_survival  = None
 
-      print(f"\n✅ task_type='{task_type}' | features={len(feature_names)} | target='{target_name}'")
+      print(f"[OK] task_type='{task_type}' | features={len(feature_names)} | target='{target_name}'")
+      print(f"     shape={df.shape}")
       print(df.head(3))
 
   - id: aws_s3_athena
@@ -2310,7 +2377,7 @@ cloud_platforms:
                   break
               time.sleep(2)
           if state != "SUCCEEDED":
-              print(f"❌ Athena query {state}")
+              print(f"Athena query terminée avec statut : {state}")
               raise SystemExit
           s3_path = (status["QueryExecution"]["ResultConfiguration"]
                      ["OutputLocation"].replace("s3://", ""))
@@ -2319,7 +2386,7 @@ cloud_platforms:
           obj = s3.get_object(Bucket=bucket, Key=key)
           df  = pd.read_csv(io.BytesIO(obj["Body"].read()))
 
-      print(f"Shape : {df.shape}")
+      print(f"Shape brut : {df.shape}")
 
       if TARGET_COL and TARGET_COL in df.columns:
           X         = df.drop(columns=[TARGET_COL])
@@ -2344,7 +2411,8 @@ cloud_platforms:
       events       = None
       df_survival  = None
 
-      print(f"\n✅ task_type='{task_type}' | features={len(feature_names)} | target='{target_name}'")
+      print(f"[OK] task_type='{task_type}' | features={len(feature_names)} | target='{target_name}'")
+      print(f"     shape={df.shape}")
       print(df.head(3))
 
   - id: azure_blob_synapse
@@ -2395,7 +2463,7 @@ cloud_platforms:
           with pyodbc.connect(conn_str) as conn:
               df = pd.read_sql(SYNAPSE_QUERY, conn)
 
-      print(f"Shape : {df.shape}")
+      print(f"Shape brut : {df.shape}")
 
       if TARGET_COL and TARGET_COL in df.columns:
           X         = df.drop(columns=[TARGET_COL])
@@ -2420,7 +2488,8 @@ cloud_platforms:
       events       = None
       df_survival  = None
 
-      print(f"\n✅ task_type='{task_type}' | features={len(feature_names)} | target='{target_name}'")
+      print(f"[OK] task_type='{task_type}' | features={len(feature_names)} | target='{target_name}'")
+      print(f"     shape={df.shape}")
       print(df.head(3))
 
 
@@ -2453,13 +2522,13 @@ lakehouse:
       import json
 
       # ── Paramètres ────────────────────────────────────────────────────
-      DELTA_TABLE_PATH = "./data/delta_table"   # local ou s3://… ou abfss://…
+      DELTA_TABLE_PATH = "./data/delta_table"   # local ou s3://... ou abfss://...
       ENGINE           = "delta-rs (sans Spark)"   # ou "PySpark"
       TRAVEL           = "Dernière version"     # "Dernière version", "Version N", "Timestamp"
       DELTA_VERSION    = None    # entier si TRAVEL == "Version N"
       DELTA_TIMESTAMP  = None    # "2024-12-01T00:00:00" si TRAVEL == "Timestamp"
       TARGET_COL       = None    # None si non supervisé
-      STORAGE_OPTIONS  = {}      # ex: {"AWS_ACCESS_KEY_ID": "…"}
+      STORAGE_OPTIONS  = {}      # ex: {"AWS_ACCESS_KEY_ID": "..."}
 
       # ── Chargement ────────────────────────────────────────────────────
       if ENGINE == "delta-rs (sans Spark)":
@@ -2482,7 +2551,7 @@ lakehouse:
               _opts = {"timestampAsOf": DELTA_TIMESTAMP}
           sdf = spark.read.format("delta").options(**_opts).load(DELTA_TABLE_PATH)
           df  = sdf.toPandas()
-          print(f"Shape : {df.shape}")
+          print(f"Shape brut : {df.shape}")
 
       if TARGET_COL and TARGET_COL in df.columns:
           X         = df.drop(columns=[TARGET_COL])
@@ -2508,7 +2577,8 @@ lakehouse:
       events       = None
       df_survival  = None
 
-      print(f"\n✅ task_type='{task_type}' | features={len(feature_names)} | target='{target_name}'")
+      print(f"[OK] task_type='{task_type}' | features={len(feature_names)} | target='{target_name}'")
+      print(f"     shape={df.shape}")
       print(df.head(3))
 
   - id: apache_iceberg
@@ -2543,7 +2613,7 @@ lakehouse:
           scan = table.scan(snapshot_id=SNAPSHOT_ID)
 
       df = scan.to_arrow().to_pandas()
-      print(f"Shape : {df.shape}")
+      print(f"Shape brut : {df.shape}")
 
       if TARGET_COL and TARGET_COL in df.columns:
           X         = df.drop(columns=[TARGET_COL])
@@ -2569,7 +2639,8 @@ lakehouse:
       events       = None
       df_survival  = None
 
-      print(f"\n✅ task_type='{task_type}' | features={len(feature_names)} | target='{target_name}'")
+      print(f"[OK] task_type='{task_type}' | features={len(feature_names)} | target='{target_name}'")
+      print(f"     shape={df.shape}")
       print(df.head(3))
 
 
@@ -2581,7 +2652,7 @@ geospatial:
     name: "Données Géospatiales Vectorielles (GeoJSON / Shapefile / GeoParquet)"
     enabled: true
     category: "Géospatial"
-    format: "GeoJSON · Shapefile · GeoPackage · GeoParquet · WFS"
+    format: "GeoJSON . Shapefile . GeoPackage . GeoParquet . WFS"
     description: >
       Chargement de données géospatiales vectorielles via GeoPandas.
       Extraction de features géométriques pour pipeline ML tabulaire.
@@ -2595,8 +2666,14 @@ geospatial:
       - "tous formats OGR supportés"
       - "projections et reprojections simples"
     cons:
-      - "géométries complexes → features non triviales"
+      - "géométries complexes — features non triviales"
       - "CRS à harmoniser entre sources"
+    # Features géométriques calculées :
+    #   Aire           : surface du polygone en m² (après reprojection en EPSG:3857)
+    #   Périmètre      : longueur du contour en m
+    #   Compacité      : C = 4*pi*A / P²  (C=1 pour un cercle, <1 pour formes allongées)
+    #   Centroïde      : (lon, lat) du barycentre géométrique
+    #   Distance ref.  : distance euclidienne entre centroïde et un point de référence
     code_template: |
       import geopandas as gpd
       import pandas as pd
@@ -2619,11 +2696,12 @@ geospatial:
       else:
           gdf = gpd.read_file(GEO_FILE, **kwargs)
 
-      print(f"Shape : {gdf.shape} | CRS : {gdf.crs}")
+      print(f"Shape brut : {gdf.shape} | CRS : {gdf.crs}")
 
       if gdf.crs and str(gdf.crs) != CRS_TARGET:
           gdf = gdf.to_crs(CRS_TARGET)
 
+      # Features géométriques — voir formules dans le commentaire YAML ci-dessus
       gdf_proj = gdf.to_crs("EPSG:3857")
       gdf["area_m2"]      = gdf_proj.geometry.area
       gdf["perimeter_m"]  = gdf_proj.geometry.length
@@ -2674,14 +2752,15 @@ geospatial:
       events       = None
       df_survival  = None
 
-      print(f"\n✅ task_type='{task_type}' | geo_features={len(GEO_FEAT)} | target='{target_name}'")
+      print(f"[OK] task_type='{task_type}' | features={len(GEO_FEAT)} | target='{target_name}'")
+      print(f"     shape={df.shape}")
       print(df[GEO_FEAT + ([TARGET_COL] if TARGET_COL else [])].head(3))
 
   - id: geospatial_raster
     name: "Données Géospatiales Raster (GeoTIFF / NetCDF / Zarr)"
     enabled: true
     category: "Géospatial"
-    format: "GeoTIFF · NetCDF · Zarr · HDF5"
+    format: "GeoTIFF . NetCDF . Zarr . HDF5"
     description: >
       Chargement de données raster (images satellite, MNT, météo, données
       climatiques) via rasterio / xarray.
@@ -2690,13 +2769,16 @@ geospatial:
       - "prévision météo (ERA5, CMIP6)"
       - "détection de changement (avant/après)"
       - "NDVI, indices spectraux"
+    # NDVI (Normalized Difference Vegetation Index) :
+    #   NDVI = (NIR - Red) / (NIR + Red)   in [-1, 1]
+    #   Vegetation dense : NDVI > 0.5 ; sol nu : ~0 ; eau : < 0
     code_template: |
       import numpy as np
       import pandas as pd
 
       # ── Paramètres ────────────────────────────────────────────────────
       RASTER_FILE   = "data/satellite.tif"   # .tif, .nc, .zarr, .h5
-      BAND_NAMES    = ["red", "green", "blue", "nir"]   # None = auto (band_1, band_2…)
+      BAND_NAMES    = ["red", "green", "blue", "nir"]   # None = auto (band_1, band_2...)
       VARIABLE      = None       # variable NetCDF/Zarr — None = première variable
       COMPUTE_NDVI  = True       # calculer NDVI si bandes red et nir disponibles
 
@@ -2713,10 +2795,11 @@ geospatial:
           X_arr    = data.reshape(n_bands, -1).T
           df       = pd.DataFrame(X_arr, columns=_names)
 
+          # NDVI — voir formule dans le commentaire YAML ci-dessus
           if COMPUTE_NDVI and "red" in df.columns and "nir" in df.columns:
               df["ndvi"] = ((df["nir"] - df["red"]) /
                             (df["nir"] + df["red"] + 1e-8))
-              print("✅ NDVI calculé")
+              print("NDVI calculé")
       else:
           import xarray as xr
           ds  = (xr.open_zarr(RASTER_FILE) if RASTER_FILE.endswith(".zarr")
@@ -2747,8 +2830,9 @@ geospatial:
       events       = None
       df_survival  = None
 
-      print(f"Shape : {df.shape}")
-      print(f"\n✅ task_type='{task_type}' | features={len(feature_names)}")
+      print(f"Shape brut : {df.shape}")
+      print(f"[OK] task_type='{task_type}' | features={len(feature_names)} | target='{target_name}'")
+      print(f"     shape={df.shape}")
       print(df.head(3))
 
 
@@ -2757,10 +2841,10 @@ audio:
 # ──────────────────────────────────────────────────────────────────────────
 
   - id: audio_features
-    name: "Audio (WAV / MP3 / FLAC) → Features MFCC / Spectrogramme"
+    name: "Audio (WAV / MP3 / FLAC) -> Features MFCC / Spectrogramme"
     enabled: true
     category: "Audio"
-    format: "WAV · MP3 · FLAC · OGG"
+    format: "WAV . MP3 . FLAC . OGG"
     description: >
       Extraction de features audio (MFCC, chroma, spectral centroid,
       mel-spectrogramme, ZCR, RMS) depuis des fichiers audio ou un dossier.
@@ -2769,6 +2853,15 @@ audio:
       - "détection d'anomalies sonores (maintenance)"
       - "émotion vocale, qualité audio"
       - "UrbanSound8K, GTZAN, ESC-50"
+    # Rappels signal audio :
+    #   MFCC (Mel-Frequency Cepstral Coefficients) :
+    #     1. STFT sur fenêtres de N_FFT échantillons (pas de HOP_LENGTH)
+    #     2. Application d'un banc de filtres mel (échelle perceptive)
+    #     3. Log puis DCT -> N_MFCC coefficients
+    #   Chroma : énergie sur les 12 classes de hauteur musicale (demi-tons)
+    #   Centroïde spectral : barycentre fréquentiel du spectre de puissance
+    #   ZCR (Zero-Crossing Rate) : taux de passages par zéro — proxy pour la brillance
+    #   RMS : sqrt(mean(x²)) — énergie globale du signal
     code_template: |
       import librosa
       import numpy as np
@@ -2785,7 +2878,7 @@ audio:
       HOP_LENGTH = 512
       DURATION   = None    # float en secondes ou None = tout
 
-      # ── Extraction de features ────────────────────────────────────────
+      # ── Extraction de features — voir formules dans commentaire YAML ──
       def extract_features(filepath):
           y_audio, _sr = librosa.load(filepath, sr=SR, duration=DURATION, mono=True)
           mfcc      = librosa.feature.mfcc(y=y_audio, sr=SR, n_mfcc=N_MFCC,
@@ -2830,10 +2923,10 @@ audio:
                       row["filename"] = fname
                       records.append(row)
                   except Exception as e:
-                      print(f"⚠ {fname} : {e}")
+                      print(f"Fichier ignoré ({fname}) : {e}")
 
       df = pd.DataFrame(records)
-      print(f"Shape : {df.shape} | Classes : {df['label'].unique() if 'label' in df else 'N/A'}")
+      print(f"Shape brut : {df.shape} | Classes : {df['label'].unique() if 'label' in df else 'N/A'}")
 
       _excl         = ["label", "filename"]
       X             = df.drop(columns=[c for c in _excl if c in df.columns])
@@ -2853,7 +2946,8 @@ audio:
       events       = None
       df_survival  = None
 
-      print(f"\n✅ task_type='{task_type}' | features={len(feature_names)} | files={len(records)}")
+      print(f"[OK] task_type='{task_type}' | features={len(feature_names)} | target='{target_name}'")
+      print(f"     shape={df.shape} | files={len(records)}")
       print(df.head(3))
 
 
@@ -2874,6 +2968,15 @@ federated_and_privacy:
       - "données sensibles non centralisables (médical, banque)"
       - "simulation de scénarios fédérés"
       - "recherche privacy-preserving ML"
+    # Algorithme FedAvg (McMahan et al., 2017) :
+    #   Pour chaque round t :
+    #     1. Chaque client k calcule w_k^{t+1} en entraînant sur ses données locales
+    #     2. Agrégation pondérée :
+    #        w^{t+1} = sum_k (n_k / N) * w_k^{t+1}
+    #        où n_k = taille du dataset du client k, N = sum(n_k)
+    #   Partitionnement Dirichlet(alpha) :
+    #     proportions_k ~ Dir(alpha * 1_C)
+    #     alpha faible (<0.5) = forte hétérogénéité ; alpha élevé = IID
     code_template: |
       import numpy as np
       import pandas as pd
@@ -2899,6 +3002,7 @@ federated_and_privacy:
           n_samples=N_SAMPLES, n_features=N_FEATURES,
           n_informative=N_FEATURES // 2, random_state=SEED)
 
+      # Partitionnement non-IID par Dirichlet — voir formule dans commentaire YAML
       n_classes   = len(np.unique(y_all))
       client_data = [[] for _ in range(NUM_CLIENTS)]
       for c in range(n_classes):
@@ -2922,7 +3026,7 @@ federated_and_privacy:
                           "y_train": y_tr, "y_test": y_te})
           print(f"Client {k} : train={len(X_tr)}, classes={np.bincount(y_tr)}")
 
-      # ── FedAvg ────────────────────────────────────────────────────────
+      # ── FedAvg — agrégation pondérée par taille de dataset ───────────
       global_coef      = None
       global_intercept = None
 
@@ -2974,7 +3078,8 @@ federated_and_privacy:
       events       = None
       df_survival  = None
 
-      print(f"\n✅ task_type='{task_type}' | features={len(feature_names)} | client_id={CLIENT_ID}")
+      print(f"[OK] task_type='{task_type}' | features={len(feature_names)} | target='{target_name}'")
+      print(f"     shape={df.shape} | client_id={CLIENT_ID}")
       print(df.head(3))
 
 
@@ -2991,6 +3096,18 @@ synthetic_advanced:
       Génère des graphes synthétiques avec structure communautaire (SBM),
       scale-free (Barabási-Albert), small-world (Watts-Strogatz) ou
       aléatoire (Erdős-Rényi).
+    # Modèles de génération de graphes :
+    #   SBM (Stochastic Block Model) :
+    #     P(arête u-v) = p_intra si même bloc, p_inter sinon
+    #     Permet de contrôler la force des communautés.
+    #   Barabási-Albert (attachement préférentiel) :
+    #     Chaque nouveau noeud crée M arêtes vers des noeuds existants
+    #     avec probabilité proportionnelle à leur degré (P(i) ∝ deg(i)).
+    #     Produit une distribution de degrés en loi de puissance P(k) ~ k^{-3}.
+    #   Watts-Strogatz (small-world) :
+    #     Anneau régulier k-voisins, puis rewiring aléatoire de chaque arête
+    #     avec probabilité p. Faible longueur de chemin + fort clustering.
+    #   Erdős-Rényi G(n, p) : chaque arête existe avec probabilité p, indépendamment.
     code_template: |
       import networkx as nx
       import numpy as np
@@ -3003,7 +3120,7 @@ synthetic_advanced:
       N_COMM  = 4      # SBM : nombre de communautés
       P_INTRA = 0.3    # SBM : probabilité intra-communauté
       P_INTER = 0.01   # SBM : probabilité inter-communauté
-      M_BA    = 3      # BA  : nombre d'arêtes par nouveau nœud
+      M_BA    = 3      # BA  : nombre d'arêtes par nouveau noeud
 
       # ── Génération ────────────────────────────────────────────────────
       if "SBM" in MODEL:
@@ -3074,26 +3191,51 @@ synthetic_advanced:
       events       = None
       df_survival  = None
 
-      print(f"\n✅ task_type='{task_type}' | features={len(feature_names)} | nodes={G.number_of_nodes()}")
+      print(f"[OK] task_type='{task_type}' | features={len(feature_names)} | target='{target_name}'")
+      print(f"     shape={df.shape} | nodes={G.number_of_nodes()}")
       print(df.head(3))
 
   - id: synthetic_time_series_advanced
-    name: "Séries Temporelles Synthétiques (ARIMA / GBM / Navier-Stokes)"
+    name: "Séries Temporelles Synthétiques (ARIMA / GBM / Ornstein-Uhlenbeck)"
     enabled: true
     category: "Synthétique — Timeseries"
     format: "numpy / pandas"
     description: >
       Génère des séries temporelles synthétiques réalistes avec différents
       processus stochastiques : ARIMA, GBM, Ornstein-Uhlenbeck, sinusoïdes + bruit.
+    # Processus stochastiques implémentés :
+    #
+    #   GBM (Mouvement Brownien Géométrique) — modèle de Black-Scholes :
+    #     dS = mu*S*dt + sigma*S*dW   avec W = mouvement brownien standard
+    #     Solution discrète : S_t = S_{t-1} * exp((mu - sigma²/2)*dt + sigma*sqrt(dt)*Z_t)
+    #     où Z_t ~ N(0,1) i.i.d. Utilisé pour les prix d'actifs financiers.
+    #
+    #   ARMA(p,q) — AutoRegressive Moving Average :
+    #     X_t = sum_{i=1}^{p} phi_i * X_{t-i} + epsilon_t + sum_{j=1}^{q} theta_j * epsilon_{t-j}
+    #     epsilon_t ~ N(0, sigma²). ARIMA(p,d,q) ajoute d différenciations pour la stationnarité.
+    #
+    #   Ornstein-Uhlenbeck (retour à la moyenne) :
+    #     dX = theta*(mu - X)*dt + sigma*dW
+    #     Discrétisation d'Euler : X_t = X_{t-1} + theta*(mu - X_{t-1}) + sigma*Z_t
+    #     theta = vitesse de retour ; mu = niveau d'équilibre long terme.
+    #     Utilisé pour les taux d'intérêt, les spreads de crédit.
+    #
+    #   Regime-Switching : chaîne de Markov à 2 états avec probabilité de transition p=0.02.
+    #
+    #   Saisonnier + bruit : superposition de sinusoïdes (période annuelle et hebdomadaire)
+    #                        et d'un bruit gaussien.
     code_template: |
       import numpy as np
       import pandas as pd
 
       # ── Paramètres ────────────────────────────────────────────────────
+      # Choisir parmi :
+      #   "GBM (Brownien géométrique)"
+      #   "ARIMA"
+      #   "OU (Ornstein-Uhlenbeck)"
+      #   "Régimes (Regime-Switch)"
+      #   "Saisonnier + bruit"
       MODEL      = "GBM (Brownien géométrique)"
-                   # "GBM (Brownien géométrique)", "ARIMA",
-                   # "OU (Ornstein-Uhlenbeck)", "Régimes (Regime-Switch)",
-                   # "Saisonnier + bruit"
       N_POINTS   = 1000
       FREQ       = "D"     # "D", "W", "ME", "h"
       TEST_RATIO = 0.2
@@ -3101,15 +3243,16 @@ synthetic_advanced:
       SEED       = 42
 
       # Paramètres GBM
-      MU    = 0.0005
-      SIGMA = 0.02
-      S0    = 100.0
+      MU    = 0.0005   # drift journalier
+      SIGMA = 0.02     # volatilité journalière
+      S0    = 100.0    # valeur initiale
 
       np.random.seed(SEED)
       dates = pd.date_range("2020-01-01", periods=N_POINTS, freq=FREQ)
 
-      # ── Génération ────────────────────────────────────────────────────
+      # ── Génération — voir formules dans commentaire YAML ──────────────
       if "GBM" in MODEL:
+          # S_t = S_{t-1} * exp((mu - sigma²/2)*dt + sigma*sqrt(dt)*Z_t)
           dt    = 1.0
           log_r  = (MU - 0.5 * SIGMA**2) * dt + SIGMA * np.sqrt(dt) * np.random.randn(N_POINTS)
           values = S0 * np.exp(np.cumsum(log_r))
@@ -3121,6 +3264,7 @@ synthetic_advanced:
           values = ArmaProcess(ar, ma).generate_sample(nsample=N_POINTS, scale=1.0) + 100
 
       elif "OU" in MODEL:
+          # X_t = X_{t-1} + theta*(mu - X_{t-1}) + sigma*Z_t
           theta, mu_ou, sigma_ou = 0.1, 50.0, 2.0
           values = np.zeros(N_POINTS)
           values[0] = mu_ou
@@ -3146,6 +3290,7 @@ synthetic_advanced:
 
       series = pd.Series(values, index=dates, name="value")
 
+      # Split temporel strict
       n_test       = int(N_POINTS * TEST_RATIO)
       y_train      = series.iloc[:-n_test]
       y_test       = series.iloc[-n_test:]
@@ -3174,8 +3319,9 @@ synthetic_advanced:
       events      = None
       df_survival = None
 
-      print(f"Série générée : {N_POINTS} points | Plage : {dates[0].date()} → {dates[-1].date()}")
-      print(f"\n✅ task_type='{task_type}' | n_train={len(y_train)} | n_test={len(y_test)} | horizon={HORIZON}")
+      print(f"Série générée : {N_POINTS} points | Plage : {dates[0].date()} a {dates[-1].date()}")
+      print(f"[OK] task_type='{task_type}' | features={len(feature_names)} | target='{target_name}'")
+      print(f"     shape={df.shape} | n_train={len(y_train)} | n_test={len(y_test)} | horizon={HORIZON}")
       print(series.tail(5).to_frame())
 
 
@@ -3184,12 +3330,12 @@ free_source:
 # ──────────────────────────────────────────────────────────────────────────
 
   - id: free_source
-    name: "Nœud Source Libre"
+    name: "Noeud Source Libre"
     enabled: true
     category: "Générique"
     format: "any"
     description: >
-      Nœud d'échappement pour toute source de données hors catalogue.
+      Noeud d'échappement pour toute source de données hors catalogue.
       OBLIGATION : produire toutes les variables du contrat I/O Bloc 1.
       Toutes les variables non applicables DOIVENT être initialisées explicitement.
     use_cases:
@@ -3211,14 +3357,12 @@ free_source:
       N_FEATS = 5
 
       # ════════════════════════════════════════════════════════════════
-      # ↓↓↓  REMPLACEZ CE BLOC PAR VOTRE LOGIQUE DE CHARGEMENT  ↓↓↓
+      # REMPLACEZ CE BLOC PAR VOTRE LOGIQUE DE CHARGEMENT
       # ════════════════════════════════════════════════════════════════
       df = pd.DataFrame({
           **{f"feature_{i}": np.random.randn(N_ROWS) for i in range(N_FEATS)},
           "target": np.random.randint(0, 2, N_ROWS),
       })
-      # ════════════════════════════════════════════════════════════════
-      # ↑↑↑  FIN DU BLOC À REMPLACER                            ↑↑↑
       # ════════════════════════════════════════════════════════════════
 
       if TARGET_COL and TARGET_COL in df.columns:
@@ -3242,6 +3386,7 @@ free_source:
       events       = None
       df_survival  = None
 
-      print(f"Shape : {df.shape}")
-      print(f"\n✅ task_type='{task_type}' | features={len(feature_names)} | target='{target_name}'")
+      print(f"Shape brut : {df.shape}")
+      print(f"[OK] task_type='{task_type}' | features={len(feature_names)} | target='{target_name}'")
+      print(f"     shape={df.shape}")
       print(df.head(3))
