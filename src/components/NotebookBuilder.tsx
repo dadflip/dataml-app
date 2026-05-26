@@ -33,17 +33,174 @@ import {
   AlertTriangle,
   CheckCircle2,
   ChevronDown,
+  Code2,
   Download,
   FileCode,
   GripVertical,
+  Image,
   Loader2,
   Notebook,
   Play,
   PlayCircle,
   Sparkles,
   Square,
+  Terminal,
   Trash2,
 } from "lucide-react";
+
+// ─── CellOutput ───────────────────────────────────────────────────────────────
+
+function Badge({
+  tone,
+  children,
+}: {
+  tone: "success" | "danger" | "muted";
+  children: React.ReactNode;
+}) {
+  const cls =
+    tone === "success"
+      ? "bg-[color:var(--color-success)]/15 text-[color:var(--color-success)]"
+      : tone === "danger"
+        ? "bg-destructive/15 text-destructive"
+        : "bg-muted text-muted-foreground";
+  return (
+    <span
+      className={`rounded-full px-2 py-0.5 font-mono text-[9px] font-medium uppercase tracking-wider ${cls}`}
+    >
+      {children}
+    </span>
+  );
+}
+
+function OutputBlock({
+  icon,
+  kind,
+  badge,
+  children,
+}: {
+  icon: React.ReactNode;
+  kind: string;
+  badge: React.ReactNode;
+  children: React.ReactNode;
+}) {
+  return (
+    <div className="overflow-hidden rounded-xl border border-border bg-card/40">
+      <div className="flex items-center gap-1.5 border-b border-border bg-card/60 px-3 py-1.5">
+        <span className="text-muted-foreground">{icon}</span>
+        <span className="font-mono text-[9px] uppercase tracking-wider text-muted-foreground">
+          {kind}
+        </span>
+        <span className="ml-auto">{badge}</span>
+      </div>
+      <div className="p-3">{children}</div>
+    </div>
+  );
+}
+
+function DisplayBlock({ mime, data }: { mime: string; data: string }) {
+  if (mime.startsWith("image/")) {
+    return (
+      <OutputBlock
+        icon={<Image className="h-3 w-3" />}
+        kind="image"
+        badge={<Badge tone="success">ok</Badge>}
+      >
+        <img
+          src={`data:${mime};base64,${data}`}
+          alt="output"
+          className="max-w-full rounded-lg border border-border"
+        />
+      </OutputBlock>
+    );
+  }
+
+  if (mime === "text/html") {
+    return (
+      <OutputBlock
+        icon={<Code2 className="h-3 w-3" />}
+        kind="text/html"
+        badge={<Badge tone="success">ok</Badge>}
+      >
+        {/* contenu généré par le kernel local de l'utilisateur */}
+        <div
+          className="overflow-auto text-xs"
+          dangerouslySetInnerHTML={{ __html: data }}
+        />
+      </OutputBlock>
+    );
+  }
+
+  return (
+    <OutputBlock
+      icon={<Code2 className="h-3 w-3" />}
+      kind={mime === "text/plain" ? "text/plain" : mime}
+      badge={<Badge tone="success">ok</Badge>}
+    >
+      <pre className="max-h-32 overflow-auto whitespace-pre-wrap font-mono text-[11px] leading-relaxed text-foreground/80">
+        {mime === "text/plain" ? data : `[${mime}] ${data.slice(0, 200)}`}
+      </pre>
+    </OutputBlock>
+  );
+}
+
+function CellOutput({ output }: { output: ExecResult }) {
+  const hasContent =
+    output.stdout || output.stderr || output.displays.length > 0;
+
+  if (output.status === "running") {
+    return (
+      <OutputBlock
+        icon={<Loader2 className="h-3 w-3 animate-spin" />}
+        kind="exécution en cours"
+        badge={<Badge tone="muted">running</Badge>}
+      >
+        <p className="font-mono text-[11px] text-muted-foreground">
+          Exécution de la cellule…
+        </p>
+      </OutputBlock>
+    );
+  }
+
+  if (!hasContent) return null;
+
+  return (
+    <div className="space-y-2">
+      {output.stdout && (
+        <OutputBlock
+          icon={<Terminal className="h-3 w-3" />}
+          kind="stdout"
+          badge={
+            <Badge tone={output.status === "ok" ? "success" : "muted"}>
+              ok
+            </Badge>
+          }
+        >
+          <pre className="max-h-48 overflow-auto whitespace-pre-wrap font-mono text-[11px] leading-relaxed text-foreground/90">
+            {output.stdout}
+          </pre>
+        </OutputBlock>
+      )}
+
+      {output.stderr && (
+        <OutputBlock
+          icon={<AlertTriangle className="h-3 w-3 text-destructive" />}
+          kind="stderr"
+          badge={<Badge tone="danger">error</Badge>}
+        >
+          <pre className="max-h-32 overflow-auto whitespace-pre-wrap font-mono text-[11px] leading-relaxed text-destructive">
+            {output.stderr}
+          </pre>
+        </OutputBlock>
+      )}
+
+      {output.displays.map((d, i) => (
+        <DisplayBlock key={i} mime={d.mime} data={d.data} />
+      ))}
+    </div>
+  );
+}
+
+// ─── NotebookBuilder ──────────────────────────────────────────────────────────
 
 interface Props {
   cells: NotebookCell[];
@@ -71,12 +228,14 @@ export function NotebookBuilder({ cells, setCells, catalogs }: Props) {
   };
 
   const remove = (uid: string) => setCells(cells.filter((c) => c.uid !== uid));
+
   const updateOverride = (uid: string, name: string, value: string) =>
     setCells(
       cells.map((c) =>
         c.uid === uid ? { ...c, overrides: { ...c.overrides, [name]: value } } : c,
       ),
     );
+
   const resetOverride = (uid: string, name: string) =>
     setCells(
       cells.map((c) => {
@@ -86,6 +245,7 @@ export function NotebookBuilder({ cells, setCells, catalogs }: Props) {
         return { ...c, overrides: next };
       }),
     );
+
   const updateCode = (uid: string, code: string) =>
     setCells(
       cells.map((c) => (c.uid === uid ? { ...c, code, params: extractParams(code) } : c)),
@@ -258,6 +418,8 @@ export function NotebookBuilder({ cells, setCells, catalogs }: Props) {
   );
 }
 
+// ─── SortableCell ─────────────────────────────────────────────────────────────
+
 function SortableCell({
   cell,
   index,
@@ -299,6 +461,29 @@ function SortableCell({
   const [editing, setEditing] = useState(false);
   const finalCode = applyParamOverrides(cell.code, cell.overrides);
 
+  // Badge de statut dans la row (compact)
+  const statusBadge = output && (
+    <span
+      className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 font-mono text-[10px] ${
+        output.status === "ok"
+          ? "bg-[color:var(--color-success)]/15 text-[color:var(--color-success)]"
+          : output.status === "error"
+            ? "bg-destructive/15 text-destructive"
+            : "bg-muted text-muted-foreground"
+      }`}
+      title={output.status}
+    >
+      {output.status === "running" ? (
+        <Loader2 className="h-3 w-3 animate-spin" />
+      ) : output.status === "ok" ? (
+        <CheckCircle2 className="h-3 w-3" />
+      ) : (
+        <AlertTriangle className="h-3 w-3" />
+      )}
+      {output.status}
+    </span>
+  );
+
   return (
     <li
       ref={setNodeRef}
@@ -309,6 +494,7 @@ function SortableCell({
           : "border-destructive/50 bg-destructive/5"
       }`}
     >
+      {/* ── Row ── */}
       <div className="flex items-center gap-2 px-3 py-2.5">
         <button
           {...attributes}
@@ -318,12 +504,15 @@ function SortableCell({
         >
           <GripVertical className="h-4 w-4" />
         </button>
+
         <span className="w-7 shrink-0 text-center font-mono text-[10px] text-muted-foreground">
           {String(index + 1).padStart(2, "0")}
         </span>
+
         <span className="shrink-0 rounded-full border border-border bg-card px-2 py-0.5 font-mono text-[10px] text-muted-foreground">
           B{cell.bloc}
         </span>
+
         <button
           onClick={onToggle}
           className="flex flex-1 items-center gap-2 truncate text-left text-sm font-medium hover:text-foreground"
@@ -335,30 +524,13 @@ function SortableCell({
             }`}
           />
         </button>
+
         <span className="hidden font-mono text-[10px] text-muted-foreground md:inline">
           {cell.section}
         </span>
-        {output && (
-          <span
-            className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 font-mono text-[10px] ${
-              output.status === "ok"
-                ? "bg-[color:var(--color-success)]/15 text-[color:var(--color-success)]"
-                : output.status === "error"
-                  ? "bg-destructive/15 text-destructive"
-                  : "bg-muted text-muted-foreground"
-            }`}
-            title={output.status}
-          >
-            {output.status === "running" ? (
-              <Loader2 className="h-3 w-3 animate-spin" />
-            ) : output.status === "ok" ? (
-              <CheckCircle2 className="h-3 w-3" />
-            ) : (
-              <AlertTriangle className="h-3 w-3" />
-            )}
-            {output.status}
-          </span>
-        )}
+
+        {statusBadge}
+
         {!validation.ok && (
           <span
             className="inline-flex items-center gap-1 rounded-full bg-destructive/15 px-2 py-0.5 font-mono text-[10px] text-destructive"
@@ -372,6 +544,7 @@ function SortableCell({
             {validation.outOfOrder ? "ordre" : validation.missing.length}
           </span>
         )}
+
         <button
           onClick={onRun}
           disabled={!canRun || isRunning}
@@ -385,6 +558,7 @@ function SortableCell({
             <Play className="h-3.5 w-3.5" />
           )}
         </button>
+
         <button
           onClick={onRemove}
           className="rounded-md p-1 text-muted-foreground hover:bg-destructive/15 hover:text-destructive"
@@ -394,8 +568,11 @@ function SortableCell({
         </button>
       </div>
 
+      {/* ── Panel ── */}
       {isOpen && (
         <div className="space-y-4 border-t border-border px-4 py-4">
+
+          {/* Erreur I/O */}
           {!validation.ok && (
             <div className="flex items-start gap-2 rounded-xl border border-destructive/40 bg-destructive/10 p-2.5 text-xs">
               <AlertTriangle className="mt-0.5 h-3.5 w-3.5 shrink-0 text-destructive" />
@@ -415,6 +592,7 @@ function SortableCell({
             </div>
           )}
 
+          {/* Paramètres */}
           {cell.params.length > 0 && (
             <div>
               <h4 className="mb-2 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
@@ -434,6 +612,7 @@ function SortableCell({
             </div>
           )}
 
+          {/* Variables I/O */}
           <div className="grid gap-3 text-xs sm:grid-cols-2">
             <VarGroup
               title="Requiert"
@@ -444,6 +623,7 @@ function SortableCell({
             <VarGroup title="Produit" vars={cell.produced} tone="primary" />
           </div>
 
+          {/* Code */}
           <div>
             <div className="mb-2 flex items-center justify-between">
               <h4 className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
@@ -471,66 +651,23 @@ function SortableCell({
             )}
           </div>
 
-          {output && (output.stdout || output.stderr || output.displays.length > 0) && (
+          {/* Sortie */}
+          {output && (
             <div>
               <h4 className="mb-2 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
                 Sortie
               </h4>
-              <div className="space-y-2 rounded-xl border border-border bg-[oklch(0.1_0.004_260)] p-3">
-                {output.stdout && (
-                  <pre className="overflow-auto whitespace-pre-wrap font-mono text-[11px] text-foreground/90">
-                    {output.stdout}
-                  </pre>
-                )}
-                {output.stderr && (
-                  <pre className="overflow-auto whitespace-pre-wrap font-mono text-[11px] text-destructive">
-                    {output.stderr}
-                  </pre>
-                )}
-                {output.displays.map((d, i) => (
-                  <DisplayOutput key={i} mime={d.mime} data={d.data} />
-                ))}
-              </div>
+              <CellOutput output={output} />
             </div>
           )}
+
         </div>
       )}
     </li>
   );
 }
 
-function DisplayOutput({ mime, data }: { mime: string; data: string }) {
-  if (mime.startsWith("image/")) {
-    return (
-      <img
-        src={`data:${mime};base64,${data}`}
-        alt="output"
-        className="max-w-full rounded-lg border border-border"
-      />
-    );
-  }
-  if (mime === "text/html") {
-    return (
-      <div
-        className="overflow-auto text-xs"
-        // contenu généré par le kernel local de l'utilisateur
-        dangerouslySetInnerHTML={{ __html: data }}
-      />
-    );
-  }
-  if (mime === "text/plain") {
-    return (
-      <pre className="overflow-auto whitespace-pre-wrap font-mono text-[11px] text-foreground/90">
-        {data}
-      </pre>
-    );
-  }
-  return (
-    <pre className="overflow-auto font-mono text-[10px] text-muted-foreground">
-      [{mime}] {data.slice(0, 200)}
-    </pre>
-  );
-}
+// ─── VarGroup ─────────────────────────────────────────────────────────────────
 
 function VarGroup({
   title,
