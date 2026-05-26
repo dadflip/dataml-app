@@ -2,10 +2,8 @@ import { useMemo } from "react";
 import type { ParamDef } from "@/lib/pipeline";
 import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
+import { Slider } from "@/components/ui/slider";
 import { X, FileText, FolderOpen, Columns3, Hash, Type, Code2 } from "lucide-react";
-
-// Regroupement des types considérés comme des chaînes de caractères
-const STRING_KINDS = new Set(["string", "file", "dir", "column"]);
 
 /**
  * Convertit la valeur de override (litéral Python brut) en valeur d'édition (string lisible).
@@ -13,7 +11,7 @@ const STRING_KINDS = new Set(["string", "file", "dir", "column"]);
  */
 function literalToDisplay(kind: ParamDef["kind"], lit: string): string {
   if (!lit) return "";
-  if (STRING_KINDS.has(kind)) {
+  if (kind === "string" || kind === "file" || kind === "dir" || kind === "column") {
     const m = lit.match(/^["'](.*)["']$/);
     return m ? m[1] : lit;
   }
@@ -22,18 +20,22 @@ function literalToDisplay(kind: ParamDef["kind"], lit: string): string {
 
 function displayToLiteral(kind: ParamDef["kind"], value: string): string {
   if (value === "") return "";
-  if (STRING_KINDS.has(kind)) {
+  if (kind === "string" || kind === "file" || kind === "dir" || kind === "column") {
     // échappe les guillemets simples
     return `"${value.replace(/\\/g, "\\\\").replace(/"/g, '\\"')}"`;
   }
   return value;
 }
 
-const KIND_META: Record<ParamDef["kind"], { icon: typeof FileText; label: string }> = {
+const KIND_META: Record<
+  ParamDef["kind"],
+  { icon: typeof FileText; label: string }
+> = {
   file: { icon: FileText, label: "fichier" },
   dir: { icon: FolderOpen, label: "dossier" },
   column: { icon: Columns3, label: "colonne" },
   boolean: { icon: Code2, label: "bool" },
+  ratio: { icon: Hash, label: "ratio" },
   int: { icon: Hash, label: "int" },
   number: { icon: Hash, label: "float" },
   string: { icon: Type, label: "str" },
@@ -55,49 +57,6 @@ export function ParamInput({ param, override, onChange, onReset }: Props) {
   const isOverridden = override !== undefined && override !== "";
 
   const handleText = (v: string) => onChange(displayToLiteral(param.kind, v));
-
-  // Extraction de la logique de rendu pour éviter les ternaires imbriqués complexes
-  const renderInputControl = () => {
-    if (param.kind === "boolean") {
-      return (
-        <div className="flex items-center gap-2">
-          <Switch
-            checked={current === "True"}
-            onCheckedChange={(v) => onChange(v ? "True" : "False")}
-          />
-          <span className="font-mono text-[11px] text-muted-foreground">{current}</span>
-        </div>
-      );
-    }
-
-    if (param.kind === "int" || param.kind === "number") {
-      return (
-        <Input
-          type="number"
-          step={param.kind === "int" ? 1 : "any"}
-          value={display}
-          onChange={(e) => handleText(e.target.value)}
-          className="h-8 rounded-lg font-mono text-xs"
-        />
-      );
-    }
-
-    // Mapping propre pour les placeholders textuels
-    const placeholders: Record<string, string> = {
-      file: "/path/to/data.csv",
-      dir: "/path/to/folder",
-      column: "target",
-    };
-
-    return (
-      <Input
-        value={display}
-        onChange={(e) => handleText(e.target.value)}
-        placeholder={placeholders[param.kind] ?? ""}
-        className="h-8 rounded-lg font-mono text-xs"
-      />
-    );
-  };
 
   return (
     <div className="rounded-xl border border-border bg-card/60 p-2.5">
@@ -121,7 +80,57 @@ export function ParamInput({ param, override, onChange, onReset }: Props) {
         )}
       </div>
 
-      {renderInputControl()}
+      {param.kind === "boolean" ? (
+        <div className="flex items-center gap-2">
+          <Switch
+            checked={current === "True"}
+            onCheckedChange={(v) => onChange(v ? "True" : "False")}
+          />
+          <span className="font-mono text-[11px] text-muted-foreground">{current}</span>
+        </div>
+      ) : param.kind === "ratio" ? (
+        <div className="space-y-1">
+          <Slider
+            value={[Number(display) || 0]}
+            min={0}
+            max={1}
+            step={0.01}
+            onValueChange={(v) => onChange(String(v[0]))}
+          />
+          <div className="flex items-center justify-between">
+            <span className="font-mono text-[10px] text-muted-foreground">0</span>
+            <Input
+              value={display}
+              onChange={(e) => handleText(e.target.value)}
+              className="h-7 w-16 rounded-lg text-center font-mono text-[11px]"
+            />
+            <span className="font-mono text-[10px] text-muted-foreground">1</span>
+          </div>
+        </div>
+      ) : param.kind === "int" || param.kind === "number" ? (
+        <Input
+          type="number"
+          step={param.kind === "int" ? 1 : "any"}
+          value={display}
+          onChange={(e) => handleText(e.target.value)}
+          className="h-8 rounded-lg font-mono text-xs"
+        />
+      ) : (
+        <Input
+          value={display}
+          onChange={(e) => handleText(e.target.value)}
+          placeholder={
+            param.kind === "file"
+              ? "/path/to/data.csv"
+              : param.kind === "dir"
+                ? "/path/to/folder"
+                : param.kind === "column"
+                  ? "target"
+                  : ""
+          }
+          className="h-8 rounded-lg font-mono text-xs"
+        />
+      )}
     </div>
   );
 }
