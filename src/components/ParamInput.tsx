@@ -12,12 +12,17 @@ import {
   Code2,
   HelpCircle,
   HardDrive,
+  AlignLeft,
 } from "lucide-react";
 
 const STRING_KINDS = new Set(["string", "file", "dir", "column"]);
 
 function literalToDisplay(kind: ParamDef["kind"], lit: string): string {
   if (!lit) return "";
+  if (kind === "text") {
+    const m = lit.match(/^("""|''')([\s\S]*)\1$/);
+    return m ? m[2] : lit;
+  }
   if (STRING_KINDS.has(kind)) {
     const m = lit.match(/^["'](.*)["']$/s);
     return m ? m[1] : lit;
@@ -27,6 +32,11 @@ function literalToDisplay(kind: ParamDef["kind"], lit: string): string {
 
 function displayToLiteral(kind: ParamDef["kind"], value: string): string {
   if (value === "") return "";
+  if (kind === "text") {
+    // Use triple double-quotes; escape any existing triple-double-quote in body.
+    const safe = value.replace(/"""/g, '\\"\\"\\"');
+    return `"""${safe}"""`;
+  }
   if (STRING_KINDS.has(kind)) {
     return `"${value.replace(/\\/g, "\\\\").replace(/"/g, '\\"')}"`;
   }
@@ -41,6 +51,7 @@ const KIND_META: Record<string, { icon: any; label: string }> = {
   int: { icon: Hash, label: "int" },
   number: { icon: Hash, label: "float" },
   string: { icon: Type, label: "str" },
+  text: { icon: AlignLeft, label: "texte" },
   expr: { icon: Code2, label: "expr" },
 };
 
@@ -142,6 +153,21 @@ export function ParamInput({ param, override, onChange, onReset }: Props) {
       );
     }
 
+    if (param.kind === "text") {
+      const lineCount = Math.min(14, Math.max(4, display.split("\n").length + 1));
+      return (
+        <textarea
+          value={display}
+          onChange={(e) => handleText(e.target.value)}
+          spellCheck={false}
+          rows={lineCount}
+          placeholder={"SELECT *\nFROM table\nWHERE ..."}
+          className="block w-full resize-y rounded-lg border border-input bg-[oklch(0.1_0.004_260)] px-2.5 py-2 font-mono text-[11px] leading-relaxed text-foreground/95 outline-none transition focus:border-foreground/30 focus:ring-1 focus:ring-ring"
+          style={{ tabSize: 2 }}
+        />
+      );
+    }
+
     if (param.kind === "int" || param.kind === "number") {
       return (
         <div className="flex gap-1.5">
@@ -190,7 +216,11 @@ export function ParamInput({ param, override, onChange, onReset }: Props) {
   };
 
   return (
-    <div className="rounded-xl border border-border bg-card/60 p-2.5">
+    <div
+      className={`rounded-xl border border-border bg-card/60 p-2.5 ${
+        param.kind === "text" ? "sm:col-span-2 lg:col-span-3" : ""
+      }`}
+    >
       <div className="mb-1.5 flex items-center gap-1.5">
         <Icon className="h-3 w-3 text-muted-foreground" />
         <span className="truncate font-mono text-[11px] text-foreground" title={param.name}>

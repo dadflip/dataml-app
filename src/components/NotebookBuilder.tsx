@@ -574,7 +574,7 @@ function SortableCell({
               missing={validation.missing}
               tone="muted"
             />
-            <VarGroup title="Produit" vars={cell.produced} tone="primary" />
+            <ProducedRecap vars={cell.produced} meta={cell.producedMeta} />
           </div>
 
           {/* Code */}
@@ -618,6 +618,51 @@ function SortableCell({
         </div>
       )}
     </li>
+  );
+}
+
+// ─── ProducedRecap ────────────────────────────────────────────────────────────
+
+function ProducedRecap({
+  vars,
+  meta,
+}: {
+  vars: string[];
+  meta: Record<string, string>;
+}) {
+  return (
+    <div>
+      <h4 className="mb-1.5 flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
+        Produit
+        <span className="rounded-full bg-foreground/10 px-1.5 py-0.5 font-mono text-[9px] normal-case text-foreground/70">
+          {vars.length}
+        </span>
+      </h4>
+      {vars.length === 0 ? (
+        <span className="text-muted-foreground">—</span>
+      ) : (
+        <ul className="space-y-1">
+          {vars.map((v) => {
+            const desc = meta[v];
+            return (
+              <li
+                key={v}
+                className="flex items-start gap-2 rounded-lg border border-border bg-card/50 px-2 py-1.5"
+              >
+                <code className="shrink-0 rounded-md border border-foreground/15 bg-foreground/10 px-1.5 py-0.5 font-mono text-[10px] text-foreground">
+                  {v}
+                </code>
+                {desc && (
+                  <span className="font-mono text-[10px] leading-snug text-muted-foreground">
+                    {desc}
+                  </span>
+                )}
+              </li>
+            );
+          })}
+        </ul>
+      )}
+    </div>
   );
 }
 
