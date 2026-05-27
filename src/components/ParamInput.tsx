@@ -216,7 +216,11 @@ export function ParamInput({ param, override, onChange, onReset }: Props) {
   };
 
   return (
-    <div className="rounded-xl border border-border bg-card/60 p-2.5">
+    <div
+      className={`rounded-xl border border-border bg-card/60 p-2.5 ${
+        param.kind === "text" ? "sm:col-span-2 lg:col-span-3" : ""
+      }`}
+    >
       <div className="mb-1.5 flex items-center gap-1.5">
         <Icon className="h-3 w-3 text-muted-foreground" />
         <span className="truncate font-mono text-[11px] text-foreground" title={param.name}>
