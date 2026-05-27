@@ -12,12 +12,17 @@ import {
   Code2,
   HelpCircle,
   HardDrive,
+  AlignLeft,
 } from "lucide-react";
 
 const STRING_KINDS = new Set(["string", "file", "dir", "column"]);
 
 function literalToDisplay(kind: ParamDef["kind"], lit: string): string {
   if (!lit) return "";
+  if (kind === "text") {
+    const m = lit.match(/^("""|''')([\s\S]*)\1$/);
+    return m ? m[2] : lit;
+  }
   if (STRING_KINDS.has(kind)) {
     const m = lit.match(/^["'](.*)["']$/s);
     return m ? m[1] : lit;
@@ -27,6 +32,11 @@ function literalToDisplay(kind: ParamDef["kind"], lit: string): string {
 
 function displayToLiteral(kind: ParamDef["kind"], value: string): string {
   if (value === "") return "";
+  if (kind === "text") {
+    // Use triple double-quotes; escape any existing triple-double-quote in body.
+    const safe = value.replace(/"""/g, '\\"\\"\\"');
+    return `"""${safe}"""`;
+  }
   if (STRING_KINDS.has(kind)) {
     return `"${value.replace(/\\/g, "\\\\").replace(/"/g, '\\"')}"`;
   }
