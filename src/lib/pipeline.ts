@@ -95,19 +95,26 @@ export type ParamKind =
   | "int"
   | "number"
   | "string"
+  | "text"
   | "expr";
 
 export interface ParamDef {
   name: string;
   defaultLiteral: string;
-  type: "string" | "number" | "boolean" | "expr";
+  type: "string" | "number" | "boolean" | "expr" | "text";
   kind: ParamKind;
 }
 
-const PARAM_RE = /^([A-Z][A-Z0-9_]{2,})\s*=\s*([^\n#]+?)\s*(?:#.*)?$/gm;
+// Matches `UPPER_SNAKE = <value>` where <value> is either:
+//   • a triple-quoted (single or double) multi-line string
+//   • a regular single-line literal/expression (no comment)
+// Anchored on (start | newline) to avoid `m`-flag $ stopping inside triple-quotes.
+const PARAM_RE =
+  /(^|\n)([A-Z][A-Z0-9_]{2,})[ \t]*=[ \t]*("""[\s\S]*?"""|'''[\s\S]*?'''|"(?:\\.|[^"\\\n])*"|'(?:\\.|[^'\\\n])*'|[^\n#]+?)[ \t]*(?:#[^\n]*)?(?=\n|$)/g;
 
 function detectKind(name: string, type: ParamDef["type"]): ParamKind {
   if (type === "boolean") return "boolean";
+  if (type === "text") return "text";
   if (/(^|_)(FILE|PATH|CSV|JSON|PARQUET|URL)(_|$)/.test(name)) return "file";
   if (/(^|_)(DIR|FOLDER)(_|$)/.test(name)) return "dir";
   if (/(^|_)(COL|COLS|COLUMN|TARGET|FEATURE|FEATURES|LABEL)(_|$)/.test(name)) return "column";
@@ -128,12 +135,13 @@ export function extractParams(code: string): ParamDef[] {
   let m: RegExpExecArray | null;
   PARAM_RE.lastIndex = 0;
   while ((m = PARAM_RE.exec(code))) {
-    const name = m[1];
-    const lit = m[2].trim();
+    const name = m[2];
+    const lit = m[3].trim();
     if (seen.has(name)) continue;
     seen.add(name);
     let type: ParamDef["type"] = "expr";
-    if (/^["'].*["']$/.test(lit)) type = "string";
+    if (/^("""|''')[\s\S]*\1$/.test(lit)) type = "text";
+    else if (/^["'][\s\S]*["']$/.test(lit)) type = "string";
     else if (/^-?\d+(\.\d+)?$/.test(lit)) type = "number";
     else if (/^(True|False)$/.test(lit)) type = "boolean";
     out.push({ name, defaultLiteral: lit, type, kind: detectKind(name, type) });
@@ -143,11 +151,11 @@ export function extractParams(code: string): ParamDef[] {
 
 export function applyParamOverrides(code: string, overrides: Record<string, string>): string {
   if (!code) return code;
-  return code.replace(PARAM_RE, (line, name: string, _lit: string) => {
+  return code.replace(PARAM_RE, (match, lead: string, name: string, _lit: string) => {
     if (overrides[name] !== undefined && overrides[name] !== "") {
-      return `${name} = ${overrides[name]}`;
+      return `${lead}${name} = ${overrides[name]}`;
     }
-    return line;
+    return match;
   });
 }
 
