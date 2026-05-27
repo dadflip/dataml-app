@@ -1,13 +1,18 @@
 // components/CellOutput.tsx
+import { useState } from "react";
 import type { ExecResult } from "@/lib/kernel";
 import {
   AlertTriangle,
   CheckCircle2,
   Code2,
+  Download,
   Image,
   Loader2,
+  Maximize2,
   Terminal,
+  X,
 } from "lucide-react";
+import { Dialog, DialogContent } from "@/components/ui/dialog";
 
 // ─── ANSI stripping ───────────────────────────────────────────────────────────
 // Removes ANSI escape sequences (colors, cursor moves, etc.) that the kernel
