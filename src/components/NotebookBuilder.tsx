@@ -574,7 +574,7 @@ function SortableCell({
               missing={validation.missing}
               tone="muted"
             />
-            <VarGroup title="Produit" vars={cell.produced} tone="primary" />
+            <ProducedRecap vars={cell.produced} meta={cell.producedMeta} />
           </div>
 
           {/* Code */}
