@@ -111,6 +111,11 @@ export function NotebookBuilder({ cells, setCells, catalogs }: Props) {
   }, [cells]);
 
   const validations = useMemo(() => validateNotebook(cells, catalogs), [cells, catalogs]);
+  const blockIndex = useMemo(() => {
+    const m = new Map<string, CatalogBlock>();
+    for (const b of allBlocks(catalogs)) m.set(b.id, b);
+    return m;
+  }, [catalogs]);
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 5 } }));
 
   const onDragEnd = (e: DragEndEvent) => {
