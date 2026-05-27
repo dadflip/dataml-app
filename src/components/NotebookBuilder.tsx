@@ -39,6 +39,7 @@ import {
   Download,
   FileCode,
   GripVertical,
+  Info,
   Loader2,
   Notebook,
   Play,
