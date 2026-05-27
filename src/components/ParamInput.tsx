@@ -51,6 +51,7 @@ const KIND_META: Record<string, { icon: any; label: string }> = {
   int: { icon: Hash, label: "int" },
   number: { icon: Hash, label: "float" },
   string: { icon: Type, label: "str" },
+  text: { icon: AlignLeft, label: "texte" },
   expr: { icon: Code2, label: "expr" },
 };
 
