@@ -153,6 +153,21 @@ export function ParamInput({ param, override, onChange, onReset }: Props) {
       );
     }
 
+    if (param.kind === "text") {
+      const lineCount = Math.min(14, Math.max(4, display.split("\n").length + 1));
+      return (
+        <textarea
+          value={display}
+          onChange={(e) => handleText(e.target.value)}
+          spellCheck={false}
+          rows={lineCount}
+          placeholder={"SELECT *\nFROM table\nWHERE ..."}
+          className="block w-full resize-y rounded-lg border border-input bg-[oklch(0.1_0.004_260)] px-2.5 py-2 font-mono text-[11px] leading-relaxed text-foreground/95 outline-none transition focus:border-foreground/30 focus:ring-1 focus:ring-ring"
+          style={{ tabSize: 2 }}
+        />
+      );
+    }
+
     if (param.kind === "int" || param.kind === "number") {
       return (
         <div className="flex gap-1.5">
