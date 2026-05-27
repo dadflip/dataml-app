@@ -387,6 +387,7 @@ function SortableCell({
   cell,
   index,
   validation,
+  blockMeta,
   isOpen,
   onToggle,
   onRemove,
@@ -401,6 +402,7 @@ function SortableCell({
   cell: NotebookCell;
   index: number;
   validation: { ok: boolean; missing: string[]; outOfOrder: boolean };
+  blockMeta?: CatalogBlock;
   isOpen: boolean;
   onToggle: () => void;
   onRemove: () => void;
