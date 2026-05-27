@@ -536,6 +536,10 @@ function SortableCell({
       {isOpen && (
         <div className="space-y-4 border-t border-border px-4 py-4">
 
+          {/* Block info (description, use cases, hyperparams, …) */}
+          {blockMeta && <BlockInfo block={blockMeta} />}
+
+
           {/* Erreur I/O */}
           {!validation.ok && (
             <div className="flex items-start gap-2 rounded-xl border border-destructive/40 bg-destructive/10 p-2.5 text-xs">
