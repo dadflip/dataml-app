@@ -15,6 +15,7 @@ import {
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import {
+  allBlocks,
   applyParamOverrides,
   buildNotebookJSON,
   buildPythonScript,
@@ -26,7 +27,6 @@ import {
   type NotebookCell,
   type ParsedCatalog,
 } from "@/lib/pipeline";
-import { allBlocks } from "@/lib/pipeline";
 import { executeCode, type ExecResult, type KernelConfig } from "@/lib/kernel";
 import { Button } from "@/components/ui/button";
 import { ParamInput } from "@/components/ParamInput";
