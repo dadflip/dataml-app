@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useMemo, useState, useEffect, useCallback } from "react";
 import {
   DndContext,
   closestCenter,
@@ -29,175 +29,54 @@ import { executeCode, type ExecResult, type KernelConfig } from "@/lib/kernel";
 import { Button } from "@/components/ui/button";
 import { ParamInput } from "@/components/ParamInput";
 import { KernelPanel, loadStoredCfg } from "@/components/KernelPanel";
+import { CellOutput } from "@/components/CellOutput";
 import {
   AlertTriangle,
   CheckCircle2,
   ChevronDown,
-  Code2,
   Download,
   FileCode,
   GripVertical,
-  Image,
   Loader2,
   Notebook,
   Play,
   PlayCircle,
   Sparkles,
   Square,
-  Terminal,
   Trash2,
+  Eraser,
 } from "lucide-react";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+  DialogFooter,
+  DialogClose,
+} from "@/components/ui/dialog";
 
-// ─── CellOutput ───────────────────────────────────────────────────────────────
+// ─── Persistence ──────────────────────────────────────────────────────────────
 
-function Badge({
-  tone,
-  children,
-}: {
-  tone: "success" | "danger" | "muted";
-  children: React.ReactNode;
-}) {
-  const cls =
-    tone === "success"
-      ? "bg-[color:var(--color-success)]/15 text-[color:var(--color-success)]"
-      : tone === "danger"
-        ? "bg-destructive/15 text-destructive"
-        : "bg-muted text-muted-foreground";
-  return (
-    <span
-      className={`rounded-full px-2 py-0.5 font-mono text-[9px] font-medium uppercase tracking-wider ${cls}`}
-    >
-      {children}
-    </span>
-  );
+const NOTEBOOK_KEY = "pipeline-studio:notebook-cells";
+
+function loadStoredCells(): NotebookCell[] {
+  if (typeof window === "undefined") return [];
+  try {
+    const raw = window.localStorage.getItem(NOTEBOOK_KEY);
+    if (raw) return JSON.parse(raw) as NotebookCell[];
+  } catch {
+    /* ignore */
+  }
+  return [];
 }
 
-function OutputBlock({
-  icon,
-  kind,
-  badge,
-  children,
-}: {
-  icon: React.ReactNode;
-  kind: string;
-  badge: React.ReactNode;
-  children: React.ReactNode;
-}) {
-  return (
-    <div className="overflow-hidden rounded-xl border border-border bg-card/40">
-      <div className="flex items-center gap-1.5 border-b border-border bg-card/60 px-3 py-1.5">
-        <span className="text-muted-foreground">{icon}</span>
-        <span className="font-mono text-[9px] uppercase tracking-wider text-muted-foreground">
-          {kind}
-        </span>
-        <span className="ml-auto">{badge}</span>
-      </div>
-      <div className="p-3">{children}</div>
-    </div>
-  );
-}
-
-function DisplayBlock({ mime, data }: { mime: string; data: string }) {
-  if (mime.startsWith("image/")) {
-    return (
-      <OutputBlock
-        icon={<Image className="h-3 w-3" />}
-        kind="image"
-        badge={<Badge tone="success">ok</Badge>}
-      >
-        <img
-          src={`data:${mime};base64,${data}`}
-          alt="output"
-          className="max-w-full rounded-lg border border-border"
-        />
-      </OutputBlock>
-    );
+function saveStoredCells(cells: NotebookCell[]) {
+  try {
+    window.localStorage.setItem(NOTEBOOK_KEY, JSON.stringify(cells));
+  } catch {
+    /* ignore */
   }
-
-  if (mime === "text/html") {
-    return (
-      <OutputBlock
-        icon={<Code2 className="h-3 w-3" />}
-        kind="text/html"
-        badge={<Badge tone="success">ok</Badge>}
-      >
-        {/* contenu généré par le kernel local de l'utilisateur */}
-        <div
-          className="overflow-auto text-xs"
-          dangerouslySetInnerHTML={{ __html: data }}
-        />
-      </OutputBlock>
-    );
-  }
-
-  return (
-    <OutputBlock
-      icon={<Code2 className="h-3 w-3" />}
-      kind={mime === "text/plain" ? "text/plain" : mime}
-      badge={<Badge tone="success">ok</Badge>}
-    >
-      <pre className="max-h-32 overflow-auto whitespace-pre-wrap font-mono text-[11px] leading-relaxed text-foreground/80">
-        {mime === "text/plain" ? data : `[${mime}] ${data.slice(0, 200)}`}
-      </pre>
-    </OutputBlock>
-  );
-}
-
-function CellOutput({ output }: { output: ExecResult }) {
-  const hasContent =
-    output.stdout || output.stderr || output.displays.length > 0;
-
-  if (output.status === "running") {
-    return (
-      <OutputBlock
-        icon={<Loader2 className="h-3 w-3 animate-spin" />}
-        kind="exécution en cours"
-        badge={<Badge tone="muted">running</Badge>}
-      >
-        <p className="font-mono text-[11px] text-muted-foreground">
-          Exécution de la cellule…
-        </p>
-      </OutputBlock>
-    );
-  }
-
-  if (!hasContent) return null;
-
-  return (
-    <div className="space-y-2">
-      {output.stdout && (
-        <OutputBlock
-          icon={<Terminal className="h-3 w-3" />}
-          kind="stdout"
-          badge={
-            <Badge tone={output.status === "ok" ? "success" : "muted"}>
-              ok
-            </Badge>
-          }
-        >
-          <pre className="max-h-48 overflow-auto whitespace-pre-wrap font-mono text-[11px] leading-relaxed text-foreground/90">
-            {output.stdout}
-          </pre>
-        </OutputBlock>
-      )}
-
-      {output.stderr && (
-        <OutputBlock
-          icon={<AlertTriangle className="h-3 w-3 text-destructive" />}
-          kind="stderr"
-          badge={<Badge tone="danger">error</Badge>}
-        >
-          <pre className="max-h-32 overflow-auto whitespace-pre-wrap font-mono text-[11px] leading-relaxed text-destructive">
-            {output.stderr}
-          </pre>
-        </OutputBlock>
-      )}
-
-      {output.displays.map((d, i) => (
-        <DisplayBlock key={i} mime={d.mime} data={d.data} />
-      ))}
-    </div>
-  );
 }
 
 // ─── NotebookBuilder ──────────────────────────────────────────────────────────
@@ -215,6 +94,20 @@ export function NotebookBuilder({ cells, setCells, catalogs }: Props) {
   const [outputs, setOutputs] = useState<Record<string, ExecResult>>({});
   const [running, setRunning] = useState<string | null>(null);
 
+  // ── Restore cells from localStorage on first mount ──
+  useEffect(() => {
+    if (cells.length === 0) {
+      const stored = loadStoredCells();
+      if (stored.length > 0) setCells(stored);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // ── Persist cells whenever they change ──
+  useEffect(() => {
+    saveStoredCells(cells);
+  }, [cells]);
+
   const validations = useMemo(() => validateNotebook(cells, catalogs), [cells, catalogs]);
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 5 } }));
 
@@ -228,6 +121,12 @@ export function NotebookBuilder({ cells, setCells, catalogs }: Props) {
   };
 
   const remove = (uid: string) => setCells(cells.filter((c) => c.uid !== uid));
+
+  const clearAll = useCallback(() => {
+    setCells([]);
+    setOutputs({});
+    setOpenUid(null);
+  }, [setCells]);
 
   const updateOverride = (uid: string, name: string, value: string) =>
     setCells(
@@ -360,6 +259,9 @@ export function NotebookBuilder({ cells, setCells, catalogs }: Props) {
               <Sparkles className="h-3.5 w-3.5" />
               Colab
             </Button>
+
+            {/* ── Clear notebook ── */}
+            <ClearNotebookDialog onConfirm={clearAll} disabled={!cells.length} />
           </div>
         </div>
         <KernelPanel
@@ -418,6 +320,59 @@ export function NotebookBuilder({ cells, setCells, catalogs }: Props) {
   );
 }
 
+// ─── ClearNotebookDialog ──────────────────────────────────────────────────────
+
+function ClearNotebookDialog({
+  onConfirm,
+  disabled,
+}: {
+  onConfirm: () => void;
+  disabled: boolean;
+}) {
+  return (
+    <Dialog>
+      <DialogTrigger asChild>
+        <Button
+          variant="outline"
+          size="sm"
+          className="rounded-full text-muted-foreground hover:border-destructive/50 hover:text-destructive"
+          disabled={disabled}
+        >
+          <Eraser className="h-3.5 w-3.5" />
+          Vider
+        </Button>
+      </DialogTrigger>
+      <DialogContent className="max-w-sm">
+        <DialogHeader>
+          <DialogTitle>Vider le notebook ?</DialogTitle>
+        </DialogHeader>
+        <p className="text-sm text-muted-foreground">
+          Toutes les cellules et leurs sorties seront supprimées. Cette action efface également
+          la sauvegarde locale.
+        </p>
+        <DialogFooter className="mt-2 gap-2">
+          <DialogClose asChild>
+            <Button variant="outline" size="sm" className="rounded-full">
+              Annuler
+            </Button>
+          </DialogClose>
+          <DialogClose asChild>
+            <Button
+              variant="destructive"
+              size="sm"
+              className="rounded-full"
+              onClick={onConfirm}
+            >
+              <Eraser className="h-3.5 w-3.5" />
+              Vider
+            </Button>
+          </DialogClose>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
 // ─── SortableCell ─────────────────────────────────────────────────────────────
 
 function SortableCell({
@@ -461,7 +416,6 @@ function SortableCell({
   const [editing, setEditing] = useState(false);
   const finalCode = applyParamOverrides(cell.code, cell.overrides);
 
-  // Badge de statut dans la row (compact)
   const statusBadge = output && (
     <span
       className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 font-mono text-[10px] ${
