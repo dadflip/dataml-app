@@ -174,6 +174,7 @@ export interface NotebookCell {
   overrides: Record<string, string>;
   required: string[];
   produced: string[];
+  producedMeta: Record<string, string>;
 }
 
 function blockRequired(b: CatalogBlock): string[] {
@@ -192,6 +193,21 @@ function blockProduced(b: CatalogBlock): string[] {
   }
   return [];
 }
+function blockProducedMeta(b: CatalogBlock): Record<string, string> {
+  const out: Record<string, string> = {};
+  const ov = b.output_variables;
+  if (ov && !Array.isArray(ov) && typeof ov === "object") {
+    for (const [k, v] of Object.entries(ov)) {
+      if (/^[a-z_]/.test(k)) out[k] = String(v);
+    }
+  }
+  if (b.output_contract && typeof b.output_contract === "object") {
+    for (const [k, v] of Object.entries(b.output_contract)) {
+      if (/^[a-z_]/.test(k) && !out[k]) out[k] = String(v);
+    }
+  }
+  return out;
+}
 
 export function makeCell(b: CatalogBlock): NotebookCell {
   const code = b.code_template ?? "";
@@ -208,6 +224,7 @@ export function makeCell(b: CatalogBlock): NotebookCell {
     overrides: {},
     required: blockRequired(b),
     produced: blockProduced(b),
+    producedMeta: blockProducedMeta(b),
   };
 }
 
