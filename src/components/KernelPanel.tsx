@@ -54,7 +54,7 @@ export function KernelPanel({ cfg, setCfg, kernelId, setKernelId }: Props) {
     setError(null);
     const ok = await pingGateway(cfg);
     setStatus(ok ? "reachable" : "unreachable");
-    if (!ok) setError("Gateway injoignable. CORS, URL ou token ?");
+    if (!ok) setError("Gateway injoignable. Vérifiez CORS, URL ou token.");
     setBusy(false);
   };
 
@@ -127,7 +127,7 @@ export function KernelPanel({ cfg, setCfg, kernelId, setKernelId }: Props) {
         </Button>
       )}
 
-      <SetupHelp />
+      <SetupHelp origin={typeof window !== "undefined" ? window.location.origin : "https://..."} />
 
       {error && (
         <span className="w-full font-mono text-[10px] text-destructive">{error}</span>
@@ -136,7 +136,7 @@ export function KernelPanel({ cfg, setCfg, kernelId, setKernelId }: Props) {
   );
 }
 
-function SetupHelp() {
+function SetupHelp({ origin }: { origin: string }) {
   return (
     <Dialog>
       <DialogTrigger asChild>
@@ -144,7 +144,7 @@ function SetupHelp() {
           <HelpCircle className="h-3.5 w-3.5" /> Setup
         </Button>
       </DialogTrigger>
-      <DialogContent className="max-w-2xl">
+      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>Installer Jupyter Kernel Gateway en local</DialogTitle>
         </DialogHeader>
@@ -160,40 +160,69 @@ function SetupHelp() {
 pip install pandas scikit-learn matplotlib seaborn`}</Code>
           </Step>
 
-          <Step n={2} title="Lancer avec CORS autorisé pour cette app">
+          <Step n={2} title="Lancer avec CORS complet">
             <Code>{`jupyter kernelgateway \\
   --KernelGatewayApp.ip=0.0.0.0 \\
   --KernelGatewayApp.port=8888 \\
-  --KernelGatewayApp.allow_origin='*' \\
+  --KernelGatewayApp.allow_origin='${origin}' \\
+  --KernelGatewayApp.allow_headers='Content-Type,Authorization,X-XSRFToken' \\
   --KernelGatewayApp.auth_token='monjeton'`}</Code>
+            <div className="mt-2 space-y-1.5 rounded-lg border border-border bg-card/40 p-2.5 text-xs text-muted-foreground">
+              <p>
+                <span className="font-semibold text-foreground/80">Pourquoi <code>--allow_headers</code> ?</span>{" "}
+                Sans ce flag, le navigateur reçoit un preflight CORS sans{" "}
+                <code>Access-Control-Allow-Headers: content-type</code> et bloque toutes les
+                requêtes avec une erreur <em>"Request header field content-type is not allowed"</em>.
+              </p>
+              <p>
+                Remplacez <code>monjeton</code> par un token de votre choix et reportez-le dans le
+                champ token ci-dessus. Pour autoriser toutes les origines (usage local uniquement),
+                utilisez <code>--allow_origin='*'</code>.
+              </p>
+            </div>
+          </Step>
+
+          <Step n={3} title="Accès aux fichiers locaux">
+            <p className="mb-2 text-xs text-muted-foreground">
+              Le kernel s'exécute sur <em>votre machine</em> — les chemins de fichiers sont donc
+              des chemins locaux absolus ou relatifs au répertoire de lancement du gateway.
+            </p>
+            <Code>{`# Absolu (recommandé)
+FILE_PATH = "/Users/moi/data/dataset.csv"
+FILE_PATH = "C:/Users/moi/data/dataset.csv"   # Windows
+
+# Relatif au dossier où tourne kernelgateway
+FILE_PATH = "data/dataset.csv"`}</Code>
             <p className="mt-1.5 text-xs text-muted-foreground">
-              Remplacez <code>monjeton</code> par un token de votre choix et reportez-le dans le
-              champ token ci-dessus. Pour restreindre, mettez{" "}
-              <code>--allow_origin='{typeof window !== "undefined" ? window.location.origin : "https://..."}'</code>.
+              Lancez le gateway depuis le dossier contenant vos données pour utiliser des chemins
+              relatifs courts.
             </p>
           </Step>
 
-          <Step n={3} title="Connecter">
+          <Step n={4} title="Connecter">
             <p className="text-xs text-muted-foreground">
-              URL: <code>http://localhost:8888</code> · Token: celui défini ci-dessus · puis cliquez{" "}
-              <span className="font-mono">Connecter</span>. Un bouton <span className="font-mono">Run</span>{" "}
-              apparaît sur chaque cellule.
+              URL : <code>http://localhost:8888</code> · Token : celui défini ci-dessus · puis
+              cliquez <span className="font-mono">Connecter</span>. Un bouton{" "}
+              <span className="font-mono">Run</span> apparaît sur chaque cellule.
             </p>
           </Step>
 
-          <Step n={4} title="Distant (Colab / VM)">
+          <Step n={5} title="Distant (Colab / VM / ngrok)">
             <p className="text-xs text-muted-foreground">
-              Exposez le port via <code>ngrok http 8888</code> et utilisez l'URL HTTPS fournie. Le
-              gateway accepte WSS automatiquement.
+              Exposez le port via <code>ngrok http 8888</code> et utilisez l'URL HTTPS fournie.
+              Ajoutez <code>--ngrok-authtoken</code> si nécessaire. Le gateway accepte WSS
+              automatiquement sur les URLs ngrok.
             </p>
             <Code>{`ngrok http 8888
-# → https://xxxx.ngrok-free.app`}</Code>
+# → https://xxxx.ngrok-free.app
+# Utilisez cette URL dans le champ ci-dessus`}</Code>
           </Step>
 
-          <p className="rounded-lg border border-border bg-card/40 p-2.5 text-xs text-muted-foreground">
-            ⚠️ <code>allow_origin='*'</code> + token vide = exécution Python ouverte à tout le
-            monde. En dehors d'un usage local, définissez un token et restreignez l'origine.
-          </p>
+          <div className="rounded-lg border border-border bg-card/40 p-2.5 text-xs text-muted-foreground">
+            <code>allow_origin='*'</code> + token vide = exécution Python ouverte à tout le
+            monde. En dehors d'un usage strictement local, définissez un token et restreignez
+            l'origine à <code>{origin}</code>.
+          </div>
         </div>
       </DialogContent>
     </Dialog>
@@ -203,7 +232,7 @@ pip install pandas scikit-learn matplotlib seaborn`}</Code>
 function Step({ n, title, children }: { n: number; title: string; children: React.ReactNode }) {
   return (
     <div>
-      <h4 className="mb-1 flex items-center gap-2 text-xs font-semibold">
+      <h4 className="mb-1.5 flex items-center gap-2 text-xs font-semibold">
         <span className="grid h-5 w-5 place-items-center rounded-full bg-foreground text-[10px] text-background">
           {n}
         </span>
