@@ -1,13 +1,18 @@
 // components/CellOutput.tsx
+import { useState } from "react";
 import type { ExecResult } from "@/lib/kernel";
 import {
   AlertTriangle,
   CheckCircle2,
   Code2,
+  Download,
   Image,
   Loader2,
+  Maximize2,
   Terminal,
+  X,
 } from "lucide-react";
+import { Dialog, DialogContent } from "@/components/ui/dialog";
 
 // ─── ANSI stripping ───────────────────────────────────────────────────────────
 // Removes ANSI escape sequences (colors, cursor moves, etc.) that the kernel
@@ -69,21 +74,86 @@ function OutputBlock({
   );
 }
 
-function DisplayBlock({ mime, data }: { mime: string; data: string }) {
-  if (mime.startsWith("image/")) {
-    return (
+function ImageDisplay({ mime, data }: { mime: string; data: string }) {
+  const [open, setOpen] = useState(false);
+  const src = `data:${mime};base64,${data}`;
+  return (
+    <>
       <OutputBlock
         icon={<Image className="h-3 w-3" />}
         kind="image"
-        badge={<Badge tone="success">ok</Badge>}
+        badge={
+          <div className="flex items-center gap-1.5">
+            <a
+              href={src}
+              download="output.png"
+              onClick={(e) => e.stopPropagation()}
+              className="rounded-md p-1 text-muted-foreground hover:bg-accent hover:text-foreground"
+              title="Télécharger"
+            >
+              <Download className="h-3 w-3" />
+            </a>
+            <button
+              onClick={() => setOpen(true)}
+              className="rounded-md p-1 text-muted-foreground hover:bg-accent hover:text-foreground"
+              title="Agrandir"
+            >
+              <Maximize2 className="h-3 w-3" />
+            </button>
+            <Badge tone="success">ok</Badge>
+          </div>
+        }
       >
-        <img
-          src={`data:${mime};base64,${data}`}
-          alt="output"
-          className="max-w-full rounded-lg border border-border"
-        />
+        <button
+          type="button"
+          onClick={() => setOpen(true)}
+          className="group block w-full overflow-hidden rounded-lg border border-border transition hover:border-foreground/30"
+          title="Cliquer pour agrandir"
+        >
+          <img
+            src={src}
+            alt="output"
+            className="max-h-[420px] w-full object-contain transition group-hover:opacity-95"
+          />
+        </button>
       </OutputBlock>
-    );
+
+      <Dialog open={open} onOpenChange={setOpen}>
+        <DialogContent className="max-w-[95vw] gap-2 border-border bg-card p-3 sm:max-w-[95vw]">
+          <div className="flex items-center justify-between gap-2 pb-1">
+            <span className="font-mono text-[10px] uppercase tracking-wider text-muted-foreground">
+              {mime}
+            </span>
+            <div className="flex items-center gap-1">
+              <a
+                href={src}
+                download="output.png"
+                className="inline-flex items-center gap-1 rounded-full border border-border bg-card px-2.5 py-1 font-mono text-[10px] text-muted-foreground hover:text-foreground"
+              >
+                <Download className="h-3 w-3" />
+                Télécharger
+              </a>
+              <button
+                onClick={() => setOpen(false)}
+                className="rounded-full border border-border bg-card p-1.5 text-muted-foreground hover:text-foreground"
+                aria-label="Fermer"
+              >
+                <X className="h-3.5 w-3.5" />
+              </button>
+            </div>
+          </div>
+          <div className="flex max-h-[85vh] items-center justify-center overflow-auto rounded-lg bg-[oklch(0.08_0.004_260)] p-2">
+            <img src={src} alt="output" className="max-h-[80vh] w-auto max-w-full object-contain" />
+          </div>
+        </DialogContent>
+      </Dialog>
+    </>
+  );
+}
+
+function DisplayBlock({ mime, data }: { mime: string; data: string }) {
+  if (mime.startsWith("image/")) {
+    return <ImageDisplay mime={mime} data={data} />;
   }
 
   if (mime === "text/html") {

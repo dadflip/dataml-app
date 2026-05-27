@@ -10,11 +10,11 @@ export const Route = createFileRoute("/")({
   component: Index,
   head: () => ({
     meta: [
-      { title: "Pipeline Studio — Générateur de notebook ML" },
+      { title: "DataML Pipeline Studio — Générateur de notebook ML" },
       {
         name: "description",
         content:
-          "Composez votre pipeline ML à partir de 5 catalogues YAML : datasets, EDA, modèles, évaluation, export.",
+          "DataML — Composez votre pipeline ML à partir de 5 catalogues YAML : datasets, EDA, modèles, évaluation, export.",
       },
     ],
   }),
@@ -40,7 +40,9 @@ function Index() {
             <Workflow className="h-4 w-4" />
           </div>
           <div>
-            <h1 className="text-sm font-semibold leading-none tracking-tight">Pipeline Studio</h1>
+            <h1 className="text-sm font-semibold leading-none tracking-tight">
+              DataML <span className="text-muted-foreground">·</span> Pipeline Studio
+            </h1>
             <p className="mt-1 font-mono text-[10px] text-muted-foreground">
               datasets → eda → model → eval → report
             </p>
@@ -73,11 +75,14 @@ function Index() {
       {error && <div className="grid flex-1 place-items-center text-sm text-destructive">{error}</div>}
       {catalogs && (
         <main className="min-h-0 flex-1 overflow-hidden">
-          {tab === "catalog" ? (
+          {/* Keep BOTH panes mounted so the kernel connection, outputs and
+              in-progress executions survive tab switches. */}
+          <div className={`h-full ${tab === "catalog" ? "block" : "hidden"}`}>
             <CatalogBrowser catalogs={catalogs} onAdd={addBlock} />
-          ) : (
+          </div>
+          <div className={`h-full ${tab === "notebook" ? "block" : "hidden"}`}>
             <NotebookBuilder cells={cells} setCells={setCells} catalogs={catalogs} />
-          )}
+          </div>
         </main>
       )}
     </div>
