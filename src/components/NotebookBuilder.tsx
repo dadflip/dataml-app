@@ -723,3 +723,172 @@ function VarGroup({
     </div>
   );
 }
+
+// ─── BlockInfo ────────────────────────────────────────────────────────────────
+// Rich, collapsible recap of the catalog metadata behind a notebook cell:
+// description, when_to_use, use_cases, pros / cons, hyperparameters,
+// eval_metrics, library/class — everything the YAML carries.
+
+function BlockInfo({ block }: { block: CatalogBlock }) {
+  const [open, setOpen] = useState(false);
+
+  const hyperparams =
+    block.hyperparameters && typeof block.hyperparameters === "object"
+      ? Object.entries(block.hyperparameters)
+      : [];
+
+  const tags: { label: string; value: string }[] = [];
+  if (block.library) tags.push({ label: "lib", value: String(block.library) });
+  if (block.class) tags.push({ label: "class", value: String(block.class) });
+  if (block.format) tags.push({ label: "format", value: String(block.format) });
+  if (block.applies_to?.length)
+    tags.push({ label: "applies", value: block.applies_to.join(", ") });
+
+  return (
+    <div className="overflow-hidden rounded-xl border border-border bg-card/40">
+      <button
+        type="button"
+        onClick={() => setOpen((v) => !v)}
+        className="flex w-full items-center justify-between gap-2 px-3 py-2 text-left transition hover:bg-accent/30"
+      >
+        <div className="flex min-w-0 items-center gap-2">
+          <Info className="h-3.5 w-3.5 text-muted-foreground" />
+          <span className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+            Infos du bloc
+          </span>
+          <span className="truncate font-mono text-[10px] text-muted-foreground">
+            {block.id}
+          </span>
+        </div>
+        <ChevronDown
+          className={`h-3.5 w-3.5 shrink-0 text-muted-foreground transition ${open ? "rotate-180" : ""}`}
+        />
+      </button>
+
+      {open && (
+        <div className="space-y-3 border-t border-border px-3 py-3 text-xs">
+          {/* Tags row */}
+          {tags.length > 0 && (
+            <div className="flex flex-wrap gap-1.5">
+              {tags.map((t) => (
+                <span
+                  key={t.label}
+                  className="inline-flex items-center gap-1 rounded-full border border-border bg-card px-2 py-0.5 font-mono text-[10px]"
+                >
+                  <span className="text-muted-foreground">{t.label}</span>
+                  <span className="text-foreground">{t.value}</span>
+                </span>
+              ))}
+            </div>
+          )}
+
+          {block.description && (
+            <InfoSection title="Description">
+              <p className="leading-relaxed text-foreground/80">{block.description}</p>
+            </InfoSection>
+          )}
+
+          {block.when_to_use && (
+            <InfoSection title="Quand l'utiliser">
+              <p className="leading-relaxed text-foreground/80">{block.when_to_use}</p>
+            </InfoSection>
+          )}
+
+          {block.use_cases && block.use_cases.length > 0 && (
+            <InfoSection title="Cas d'usage">
+              <ul className="ml-1 list-inside list-disc space-y-0.5 text-foreground/80">
+                {block.use_cases.map((u, i) => (
+                  <li key={i}>{u}</li>
+                ))}
+              </ul>
+            </InfoSection>
+          )}
+
+          {(block.pros?.length || block.cons?.length) && (
+            <div className="grid gap-2 sm:grid-cols-2">
+              {block.pros && block.pros.length > 0 && (
+                <InfoSection title="Avantages" tone="success">
+                  <ul className="ml-1 list-inside list-disc space-y-0.5 text-foreground/80">
+                    {block.pros.map((p, i) => (
+                      <li key={i}>{p}</li>
+                    ))}
+                  </ul>
+                </InfoSection>
+              )}
+              {block.cons && block.cons.length > 0 && (
+                <InfoSection title="Limites" tone="danger">
+                  <ul className="ml-1 list-inside list-disc space-y-0.5 text-foreground/80">
+                    {block.cons.map((p, i) => (
+                      <li key={i}>{p}</li>
+                    ))}
+                  </ul>
+                </InfoSection>
+              )}
+            </div>
+          )}
+
+          {hyperparams.length > 0 && (
+            <InfoSection title="Hyperparamètres par défaut">
+              <div className="overflow-hidden rounded-lg border border-border">
+                <table className="w-full text-[11px]">
+                  <tbody>
+                    {hyperparams.map(([k, v]) => (
+                      <tr key={k} className="border-b border-border/60 last:border-0">
+                        <td className="bg-card/60 px-2 py-1 font-mono text-muted-foreground">
+                          {k}
+                        </td>
+                        <td className="px-2 py-1 font-mono text-foreground/85">
+                          {typeof v === "object" ? JSON.stringify(v) : String(v)}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </InfoSection>
+          )}
+
+          {block.eval_metrics && block.eval_metrics.length > 0 && (
+            <InfoSection title="Métriques d'évaluation">
+              <div className="flex flex-wrap gap-1">
+                {block.eval_metrics.map((m) => (
+                  <code
+                    key={m}
+                    className="rounded-md border border-border bg-card px-1.5 py-0.5 font-mono text-[10px]"
+                  >
+                    {m}
+                  </code>
+                ))}
+              </div>
+            </InfoSection>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function InfoSection({
+  title,
+  tone = "muted",
+  children,
+}: {
+  title: string;
+  tone?: "muted" | "success" | "danger";
+  children: React.ReactNode;
+}) {
+  const toneCls =
+    tone === "success"
+      ? "text-[color:var(--color-success)]"
+      : tone === "danger"
+        ? "text-destructive"
+        : "text-muted-foreground";
+  return (
+    <div>
+      <h5 className={`mb-1 text-[10px] font-semibold uppercase tracking-wider ${toneCls}`}>
+        {title}
+      </h5>
+      {children}
+    </div>
+  );
+}
