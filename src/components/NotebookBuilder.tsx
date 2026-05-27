@@ -305,6 +305,7 @@ export function NotebookBuilder({ cells, setCells, catalogs }: Props) {
                       cell={cell}
                       index={i}
                       validation={validations[i]}
+                      blockMeta={blockIndex.get(cell.blockId)}
                       isOpen={openUid === cell.uid}
                       onToggle={() => setOpenUid(openUid === cell.uid ? null : cell.uid)}
                       onRemove={() => remove(cell.uid)}
