@@ -149,9 +149,23 @@ export function executeCode(
         onUpdate?.({ ...result });
       } else if (t === "execute_result" || t === "display_data") {
         const data = (c.data ?? {}) as Record<string, unknown>;
-        for (const [mime, val] of Object.entries(data)) {
-          result.displays.push({ mime, data: String(val) });
+        
+        // Find best representation (from richest to poorest)
+        const mimes = Object.keys(data);
+        if (mimes.length > 0) {
+          const priority = ["image/png", "image/jpeg", "image/svg+xml", "text/html", "text/markdown", "text/plain"];
+          let bestMime = mimes[0];
+          for (const p of priority) {
+            if (mimes.includes(p)) {
+              bestMime = p;
+              break;
+            }
+          }
+          const val = data[bestMime];
+          const strData = Array.isArray(val) ? val.join("") : (typeof val === "object" ? JSON.stringify(val, null, 2) : String(val));
+          result.displays.push({ mime: bestMime, data: strData });
         }
+        
         onUpdate?.({ ...result });
       } else if (t === "error") {
         const tb = (c.traceback as string[]) ?? [];
