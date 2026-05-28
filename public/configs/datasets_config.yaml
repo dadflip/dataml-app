@@ -275,6 +275,8 @@ catalog:
         y_train      = None; y_test = None
         dates_train  = None; dates_future = None
         durations    = None; events = None; df_survival = None
+        X_train      = None; X_test = None
+        preprocessor = None; feature_names_out = feature_names
         print(f"[TABULAR] task_type='{task_type}' | features={len(feature_names)} | target='{target_name}'")
         print(f"          shape={df.shape}")
         print(df.head(3))
@@ -322,6 +324,8 @@ catalog:
         y_train      = None; y_test = None
         dates_train  = None; dates_future = None
         durations    = None; events = None; df_survival = None
+        X_train      = None; X_test = None
+        preprocessor = None; feature_names_out = feature_names
         print(f"[TABULAR] task_type='{task_type}' | features={len(feature_names)} | target='{target_name}'")
         print(f"          shape={df.shape}")
         print(df.head(3))
@@ -364,6 +368,8 @@ catalog:
         y_train      = None; y_test = None
         dates_train  = None; dates_future = None
         durations    = None; events = None; df_survival = None
+        X_train      = None; X_test = None
+        preprocessor = None; feature_names_out = feature_names
         print(f"[TABULAR] task_type='{task_type}' | features={len(feature_names)} | target='{target_name}'")
         print(f"          shape={df.shape}")
         print(df.head(3))
@@ -416,6 +422,8 @@ catalog:
         y_train      = None; y_test = None
         dates_train  = None; dates_future = None
         durations    = None; events = None; df_survival = None
+        X_train      = None; X_test = None
+        preprocessor = None; feature_names_out = feature_names
         print(f"[TABULAR] task_type='{task_type}' | features={len(feature_names)} | target='{target_name}'")
         print(f"          shape={df.shape}")
         print(df.head(3))
@@ -510,6 +518,8 @@ catalog:
         y_train      = None; y_test = None
         dates_train  = None; dates_future = None
         durations    = None; events = None; df_survival = None
+        X_train      = None; X_test = None
+        preprocessor = None; feature_names_out = feature_names
         print(f"[TABULAR] task_type='{task_type}' | features={len(feature_names)} | target='{target_name}'")
         print(f"          shape={df.shape}")
         print(df.head(3))
@@ -588,6 +598,8 @@ catalog:
         y_train      = None; y_test = None
         dates_train  = None; dates_future = None
         durations    = None; events = None; df_survival = None
+        X_train      = None; X_test = None
+        preprocessor = None; feature_names_out = feature_names
         print(f"[TABULAR] task_type='{task_type}' | features={len(feature_names)} | target='{target_name}'")
         print(f"          shape={df.shape}")
         print(df.head(3))
@@ -665,6 +677,8 @@ catalog:
         y_train      = None; y_test = None
         dates_train  = None; dates_future = None
         durations    = None; events = None; df_survival = None
+        X_train      = None; X_test = None
+        preprocessor = None; feature_names_out = feature_names
         print(f"[TABULAR] task_type='{task_type}' | features={len(feature_names)} | target='{target_name}'")
         print(f"          shape={df.shape}")
         print(df.head(3))
@@ -716,6 +730,8 @@ catalog:
         y_train      = None; y_test = None
         dates_train  = None; dates_future = None
         durations    = None; events = None; df_survival = None
+        X_train      = None; X_test = None
+        preprocessor = None; feature_names_out = feature_names
         print(f"[TABULAR] task_type='{task_type}' | features={len(feature_names)} | target='{target_name}'")
         print(f"          shape={df.shape}")
         print(df.head(3))
@@ -763,6 +779,8 @@ catalog:
         y_train      = None; y_test = None
         dates_train  = None; dates_future = None
         durations    = None; events = None; df_survival = None
+        X_train      = None; X_test = None
+        preprocessor = None; feature_names_out = feature_names
         print(f"[TABULAR] task_type='{task_type}' | features={len(feature_names)} | target='{target_name}'")
         print(f"          shape={df.shape}")
         print(df.head(3))
@@ -808,6 +826,8 @@ catalog:
         y_train      = None; y_test = None
         dates_train  = None; dates_future = None
         durations    = None; events = None; df_survival = None
+        X_train      = None; X_test = None
+        preprocessor = None; feature_names_out = feature_names
         print(f"[TABULAR] task_type='{task_type}' | features={len(feature_names)} | target='{target_name}'")
         print(f"          shape={df.shape}")
         print(df.head(3))
@@ -902,6 +922,8 @@ catalog:
         y_train      = None; y_test = None
         dates_train  = None; dates_future = None
         durations    = None; events = None; df_survival = None
+        X_train      = None; X_test = None
+        preprocessor = None; feature_names_out = feature_names
         print(f"[TABULAR] task_type='{task_type}' | features={len(feature_names)} | target='{target_name}'")
         print(f"          shape={X.shape}")
         print(X.head(3))
@@ -967,6 +989,8 @@ catalog:
         y_train      = None; y_test = None
         dates_train  = None; dates_future = None
         durations    = None; events = None; df_survival = None
+        X_train      = None; X_test = None
+        preprocessor = None; feature_names_out = feature_names
         print(f"[TABULAR] task_type='{task_type}' | features={len(feature_names)} | target='{target_name}'")
         print(f"          shape={df.shape}")
         print(df.head(3))
@@ -1025,6 +1049,8 @@ catalog:
         y_train      = None; y_test = None
         dates_train  = None; dates_future = None
         durations    = None; events = None; df_survival = None
+        X_train      = None; X_test = None
+        preprocessor = None; feature_names_out = feature_names
         print(f"[TABULAR] task_type='{task_type}' | features={len(feature_names)} | target='{target_name}'")
         print(f"          shape={df.shape}")
         print(df.head(3))
@@ -1084,6 +1110,8 @@ catalog:
         y_train      = None; y_test = None
         dates_train  = None; dates_future = None
         durations    = None; events = None; df_survival = None
+        X_train      = None; X_test = None
+        preprocessor = None; feature_names_out = feature_names
         print(f"[TABULAR] task_type='{task_type}' | features={len(feature_names)} | target='{target_name}'")
         print(f"          shape={df.shape}")
         print(df.head(3))
@@ -1123,6 +1151,8 @@ catalog:
         y_train      = None; y_test = None
         dates_train  = None; dates_future = None
         durations    = None; events = None; df_survival = None
+        X_train      = None; X_test = None
+        preprocessor = None; feature_names_out = feature_names
         print(f"[TABULAR] task_type='{task_type}' | features={len(feature_names)} | target='{target_name}'")
         print(f"          shape={df.shape}")
         print(df.head(3))
@@ -1296,6 +1326,8 @@ catalog:
         y_train      = None; y_test = None
         dates_train  = None; dates_future = None
         durations    = None; events = None; df_survival = None
+        X_train      = None; X_test = None
+        preprocessor = None; feature_names_out = feature_names
         print(f"[TABULAR] task_type='{task_type}' | features={len(feature_names)} | target='{target_name}'")
         print(f"          shape={df.shape}")
         print(df.head(3))
@@ -1368,6 +1400,8 @@ catalog:
         y_train      = None; y_test = None
         dates_train  = None; dates_future = None
         durations    = None; events = None; df_survival = None
+        X_train      = None; X_test = None
+        preprocessor = None; feature_names_out = feature_names
         print(f"[TABULAR] task_type='{task_type}' | features={len(feature_names)} | target='{target_name}'")
         print(f"          shape={df.shape} | nodes={G.number_of_nodes()}")
         print(df.head(3))
@@ -1440,6 +1474,8 @@ catalog:
         y_train      = None; y_test = None
         dates_train  = None; dates_future = None
         durations    = None; events = None; df_survival = None
+        X_train      = None; X_test = None
+        preprocessor = None; feature_names_out = feature_names
         print(f"[TABULAR] task_type='{task_type}' | features={len(feature_names)} | target='{target_name}'")
         print(f"          shape={df.shape} | entities={len(subjects)}")
         print(df.head(3))
@@ -1511,6 +1547,8 @@ catalog:
         y_train      = None; y_test = None
         dates_train  = None; dates_future = None
         durations    = None; events = None; df_survival = None
+        X_train      = None; X_test = None
+        preprocessor = None; feature_names_out = feature_names
         print(f"[TABULAR] task_type='{task_type}' | features={len(feature_names)} | target='{target_name}'")
         print(f"          shape={df.shape} | entities={len(df)}")
         print(df.head(3))
@@ -1581,6 +1619,8 @@ catalog:
         y_train      = None; y_test = None
         dates_train  = None; dates_future = None
         durations    = None; events = None; df_survival = None
+        X_train      = None; X_test = None
+        preprocessor = None; feature_names_out = feature_names
         print(f"[TABULAR] task_type='{task_type}' | features={len(GEO_FEAT)} | target='{target_name}'")
         print(f"          shape={df.shape}")
         print(df[GEO_FEAT].head(3))
@@ -1636,6 +1676,8 @@ catalog:
         y_train      = None; y_test = None
         dates_train  = None; dates_future = None
         durations    = None; events = None; df_survival = None
+        X_train      = None; X_test = None
+        preprocessor = None; feature_names_out = feature_names
         print(f"[TABULAR] task_type='{task_type}' | features={len(feature_names)} | target='{target_name}'")
         print(f"          shape={df.shape}")
         print(df.head(3))
@@ -1697,6 +1739,8 @@ catalog:
         y_train      = None; y_test = None
         dates_train  = None; dates_future = None
         durations    = None; events = None; df_survival = None
+        X_train      = None; X_test = None
+        preprocessor = None; feature_names_out = feature_names
         print(f"[TABULAR] task_type='{task_type}' | features={len(feature_names)} | target='{target_name}'")
         print(f"          shape={df.shape} | dim={dim}")
         print(df.head(3))
@@ -1749,6 +1793,8 @@ catalog:
         y_train      = None; y_test = None
         dates_train  = None; dates_future = None
         durations    = None; events = None; df_survival = None
+        X_train      = None; X_test = None
+        preprocessor = None; feature_names_out = feature_names
         print(f"[TABULAR] task_type='{task_type}' | features={len(feature_names)} | target='{target_name}'")
         print(f"          shape={df.shape} | dim={dim}")
         print(df.head(3))
@@ -1815,6 +1861,8 @@ catalog:
         y_train      = None; y_test = None
         dates_train  = None; dates_future = None
         durations    = None; events = None; df_survival = None
+        X_train      = None; X_test = None
+        preprocessor = None; feature_names_out = feature_names
         print(f"[TABULAR] task_type='{task_type}' | features={len(feature_names)} | target='{target_name}'")
         print(f"          shape={df.shape}")
         print(df.head(3))
@@ -1877,6 +1925,8 @@ catalog:
         y_train      = None; y_test = None
         dates_train  = None; dates_future = None
         durations    = None; events = None; df_survival = None
+        X_train      = None; X_test = None
+        preprocessor = None; feature_names_out = feature_names
         print(f"[TABULAR] task_type='{task_type}' | features={len(feature_names)} | target='{target_name}'")
         print(f"          shape={df.shape}")
         print(df.head(3))
@@ -1929,6 +1979,8 @@ catalog:
         y_train      = None; y_test = None
         dates_train  = None; dates_future = None
         durations    = None; events = None; df_survival = None
+        X_train      = None; X_test = None
+        preprocessor = None; feature_names_out = feature_names
         print(f"[TABULAR] task_type='{task_type}' | features={len(feature_names)} | target='{target_name}'")
         print(f"          shape={df.shape}")
         print(df.head(3))
@@ -1986,6 +2038,8 @@ catalog:
         y_train      = None; y_test = None
         dates_train  = None; dates_future = None
         durations    = None; events = None; df_survival = None
+        X_train      = None; X_test = None
+        preprocessor = None; feature_names_out = feature_names
         print(f"[TABULAR] task_type='{task_type}' | features={len(feature_names)} | target='{target_name}'")
         print(f"          shape={df.shape}")
         print(df.head(3))
@@ -2027,6 +2081,8 @@ catalog:
         y_train      = None; y_test = None
         dates_train  = None; dates_future = None
         durations    = None; events = None; df_survival = None
+        X_train      = None; X_test = None
+        preprocessor = None; feature_names_out = feature_names
         print(f"[TABULAR] task_type='{task_type}' | features={len(feature_names)} | target='{target_name}'")
         print(f"          shape={df.shape}")
         print(df.head(3))
@@ -2079,6 +2135,8 @@ catalog:
         y_train      = None; y_test = None
         dates_train  = None; dates_future = None
         durations    = None; events = None; df_survival = None
+        X_train      = None; X_test = None
+        preprocessor = None; feature_names_out = feature_names
         print(f"[TABULAR] task_type='{task_type}' | features={len(feature_names)} | target='{target_name}'")
         print(f"          shape={df.shape} | records={len(records)}")
         print(df.head(3))
@@ -2141,6 +2199,8 @@ catalog:
         y_train      = None; y_test = None
         dates_train  = None; dates_future = None
         durations    = None; events = None; df_survival = None
+        X_train      = None; X_test = None
+        preprocessor = None; feature_names_out = feature_names
         print(f"[TABULAR] task_type='{task_type}' | features={len(feature_names)} | target='{target_name}'")
         print(f"          shape={df.shape}")
         print(df.head(3))
@@ -2257,6 +2317,8 @@ catalog:
         y_train      = None; y_test = None
         dates_train  = None; dates_future = None
         durations    = None; events = None; df_survival = None
+        X_train      = None; X_test = None
+        preprocessor = None; feature_names_out = feature_names
         print(f"[TABULAR] task_type='{task_type}' | features={len(feature_names)} | target='{target_name}'")
         print(f"          shape={df.shape}")
         print(df.head(3))
@@ -2377,6 +2439,8 @@ catalog:
         y_train      = None; y_test = None
         dates_train  = None; dates_future = None
         durations    = None; events = None; df_survival = None
+        X_train      = None; X_test = None
+        preprocessor = None; feature_names_out = feature_names
         print(f"[TABULAR] task_type='{task_type}' | features={len(feature_names)} | target='{target_name}'")
         print(f"          shape={df.shape} | client_id={CLIENT_ID}")
         print(df.head(3))
@@ -2416,6 +2480,8 @@ catalog:
         y_train      = None; y_test = None
         dates_train  = None; dates_future = None
         durations    = None; events = None; df_survival = None
+        X_train      = None; X_test = None
+        preprocessor = None; feature_names_out = feature_names
         print(f"[TABULAR] task_type='{task_type}' | features={len(feature_names)} | target='{target_name}'")
         print(f"          shape={df.shape}")
         print(df.head(3))
@@ -3668,6 +3734,8 @@ catalog:
         y_train      = None; y_test = None
         dates_train  = None; dates_future = None
         durations    = None; events = None; df_survival = None
+        X_train      = None; X_test = None
+        preprocessor = None; feature_names_out = feature_names
         print(f"[TABULAR] task_type='{task_type}' | features={len(feature_names)} | target='{target_name}'")
         print(f"          shape={df.shape} | files={len(records)}")
         print(df.head(3))
@@ -4025,3 +4093,96 @@ catalog:
 # vision       any                          vision_free_source
 # sequence     any                          sequence_free_source
 # ══════════════════════════════════════════════════════════════════════════
+    # ──────────────────────────────────────────────────────────────────────
+    utilities:
+    # ──────────────────────────────────────────────────────────────────────
+
+    - id: train_test_split_tabular
+      contract: tabular
+      name: "Split Train/Test (Tabulaire)"
+      category: "Utilitaires Data"
+      format: "N/A"
+      description: "Sépare le DataFrame (X et y) en ensembles d'entraînement et de test."
+      use_cases: ["avant feature engineering", "avant Bloc 2", "pour valider un modèle"]
+      pros: ["stratification automatique pour la classification"]
+      cons: ["pas pour les séries temporelles"]
+      code_template: |
+        from sklearn.model_selection import train_test_split
+
+        # ── Paramètres ──────────────────────────────────────────────────
+        TEST_SIZE    = 0.2
+        RANDOM_STATE = 42
+        STRATIFY     = True
+
+        # ── Execution ───────────────────────────────────────────────────
+        strat = y if (STRATIFY and task_type == "classification" and y is not None) else None
+
+        if y is not None:
+            X_train, X_test, y_train, y_test = train_test_split(
+                X, y, test_size=TEST_SIZE, random_state=RANDOM_STATE, stratify=strat
+            )
+        else:
+            X_train, X_test = train_test_split(
+                X, test_size=TEST_SIZE, random_state=RANDOM_STATE
+            )
+            y_train, y_test = None, None
+
+        # preprocessor et feature_names sont propagés
+        preprocessor = locals().get("preprocessor", None)
+        feature_names_out = feature_names
+
+        print(f"Shape X_train : {X_train.shape}")
+        print(f"Shape X_test  : {X_test.shape}")
+
+
+# ══════════════════════════════════════════════════════════════════════════
+# SECTION 3 — VALIDATION CONTRATS DE SORTIE (BLOC 1)
+# ══════════════════════════════════════════════════════════════════════════
+
+validator:
+  - id: validate_bloc1_contract
+    name: "Validateur Contrat Bloc 1"
+    description: "Vérifie que les variables obligatoires du Bloc 1 sont bien définies selon le contrat."
+    code_template: |
+      print("=" * 70)
+      print("VALIDATION CONTRAT DE SORTIE — BLOC 1")
+      print("=" * 70)
+      
+      errors = []
+      
+      try:
+          print(f"Contract actif : {contract}")
+      except NameError:
+          errors.append("Variable 'contract' non définie (choisir 'tabular', 'vision' ou 'sequence').")
+          contract = None
+
+      if contract == "tabular":
+          try:
+              if not isinstance(df, pd.DataFrame): errors.append("'df' doit être un pd.DataFrame")
+              if not isinstance(X, pd.DataFrame): errors.append("'X' doit être un pd.DataFrame")
+              if y is not None and not isinstance(y, pd.Series): errors.append("'y' doit être None ou pd.Series")
+              if not isinstance(feature_names, list): errors.append("'feature_names' doit être une liste de str")
+          except NameError as e:
+              errors.append(f"Variable tabular manquante : {e}")
+              
+      elif contract == "vision":
+          try:
+              if not isinstance(images_train, np.ndarray): errors.append("'images_train' doit être un np.ndarray")
+              if not isinstance(images_test, np.ndarray): errors.append("'images_test' doit être un np.ndarray")
+              if labels_train is not None and not isinstance(labels_train, np.ndarray): errors.append("'labels_train' doit être un ndarray")
+          except NameError as e:
+              errors.append(f"Variable vision manquante : {e}")
+
+      elif contract == "sequence":
+          try:
+              if not isinstance(sequences_train, np.ndarray) and not isinstance(sequences_train, list): 
+                  errors.append("'sequences_train' doit être un array ou list")
+          except NameError as e:
+              errors.append(f"Variable sequence manquante : {e}")
+
+      if not errors:
+          print(f"Contrat {contract} validé. Prêt pour le Bloc 2.")
+      else:
+          print("ERREURS DE CONTRAT :")
+          for err in errors:
+              print(f"  - {err}")
