@@ -273,6 +273,9 @@ catalog:
         SEPARATOR  = ","
         ENCODING   = "utf-8"
         COLUMNS    = None       # liste de colonnes ou None = toutes
+        TEST_SIZE    = 0.2
+        RANDOM_STATE = 42
+        STRATIFY     = True
 
         # ── Chargement ──────────────────────────────────────────────────
         df = pd.read_csv(
@@ -352,6 +355,9 @@ catalog:
         TARGET_COL = "target"
         HEADER_ROW = 0
         SKIP_ROWS  = None
+        TEST_SIZE    = 0.2
+        RANDOM_STATE = 42
+        STRATIFY     = True
 
         # ── Chargement ──────────────────────────────────────────────────
         xl = pd.ExcelFile(FILE_PATH)
@@ -426,6 +432,9 @@ catalog:
         TARGET_COL = "target"
         COLUMNS    = None
         ENGINE     = "pyarrow"
+        TEST_SIZE    = 0.2
+        RANDOM_STATE = 42
+        STRATIFY     = True
 
         # ── Chargement ──────────────────────────────────────────────────
         df = pd.read_parquet(FILE_PATH, columns=COLUMNS, engine=ENGINE)
@@ -495,6 +504,9 @@ catalog:
         # ── Paramètres ──────────────────────────────────────────────────
         FILE_PATH  = "data/dataset.json"
         TARGET_COL = "label"
+        TEST_SIZE    = 0.2
+        RANDOM_STATE = 42
+        STRATIFY     = True
 
         # ── Chargement ──────────────────────────────────────────────────
         IS_JSONL = FILE_PATH.endswith(".jsonl")
@@ -586,6 +598,9 @@ catalog:
         TARGET_KEY = "labels"    # clé MATLAB pour y — None si non supervisé
         TARGET_COL = "target"
         FLATTEN    = True        # aplatir les tableaux >2D en vecteurs
+        TEST_SIZE    = 0.2
+        RANDOM_STATE = 42
+        STRATIFY     = True
 
         # ── Chargement avec détection de version ─────────────────────────
         try:
@@ -707,6 +722,9 @@ catalog:
         H5_LABEL_PATH = "/y"               # chemin labels (h5py direct) — None si absent
         TARGET_COL    = "target"
         MAX_ROWS      = None
+        TEST_SIZE    = 0.2
+        RANDOM_STATE = 42
+        STRATIFY     = True
 
         def _list_datasets(f):
             leaves = {}
@@ -812,6 +830,9 @@ catalog:
         TARGET_IDX = -1           # si .npy : colonne target (-1=dernière), None si absent
         TARGET_COL = "target"
         MMAP_MODE  = None         # None | "r" pour grands fichiers
+        TEST_SIZE    = 0.2
+        RANDOM_STATE = 42
+        STRATIFY     = True
 
         is_npz = FILE_PATH.endswith(".npz")
         if is_npz:
@@ -913,6 +934,9 @@ catalog:
         DB_URL     = "postgresql+psycopg2://user:password@localhost:5432/mydb"
         TARGET_COL = "target"
         QUERY      = """
+        TEST_SIZE    = 0.2
+        RANDOM_STATE = 42
+        STRATIFY     = True
             SELECT t.*, f.feature_extra
             FROM   main_table t
             JOIN   features_table f ON t.id = f.id
@@ -992,6 +1016,9 @@ catalog:
         QUERY_FILTER = {"status": "active"}
         PROJECTION   = {"_id": 0}
         LIMIT        = 100000
+        TEST_SIZE    = 0.2
+        RANDOM_STATE = 42
+        STRATIFY     = True
 
         client = MongoClient(MONGO_URI)
         df     = pd.json_normalize(list(
@@ -1064,6 +1091,9 @@ catalog:
         TARGET_COL  = "target"
         USE_STORAGE = False
         QUERY       = """
+        TEST_SIZE    = 0.2
+        RANDOM_STATE = 42
+        STRATIFY     = True
             SELECT feature1, feature2, feature3, target
             FROM   `my-gcp-project.my_dataset.my_table`
             WHERE  DATE(created_at) >= '2024-01-01'
@@ -1148,6 +1178,9 @@ catalog:
         EXCLUDE_TABLES = ["alembic_version", "django_migrations"]
         MAX_DEPTH      = 2
         N_JOBS         = -1
+        TEST_SIZE    = 0.2
+        RANDOM_STATE = 42
+        STRATIFY     = True
 
         engine    = create_engine(DB_URL, pool_pre_ping=True)
         inspector = inspect(engine)
@@ -1261,6 +1294,9 @@ catalog:
         N_PAGES    = 10
         SLEEP      = 1.0
         HEADERS    = {"User-Agent": "Mozilla/5.0 (compatible; DataBot/1.0)"}
+        TEST_SIZE    = 0.2
+        RANDOM_STATE = 42
+        STRATIFY     = True
 
         if MULTI_PAGE:
             all_dfs = []
@@ -1344,6 +1380,9 @@ catalog:
         import pandas as pd, numpy as np
 
         # ── Paramètres ──────────────────────────────────────────────────
+        TEST_SIZE    = 0.2
+        RANDOM_STATE = 42
+        STRATIFY     = True
         # load_breast_cancer, load_iris, load_wine, load_digits,
         # load_diabetes, load_california_housing,
         # make_classification, make_regression, make_blobs
@@ -1426,6 +1465,9 @@ catalog:
         import openml, pandas as pd, numpy as np
 
         # ── Paramètres ──────────────────────────────────────────────────
+        TEST_SIZE    = 0.2
+        RANDOM_STATE = 42
+        STRATIFY     = True
         # 31 (credit-g), 40 (sonar), 44 (spambase),
         # 1590 (adult), 4534 (PhishingWebsites)
         DATASET_ID = 31
@@ -1508,6 +1550,9 @@ catalog:
         TEST_RATIO = 0.2
         HORIZON    = 30
         AGG        = "sum"      # "sum","mean","last","first","max","min"
+        TEST_SIZE    = 0.2
+        RANDOM_STATE = 42
+        STRATIFY     = True
 
         df = pd.read_csv(FILE_PATH, parse_dates=[DATE_COL])
         df = df.set_index(DATE_COL).sort_index()
@@ -1594,6 +1639,9 @@ catalog:
         SOURCE_COL     = "source"; TARGET_COL_G = "target"; WEIGHT_COL = "weight"
         NODE_LABEL_COL = "label"
         DIRECTED       = False
+        TEST_SIZE    = 0.2
+        RANDOM_STATE = 42
+        STRATIFY     = True
 
         if SOURCE != "CSV edges":
             ext = GRAPH_FILE.split(".")[-1].lower()
@@ -1684,6 +1732,9 @@ catalog:
         SPARQL_ENDPOINT  = "http://dbpedia.org/sparql"
         TARGET_PREDICATE = None
         SPARQL_QUERY     = """
+        TEST_SIZE    = 0.2
+        RANDOM_STATE = 42
+        STRATIFY     = True
             PREFIX rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#>
             SELECT ?subject ?predicate ?object WHERE {
                 ?subject ?predicate ?object .
@@ -1781,6 +1832,9 @@ catalog:
         TARGET_COL  = None
         MAX_RETRIES = 3
         WIKIDATA_QUERY = """
+        TEST_SIZE    = 0.2
+        RANDOM_STATE = 42
+        STRATIFY     = True
             SELECT ?item ?itemLabel ?population ?area ?capital ?capitalLabel WHERE {
               ?item wdt:P31 wd:Q6256 .
               OPTIONAL { ?item wdt:P1082 ?population . }
@@ -1891,6 +1945,9 @@ catalog:
         GEO_FILE   = "data/parcels.geojson"
         TARGET_COL = None; CRS_TARGET = "EPSG:4326"; LAYER = None
         USE_REF    = True; REF_LON = 2.3522; REF_LAT = 48.8566
+        TEST_SIZE    = 0.2
+        RANDOM_STATE = 42
+        STRATIFY     = True
 
         kw = {"layer": LAYER} if LAYER else {}
         gdf = (gpd.read_parquet(GEO_FILE) if GEO_FILE.endswith(".parquet")
@@ -1985,6 +2042,9 @@ catalog:
         COLLECTION_NAME     = "documents"
         TARGET_METADATA_KEY = None
         N_MAX               = None
+        TEST_SIZE    = 0.2
+        RANDOM_STATE = 42
+        STRATIFY     = True
 
         client = (chromadb.HttpClient(host=CHROMA_HOST, port=CHROMA_PORT)
                   if MODE != "Local (PersistentClient)"
@@ -2067,6 +2127,9 @@ catalog:
         PINECONE_INDEX      = "my-index"
         TARGET_METADATA_KEY = None
         FETCH_N             = 1000
+        TEST_SIZE    = 0.2
+        RANDOM_STATE = 42
+        STRATIFY     = True
 
         pc = Pinecone(api_key=PINECONE_API_KEY)
         index = pc.Index(PINECONE_INDEX)
@@ -2154,6 +2217,9 @@ catalog:
         TARGET_COL           = None
         SELECT_COLS          = "*"
         FILTERS              = {}
+        TEST_SIZE    = 0.2
+        RANDOM_STATE = 42
+        STRATIFY     = True
 
         if MODE == "Client Python (PostgREST)":
             from supabase import create_client
@@ -2243,6 +2309,9 @@ catalog:
         ATHENA_OUT   = "s3://my-data-lake/athena-results/"
         TARGET_COL   = None
         ATHENA_QUERY = "SELECT * FROM my_table WHERE year='2024' LIMIT 500000"
+        TEST_SIZE    = 0.2
+        RANDOM_STATE = 42
+        STRATIFY     = True
 
         session = boto3.Session(region_name=AWS_REGION); exec_id = None
         if MODE == "Lecture directe S3":
@@ -2331,6 +2400,9 @@ catalog:
         SYNAPSE_DATABASE = "my_serverless_db"
         SYNAPSE_QUERY    = "SELECT TOP 100000 * FROM my_table"
         TARGET_COL       = None
+        TEST_SIZE    = 0.2
+        RANDOM_STATE = 42
+        STRATIFY     = True
 
         if MODE == "Azure Blob Storage":
             from azure.storage.blob import BlobServiceClient
@@ -2416,6 +2488,9 @@ catalog:
         DELTA_TIMESTAMP  = None    # "2024-12-01T00:00:00" ou None
         TARGET_COL       = None
         STORAGE_OPTIONS  = {}
+        TEST_SIZE    = 0.2
+        RANDOM_STATE = 42
+        STRATIFY     = True
 
         if ENGINE == "delta-rs (sans Spark)":
             from deltalake import DeltaTable
@@ -2493,6 +2568,9 @@ catalog:
         CATALOG_URI  = "http://localhost:8181"
         NAMESPACE    = "default"; TABLE = "my_table"
         SNAPSHOT_ID  = None; TARGET_COL = None
+        TEST_SIZE    = 0.2
+        RANDOM_STATE = 42
+        STRATIFY     = True
 
         catalog = load_catalog(CATALOG_TYPE, **{"uri": CATALOG_URI})
         table   = catalog.load_table(f"{NAMESPACE}.{TABLE}")
@@ -2569,6 +2647,9 @@ catalog:
         BOOTSTRAP_SERVERS = ["localhost:9092"]
         TOPIC       = "ml-events"; GROUP_ID = "ml-consumer-group"
         BATCH_SIZE  = 1000; TIMEOUT_MS = 1000; OFFSET_RESET = "latest"
+        TEST_SIZE    = 0.2
+        RANDOM_STATE = 42
+        STRATIFY     = True
 
         consumer = KafkaConsumer(TOPIC, bootstrap_servers=BOOTSTRAP_SERVERS,
                                  group_id=GROUP_ID, auto_offset_reset=OFFSET_RESET,
@@ -2649,6 +2730,9 @@ catalog:
         N       = 10000; N_FEAT = 15; N_INF = 8; N_CLS = 3
         NOISE   = 0.02;  SEED   = 42
         ADD_CAT = True; ADD_NAN = True
+        TEST_SIZE    = 0.2
+        RANDOM_STATE = 42
+        STRATIFY     = True
 
         np.random.seed(SEED); N_INF = min(N_INF, N_FEAT)
         if MODE == "Classification":
@@ -2733,6 +2817,9 @@ catalog:
 
         # ── Paramètres ──────────────────────────────────────────────────
         MODEL      = "GBM (Brownien géométrique)"
+        TEST_SIZE    = 0.2
+        RANDOM_STATE = 42
+        STRATIFY     = True
         # "GBM","ARIMA","OU (Ornstein-Uhlenbeck)","Régimes","Saisonnier + bruit"
         N_POINTS   = 1000; FREQ = "D"; TEST_RATIO = 0.2; HORIZON = 30; SEED = 42
         MU = 0.0005; SIGMA = 0.02; S0 = 100.0
@@ -2824,6 +2911,9 @@ catalog:
         import pandas as pd, numpy as np
 
         # ── Paramètres ──────────────────────────────────────────────────
+        TEST_SIZE    = 0.2
+        RANDOM_STATE = 42
+        STRATIFY     = True
         # lifelines : load_rossi, load_lung, load_dd, load_stanford_heart_transplants
         LOADER_NAME  = "load_rossi"
         CSV_PATH     = "survival_data.csv"
@@ -2900,7 +2990,9 @@ catalog:
         from sklearn.linear_model import LogisticRegression
 
         # ── Paramètres ──────────────────────────────────────────────────
-        NUM_CLIENTS=5; NUM_ROUNDS=3; ALPHA_DIR=0.5
+        NUM_CLIENTS=5
+        NUM_ROUNDS=3
+        ALPHA_DIR=0.5
         N_SAMPLES=5000; N_FEATURES=20; SEED=42; CLIENT_ID=0
 
         np.random.seed(SEED)
@@ -2998,6 +3090,9 @@ catalog:
 
         # ── Paramètres ──────────────────────────────────────────────────
         TARGET_COL = "target"
+        TEST_SIZE    = 0.2
+        RANDOM_STATE = 42
+        STRATIFY     = True
         task_type  = "classification"
         N_ROWS = 100; N_FEATS = 5
 
@@ -3889,7 +3984,10 @@ catalog:
         import numpy as np
 
         # ── Paramètres ──────────────────────────────────────────────────
-        IMG_SIZE = 224; N_CLASSES = 10; N_TRAIN = 1000; N_TEST = 200
+        IMG_SIZE = 224
+        N_CLASSES = 10
+        N_TRAIN = 1000
+        N_TEST = 200
         task_type = "image_classification"; BATCH_SIZE = 32; NUM_WORKERS = 4
 
         # ════════════════════════════════════════════════════════════════
@@ -4066,13 +4164,16 @@ catalog:
         # ── Paramètres ──────────────────────────────────────────────────
         SOURCE    = "CSV"          # "CSV" | "Dossier structuré"
         FILE_PATH = "data/texts.csv"
-        TEXT_COL  = "text"; LABEL_COL = "label"
+        TEXT_COL  = "text"
+        LABEL_COL = "label"
         TOKENIZE  = "word"         # "word" | "char"
         MAX_VOCAB = 30000          # taille vocabulaire (hors PAD/UNK)
         MAX_LEN   = 256            # longueur max de séquence
         MIN_LEN   = 5
-        TEST_RATIO= 0.2; SEED = 42
-        BATCH_SIZE= 32; NUM_WORKERS = 2
+        TEST_RATIO  = 0.2
+        SEED        = 42
+        BATCH_SIZE  = 32
+        NUM_WORKERS = 2
 
         # ── Chargement ────────────────────────────────────────────────
         if SOURCE == "CSV":
@@ -4261,6 +4362,9 @@ catalog:
         AUDIO_DIR  = "data/audio_dataset/"
         SR=22050; N_MFCC=40; N_FFT=2048; HOP_LENGTH=512; DURATION=None
         EXTS = (".wav",".mp3",".flac",".ogg",".m4a")
+        TEST_SIZE    = 0.2
+        RANDOM_STATE = 42
+        STRATIFY     = True
 
         def extract_features(path):
             y,_ = librosa.load(path, sr=SR, duration=DURATION, mono=True)
@@ -4612,8 +4716,13 @@ catalog:
         from torch.utils.data import TensorDataset, DataLoader
 
         # ── Paramètres ──────────────────────────────────────────────────
-        N_TRAIN=1000; N_TEST=200; SEQ_LEN=64; N_FEATURES=4; N_CLASSES=3
-        task_type="timeseries_classification"; BATCH_SIZE=32; NUM_WORKERS=2
+        N_TRAIN=1000
+        N_TEST=200
+        SEQ_LEN=64
+        N_FEATURES=4
+        N_CLASSES=3
+        task_type="timeseries_classification"; BATCH_SIZE  = 32
+        NUM_WORKERS = 2
 
         # ════════════════════════════════════════════════════════════════
         # REMPLACEZ PAR VOTRE LOGIQUE DE CHARGEMENT
