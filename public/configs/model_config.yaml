@@ -80,7 +80,7 @@ pipeline_contract:
     y_proba:            "np.ndarray | None — probabilités (clf) ou None (reg)"
     fit_time_s:         "float"
     training_history:   "dict — loss_curve, val_loss_curve, metrics_per_epoch"
-    feature_importances:"pd.Series | None"
+    feature_importances: "pd.Series | None"
     save_path:          "str — chemin du fichier sauvegardé"
     full_pipeline:      "dict — preprocessor + model + meta + feature_names"
     task_type:          "str"
