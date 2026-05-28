@@ -16,8 +16,8 @@ import {
   SquareCode,
 } from "lucide-react";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
-import ReactMarkdown from "react-markdown";
-import { Prism as SyntaxHighlighter } from "prism-react-renderer";
+import Markdown from "react-markdown";
+import { Highlight, themes } from "prism-react-renderer";
 
 // ─── ANSI stripping ───────────────────────────────────────────────────────────
 const ANSI_RE = /\x1b\[[0-9;]*[a-zA-Z]|\x1b\][^\x07]*\x07|\x1b[()][AB]/g;
@@ -190,7 +190,7 @@ function HtmlDisplay({ data }: { data: string }) {
 function MarkdownDisplay({ data }: { data: string }) {
   return (
     <div className="prose max-w-none text-xs dark:prose-invert">
-      <ReactMarkdown>{data}</ReactMarkdown>
+      <Markdown>{data}</Markdown>
     </div>
   );
 }
@@ -258,13 +258,22 @@ function TableDisplay({ data, mime }: { data: string; mime: string }) {
 // ─── Code Display (Syntax Highlighting) ────────────────────────────────────
 function CodeDisplay({ data, language }: { data: string; language: string }) {
   return (
-    <SyntaxHighlighter
-      language={language}
-      theme={undefined} // Utilise le thème par défaut (adapté au mode sombre/clair)
-      className="rounded font-mono text-[11px]"
-    >
-      {data}
-    </SyntaxHighlighter>
+    <Highlight theme={themes.github} code={data} language={language}>
+      {({ className, style, tokens, getLineProps, getTokenProps }) => (
+        <pre
+          className={`${className} max-h-64 overflow-auto rounded p-2 font-mono text-[11px]`}
+          style={style}
+        >
+          {tokens.map((line, i) => (
+            <div key={i} {...getLineProps({ line, key: i })}>
+              {line.map((token, key) => (
+                <span key={key} {...getTokenProps({ token, key })} />
+              ))}
+            </div>
+          ))}
+        </pre>
+      )}
+    </Highlight>
   );
 }
 
