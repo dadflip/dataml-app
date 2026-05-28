@@ -218,7 +218,14 @@ eda_tabular:
           axes[1].set_title("Taux de NaN par colonne")
           plt.tight_layout()
           plt.savefig("eda_overview_missing.png", dpi=120, bbox_inches="tight")
-          plt.show()
+          import warnings
+          warnings.filterwarnings("ignore", message=".*FigureCanvasAgg.*")
+          try:
+              from IPython.display import display
+              display(plt.gcf())
+              plt.close()
+          except:
+              pass
           print("Figure sauvegardee : eda_overview_missing.png")
 
       # Variables contrat inchangees
@@ -275,7 +282,14 @@ eda_tabular:
       plt.suptitle("Distributions (histogramme + KDE)")
       plt.tight_layout()
       plt.savefig("eda_distributions.png", dpi=120, bbox_inches="tight")
-      plt.show()
+      import warnings
+      warnings.filterwarnings("ignore", message=".*FigureCanvasAgg.*")
+      try:
+          from IPython.display import display
+          display(plt.gcf())
+          plt.close()
+      except:
+          pass
 
       # Tableau d'outliers
       outlier_report = {}
@@ -357,7 +371,14 @@ eda_tabular:
           plt.suptitle(f"Distribution target : {TARGET_COL}")
           plt.tight_layout()
           plt.savefig("eda_target.png", dpi=120, bbox_inches="tight")
-          plt.show()
+          import warnings
+          warnings.filterwarnings("ignore", message=".*FigureCanvasAgg.*")
+          try:
+              from IPython.display import display
+              display(plt.gcf())
+              plt.close()
+          except:
+              pass
       else:
           fig, axes = plt.subplots(2, 3, figsize=(18, 10))
           y_plot.hist(bins=60, ax=axes[0, 0], color="steelblue", alpha=0.8, edgecolor="white")
@@ -387,7 +408,14 @@ eda_tabular:
           plt.suptitle(f"Analyse target : {TARGET_COL}")
           plt.tight_layout()
           plt.savefig("eda_target.png", dpi=120, bbox_inches="tight")
-          plt.show()
+          import warnings
+          warnings.filterwarnings("ignore", message=".*FigureCanvasAgg.*")
+          try:
+              from IPython.display import display
+              display(plt.gcf())
+              plt.close()
+          except:
+              pass
 
           print(f"Skewness : {stats.skew(y_plot):.3f}")
           print(f"Kurtosis : {stats.kurtosis(y_plot):.3f}")
@@ -445,7 +473,14 @@ eda_tabular:
       axes[1].set_title("Correlation de Spearman")
       plt.tight_layout()
       plt.savefig("eda_correlations.png", dpi=120, bbox_inches="tight")
-      plt.show()
+      import warnings
+      warnings.filterwarnings("ignore", message=".*FigureCanvasAgg.*")
+      try:
+          from IPython.display import display
+          display(plt.gcf())
+          plt.close()
+      except:
+          pass
 
       # Heatmap clusterisee
       if len(feats) > 1:
@@ -454,7 +489,14 @@ eda_tabular:
                              annot=len(feats) <= 15, fmt=".2f")
           g.fig.suptitle("Heatmap clusterisee (Ward)", y=1.02)
           g.fig.savefig("eda_clustermap.png", dpi=120, bbox_inches="tight")
-          plt.show()
+          import warnings
+          warnings.filterwarnings("ignore", message=".*FigureCanvasAgg.*")
+          try:
+              from IPython.display import display
+              display(plt.gcf())
+              plt.close()
+          except:
+              pass
 
       # Correlation avec la target
       if TARGET_COL and TARGET_COL in df.columns and len(feats) > 0:
@@ -468,7 +510,14 @@ eda_tabular:
           ax.legend()
           plt.tight_layout()
           plt.savefig("eda_target_correlation.png", dpi=120, bbox_inches="tight")
-          plt.show()
+          import warnings
+          warnings.filterwarnings("ignore", message=".*FigureCanvasAgg.*")
+          try:
+              from IPython.display import display
+              display(plt.gcf())
+              plt.close()
+          except:
+              pass
 
       # Paires fortement correlees
       corr_abs = corr_p.abs()
@@ -547,7 +596,14 @@ eda_tabular:
               axes[1].set_title("Correlation patterns NaN")
           plt.tight_layout()
           plt.savefig("eda_missing.png", dpi=120, bbox_inches="tight")
-          plt.show()
+          import warnings
+          warnings.filterwarnings("ignore", message=".*FigureCanvasAgg.*")
+          try:
+              from IPython.display import display
+              display(plt.gcf())
+              plt.close()
+          except:
+              pass
 
           # Co-occurrence NaN
           if len(cols_na) > 1:
@@ -558,7 +614,14 @@ eda_tabular:
               plt.title("Co-occurrence NaN")
               plt.tight_layout()
               plt.savefig("eda_missing_cooccurrence.png", dpi=120, bbox_inches="tight")
-              plt.show()
+              import warnings
+              warnings.filterwarnings("ignore", message=".*FigureCanvasAgg.*")
+              try:
+                  from IPython.display import display
+                  display(plt.gcf())
+                  plt.close()
+              except:
+                  pass
 
           # Recommandations
           HIGH_NA_THRESHOLD = 60
@@ -614,7 +677,14 @@ eda_tabular:
           plt.suptitle("Distribution features numeriques par classe")
           plt.tight_layout()
           plt.savefig("eda_bivariate.png", dpi=120, bbox_inches="tight")
-          plt.show()
+          import warnings
+          warnings.filterwarnings("ignore", message=".*FigureCanvasAgg.*")
+          try:
+              from IPython.display import display
+              display(plt.gcf())
+              plt.close()
+          except:
+              pass
 
           # ANOVA F-test
           f_results = {}
@@ -654,7 +724,14 @@ eda_tabular:
           plt.suptitle("Scatter plots features vs target")
           plt.tight_layout()
           plt.savefig("eda_bivariate.png", dpi=120, bbox_inches="tight")
-          plt.show()
+          import warnings
+          warnings.filterwarnings("ignore", message=".*FigureCanvasAgg.*")
+          try:
+              from IPython.display import display
+              display(plt.gcf())
+              plt.close()
+          except:
+              pass
 
   - id: eda_timeseries
     name: "EDA Series Temporelles"
@@ -703,7 +780,14 @@ eda_tabular:
       axes[1].legend()
       plt.tight_layout()
       plt.savefig("eda_ts_raw.png", dpi=120, bbox_inches="tight")
-      plt.show()
+      import warnings
+      warnings.filterwarnings("ignore", message=".*FigureCanvasAgg.*")
+      try:
+          from IPython.display import display
+          display(plt.gcf())
+          plt.close()
+      except:
+          pass
 
       # Decomposition STL
       try:
@@ -713,7 +797,14 @@ eda_tabular:
           plt.suptitle("Decomposition STL")
           plt.tight_layout()
           plt.savefig("eda_ts_stl.png", dpi=120, bbox_inches="tight")
-          plt.show()
+          import warnings
+          warnings.filterwarnings("ignore", message=".*FigureCanvasAgg.*")
+          try:
+              from IPython.display import display
+              display(plt.gcf())
+              plt.close()
+          except:
+              pass
       except Exception as e:
           print(f"STL: {e}")
 
@@ -738,7 +829,14 @@ eda_tabular:
       axes[1].set_title("PACF — ordre p (AR)")
       plt.tight_layout()
       plt.savefig("eda_ts_acf_pacf.png", dpi=120, bbox_inches="tight")
-      plt.show()
+      import warnings
+      warnings.filterwarnings("ignore", message=".*FigureCanvasAgg.*")
+      try:
+          from IPython.display import display
+          display(plt.gcf())
+          plt.close()
+      except:
+          pass
 
   - id: eda_survival
     name: "EDA Analyse de Survie"
@@ -783,7 +881,14 @@ eda_tabular:
       axes[1].set_title("Risque cumule (Nelson-Aalen)")
       plt.tight_layout()
       plt.savefig("eda_survival.png", dpi=120, bbox_inches="tight")
-      plt.show()
+      import warnings
+      warnings.filterwarnings("ignore", message=".*FigureCanvasAgg.*")
+      try:
+          from IPython.display import display
+          display(plt.gcf())
+          plt.close()
+      except:
+          pass
 
       # KM par groupes
       cat_cols_surv = df_s.select_dtypes(include=["object", "category"]).columns.tolist()
@@ -806,7 +911,14 @@ eda_tabular:
               ax.set_title(f"KM par {col}")
           plt.tight_layout()
           plt.savefig(f"eda_survival_km_{col}.png", dpi=120, bbox_inches="tight")
-          plt.show()
+          import warnings
+          warnings.filterwarnings("ignore", message=".*FigureCanvasAgg.*")
+          try:
+              from IPython.display import display
+              display(plt.gcf())
+              plt.close()
+          except:
+              pass
 
   - id: eda_nlp_corpus
     name: "EDA Corpus NLP"
@@ -847,7 +959,14 @@ eda_tabular:
       axes[1].set_title("Longueur (mots)")
       plt.tight_layout()
       plt.savefig("eda_nlp_lengths.png", dpi=120, bbox_inches="tight")
-      plt.show()
+      import warnings
+      warnings.filterwarnings("ignore", message=".*FigureCanvasAgg.*")
+      try:
+          from IPython.display import display
+          display(plt.gcf())
+          plt.close()
+      except:
+          pass
 
       all_tokens = [t for text in texts_all
                     for t in re.findall(r"\b[a-zA-Z\u00C0-\u00FF]{3,}\b", text.lower())]
@@ -862,7 +981,14 @@ eda_tabular:
       plt.xlabel("Rang"); plt.ylabel("Frequence")
       plt.tight_layout()
       plt.savefig("eda_nlp_zipf.png", dpi=120, bbox_inches="tight")
-      plt.show()
+      import warnings
+      warnings.filterwarnings("ignore", message=".*FigureCanvasAgg.*")
+      try:
+          from IPython.display import display
+          display(plt.gcf())
+          plt.close()
+      except:
+          pass
 
       # Nuage de mots
       try:
@@ -875,7 +1001,14 @@ eda_tabular:
           plt.title("Nuage de mots")
           plt.tight_layout()
           plt.savefig("eda_nlp_wordcloud.png", dpi=120, bbox_inches="tight")
-          plt.show()
+          import warnings
+          warnings.filterwarnings("ignore", message=".*FigureCanvasAgg.*")
+          try:
+              from IPython.display import display
+              display(plt.gcf())
+              plt.close()
+          except:
+              pass
       except ImportError:
           print("pip install wordcloud")
 
@@ -927,7 +1060,14 @@ eda_tabular:
       axes[1].legend()
       plt.tight_layout()
       plt.savefig("eda_clustering_pca.png", dpi=120, bbox_inches="tight")
-      plt.show()
+      import warnings
+      warnings.filterwarnings("ignore", message=".*FigureCanvasAgg.*")
+      try:
+          from IPython.display import display
+          display(plt.gcf())
+          plt.close()
+      except:
+          pass
 
       try:
           from sklearn.manifold import TSNE
@@ -940,7 +1080,14 @@ eda_tabular:
           plt.title(f"t-SNE 2D ({n_tsne} points)")
           plt.tight_layout()
           plt.savefig("eda_clustering_tsne.png", dpi=120, bbox_inches="tight")
-          plt.show()
+          import warnings
+          warnings.filterwarnings("ignore", message=".*FigureCanvasAgg.*")
+          try:
+              from IPython.display import display
+              display(plt.gcf())
+              plt.close()
+          except:
+              pass
       except Exception as e:
           print(f"t-SNE: {e}")
 
@@ -997,7 +1144,14 @@ eda_vision:
           ax.set_title("Distribution des classes (train)")
           plt.tight_layout()
           plt.savefig("eda_vision_classes.png", dpi=120, bbox_inches="tight")
-          plt.show()
+          import warnings
+          warnings.filterwarnings("ignore", message=".*FigureCanvasAgg.*")
+          try:
+              from IPython.display import display
+              display(plt.gcf())
+              plt.close()
+          except:
+              pass
 
           ratio = max(counts.values()) / max(min(counts.values()), 1)
           print(f"Ratio desequilibre : {ratio:.1f}x")
@@ -1026,7 +1180,14 @@ eda_vision:
           plt.suptitle("Exemples par classe")
           plt.tight_layout()
           plt.savefig("eda_vision_examples.png", dpi=120, bbox_inches="tight")
-          plt.show()
+          import warnings
+          warnings.filterwarnings("ignore", message=".*FigureCanvasAgg.*")
+          try:
+              from IPython.display import display
+              display(plt.gcf())
+              plt.close()
+          except:
+              pass
 
       # Statistiques pixel par canal
       if images_train.shape[-1] in (1, 3):
@@ -1048,7 +1209,14 @@ eda_vision:
       plt.ylabel("Frequence")
       plt.tight_layout()
       plt.savefig("eda_vision_pixel_hist.png", dpi=120, bbox_inches="tight")
-      plt.show()
+      import warnings
+      warnings.filterwarnings("ignore", message=".*FigureCanvasAgg.*")
+      try:
+          from IPython.display import display
+          display(plt.gcf())
+          plt.close()
+      except:
+          pass
 
   - id: eda_vision_embedding
     name: "EDA Vision — Embeddings 2D (features CNN)"
@@ -1127,7 +1295,14 @@ eda_vision:
           plt.title(f"t-SNE features {MODEL_NAME} ({n_show} images)")
           plt.tight_layout()
           plt.savefig("eda_vision_tsne.png", dpi=120, bbox_inches="tight")
-          plt.show()
+          import warnings
+          warnings.filterwarnings("ignore", message=".*FigureCanvasAgg.*")
+          try:
+              from IPython.display import display
+              display(plt.gcf())
+              plt.close()
+          except:
+              pass
 
       except ImportError as e:
           print(f"PyTorch / torchvision requis : {e}")
@@ -1179,7 +1354,14 @@ eda_sequence:
           plt.legend()
           plt.tight_layout()
           plt.savefig("eda_seq_lengths.png", dpi=120, bbox_inches="tight")
-          plt.show()
+          import warnings
+          warnings.filterwarnings("ignore", message=".*FigureCanvasAgg.*")
+          try:
+              from IPython.display import display
+              display(plt.gcf())
+              plt.close()
+          except:
+              pass
 
       # Distribution des classes
       if labels_train is not None:
@@ -1194,7 +1376,14 @@ eda_sequence:
           ax.set_title("Distribution des classes (train)")
           plt.tight_layout()
           plt.savefig("eda_seq_classes.png", dpi=120, bbox_inches="tight")
-          plt.show()
+          import warnings
+          warnings.filterwarnings("ignore", message=".*FigureCanvasAgg.*")
+          try:
+              from IPython.display import display
+              display(plt.gcf())
+              plt.close()
+          except:
+              pass
 
       # Exemples de sequences
       N_EXAMPLES = min(5, len(sequences_train))
@@ -1217,7 +1406,14 @@ eda_sequence:
       plt.suptitle("Exemples de sequences")
       plt.tight_layout()
       plt.savefig("eda_seq_examples.png", dpi=120, bbox_inches="tight")
-      plt.show()
+      import warnings
+      warnings.filterwarnings("ignore", message=".*FigureCanvasAgg.*")
+      try:
+          from IPython.display import display
+          display(plt.gcf())
+          plt.close()
+      except:
+          pass
 
       # Heatmap correlation inter-features (si F > 1)
       if n_features > 1:
@@ -1230,7 +1426,14 @@ eda_sequence:
           plt.title("Correlation inter-features (tous timesteps)")
           plt.tight_layout()
           plt.savefig("eda_seq_corr.png", dpi=120, bbox_inches="tight")
-          plt.show()
+          import warnings
+          warnings.filterwarnings("ignore", message=".*FigureCanvasAgg.*")
+          try:
+              from IPython.display import display
+              display(plt.gcf())
+              plt.close()
+          except:
+              pass
 
 
 # ══════════════════════════════════════════════════════════════════════════
@@ -1769,7 +1972,14 @@ feature_selection:
       plt.legend()
       plt.tight_layout()
       plt.savefig("fs_mutual_information.png", dpi=120, bbox_inches="tight")
-      plt.show()
+      import warnings
+      warnings.filterwarnings("ignore", message=".*FigureCanvasAgg.*")
+      try:
+          from IPython.display import display
+          display(plt.gcf())
+          plt.close()
+      except:
+          pass
 
       selected_names = mi_series.head(K).index.tolist()
       selected_idx   = [list(feature_names_out).index(f) for f in selected_names]
@@ -1895,7 +2105,14 @@ feature_selection:
       axes[1].set_title("Permutation Importance (test)")
       plt.tight_layout()
       plt.savefig("fs_rf_importance.png", dpi=120, bbox_inches="tight")
-      plt.show()
+      import warnings
+      warnings.filterwarnings("ignore", message=".*FigureCanvasAgg.*")
+      try:
+          from IPython.display import display
+          display(plt.gcf())
+          plt.close()
+      except:
+          pass
 
       # SHAP
       try:
@@ -1989,7 +2206,14 @@ feature_selection:
       ax.legend()
       plt.tight_layout()
       plt.savefig("fs_rfecv.png", dpi=120, bbox_inches="tight")
-      plt.show()
+      import warnings
+      warnings.filterwarnings("ignore", message=".*FigureCanvasAgg.*")
+      try:
+          from IPython.display import display
+          display(plt.gcf())
+          plt.close()
+      except:
+          pass
 
       print(f"Nombre optimal de features : {rfecv.n_features_}")
       selected_mask  = rfecv.support_
@@ -2094,7 +2318,8 @@ dimensionality_reduction:
       import matplotlib.pyplot as plt
       from sklearn.decomposition import PCA
 
-      N_COMPONENTS    = 0.95   # float [0,1] = variance a conserver ; int = nb composantes
+      N_COMPONENTS    = 0.95   # float [0,1] = variance a conserver
+      int = nb composantes
       WHITEN          = False
 
       pca = PCA(n_components=N_COMPONENTS, whiten=WHITEN, random_state=42)
@@ -2119,7 +2344,14 @@ dimensionality_reduction:
       axes[1].legend()
       plt.tight_layout()
       plt.savefig("dr_pca.png", dpi=120, bbox_inches="tight")
-      plt.show()
+      import warnings
+      warnings.filterwarnings("ignore", message=".*FigureCanvasAgg.*")
+      try:
+          from IPython.display import display
+          display(plt.gcf())
+          plt.close()
+      except:
+          pass
 
       print(f"PCA : {n_comp} composantes | variance conservee : {cumvar[-1]*100:.1f}%")
       print(f"Shape : train={X_train.shape} | test={X_test.shape}")
@@ -2184,7 +2416,14 @@ dimensionality_reduction:
               plt.title(f"UMAP 2D (n_neighbors={N_NEIGHBORS}, min_dist={MIN_DIST})")
               plt.tight_layout()
               plt.savefig("dr_umap.png", dpi=120, bbox_inches="tight")
-              plt.show()
+              import warnings
+              warnings.filterwarnings("ignore", message=".*FigureCanvasAgg.*")
+              try:
+                  from IPython.display import display
+                  display(plt.gcf())
+                  plt.close()
+              except:
+                  pass
 
           print(f"UMAP : {N_COMPONENTS} composantes")
           print(f"Shape : train={X_train.shape} | test={X_test.shape}")
@@ -2214,7 +2453,8 @@ dimensionality_reduction:
 
       N_COMPONENTS = 10
       KERNEL       = "rbf"   # "rbf" | "poly" | "sigmoid" | "cosine"
-      GAMMA        = None    # None = 1/n_features ; float sinon
+      GAMMA        = None    # None = 1/n_features
+      float sinon
 
       kpca = KernelPCA(
           n_components=N_COMPONENTS,
@@ -2325,7 +2565,14 @@ dimensionality_reduction:
           plt.xlabel("Epoch"); plt.ylabel("MSE")
           plt.tight_layout()
           plt.savefig("dr_autoencoder_loss.png", dpi=120, bbox_inches="tight")
-          plt.show()
+          import warnings
+          warnings.filterwarnings("ignore", message=".*FigureCanvasAgg.*")
+          try:
+              from IPython.display import display
+              display(plt.gcf())
+              plt.close()
+          except:
+              pass
 
           # Extraction de la representation latente
           model.eval()
@@ -2619,7 +2866,8 @@ sequence_transforms:
     code_template: |
       import numpy as np
 
-      MAX_LEN   = None   # None = max observee ; int = valeur fixee
+      MAX_LEN   = None   # None = max observee
+      int = valeur fixee
       PAD_SIDE  = "right"   # "right" | "left"
       PAD_VALUE = 0
 
