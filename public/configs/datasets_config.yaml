@@ -4002,5 +4002,26 @@ catalog:
 # tabular      graph / node_classification  networkx_graph, synthetic_graph
 # tabular      knowledge_graph              rdf_owl_ontology, wikidata_sparql
 # tabular      geospatial                   geospatial_vector, geospatial_raster
+# tabular      nlp (features tabulaires)    audio_features_tabular_from_sequence
 # ─────────────────────────────────────────────────────────────────────────
-#
+# vision       image_classification         image_folder, torchvision_datasets, huggingface_vision
+# vision       image_classification         matlab_mat_vision, hdf5_vision, numpy_npz_vision
+# vision       image_classification         lmdb_vision, synthetic_images
+# vision       image_segmentation           vision_free_source (à spécialiser)
+# vision       image_clustering             hdf5_vision, numpy_npz_vision (sans labels)
+# vision       image_anomaly                vision_free_source (à spécialiser)
+# ─────────────────────────────────────────────────────────────────────────
+# sequence     text_classification          huggingface_nlp, text_files_sequence
+# sequence     text_generation              huggingface_nlp (LABEL_COL=None)
+# sequence     ner / qa                     huggingface_nlp
+# sequence     audio_classification         audio_raw_sequence
+# sequence     audio_regression             audio_raw_sequence (LABEL_COL continu)
+# sequence     timeseries_classification    ts_windowed, synthetic_sequences
+# sequence     timeseries_forecasting       ts_windowed, netcdf_sequence
+# sequence     video_classification         sequence_free_source (à spécialiser)
+# ─────────────────────────────────────────────────────────────────────────
+# ESCAPE HATCHES
+# tabular      any                          tabular_free_source
+# vision       any                          vision_free_source
+# sequence     any                          sequence_free_source
+# ══════════════════════════════════════════════════════════════════════════
