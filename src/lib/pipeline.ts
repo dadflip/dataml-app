@@ -54,28 +54,102 @@ const BLOC_FILES: { bloc: number; name: string; file: string }[] = [
 
 export async function loadAllCatalogs(): Promise<ParsedCatalog[]> {
   const results: ParsedCatalog[] = [];
+
   for (const { bloc, name, file } of BLOC_FILES) {
     const res = await fetch(file);
     const text = await res.text();
     const data = yaml.load(text) as Record<string, unknown>;
-    const contract = (data.pipeline_contract ?? {
-      bloc,
-      role: "",
-      input_variables: {},
-      output_variables: {},
-    }) as IOContract;
+
+    // ── Détection du format datasets (Bloc 1) ──────────────────────
+    const isDatasets =
+      "pipeline_contracts" in data && "catalog" in data;
+
+    // ── Contrat I/O ────────────────────────────────────────────────
+    let contract: IOContract;
+    if (isDatasets) {
+      // Fusionner les 3 contrats en un seul contrat générique pour le browser
+      const contracts = data.pipeline_contracts as Record
+        string,
+        Record<string, unknown>
+      >;
+      const allOutputs: Record<string, string> = {};
+      for (const c of Object.values(contracts)) {
+        for (const [k, v] of Object.entries(
+          (c.output_variables as Record<string, string>) ?? {}
+        )) {
+          allOutputs[k] = String(v);
+        }
+      }
+      contract = {
+        bloc,
+        role: "Sources de données : tabular | vision | sequence",
+        input_variables: {},
+        output_variables: allOutputs,
+      };
+    } else {
+      contract = (data.pipeline_contract ?? {
+        bloc,
+        role: "",
+        input_variables: {},
+        output_variables: {},
+      }) as IOContract;
+    }
+
+    // ── Sections & blocs ───────────────────────────────────────────
     const sections: { name: string; blocks: CatalogBlock[] }[] = [];
-    for (const [key, value] of Object.entries(data)) {
-      if (key === "pipeline_contract") continue;
-      if (Array.isArray(value)) {
-        const blocks: CatalogBlock[] = (value as CatalogBlock[])
-          .filter((b) => b && typeof b === "object" && b.id)
-          .map((b) => ({ ...b, bloc, blocName: name, section: key }));
-        if (blocks.length) sections.push({ name: key, blocks });
+
+    if (isDatasets) {
+      // catalog:
+      //   tabular:
+      //     flat_files:   [ ...blocks ]
+      //     databases:    [ ...blocks ]
+      //   vision:
+      //     local:        [ ...blocks ]
+      //   sequence:
+      //     nlp:          [ ...blocks ]
+      const catalog = data.catalog as Record
+        string,
+        Record<string, CatalogBlock[]>
+      >;
+
+      for (const [contract_key, subsections] of Object.entries(catalog)) {
+        // contract_key : "tabular" | "vision" | "sequence"
+        if (!subsections || typeof subsections !== "object") continue;
+
+        for (const [subsection_key, rawBlocks] of Object.entries(
+          subsections
+        )) {
+          if (!Array.isArray(rawBlocks)) continue;
+
+          const sectionLabel = `${contract_key} › ${subsection_key}`;
+          const blocks: CatalogBlock[] = rawBlocks
+            .filter((b) => b && typeof b === "object" && b.id)
+            .map((b) => ({
+              ...b,
+              bloc,
+              blocName: name,
+              section: sectionLabel,
+            }));
+
+          if (blocks.length) sections.push({ name: sectionLabel, blocks });
+        }
+      }
+    } else {
+      // Format standard : tableaux de blocs directement à la racine
+      for (const [key, value] of Object.entries(data)) {
+        if (key === "pipeline_contract") continue;
+        if (Array.isArray(value)) {
+          const blocks: CatalogBlock[] = (value as CatalogBlock[])
+            .filter((b) => b && typeof b === "object" && b.id)
+            .map((b) => ({ ...b, bloc, blocName: name, section: key }));
+          if (blocks.length) sections.push({ name: key, blocks });
+        }
       }
     }
+
     results.push({ bloc, blocName: name, file, contract, sections });
   }
+
   return results;
 }
 
