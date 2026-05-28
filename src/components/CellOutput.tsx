@@ -76,7 +76,8 @@ function OutputBlock({
 
 function ImageDisplay({ mime, data }: { mime: string; data: string }) {
   const [open, setOpen] = useState(false);
-  const src = `data:${mime};base64,${data}`;
+  const isSvg = mime === "image/svg+xml";
+  const src = isSvg ? `data:${mime};utf8,${encodeURIComponent(data)}` : `data:${mime};base64,${data}`;
   return (
     <>
       <OutputBlock
@@ -175,11 +176,11 @@ function DisplayBlock({ mime, data }: { mime: string; data: string }) {
   return (
     <OutputBlock
       icon={<Code2 className="h-3 w-3" />}
-      kind={mime === "text/plain" ? "text/plain" : mime}
+      kind={mime}
       badge={<Badge tone="success">ok</Badge>}
     >
       <pre className="max-h-32 overflow-auto whitespace-pre-wrap font-mono text-[11px] leading-relaxed text-foreground/80">
-        {mime === "text/plain" ? stripAnsi(data) : `[${mime}] ${data.slice(0, 200)}`}
+        {mime.includes("text/") || mime.includes("json") ? stripAnsi(data) : `[${mime}] ${data.slice(0, 500)}`}
       </pre>
     </OutputBlock>
   );
