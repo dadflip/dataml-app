@@ -95,7 +95,8 @@ pipeline_contracts:
               X_train, X_test = train_test_split(
                   X, test_size=TEST_SIZE, random_state=RANDOM_STATE
               )
-              y_train = None; y_test = None
+              y_train = None
+              y_test = None
           else:
               # Timeseries
               split_idx = int(len(X) * (1 - TEST_SIZE))
@@ -103,16 +104,23 @@ pipeline_contracts:
               y_train, y_test = ((y.iloc[:split_idx], y.iloc[split_idx:]) if y is not None else (None, None))
       except Exception as e:
           print(f"Split error (fallback to None): {e}")
-          X_train = None; X_test = None; y_train = None; y_test = None
+          X_train = None
+          X_test = None
+          y_train = None
+          y_test = None
 
       preprocessor = None
       feature_names_out = feature_names
 
       # ── Init contrat ─────────────────────────────────────────────────
       contract     = "tabular"
-      texts_train  = []; texts_test = []
-      dates_train  = None; dates_future = None
-      durations    = None; events = None; df_survival = None
+      texts_train  = []
+      texts_test = []
+      dates_train  = None
+      dates_future = None
+      durations    = None
+      events = None
+      df_survival = None
       
       print(f"[TABULAR] task_type={task_type!r} | features={len(feature_names)} | target={target_name!r}")
       print(f"          shape={df.shape}")
@@ -293,7 +301,9 @@ catalog:
             y = df[TARGET_COL]
             task_type = "classification" if (y.dtype == object or y.nunique() < 20) else "regression"
         else:
-            X = df.copy(); y = None; task_type = "clustering"
+            X = df.copy()
+            y = None
+            task_type = "clustering"
 
         feature_names = X.columns.tolist()
         target_name   = TARGET_COL
@@ -311,7 +321,8 @@ catalog:
                 X_train, X_test = train_test_split(
                     X, test_size=TEST_SIZE, random_state=RANDOM_STATE
                 )
-                y_train = None; y_test = None
+                y_train = None
+                y_test = None
             else:
                 # Timeseries
                 split_idx = int(len(X) * (1 - TEST_SIZE))
@@ -319,16 +330,23 @@ catalog:
                 y_train, y_test = ((y.iloc[:split_idx], y.iloc[split_idx:]) if y is not None else (None, None))
         except Exception as e:
             print(f"Split error (fallback to None): {e}")
-            X_train = None; X_test = None; y_train = None; y_test = None
+            X_train = None
+            X_test = None
+            y_train = None
+            y_test = None
 
         preprocessor = None
         feature_names_out = feature_names
 
         # ── Init contrat ─────────────────────────────────────────────────
         contract     = "tabular"
-        texts_train  = []; texts_test = []
-        dates_train  = None; dates_future = None
-        durations    = None; events = None; df_survival = None
+        texts_train  = []
+        texts_test = []
+        dates_train  = None
+        dates_future = None
+        durations    = None
+        events = None
+        df_survival = None
         
         print(f"[TABULAR] task_type='{task_type}' | features={len(feature_names)} | target='{target_name}'")
         print(f"          shape={df.shape}")
@@ -369,12 +387,16 @@ catalog:
         print(f"Shape brut : {df.shape}")
 
         if TARGET_COL and TARGET_COL in df.columns:
-            X = df.drop(columns=[TARGET_COL]); y = df[TARGET_COL]
+            X = df.drop(columns=[TARGET_COL])
+            y = df[TARGET_COL]
             task_type = "classification" if (y.dtype == object or y.nunique() < 20) else "regression"
         else:
-            X = df.copy(); y = None; task_type = "clustering"
+            X = df.copy()
+            y = None
+            task_type = "clustering"
 
-        feature_names = X.columns.tolist(); target_name = TARGET_COL
+        feature_names = X.columns.tolist()
+        target_name = TARGET_COL
         meta = {"file": FILE_PATH, "sheet": SHEET_NAME, "shape": df.shape}
 
                 # ── Split Train/Test ─────────────────────────────────────────────
@@ -389,7 +411,8 @@ catalog:
                 X_train, X_test = train_test_split(
                     X, test_size=TEST_SIZE, random_state=RANDOM_STATE
                 )
-                y_train = None; y_test = None
+                y_train = None
+                y_test = None
             else:
                 # Timeseries
                 split_idx = int(len(X) * (1 - TEST_SIZE))
@@ -397,16 +420,23 @@ catalog:
                 y_train, y_test = ((y.iloc[:split_idx], y.iloc[split_idx:]) if y is not None else (None, None))
         except Exception as e:
             print(f"Split error (fallback to None): {e}")
-            X_train = None; X_test = None; y_train = None; y_test = None
+            X_train = None
+            X_test = None
+            y_train = None
+            y_test = None
 
         preprocessor = None
         feature_names_out = feature_names
 
         # ── Init contrat ─────────────────────────────────────────────────
         contract     = "tabular"
-        texts_train  = []; texts_test = []
-        dates_train  = None; dates_future = None
-        durations    = None; events = None; df_survival = None
+        texts_train  = []
+        texts_test = []
+        dates_train  = None
+        dates_future = None
+        durations    = None
+        events = None
+        df_survival = None
         
         print(f"[TABULAR] task_type='{task_type}' | features={len(feature_names)} | target='{target_name}'")
         print(f"          shape={df.shape}")
@@ -442,12 +472,16 @@ catalog:
         print(df.dtypes)
 
         if TARGET_COL and TARGET_COL in df.columns:
-            X = df.drop(columns=[TARGET_COL]); y = df[TARGET_COL]
+            X = df.drop(columns=[TARGET_COL])
+            y = df[TARGET_COL]
             task_type = "classification" if y.nunique() < 20 else "regression"
         else:
-            X = df.copy(); y = None; task_type = "clustering"
+            X = df.copy()
+            y = None
+            task_type = "clustering"
 
-        feature_names = X.columns.tolist(); target_name = TARGET_COL
+        feature_names = X.columns.tolist()
+        target_name = TARGET_COL
         meta = {"engine": ENGINE, "file": FILE_PATH, "shape": df.shape}
 
                 # ── Split Train/Test ─────────────────────────────────────────────
@@ -462,7 +496,8 @@ catalog:
                 X_train, X_test = train_test_split(
                     X, test_size=TEST_SIZE, random_state=RANDOM_STATE
                 )
-                y_train = None; y_test = None
+                y_train = None
+                y_test = None
             else:
                 # Timeseries
                 split_idx = int(len(X) * (1 - TEST_SIZE))
@@ -470,16 +505,23 @@ catalog:
                 y_train, y_test = ((y.iloc[:split_idx], y.iloc[split_idx:]) if y is not None else (None, None))
         except Exception as e:
             print(f"Split error (fallback to None): {e}")
-            X_train = None; X_test = None; y_train = None; y_test = None
+            X_train = None
+            X_test = None
+            y_train = None
+            y_test = None
 
         preprocessor = None
         feature_names_out = feature_names
 
         # ── Init contrat ─────────────────────────────────────────────────
         contract     = "tabular"
-        texts_train  = []; texts_test = []
-        dates_train  = None; dates_future = None
-        durations    = None; events = None; df_survival = None
+        texts_train  = []
+        texts_test = []
+        dates_train  = None
+        dates_future = None
+        durations    = None
+        events = None
+        df_survival = None
         
         print(f"[TABULAR] task_type='{task_type}' | features={len(feature_names)} | target='{target_name}'")
         print(f"          shape={df.shape}")
@@ -525,12 +567,16 @@ catalog:
         print(f"Shape brut : {df.shape}")
 
         if TARGET_COL and TARGET_COL in df.columns:
-            X = df.drop(columns=[TARGET_COL]); y = df[TARGET_COL]
+            X = df.drop(columns=[TARGET_COL])
+            y = df[TARGET_COL]
             task_type = "classification" if (y.dtype == object or y.nunique() < 20) else "regression"
         else:
-            X = df.copy(); y = None; task_type = "clustering"
+            X = df.copy()
+            y = None
+            task_type = "clustering"
 
-        feature_names = X.columns.tolist(); target_name = TARGET_COL
+        feature_names = X.columns.tolist()
+        target_name = TARGET_COL
         meta = {"nested_cols_expanded": nested_cols, "shape": df.shape}
 
                 # ── Split Train/Test ─────────────────────────────────────────────
@@ -545,7 +591,8 @@ catalog:
                 X_train, X_test = train_test_split(
                     X, test_size=TEST_SIZE, random_state=RANDOM_STATE
                 )
-                y_train = None; y_test = None
+                y_train = None
+                y_test = None
             else:
                 # Timeseries
                 split_idx = int(len(X) * (1 - TEST_SIZE))
@@ -553,16 +600,23 @@ catalog:
                 y_train, y_test = ((y.iloc[:split_idx], y.iloc[split_idx:]) if y is not None else (None, None))
         except Exception as e:
             print(f"Split error (fallback to None): {e}")
-            X_train = None; X_test = None; y_train = None; y_test = None
+            X_train = None
+            X_test = None
+            y_train = None
+            y_test = None
 
         preprocessor = None
         feature_names_out = feature_names
 
         # ── Init contrat ─────────────────────────────────────────────────
         contract     = "tabular"
-        texts_train  = []; texts_test = []
-        dates_train  = None; dates_future = None
-        durations    = None; events = None; df_survival = None
+        texts_train  = []
+        texts_test = []
+        dates_train  = None
+        dates_future = None
+        durations    = None
+        events = None
+        df_survival = None
         
         print(f"[TABULAR] task_type='{task_type}' | features={len(feature_names)} | target='{target_name}'")
         print(f"          shape={df.shape}")
@@ -649,7 +703,8 @@ catalog:
             y     = pd.Series(y_raw, name=TARGET_COL)
             task_type = "classification" if (y.dtype == object or y.nunique() < 50) else "regression"
         else:
-            y = None; task_type = "clustering"
+            y = None
+            task_type = "clustering"
 
         df = X.copy()
         if y is not None:
@@ -670,7 +725,8 @@ catalog:
                 X_train, X_test = train_test_split(
                     X, test_size=TEST_SIZE, random_state=RANDOM_STATE
                 )
-                y_train = None; y_test = None
+                y_train = None
+                y_test = None
             else:
                 # Timeseries
                 split_idx = int(len(X) * (1 - TEST_SIZE))
@@ -678,16 +734,23 @@ catalog:
                 y_train, y_test = ((y.iloc[:split_idx], y.iloc[split_idx:]) if y is not None else (None, None))
         except Exception as e:
             print(f"Split error (fallback to None): {e}")
-            X_train = None; X_test = None; y_train = None; y_test = None
+            X_train = None
+            X_test = None
+            y_train = None
+            y_test = None
 
         preprocessor = None
         feature_names_out = feature_names
 
         # ── Init contrat ─────────────────────────────────────────────────
         contract     = "tabular"
-        texts_train  = []; texts_test = []
-        dates_train  = None; dates_future = None
-        durations    = None; events = None; df_survival = None
+        texts_train  = []
+        texts_test = []
+        dates_train  = None
+        dates_future = None
+        durations    = None
+        events = None
+        df_survival = None
         
         print(f"[TABULAR] task_type='{task_type}' | features={len(feature_names)} | target='{target_name}'")
         print(f"          shape={df.shape}")
@@ -759,12 +822,16 @@ catalog:
                 df[TARGET_COL] = y_raw.ravel()
 
         if TARGET_COL and TARGET_COL in df.columns:
-            X = df.drop(columns=[TARGET_COL]); y = df[TARGET_COL]
+            X = df.drop(columns=[TARGET_COL])
+            y = df[TARGET_COL]
             task_type = "classification" if (y.dtype == object or y.nunique() < 20) else "regression"
         else:
-            X = df.copy(); y = None; task_type = "clustering"
+            X = df.copy()
+            y = None
+            task_type = "clustering"
 
-        feature_names = X.columns.tolist(); target_name = TARGET_COL if y is not None else None
+        feature_names = X.columns.tolist()
+        target_name = TARGET_COL if y is not None else None
         meta = {"file": FILE_PATH, "mode": MODE, "key": H5_KEY, "shape": df.shape}
 
                 # ── Split Train/Test ─────────────────────────────────────────────
@@ -779,7 +846,8 @@ catalog:
                 X_train, X_test = train_test_split(
                     X, test_size=TEST_SIZE, random_state=RANDOM_STATE
                 )
-                y_train = None; y_test = None
+                y_train = None
+                y_test = None
             else:
                 # Timeseries
                 split_idx = int(len(X) * (1 - TEST_SIZE))
@@ -787,16 +855,23 @@ catalog:
                 y_train, y_test = ((y.iloc[:split_idx], y.iloc[split_idx:]) if y is not None else (None, None))
         except Exception as e:
             print(f"Split error (fallback to None): {e}")
-            X_train = None; X_test = None; y_train = None; y_test = None
+            X_train = None
+            X_test = None
+            y_train = None
+            y_test = None
 
         preprocessor = None
         feature_names_out = feature_names
 
         # ── Init contrat ─────────────────────────────────────────────────
         contract     = "tabular"
-        texts_train  = []; texts_test = []
-        dates_train  = None; dates_future = None
-        durations    = None; events = None; df_survival = None
+        texts_train  = []
+        texts_test = []
+        dates_train  = None
+        dates_future = None
+        durations    = None
+        events = None
+        df_survival = None
         
         print(f"[TABULAR] task_type='{task_type}' | features={len(feature_names)} | target='{target_name}'")
         print(f"          shape={df.shape}")
@@ -855,7 +930,8 @@ catalog:
                 y_raw = arr[:, TARGET_IDX].ravel()
                 X_raw = np.delete(arr, TARGET_IDX, axis=1)
             else:
-                X_raw = arr; y_raw = None
+                X_raw = arr
+                y_raw = None
 
         if X_raw.ndim == 1:
             X_raw = X_raw.reshape(-1, 1)
@@ -887,7 +963,8 @@ catalog:
                 X_train, X_test = train_test_split(
                     X, test_size=TEST_SIZE, random_state=RANDOM_STATE
                 )
-                y_train = None; y_test = None
+                y_train = None
+                y_test = None
             else:
                 # Timeseries
                 split_idx = int(len(X) * (1 - TEST_SIZE))
@@ -895,16 +972,23 @@ catalog:
                 y_train, y_test = ((y.iloc[:split_idx], y.iloc[split_idx:]) if y is not None else (None, None))
         except Exception as e:
             print(f"Split error (fallback to None): {e}")
-            X_train = None; X_test = None; y_train = None; y_test = None
+            X_train = None
+            X_test = None
+            y_train = None
+            y_test = None
 
         preprocessor = None
         feature_names_out = feature_names
 
         # ── Init contrat ─────────────────────────────────────────────────
         contract     = "tabular"
-        texts_train  = []; texts_test = []
-        dates_train  = None; dates_future = None
-        durations    = None; events = None; df_survival = None
+        texts_train  = []
+        texts_test = []
+        dates_train  = None
+        dates_future = None
+        durations    = None
+        events = None
+        df_survival = None
         
         print(f"[TABULAR] task_type='{task_type}' | features={len(feature_names)} | target='{target_name}'")
         print(f"          shape={df.shape}")
@@ -954,7 +1038,8 @@ catalog:
         X = df.drop(columns=[c for c in EXCLUDE if c in df.columns])
         y = df[TARGET_COL] if TARGET_COL in df.columns else None
         task_type = "classification" if (y is not None and y.nunique() < 20) else "regression"
-        feature_names = X.columns.tolist(); target_name = TARGET_COL
+        feature_names = X.columns.tolist()
+        target_name = TARGET_COL
         meta = {"query": QUERY[:200], "db": DB_URL.split("@")[-1], "shape": df.shape}
 
                 # ── Split Train/Test ─────────────────────────────────────────────
@@ -969,7 +1054,8 @@ catalog:
                 X_train, X_test = train_test_split(
                     X, test_size=TEST_SIZE, random_state=RANDOM_STATE
                 )
-                y_train = None; y_test = None
+                y_train = None
+                y_test = None
             else:
                 # Timeseries
                 split_idx = int(len(X) * (1 - TEST_SIZE))
@@ -977,16 +1063,23 @@ catalog:
                 y_train, y_test = ((y.iloc[:split_idx], y.iloc[split_idx:]) if y is not None else (None, None))
         except Exception as e:
             print(f"Split error (fallback to None): {e}")
-            X_train = None; X_test = None; y_train = None; y_test = None
+            X_train = None
+            X_test = None
+            y_train = None
+            y_test = None
 
         preprocessor = None
         feature_names_out = feature_names
 
         # ── Init contrat ─────────────────────────────────────────────────
         contract     = "tabular"
-        texts_train  = []; texts_test = []
-        dates_train  = None; dates_future = None
-        durations    = None; events = None; df_survival = None
+        texts_train  = []
+        texts_test = []
+        dates_train  = None
+        dates_future = None
+        durations    = None
+        events = None
+        df_survival = None
         
         print(f"[TABULAR] task_type='{task_type}' | features={len(feature_names)} | target='{target_name}'")
         print(f"          shape={df.shape}")
@@ -1027,12 +1120,16 @@ catalog:
         print(f"Shape brut : {df.shape}")
 
         if TARGET_COL and TARGET_COL in df.columns:
-            X = df.drop(columns=[TARGET_COL]); y = df[TARGET_COL]
+            X = df.drop(columns=[TARGET_COL])
+            y = df[TARGET_COL]
             task_type = "classification" if (y.dtype == object or y.nunique() < 20) else "regression"
         else:
-            X = df.copy(); y = None; task_type = "clustering"
+            X = df.copy()
+            y = None
+            task_type = "clustering"
 
-        feature_names = X.columns.tolist(); target_name = TARGET_COL
+        feature_names = X.columns.tolist()
+        target_name = TARGET_COL
         meta = {"collection": COLLECTION, "filter": QUERY_FILTER, "shape": df.shape}
 
                 # ── Split Train/Test ─────────────────────────────────────────────
@@ -1047,7 +1144,8 @@ catalog:
                 X_train, X_test = train_test_split(
                     X, test_size=TEST_SIZE, random_state=RANDOM_STATE
                 )
-                y_train = None; y_test = None
+                y_train = None
+                y_test = None
             else:
                 # Timeseries
                 split_idx = int(len(X) * (1 - TEST_SIZE))
@@ -1055,16 +1153,23 @@ catalog:
                 y_train, y_test = ((y.iloc[:split_idx], y.iloc[split_idx:]) if y is not None else (None, None))
         except Exception as e:
             print(f"Split error (fallback to None): {e}")
-            X_train = None; X_test = None; y_train = None; y_test = None
+            X_train = None
+            X_test = None
+            y_train = None
+            y_test = None
 
         preprocessor = None
         feature_names_out = feature_names
 
         # ── Init contrat ─────────────────────────────────────────────────
         contract     = "tabular"
-        texts_train  = []; texts_test = []
-        dates_train  = None; dates_future = None
-        durations    = None; events = None; df_survival = None
+        texts_train  = []
+        texts_test = []
+        dates_train  = None
+        dates_future = None
+        durations    = None
+        events = None
+        df_survival = None
         
         print(f"[TABULAR] task_type='{task_type}' | features={len(feature_names)} | target='{target_name}'")
         print(f"          shape={df.shape}")
@@ -1108,7 +1213,8 @@ catalog:
         X = df.drop(columns=[TARGET_COL]) if TARGET_COL in df.columns else df.copy()
         y = df[TARGET_COL] if TARGET_COL in df.columns else None
         task_type = "classification" if (y is not None and y.nunique() < 20) else "regression"
-        feature_names = X.columns.tolist(); target_name = TARGET_COL
+        feature_names = X.columns.tolist()
+        target_name = TARGET_COL
         meta = {"project": PROJECT_ID, "shape": df.shape}
 
                 # ── Split Train/Test ─────────────────────────────────────────────
@@ -1123,7 +1229,8 @@ catalog:
                 X_train, X_test = train_test_split(
                     X, test_size=TEST_SIZE, random_state=RANDOM_STATE
                 )
-                y_train = None; y_test = None
+                y_train = None
+                y_test = None
             else:
                 # Timeseries
                 split_idx = int(len(X) * (1 - TEST_SIZE))
@@ -1131,16 +1238,23 @@ catalog:
                 y_train, y_test = ((y.iloc[:split_idx], y.iloc[split_idx:]) if y is not None else (None, None))
         except Exception as e:
             print(f"Split error (fallback to None): {e}")
-            X_train = None; X_test = None; y_train = None; y_test = None
+            X_train = None
+            X_test = None
+            y_train = None
+            y_test = None
 
         preprocessor = None
         feature_names_out = feature_names
 
         # ── Init contrat ─────────────────────────────────────────────────
         contract     = "tabular"
-        texts_train  = []; texts_test = []
-        dates_train  = None; dates_future = None
-        durations    = None; events = None; df_survival = None
+        texts_train  = []
+        texts_test = []
+        dates_train  = None
+        dates_future = None
+        durations    = None
+        events = None
+        df_survival = None
         
         print(f"[TABULAR] task_type='{task_type}' | features={len(feature_names)} | target='{target_name}'")
         print(f"          shape={df.shape}")
@@ -1212,7 +1326,9 @@ catalog:
             pks = [c["name"] for c in inspector.get_pk_constraint(table)["constrained_columns"]]
             idx = pks[0] if pks and pks[0] in df_t.columns else None
             if not idx:
-                df_t = df_t.copy(); df_t["_id"] = range(len(df_t)); idx = "_id"
+                df_t = df_t.copy()
+                df_t["_id"] = range(len(df_t))
+                idx = "_id"
             es.add_dataframe(dataframe_name=table, dataframe=df_t, index=idx)
         for rel in relationships:
             try: es.add_relationship(rel)
@@ -1230,10 +1346,12 @@ catalog:
             y = df.pop(TARGET_COL)
             task_type = "classification" if y.nunique() < 20 else "regression"
         else:
-            y = None; task_type = "clustering"
+            y = None
+            task_type = "clustering"
 
         X = df.select_dtypes(include=[np.number]).fillna(0)
-        feature_names = X.columns.tolist(); target_name = TARGET_COL
+        feature_names = X.columns.tolist()
+        target_name = TARGET_COL
         meta = {"tables": list(dfs_dict.keys()), "n_dfs_features": len(feature_defs), "shape": X.shape}
 
                 # ── Split Train/Test ─────────────────────────────────────────────
@@ -1248,7 +1366,8 @@ catalog:
                 X_train, X_test = train_test_split(
                     X, test_size=TEST_SIZE, random_state=RANDOM_STATE
                 )
-                y_train = None; y_test = None
+                y_train = None
+                y_test = None
             else:
                 # Timeseries
                 split_idx = int(len(X) * (1 - TEST_SIZE))
@@ -1256,16 +1375,23 @@ catalog:
                 y_train, y_test = ((y.iloc[:split_idx], y.iloc[split_idx:]) if y is not None else (None, None))
         except Exception as e:
             print(f"Split error (fallback to None): {e}")
-            X_train = None; X_test = None; y_train = None; y_test = None
+            X_train = None
+            X_test = None
+            y_train = None
+            y_test = None
 
         preprocessor = None
         feature_names_out = feature_names
 
         # ── Init contrat ─────────────────────────────────────────────────
         contract     = "tabular"
-        texts_train  = []; texts_test = []
-        dates_train  = None; dates_future = None
-        durations    = None; events = None; df_survival = None
+        texts_train  = []
+        texts_test = []
+        dates_train  = None
+        dates_future = None
+        durations    = None
+        events = None
+        df_survival = None
         
         print(f"[TABULAR] task_type='{task_type}' | features={len(feature_names)} | target='{target_name}'")
         print(f"          shape={df.shape}")
@@ -1320,9 +1446,12 @@ catalog:
             y = pd.to_numeric(df[TARGET_COL].astype(str).str.replace("[^0-9.]", "", regex=True), errors="coerce")
             task_type = "regression"
         else:
-            X = df.copy(); y = None; task_type = "clustering"
+            X = df.copy()
+            y = None
+            task_type = "clustering"
 
-        feature_names = X.columns.tolist(); target_name = TARGET_COL
+        feature_names = X.columns.tolist()
+        target_name = TARGET_COL
         meta = {"url": URL, "shape": df.shape}
 
                 # ── Split Train/Test ─────────────────────────────────────────────
@@ -1337,7 +1466,8 @@ catalog:
                 X_train, X_test = train_test_split(
                     X, test_size=TEST_SIZE, random_state=RANDOM_STATE
                 )
-                y_train = None; y_test = None
+                y_train = None
+                y_test = None
             else:
                 # Timeseries
                 split_idx = int(len(X) * (1 - TEST_SIZE))
@@ -1345,16 +1475,23 @@ catalog:
                 y_train, y_test = ((y.iloc[:split_idx], y.iloc[split_idx:]) if y is not None else (None, None))
         except Exception as e:
             print(f"Split error (fallback to None): {e}")
-            X_train = None; X_test = None; y_train = None; y_test = None
+            X_train = None
+            X_test = None
+            y_train = None
+            y_test = None
 
         preprocessor = None
         feature_names_out = feature_names
 
         # ── Init contrat ─────────────────────────────────────────────────
         contract     = "tabular"
-        texts_train  = []; texts_test = []
-        dates_train  = None; dates_future = None
-        durations    = None; events = None; df_survival = None
+        texts_train  = []
+        texts_test = []
+        dates_train  = None
+        dates_future = None
+        durations    = None
+        events = None
+        df_survival = None
         
         print(f"[TABULAR] task_type='{task_type}' | features={len(feature_names)} | target='{target_name}'")
         print(f"          shape={df.shape}")
@@ -1388,30 +1525,39 @@ catalog:
         # make_classification, make_regression, make_blobs
         LOADER_NAME  = "load_breast_cancer"
         DEFAULT_TASK = "classification"
-        N_SAMPLES  = 1000; N_FEATURES = 20; N_CLASSES = 2
+        N_SAMPLES  = 1000
+        N_FEATURES = 20
+        N_CLASSES = 2
 
         if LOADER_NAME == "make_classification":
             X_arr, y_arr = datasets.make_classification(
                 n_samples=N_SAMPLES, n_features=N_FEATURES, n_classes=N_CLASSES,
                 n_informative=max(2, N_FEATURES//2), random_state=42)
-            feat_names = [f"feat_{i}" for i in range(X_arr.shape[1])]; bunch = None
+            feat_names = [f"feat_{i}" for i in range(X_arr.shape[1])]
+            bunch = None
         elif LOADER_NAME == "make_regression":
             X_arr, y_arr = datasets.make_regression(
                 n_samples=N_SAMPLES, n_features=N_FEATURES, noise=0.1, random_state=42)
-            feat_names = [f"feat_{i}" for i in range(X_arr.shape[1])]; bunch = None
+            feat_names = [f"feat_{i}" for i in range(X_arr.shape[1])]
+            bunch = None
         elif LOADER_NAME == "make_blobs":
             X_arr, y_arr = datasets.make_blobs(
                 n_samples=N_SAMPLES, n_features=N_FEATURES, centers=N_CLASSES, random_state=42)
-            feat_names = [f"feat_{i}" for i in range(X_arr.shape[1])]; bunch = None
+            feat_names = [f"feat_{i}" for i in range(X_arr.shape[1])]
+            bunch = None
         else:
             bunch = getattr(datasets, LOADER_NAME)(as_frame=True)
-            X_arr = bunch.data.values; y_arr = bunch.target.values
+            X_arr = bunch.data.values
+            y_arr = bunch.target.values
             feat_names = list(bunch.feature_names)
 
-        df = pd.DataFrame(X_arr, columns=feat_names); df["target"] = y_arr
+        df = pd.DataFrame(X_arr, columns=feat_names)
+        df["target"] = y_arr
         X = bunch.data if bunch else pd.DataFrame(X_arr, columns=feat_names)
         y = bunch.target if bunch else pd.Series(y_arr, name="target")
-        feature_names = feat_names; target_name = "target"; task_type = DEFAULT_TASK
+        feature_names = feat_names
+        target_name = "target"
+        task_type = DEFAULT_TASK
         meta = {"source": "sklearn", "dataset": LOADER_NAME, "shape": df.shape,
                 "classes": list(bunch.target_names) if bunch and hasattr(bunch,"target_names") else None}
 
@@ -1427,7 +1573,8 @@ catalog:
                 X_train, X_test = train_test_split(
                     X, test_size=TEST_SIZE, random_state=RANDOM_STATE
                 )
-                y_train = None; y_test = None
+                y_train = None
+                y_test = None
             else:
                 # Timeseries
                 split_idx = int(len(X) * (1 - TEST_SIZE))
@@ -1435,16 +1582,23 @@ catalog:
                 y_train, y_test = ((y.iloc[:split_idx], y.iloc[split_idx:]) if y is not None else (None, None))
         except Exception as e:
             print(f"Split error (fallback to None): {e}")
-            X_train = None; X_test = None; y_train = None; y_test = None
+            X_train = None
+            X_test = None
+            y_train = None
+            y_test = None
 
         preprocessor = None
         feature_names_out = feature_names
 
         # ── Init contrat ─────────────────────────────────────────────────
         contract     = "tabular"
-        texts_train  = []; texts_test = []
-        dates_train  = None; dates_future = None
-        durations    = None; events = None; df_survival = None
+        texts_train  = []
+        texts_test = []
+        dates_train  = None
+        dates_future = None
+        durations    = None
+        events = None
+        df_survival = None
         
         print(f"[TABULAR] task_type='{task_type}' | features={len(feature_names)} | target='{target_name}'")
         print(f"          shape={df.shape}")
@@ -1478,9 +1632,12 @@ catalog:
             dataset_format="dataframe",
             target=dataset.default_target_attribute)
 
-        df = X_raw.copy(); df[dataset.default_target_attribute] = y_raw
-        X = X_raw; y = y_raw
-        feature_names = list(attr_names); target_name = dataset.default_target_attribute
+        df = X_raw.copy()
+        df[dataset.default_target_attribute] = y_raw
+        X = X_raw
+        y = y_raw
+        feature_names = list(attr_names)
+        target_name = dataset.default_target_attribute
         task_type = "classification" if (y.dtype == object or y.nunique() < 20) else "regression"
         meta = {"openml_id": DATASET_ID, "name": dataset.name, "shape": df.shape,
                 "categorical": [attr_names[i] for i, c in enumerate(cat_indicator) if c]}
@@ -1497,7 +1654,8 @@ catalog:
                 X_train, X_test = train_test_split(
                     X, test_size=TEST_SIZE, random_state=RANDOM_STATE
                 )
-                y_train = None; y_test = None
+                y_train = None
+                y_test = None
             else:
                 # Timeseries
                 split_idx = int(len(X) * (1 - TEST_SIZE))
@@ -1505,16 +1663,23 @@ catalog:
                 y_train, y_test = ((y.iloc[:split_idx], y.iloc[split_idx:]) if y is not None else (None, None))
         except Exception as e:
             print(f"Split error (fallback to None): {e}")
-            X_train = None; X_test = None; y_train = None; y_test = None
+            X_train = None
+            X_test = None
+            y_train = None
+            y_test = None
 
         preprocessor = None
         feature_names_out = feature_names
 
         # ── Init contrat ─────────────────────────────────────────────────
         contract     = "tabular"
-        texts_train  = []; texts_test = []
-        dates_train  = None; dates_future = None
-        durations    = None; events = None; df_survival = None
+        texts_train  = []
+        texts_test = []
+        dates_train  = None
+        dates_future = None
+        durations    = None
+        events = None
+        df_survival = None
         
         print(f"[TABULAR] task_type='{task_type}' | features={len(feature_names)} | target='{target_name}'")
         print(f"          shape={df.shape}")
@@ -1561,7 +1726,9 @@ catalog:
 
         X = df.drop(columns=[TARGET_COL]) if df.shape[1] > 1 else pd.DataFrame(index=df.index)
         y = df[TARGET_COL]
-        feature_names = X.columns.tolist(); target_name = TARGET_COL; task_type = "timeseries"
+        feature_names = X.columns.tolist()
+        target_name = TARGET_COL
+        task_type = "timeseries"
 
         n_test = int(len(df) * TEST_RATIO)
         y_train = df[TARGET_COL].iloc[:-n_test]
@@ -1583,7 +1750,8 @@ catalog:
                 X_train, X_test = train_test_split(
                     X, test_size=TEST_SIZE, random_state=RANDOM_STATE
                 )
-                y_train = None; y_test = None
+                y_train = None
+                y_test = None
             else:
                 # Timeseries
                 split_idx = int(len(X) * (1 - TEST_SIZE))
@@ -1591,16 +1759,23 @@ catalog:
                 y_train, y_test = ((y.iloc[:split_idx], y.iloc[split_idx:]) if y is not None else (None, None))
         except Exception as e:
             print(f"Split error (fallback to None): {e}")
-            X_train = None; X_test = None; y_train = None; y_test = None
+            X_train = None
+            X_test = None
+            y_train = None
+            y_test = None
 
         preprocessor = None
         feature_names_out = feature_names
 
         # ── Init contrat ─────────────────────────────────────────────────
         contract     = "tabular"
-        texts_train  = []; texts_test = []
-        dates_train  = None; dates_future = None
-        durations    = None; events = None; df_survival = None
+        texts_train  = []
+        texts_test = []
+        dates_train  = None
+        dates_future = None
+        durations    = None
+        events = None
+        df_survival = None
         
         print(f"[TABULAR] task_type='{task_type}' | features={len(feature_names)} | target='{target_name}'")
         print(f"          shape={df.shape}")
@@ -1636,7 +1811,9 @@ catalog:
         EDGE_FILE      = "data/edges.csv"
         GRAPH_FILE     = "data/graph.graphml"
         NODE_FILE      = None
-        SOURCE_COL     = "source"; TARGET_COL_G = "target"; WEIGHT_COL = "weight"
+        SOURCE_COL     = "source"
+        TARGET_COL_G = "target"
+        WEIGHT_COL = "weight"
         NODE_LABEL_COL = "label"
         DIRECTED       = False
         TEST_SIZE    = 0.2
@@ -1666,11 +1843,16 @@ catalog:
         df = pd.DataFrame(rows).set_index("node_id")
 
         if NODE_LABEL_COL and NODE_LABEL_COL in df.columns:
-            y = df[NODE_LABEL_COL]; X = df.drop(columns=[NODE_LABEL_COL]); task_type = "node_classification"
+            y = df[NODE_LABEL_COL]
+            X = df.drop(columns=[NODE_LABEL_COL])
+            task_type = "node_classification"
         else:
-            X = df.copy(); y = None; task_type = "graph"
+            X = df.copy()
+            y = None
+            task_type = "graph"
 
-        feature_names = X.columns.tolist(); target_name = NODE_LABEL_COL
+        feature_names = X.columns.tolist()
+        target_name = NODE_LABEL_COL
         meta = {"n_nodes": G.number_of_nodes(), "n_edges": G.number_of_edges(),
                 "density": nx.density(G), "graph_obj": G}
 
@@ -1686,7 +1868,8 @@ catalog:
                 X_train, X_test = train_test_split(
                     X, test_size=TEST_SIZE, random_state=RANDOM_STATE
                 )
-                y_train = None; y_test = None
+                y_train = None
+                y_test = None
             else:
                 # Timeseries
                 split_idx = int(len(X) * (1 - TEST_SIZE))
@@ -1694,16 +1877,23 @@ catalog:
                 y_train, y_test = ((y.iloc[:split_idx], y.iloc[split_idx:]) if y is not None else (None, None))
         except Exception as e:
             print(f"Split error (fallback to None): {e}")
-            X_train = None; X_test = None; y_train = None; y_test = None
+            X_train = None
+            X_test = None
+            y_train = None
+            y_test = None
 
         preprocessor = None
         feature_names_out = feature_names
 
         # ── Init contrat ─────────────────────────────────────────────────
         contract     = "tabular"
-        texts_train  = []; texts_test = []
-        dates_train  = None; dates_future = None
-        durations    = None; events = None; df_survival = None
+        texts_train  = []
+        texts_test = []
+        dates_train  = None
+        dates_future = None
+        durations    = None
+        events = None
+        df_survival = None
         
         print(f"[TABULAR] task_type='{task_type}' | features={len(feature_names)} | target='{target_name}'")
         print(f"          shape={df.shape}")
@@ -1769,11 +1959,15 @@ catalog:
         if TARGET_PREDICATE:
             _tc = f"pred_{TARGET_PREDICATE.split('/')[-1][:30]}"
             y = df[_tc] if _tc in df.columns else None
-            X = df.drop(columns=[_tc], errors="ignore"); task_type = "node_classification"
+            X = df.drop(columns=[_tc], errors="ignore")
+            task_type = "node_classification"
         else:
-            X = df.copy(); y = None; task_type = "knowledge_graph"
+            X = df.copy()
+            y = None
+            task_type = "knowledge_graph"
 
-        feature_names = X.columns.tolist(); target_name = TARGET_PREDICATE
+        feature_names = X.columns.tolist()
+        target_name = TARGET_PREDICATE
         meta = {"n_triplets": len(df_triplets), "n_entities": len(subjects),
                 "n_relations": df_triplets["predicate"].nunique(), "rdf_graph": g}
 
@@ -1789,7 +1983,8 @@ catalog:
                 X_train, X_test = train_test_split(
                     X, test_size=TEST_SIZE, random_state=RANDOM_STATE
                 )
-                y_train = None; y_test = None
+                y_train = None
+                y_test = None
             else:
                 # Timeseries
                 split_idx = int(len(X) * (1 - TEST_SIZE))
@@ -1797,16 +1992,23 @@ catalog:
                 y_train, y_test = ((y.iloc[:split_idx], y.iloc[split_idx:]) if y is not None else (None, None))
         except Exception as e:
             print(f"Split error (fallback to None): {e}")
-            X_train = None; X_test = None; y_train = None; y_test = None
+            X_train = None
+            X_test = None
+            y_train = None
+            y_test = None
 
         preprocessor = None
         feature_names_out = feature_names
 
         # ── Init contrat ─────────────────────────────────────────────────
         contract     = "tabular"
-        texts_train  = []; texts_test = []
-        dates_train  = None; dates_future = None
-        durations    = None; events = None; df_survival = None
+        texts_train  = []
+        texts_test = []
+        dates_train  = None
+        dates_future = None
+        durations    = None
+        events = None
+        df_survival = None
         
         print(f"[TABULAR] task_type='{task_type}' | features={len(feature_names)} | target='{target_name}'")
         print(f"          shape={df.shape}")
@@ -1874,9 +2076,11 @@ catalog:
             task_type = "classification" if y.nunique() < 20 else "regression"
         else:
             X = df.drop(columns=[c for c in _excl if c in df.columns])
-            y = None; task_type = "knowledge_graph"
+            y = None
+            task_type = "knowledge_graph"
 
-        feature_names = X.columns.tolist(); target_name = TARGET_COL
+        feature_names = X.columns.tolist()
+        target_name = TARGET_COL
         meta = {"n_entities": len(df), "query_vars": cols, "shape": df.shape}
 
                 # ── Split Train/Test ─────────────────────────────────────────────
@@ -1891,7 +2095,8 @@ catalog:
                 X_train, X_test = train_test_split(
                     X, test_size=TEST_SIZE, random_state=RANDOM_STATE
                 )
-                y_train = None; y_test = None
+                y_train = None
+                y_test = None
             else:
                 # Timeseries
                 split_idx = int(len(X) * (1 - TEST_SIZE))
@@ -1899,16 +2104,23 @@ catalog:
                 y_train, y_test = ((y.iloc[:split_idx], y.iloc[split_idx:]) if y is not None else (None, None))
         except Exception as e:
             print(f"Split error (fallback to None): {e}")
-            X_train = None; X_test = None; y_train = None; y_test = None
+            X_train = None
+            X_test = None
+            y_train = None
+            y_test = None
 
         preprocessor = None
         feature_names_out = feature_names
 
         # ── Init contrat ─────────────────────────────────────────────────
         contract     = "tabular"
-        texts_train  = []; texts_test = []
-        dates_train  = None; dates_future = None
-        durations    = None; events = None; df_survival = None
+        texts_train  = []
+        texts_test = []
+        dates_train  = None
+        dates_future = None
+        durations    = None
+        events = None
+        df_survival = None
         
         print(f"[TABULAR] task_type='{task_type}' | features={len(feature_names)} | target='{target_name}'")
         print(f"          shape={df.shape}")
@@ -1943,8 +2155,12 @@ catalog:
 
         # ── Paramètres ──────────────────────────────────────────────────
         GEO_FILE   = "data/parcels.geojson"
-        TARGET_COL = None; CRS_TARGET = "EPSG:4326"; LAYER = None
-        USE_REF    = True; REF_LON = 2.3522; REF_LAT = 48.8566
+        TARGET_COL = None
+        CRS_TARGET = "EPSG:4326"
+        LAYER = None
+        USE_REF    = True
+        REF_LON = 2.3522
+        REF_LAT = 48.8566
         TEST_SIZE    = 0.2
         RANDOM_STATE = 42
         STRATIFY     = True
@@ -1972,12 +2188,16 @@ catalog:
                     "is_valid","geom_type"] + (["dist_ref_m"] if USE_REF else [])
 
         if TARGET_COL and TARGET_COL in df.columns:
-            X = df[GEO_FEAT]; y = df[TARGET_COL]
+            X = df[GEO_FEAT]
+            y = df[TARGET_COL]
             task_type = "classification" if (y.dtype == object or y.nunique() < 20) else "regression"
         else:
-            X = df[GEO_FEAT]; y = None; task_type = "geospatial"
+            X = df[GEO_FEAT]
+            y = None
+            task_type = "geospatial"
 
-        feature_names = X.columns.tolist(); target_name = TARGET_COL
+        feature_names = X.columns.tolist()
+        target_name = TARGET_COL
         meta = {"crs": str(gdf.crs), "bbox": list(gdf.total_bounds), "shape": gdf.shape, "gdf": gdf}
 
                 # ── Split Train/Test ─────────────────────────────────────────────
@@ -1992,7 +2212,8 @@ catalog:
                 X_train, X_test = train_test_split(
                     X, test_size=TEST_SIZE, random_state=RANDOM_STATE
                 )
-                y_train = None; y_test = None
+                y_train = None
+                y_test = None
             else:
                 # Timeseries
                 split_idx = int(len(X) * (1 - TEST_SIZE))
@@ -2000,16 +2221,23 @@ catalog:
                 y_train, y_test = ((y.iloc[:split_idx], y.iloc[split_idx:]) if y is not None else (None, None))
         except Exception as e:
             print(f"Split error (fallback to None): {e}")
-            X_train = None; X_test = None; y_train = None; y_test = None
+            X_train = None
+            X_test = None
+            y_train = None
+            y_test = None
 
         preprocessor = None
         feature_names_out = feature_names
 
         # ── Init contrat ─────────────────────────────────────────────────
         contract     = "tabular"
-        texts_train  = []; texts_test = []
-        dates_train  = None; dates_future = None
-        durations    = None; events = None; df_survival = None
+        texts_train  = []
+        texts_test = []
+        dates_train  = None
+        dates_future = None
+        durations    = None
+        events = None
+        df_survival = None
         
         print(f"[TABULAR] task_type='{task_type}' | features={len(feature_names)} | target='{target_name}'")
         print(f"          shape={df.shape}")
@@ -2038,7 +2266,8 @@ catalog:
         # ── Paramètres ──────────────────────────────────────────────────
         MODE                = "Local (PersistentClient)"
         CHROMA_PATH         = "./chroma_db"
-        CHROMA_HOST         = "localhost"; CHROMA_PORT = 8000
+        CHROMA_HOST         = "localhost"
+        CHROMA_PORT = 8000
         COLLECTION_NAME     = "documents"
         TARGET_METADATA_KEY = None
         N_MAX               = None
@@ -2068,7 +2297,8 @@ catalog:
         y = df_meta[TARGET_METADATA_KEY] if TARGET_METADATA_KEY and TARGET_METADATA_KEY in df_meta.columns else None
         task_type = ("classification" if y is not None and y.nunique() < 20
                      else "regression" if y is not None else "clustering")
-        feature_names = feat_cols; target_name = TARGET_METADATA_KEY
+        feature_names = feat_cols
+        target_name = TARGET_METADATA_KEY
         meta = {"collection": COLLECTION_NAME, "n_vectors": len(embeddings),
                 "embedding_dim": dim, "shape": embeddings.shape}
 
@@ -2084,7 +2314,8 @@ catalog:
                 X_train, X_test = train_test_split(
                     X, test_size=TEST_SIZE, random_state=RANDOM_STATE
                 )
-                y_train = None; y_test = None
+                y_train = None
+                y_test = None
             else:
                 # Timeseries
                 split_idx = int(len(X) * (1 - TEST_SIZE))
@@ -2092,16 +2323,23 @@ catalog:
                 y_train, y_test = ((y.iloc[:split_idx], y.iloc[split_idx:]) if y is not None else (None, None))
         except Exception as e:
             print(f"Split error (fallback to None): {e}")
-            X_train = None; X_test = None; y_train = None; y_test = None
+            X_train = None
+            X_test = None
+            y_train = None
+            y_test = None
 
         preprocessor = None
         feature_names_out = feature_names
 
         # ── Init contrat ─────────────────────────────────────────────────
         contract     = "tabular"
-        texts_train  = []; texts_test = []
-        dates_train  = None; dates_future = None
-        durations    = None; events = None; df_survival = None
+        texts_train  = []
+        texts_test = []
+        dates_train  = None
+        dates_future = None
+        durations    = None
+        events = None
+        df_survival = None
         
         print(f"[TABULAR] task_type='{task_type}' | features={len(feature_names)} | target='{target_name}'")
         print(f"          shape={df.shape}")
@@ -2151,7 +2389,8 @@ catalog:
              if TARGET_METADATA_KEY and TARGET_METADATA_KEY in df_meta.columns else None)
         task_type = ("classification" if y is not None and y.nunique() < 20
                      else "regression" if y is not None else "clustering")
-        feature_names = feat_cols; target_name = TARGET_METADATA_KEY
+        feature_names = feat_cols
+        target_name = TARGET_METADATA_KEY
         meta = {"index": PINECONE_INDEX, "n_vectors": len(vectors),
                 "embedding_dim": dim, "shape": vectors.shape}
 
@@ -2167,7 +2406,8 @@ catalog:
                 X_train, X_test = train_test_split(
                     X, test_size=TEST_SIZE, random_state=RANDOM_STATE
                 )
-                y_train = None; y_test = None
+                y_train = None
+                y_test = None
             else:
                 # Timeseries
                 split_idx = int(len(X) * (1 - TEST_SIZE))
@@ -2175,16 +2415,23 @@ catalog:
                 y_train, y_test = ((y.iloc[:split_idx], y.iloc[split_idx:]) if y is not None else (None, None))
         except Exception as e:
             print(f"Split error (fallback to None): {e}")
-            X_train = None; X_test = None; y_train = None; y_test = None
+            X_train = None
+            X_test = None
+            y_train = None
+            y_test = None
 
         preprocessor = None
         feature_names_out = feature_names
 
         # ── Init contrat ─────────────────────────────────────────────────
         contract     = "tabular"
-        texts_train  = []; texts_test = []
-        dates_train  = None; dates_future = None
-        durations    = None; events = None; df_survival = None
+        texts_train  = []
+        texts_test = []
+        dates_train  = None
+        dates_future = None
+        durations    = None
+        events = None
+        df_survival = None
         
         print(f"[TABULAR] task_type='{task_type}' | features={len(feature_names)} | target='{target_name}'")
         print(f"          shape={df.shape}")
@@ -2226,7 +2473,9 @@ catalog:
             client = create_client(SUPABASE_URL, SUPABASE_SERVICE_KEY)
             query  = client.table(SUPABASE_TABLE).select(SELECT_COLS)
             for col, val in FILTERS.items(): query = query.eq(col, val)
-            all_records = []; offset = 0; page_size = 1000
+            all_records = []
+            offset = 0
+            page_size = 1000
             while True:
                 resp = query.range(offset, offset+page_size-1).execute()
                 if not resp.data: break
@@ -2244,12 +2493,16 @@ catalog:
         print(f"Shape brut : {df.shape}")
         _id_cols = [c for c in ["id","uuid","created_at","updated_at"] if c in df.columns]
         if TARGET_COL and TARGET_COL in df.columns:
-            X = df.drop(columns=_id_cols+[TARGET_COL]); y = df[TARGET_COL]
+            X = df.drop(columns=_id_cols+[TARGET_COL])
+            y = df[TARGET_COL]
             task_type = "classification" if (y.dtype == object or y.nunique() < 20) else "regression"
         else:
-            X = df.drop(columns=_id_cols); y = None; task_type = "clustering"
+            X = df.drop(columns=_id_cols)
+            y = None
+            task_type = "clustering"
 
-        feature_names = X.columns.tolist(); target_name = TARGET_COL
+        feature_names = X.columns.tolist()
+        target_name = TARGET_COL
         meta = {"table": SUPABASE_TABLE, "n_records": len(df), "shape": df.shape}
 
                 # ── Split Train/Test ─────────────────────────────────────────────
@@ -2264,7 +2517,8 @@ catalog:
                 X_train, X_test = train_test_split(
                     X, test_size=TEST_SIZE, random_state=RANDOM_STATE
                 )
-                y_train = None; y_test = None
+                y_train = None
+                y_test = None
             else:
                 # Timeseries
                 split_idx = int(len(X) * (1 - TEST_SIZE))
@@ -2272,16 +2526,23 @@ catalog:
                 y_train, y_test = ((y.iloc[:split_idx], y.iloc[split_idx:]) if y is not None else (None, None))
         except Exception as e:
             print(f"Split error (fallback to None): {e}")
-            X_train = None; X_test = None; y_train = None; y_test = None
+            X_train = None
+            X_test = None
+            y_train = None
+            y_test = None
 
         preprocessor = None
         feature_names_out = feature_names
 
         # ── Init contrat ─────────────────────────────────────────────────
         contract     = "tabular"
-        texts_train  = []; texts_test = []
-        dates_train  = None; dates_future = None
-        durations    = None; events = None; df_survival = None
+        texts_train  = []
+        texts_test = []
+        dates_train  = None
+        dates_future = None
+        durations    = None
+        events = None
+        df_survival = None
         
         print(f"[TABULAR] task_type='{task_type}' | features={len(feature_names)} | target='{target_name}'")
         print(f"          shape={df.shape}")
@@ -2304,7 +2565,8 @@ catalog:
         # ── Paramètres ──────────────────────────────────────────────────
         MODE         = "Lecture directe S3"
         AWS_REGION   = "eu-west-1"
-        S3_BUCKET    = "my-data-lake"; S3_KEY = "datasets/data.parquet"
+        S3_BUCKET    = "my-data-lake"
+        S3_KEY = "datasets/data.parquet"
         ATHENA_DB    = "my_glue_database"
         ATHENA_OUT   = "s3://my-data-lake/athena-results/"
         TARGET_COL   = None
@@ -2313,7 +2575,8 @@ catalog:
         RANDOM_STATE = 42
         STRATIFY     = True
 
-        session = boto3.Session(region_name=AWS_REGION); exec_id = None
+        session = boto3.Session(region_name=AWS_REGION)
+        exec_id = None
         if MODE == "Lecture directe S3":
             s3  = session.client("s3")
             obj = s3.get_object(Bucket=S3_BUCKET, Key=S3_KEY)
@@ -2337,12 +2600,16 @@ catalog:
 
         print(f"Shape brut : {df.shape}")
         if TARGET_COL and TARGET_COL in df.columns:
-            X = df.drop(columns=[TARGET_COL]); y = df[TARGET_COL]
+            X = df.drop(columns=[TARGET_COL])
+            y = df[TARGET_COL]
             task_type = "classification" if y.nunique() < 20 else "regression"
         else:
-            X = df.copy(); y = None; task_type = "clustering"
+            X = df.copy()
+            y = None
+            task_type = "clustering"
 
-        feature_names = X.columns.tolist(); target_name = TARGET_COL
+        feature_names = X.columns.tolist()
+        target_name = TARGET_COL
         meta = {"bucket": S3_BUCKET, "shape": df.shape, "athena_exec_id": exec_id}
 
                 # ── Split Train/Test ─────────────────────────────────────────────
@@ -2357,7 +2624,8 @@ catalog:
                 X_train, X_test = train_test_split(
                     X, test_size=TEST_SIZE, random_state=RANDOM_STATE
                 )
-                y_train = None; y_test = None
+                y_train = None
+                y_test = None
             else:
                 # Timeseries
                 split_idx = int(len(X) * (1 - TEST_SIZE))
@@ -2365,16 +2633,23 @@ catalog:
                 y_train, y_test = ((y.iloc[:split_idx], y.iloc[split_idx:]) if y is not None else (None, None))
         except Exception as e:
             print(f"Split error (fallback to None): {e}")
-            X_train = None; X_test = None; y_train = None; y_test = None
+            X_train = None
+            X_test = None
+            y_train = None
+            y_test = None
 
         preprocessor = None
         feature_names_out = feature_names
 
         # ── Init contrat ─────────────────────────────────────────────────
         contract     = "tabular"
-        texts_train  = []; texts_test = []
-        dates_train  = None; dates_future = None
-        durations    = None; events = None; df_survival = None
+        texts_train  = []
+        texts_test = []
+        dates_train  = None
+        dates_future = None
+        durations    = None
+        events = None
+        df_survival = None
         
         print(f"[TABULAR] task_type='{task_type}' | features={len(feature_names)} | target='{target_name}'")
         print(f"          shape={df.shape}")
@@ -2395,7 +2670,8 @@ catalog:
         # ── Paramètres ──────────────────────────────────────────────────
         MODE             = "Azure Blob Storage"
         AZURE_CONN       = ""
-        CONTAINER        = "raw-data"; BLOB_PATH = "2024/12/dataset.parquet"
+        CONTAINER        = "raw-data"
+        BLOB_PATH = "2024/12/dataset.parquet"
         SYNAPSE_SERVER   = "xxx-ondemand.sql.azuresynapse.net"
         SYNAPSE_DATABASE = "my_serverless_db"
         SYNAPSE_QUERY    = "SELECT TOP 100000 * FROM my_table"
@@ -2414,18 +2690,24 @@ catalog:
             df  = pd.read_parquet(buf) if BLOB_PATH.endswith(".parquet") else pd.read_csv(buf)
         else:
             import pyodbc
-            conn_str = (f"DRIVER={{ODBC Driver 18 for SQL Server}};SERVER={SYNAPSE_SERVER};"
+            conn_str = (f"DRIVER={{ODBC Driver 18 for SQL Server}}
+            SERVER={SYNAPSE_SERVER}
+            "
                         f"DATABASE={SYNAPSE_DATABASE};Authentication=ActiveDirectoryInteractive")
             with pyodbc.connect(conn_str) as conn: df = pd.read_sql(SYNAPSE_QUERY, conn)
 
         print(f"Shape brut : {df.shape}")
         if TARGET_COL and TARGET_COL in df.columns:
-            X = df.drop(columns=[TARGET_COL]); y = df[TARGET_COL]
+            X = df.drop(columns=[TARGET_COL])
+            y = df[TARGET_COL]
             task_type = "classification" if y.nunique() < 20 else "regression"
         else:
-            X = df.copy(); y = None; task_type = "clustering"
+            X = df.copy()
+            y = None
+            task_type = "clustering"
 
-        feature_names = X.columns.tolist(); target_name = TARGET_COL
+        feature_names = X.columns.tolist()
+        target_name = TARGET_COL
         meta = {"shape": df.shape}
 
                 # ── Split Train/Test ─────────────────────────────────────────────
@@ -2440,7 +2722,8 @@ catalog:
                 X_train, X_test = train_test_split(
                     X, test_size=TEST_SIZE, random_state=RANDOM_STATE
                 )
-                y_train = None; y_test = None
+                y_train = None
+                y_test = None
             else:
                 # Timeseries
                 split_idx = int(len(X) * (1 - TEST_SIZE))
@@ -2448,16 +2731,23 @@ catalog:
                 y_train, y_test = ((y.iloc[:split_idx], y.iloc[split_idx:]) if y is not None else (None, None))
         except Exception as e:
             print(f"Split error (fallback to None): {e}")
-            X_train = None; X_test = None; y_train = None; y_test = None
+            X_train = None
+            X_test = None
+            y_train = None
+            y_test = None
 
         preprocessor = None
         feature_names_out = feature_names
 
         # ── Init contrat ─────────────────────────────────────────────────
         contract     = "tabular"
-        texts_train  = []; texts_test = []
-        dates_train  = None; dates_future = None
-        durations    = None; events = None; df_survival = None
+        texts_train  = []
+        texts_test = []
+        dates_train  = None
+        dates_future = None
+        durations    = None
+        events = None
+        df_survival = None
         
         print(f"[TABULAR] task_type='{task_type}' | features={len(feature_names)} | target='{target_name}'")
         print(f"          shape={df.shape}")
@@ -2508,12 +2798,16 @@ catalog:
             df = spark.read.format("delta").options(**_opts).load(DELTA_TABLE_PATH).toPandas()
 
         if TARGET_COL and TARGET_COL in df.columns:
-            X = df.drop(columns=[TARGET_COL]); y = df[TARGET_COL]
+            X = df.drop(columns=[TARGET_COL])
+            y = df[TARGET_COL]
             task_type = "classification" if y.nunique() < 20 else "regression"
         else:
-            X = df.copy(); y = None; task_type = "clustering"
+            X = df.copy()
+            y = None
+            task_type = "clustering"
 
-        feature_names = X.columns.tolist(); target_name = TARGET_COL
+        feature_names = X.columns.tolist()
+        target_name = TARGET_COL
         meta = {"path": DELTA_TABLE_PATH, "version": DELTA_VERSION, "shape": df.shape}
 
                 # ── Split Train/Test ─────────────────────────────────────────────
@@ -2528,7 +2822,8 @@ catalog:
                 X_train, X_test = train_test_split(
                     X, test_size=TEST_SIZE, random_state=RANDOM_STATE
                 )
-                y_train = None; y_test = None
+                y_train = None
+                y_test = None
             else:
                 # Timeseries
                 split_idx = int(len(X) * (1 - TEST_SIZE))
@@ -2536,16 +2831,23 @@ catalog:
                 y_train, y_test = ((y.iloc[:split_idx], y.iloc[split_idx:]) if y is not None else (None, None))
         except Exception as e:
             print(f"Split error (fallback to None): {e}")
-            X_train = None; X_test = None; y_train = None; y_test = None
+            X_train = None
+            X_test = None
+            y_train = None
+            y_test = None
 
         preprocessor = None
         feature_names_out = feature_names
 
         # ── Init contrat ─────────────────────────────────────────────────
         contract     = "tabular"
-        texts_train  = []; texts_test = []
-        dates_train  = None; dates_future = None
-        durations    = None; events = None; df_survival = None
+        texts_train  = []
+        texts_test = []
+        dates_train  = None
+        dates_future = None
+        durations    = None
+        events = None
+        df_survival = None
         
         print(f"[TABULAR] task_type='{task_type}' | features={len(feature_names)} | target='{target_name}'")
         print(f"          shape={df.shape}")
@@ -2566,8 +2868,10 @@ catalog:
         # ── Paramètres ──────────────────────────────────────────────────
         CATALOG_TYPE = "rest"
         CATALOG_URI  = "http://localhost:8181"
-        NAMESPACE    = "default"; TABLE = "my_table"
-        SNAPSHOT_ID  = None; TARGET_COL = None
+        NAMESPACE    = "default"
+        TABLE = "my_table"
+        SNAPSHOT_ID  = None
+        TARGET_COL = None
         TEST_SIZE    = 0.2
         RANDOM_STATE = 42
         STRATIFY     = True
@@ -2580,12 +2884,16 @@ catalog:
         print(f"Shape brut : {df.shape}")
 
         if TARGET_COL and TARGET_COL in df.columns:
-            X = df.drop(columns=[TARGET_COL]); y = df[TARGET_COL]
+            X = df.drop(columns=[TARGET_COL])
+            y = df[TARGET_COL]
             task_type = "classification" if y.nunique() < 20 else "regression"
         else:
-            X = df.copy(); y = None; task_type = "clustering"
+            X = df.copy()
+            y = None
+            task_type = "clustering"
 
-        feature_names = X.columns.tolist(); target_name = TARGET_COL
+        feature_names = X.columns.tolist()
+        target_name = TARGET_COL
         meta = {"namespace": NAMESPACE, "table": TABLE, "snapshot_id": SNAPSHOT_ID, "shape": df.shape}
 
                 # ── Split Train/Test ─────────────────────────────────────────────
@@ -2600,7 +2908,8 @@ catalog:
                 X_train, X_test = train_test_split(
                     X, test_size=TEST_SIZE, random_state=RANDOM_STATE
                 )
-                y_train = None; y_test = None
+                y_train = None
+                y_test = None
             else:
                 # Timeseries
                 split_idx = int(len(X) * (1 - TEST_SIZE))
@@ -2608,16 +2917,23 @@ catalog:
                 y_train, y_test = ((y.iloc[:split_idx], y.iloc[split_idx:]) if y is not None else (None, None))
         except Exception as e:
             print(f"Split error (fallback to None): {e}")
-            X_train = None; X_test = None; y_train = None; y_test = None
+            X_train = None
+            X_test = None
+            y_train = None
+            y_test = None
 
         preprocessor = None
         feature_names_out = feature_names
 
         # ── Init contrat ─────────────────────────────────────────────────
         contract     = "tabular"
-        texts_train  = []; texts_test = []
-        dates_train  = None; dates_future = None
-        durations    = None; events = None; df_survival = None
+        texts_train  = []
+        texts_test = []
+        dates_train  = None
+        dates_future = None
+        durations    = None
+        events = None
+        df_survival = None
         
         print(f"[TABULAR] task_type='{task_type}' | features={len(feature_names)} | target='{target_name}'")
         print(f"          shape={df.shape}")
@@ -2645,8 +2961,11 @@ catalog:
 
         # ── Paramètres ──────────────────────────────────────────────────
         BOOTSTRAP_SERVERS = ["localhost:9092"]
-        TOPIC       = "ml-events"; GROUP_ID = "ml-consumer-group"
-        BATCH_SIZE  = 1000; TIMEOUT_MS = 1000; OFFSET_RESET = "latest"
+        TOPIC       = "ml-events"
+        GROUP_ID = "ml-consumer-group"
+        BATCH_SIZE  = 1000
+        TIMEOUT_MS = 1000
+        OFFSET_RESET = "latest"
         TEST_SIZE    = 0.2
         RANDOM_STATE = 42
         STRATIFY     = True
@@ -2656,7 +2975,8 @@ catalog:
                                  enable_auto_commit=True,
                                  value_deserializer=lambda m: json.loads(m.decode("utf-8")),
                                  consumer_timeout_ms=TIMEOUT_MS)
-        buffer = deque(maxlen=BATCH_SIZE); records = []
+        buffer = deque(maxlen=BATCH_SIZE)
+        records = []
         try:
             for message in consumer:
                 buffer.append(message.value)
@@ -2667,8 +2987,10 @@ catalog:
 
         df = pd.json_normalize(records)
         X  = df.drop(columns=["event_id","timestamp"], errors="ignore")
-        y  = None; task_type = "anomaly"
-        feature_names = X.columns.tolist(); target_name = None
+        y  = None
+        task_type = "anomaly"
+        feature_names = X.columns.tolist()
+        target_name = None
         meta = {"topic": TOPIC, "batch_size": BATCH_SIZE, "shape": df.shape}
 
                 # ── Split Train/Test ─────────────────────────────────────────────
@@ -2683,7 +3005,8 @@ catalog:
                 X_train, X_test = train_test_split(
                     X, test_size=TEST_SIZE, random_state=RANDOM_STATE
                 )
-                y_train = None; y_test = None
+                y_train = None
+                y_test = None
             else:
                 # Timeseries
                 split_idx = int(len(X) * (1 - TEST_SIZE))
@@ -2691,16 +3014,23 @@ catalog:
                 y_train, y_test = ((y.iloc[:split_idx], y.iloc[split_idx:]) if y is not None else (None, None))
         except Exception as e:
             print(f"Split error (fallback to None): {e}")
-            X_train = None; X_test = None; y_train = None; y_test = None
+            X_train = None
+            X_test = None
+            y_train = None
+            y_test = None
 
         preprocessor = None
         feature_names_out = feature_names
 
         # ── Init contrat ─────────────────────────────────────────────────
         contract     = "tabular"
-        texts_train  = []; texts_test = []
-        dates_train  = None; dates_future = None
-        durations    = None; events = None; df_survival = None
+        texts_train  = []
+        texts_test = []
+        dates_train  = None
+        dates_future = None
+        durations    = None
+        events = None
+        df_survival = None
         
         print(f"[TABULAR] task_type='{task_type}' | features={len(feature_names)} | target='{target_name}'")
         print(f"          shape={df.shape}")
@@ -2727,9 +3057,14 @@ catalog:
 
         # ── Paramètres ──────────────────────────────────────────────────
         MODE    = "Classification"   # "Classification","Régression","Clustering (blobs)"
-        N       = 10000; N_FEAT = 15; N_INF = 8; N_CLS = 3
-        NOISE   = 0.02;  SEED   = 42
-        ADD_CAT = True; ADD_NAN = True
+        N       = 10000
+        N_FEAT = 15
+        N_INF = 8
+        N_CLS = 3
+        NOISE   = 0.02
+        SEED   = 42
+        ADD_CAT = True
+        ADD_NAN = True
         TEST_SIZE    = 0.2
         RANDOM_STATE = 42
         STRATIFY     = True
@@ -2760,8 +3095,10 @@ catalog:
                 df.loc[np.random.rand(N)<0.08, col] = np.nan
         df["target"] = y_arr
 
-        X = df.drop(columns=["target"]); y = df["target"]
-        feature_names = X.columns.tolist(); target_name = "target"
+        X = df.drop(columns=["target"])
+        y = df["target"]
+        feature_names = X.columns.tolist()
+        target_name = "target"
         meta = {"n_samples": N, "synthetic": True, "shape": df.shape, "mode": MODE}
 
                 # ── Split Train/Test ─────────────────────────────────────────────
@@ -2776,7 +3113,8 @@ catalog:
                 X_train, X_test = train_test_split(
                     X, test_size=TEST_SIZE, random_state=RANDOM_STATE
                 )
-                y_train = None; y_test = None
+                y_train = None
+                y_test = None
             else:
                 # Timeseries
                 split_idx = int(len(X) * (1 - TEST_SIZE))
@@ -2784,16 +3122,23 @@ catalog:
                 y_train, y_test = ((y.iloc[:split_idx], y.iloc[split_idx:]) if y is not None else (None, None))
         except Exception as e:
             print(f"Split error (fallback to None): {e}")
-            X_train = None; X_test = None; y_train = None; y_test = None
+            X_train = None
+            X_test = None
+            y_train = None
+            y_test = None
 
         preprocessor = None
         feature_names_out = feature_names
 
         # ── Init contrat ─────────────────────────────────────────────────
         contract     = "tabular"
-        texts_train  = []; texts_test = []
-        dates_train  = None; dates_future = None
-        durations    = None; events = None; df_survival = None
+        texts_train  = []
+        texts_test = []
+        dates_train  = None
+        dates_future = None
+        durations    = None
+        events = None
+        df_survival = None
         
         print(f"[TABULAR] task_type='{task_type}' | features={len(feature_names)} | target='{target_name}'")
         print(f"          shape={df.shape}")
@@ -2821,8 +3166,14 @@ catalog:
         RANDOM_STATE = 42
         STRATIFY     = True
         # "GBM","ARIMA","OU (Ornstein-Uhlenbeck)","Régimes","Saisonnier + bruit"
-        N_POINTS   = 1000; FREQ = "D"; TEST_RATIO = 0.2; HORIZON = 30; SEED = 42
-        MU = 0.0005; SIGMA = 0.02; S0 = 100.0
+        N_POINTS   = 1000
+        FREQ = "D"
+        TEST_RATIO = 0.2
+        HORIZON = 30
+        SEED = 42
+        MU = 0.0005
+        SIGMA = 0.02
+        S0 = 100.0
 
         np.random.seed(SEED)
         dates = pd.date_range("2020-01-01", periods=N_POINTS, freq=FREQ)
@@ -2835,11 +3186,13 @@ catalog:
             values = ArmaProcess(np.array([1,-0.75,0.25]),np.array([1,0.65])).generate_sample(N_POINTS)+100
         elif "OU" in MODEL:
             theta,mu_ou,sigma_ou = 0.1,50.0,2.0
-            values = np.zeros(N_POINTS); values[0] = mu_ou
+            values = np.zeros(N_POINTS)
+            values[0] = mu_ou
             for t in range(1,N_POINTS):
                 values[t] = values[t-1]+theta*(mu_ou-values[t-1])+sigma_ou*np.random.randn()
         elif "Régimes" in MODEL:
-            values = np.zeros(N_POINTS); regime = 0
+            values = np.zeros(N_POINTS)
+            regime = 0
             for t in range(N_POINTS):
                 if np.random.rand()<0.02: regime=1-regime
                 values[t] = 100+np.random.randn()*2 if regime==0 else 120+np.random.randn()*5
@@ -2849,11 +3202,16 @@ catalog:
 
         series = pd.Series(values, index=dates, name="value")
         n_test = int(N_POINTS*TEST_RATIO)
-        y_train = series.iloc[:-n_test]; y_test = series.iloc[-n_test:]
+        y_train = series.iloc[:-n_test]
+        y_test = series.iloc[-n_test:]
         dates_train  = y_train.index
         dates_future = pd.date_range(start=y_test.index[0], periods=HORIZON, freq=FREQ)
-        X = pd.DataFrame(index=series.index); y = series; df = series.to_frame()
-        feature_names = []; target_name = "value"; task_type = "timeseries"
+        X = pd.DataFrame(index=series.index)
+        y = series
+        df = series.to_frame()
+        feature_names = []
+        target_name = "value"
+        task_type = "timeseries"
         meta = {"model": MODEL, "n_points": N_POINTS, "freq": FREQ,
                 "horizon": HORIZON, "synthetic": True, "shape": df.shape}
 
@@ -2869,7 +3227,8 @@ catalog:
                 X_train, X_test = train_test_split(
                     X, test_size=TEST_SIZE, random_state=RANDOM_STATE
                 )
-                y_train = None; y_test = None
+                y_train = None
+                y_test = None
             else:
                 # Timeseries
                 split_idx = int(len(X) * (1 - TEST_SIZE))
@@ -2877,16 +3236,23 @@ catalog:
                 y_train, y_test = ((y.iloc[:split_idx], y.iloc[split_idx:]) if y is not None else (None, None))
         except Exception as e:
             print(f"Split error (fallback to None): {e}")
-            X_train = None; X_test = None; y_train = None; y_test = None
+            X_train = None
+            X_test = None
+            y_train = None
+            y_test = None
 
         preprocessor = None
         feature_names_out = feature_names
 
         # ── Init contrat ─────────────────────────────────────────────────
         contract     = "tabular"
-        texts_train  = []; texts_test = []
-        dates_train  = None; dates_future = None
-        durations    = None; events = None; df_survival = None
+        texts_train  = []
+        texts_test = []
+        dates_train  = None
+        dates_future = None
+        durations    = None
+        events = None
+        df_survival = None
         
         print(f"[TABULAR] task_type='{task_type}' | features={len(feature_names)} | target='{target_name}'")
         print(f"          shape={df.shape}")
@@ -2917,7 +3283,8 @@ catalog:
         # lifelines : load_rossi, load_lung, load_dd, load_stanford_heart_transplants
         LOADER_NAME  = "load_rossi"
         CSV_PATH     = "survival_data.csv"
-        DURATION_COL = "week"; EVENT_COL = "arrest"
+        DURATION_COL = "week"
+        EVENT_COL = "arrest"
 
         if LOADER_NAME == "csv":
             df = pd.read_csv(CSV_PATH)
@@ -2926,11 +3293,15 @@ catalog:
             df = getattr(lds, LOADER_NAME)()
 
         print(f"Shape brut : {df.shape}")
-        durations = df[DURATION_COL]; events = df[EVENT_COL].astype(int)
+        durations = df[DURATION_COL]
+        events = df[EVENT_COL].astype(int)
         df_survival = df.copy()
         feat_cols = [c for c in df.columns if c not in [DURATION_COL, EVENT_COL]]
-        X = df[feat_cols]; y = events
-        feature_names = feat_cols; target_name = EVENT_COL; task_type = "survival"
+        X = df[feat_cols]
+        y = events
+        feature_names = feat_cols
+        target_name = EVENT_COL
+        task_type = "survival"
         meta = {"duration_col": DURATION_COL, "event_col": EVENT_COL,
                 "censoring_rate": f"{(1-events.mean())*100:.1f}%", "shape": df.shape}
 
@@ -2946,7 +3317,8 @@ catalog:
                 X_train, X_test = train_test_split(
                     X, test_size=TEST_SIZE, random_state=RANDOM_STATE
                 )
-                y_train = None; y_test = None
+                y_train = None
+                y_test = None
             else:
                 # Timeseries
                 split_idx = int(len(X) * (1 - TEST_SIZE))
@@ -2954,16 +3326,23 @@ catalog:
                 y_train, y_test = ((y.iloc[:split_idx], y.iloc[split_idx:]) if y is not None else (None, None))
         except Exception as e:
             print(f"Split error (fallback to None): {e}")
-            X_train = None; X_test = None; y_train = None; y_test = None
+            X_train = None
+            X_test = None
+            y_train = None
+            y_test = None
 
         preprocessor = None
         feature_names_out = feature_names
 
         # ── Init contrat ─────────────────────────────────────────────────
         contract     = "tabular"
-        texts_train  = []; texts_test = []
-        dates_train  = None; dates_future = None
-        durations    = None; events = None; df_survival = None
+        texts_train  = []
+        texts_test = []
+        dates_train  = None
+        dates_future = None
+        durations    = None
+        events = None
+        df_survival = None
         
         print(f"[TABULAR] task_type='{task_type}' | features={len(feature_names)} | target='{target_name}'")
         print(f"          shape={df.shape}")
@@ -2993,7 +3372,10 @@ catalog:
         NUM_CLIENTS=5
         NUM_ROUNDS=3
         ALPHA_DIR=0.5
-        N_SAMPLES=5000; N_FEATURES=20; SEED=42; CLIENT_ID=0
+        N_SAMPLES=5000
+        N_FEATURES=20
+        SEED=42
+        CLIENT_ID=0
 
         np.random.seed(SEED)
         X_all, y_all = make_classification(
@@ -3004,7 +3386,8 @@ catalog:
         for c in range(n_classes):
             idx_c = np.where(y_all==c)[0]; np.random.shuffle(idx_c)
             props = np.random.dirichlet([ALPHA_DIR]*NUM_CLIENTS)
-            splits = (props*len(idx_c)).astype(int); splits[-1] += len(idx_c)-splits.sum()
+            splits = (props*len(idx_c)).astype(int)
+            splits[-1] += len(idx_c)-splits.sum()
             cum = 0
             for k, s in enumerate(splits): client_data[k].append(idx_c[cum:cum+s]); cum += s
 
@@ -3015,9 +3398,11 @@ catalog:
             X_tr,X_te,y_tr,y_te = train_test_split(X_k,y_k,test_size=0.2,random_state=SEED)
             clients.append({"X_train":X_tr,"X_test":X_te,"y_train":y_tr,"y_test":y_te})
 
-        global_coef = None; global_intercept = None
+        global_coef = None
+        global_intercept = None
         for rnd in range(NUM_ROUNDS):
-            lcoefs=[]; lints=[]
+            lcoefs=[]
+            lints=[]
             for k, client in enumerate(clients):
                 clf = LogisticRegression(max_iter=200, random_state=SEED, warm_start=True)
                 if global_coef is not None:
@@ -3025,7 +3410,8 @@ catalog:
                     clf.classes_=np.unique(client["y_train"])
                 clf.fit(client["X_train"],client["y_train"])
                 lcoefs.append(clf.coef_); lints.append(clf.intercept_)
-            wts = [len(c["X_train"]) for c in clients]; tot = sum(wts)
+            wts = [len(c["X_train"]) for c in clients]
+            tot = sum(wts)
             global_coef      = sum(w*c/tot for w,c in zip(wts,lcoefs))
             global_intercept = sum(w*i/tot for w,i in zip(wts,lints))
             print(f"Round {rnd+1}/{NUM_ROUNDS} — FedAvg agrégé")
@@ -3034,8 +3420,11 @@ catalog:
         df = pd.DataFrame(clients[CLIENT_ID]["X_train"],
                           columns=[f"feat_{i}" for i in range(X_all.shape[1])])
         df["target"] = clients[CLIENT_ID]["y_train"]
-        X = df.drop(columns=["target"]); y = df["target"]
-        feature_names = X.columns.tolist(); target_name = "target"; task_type = "classification"
+        X = df.drop(columns=["target"])
+        y = df["target"]
+        feature_names = X.columns.tolist()
+        target_name = "target"
+        task_type = "classification"
         meta = {"num_clients": NUM_CLIENTS, "num_rounds": NUM_ROUNDS,
                 "global_coef": global_coef, "clients": clients, "shape": df.shape}
 
@@ -3051,7 +3440,8 @@ catalog:
                 X_train, X_test = train_test_split(
                     X, test_size=TEST_SIZE, random_state=RANDOM_STATE
                 )
-                y_train = None; y_test = None
+                y_train = None
+                y_test = None
             else:
                 # Timeseries
                 split_idx = int(len(X) * (1 - TEST_SIZE))
@@ -3059,16 +3449,23 @@ catalog:
                 y_train, y_test = ((y.iloc[:split_idx], y.iloc[split_idx:]) if y is not None else (None, None))
         except Exception as e:
             print(f"Split error (fallback to None): {e}")
-            X_train = None; X_test = None; y_train = None; y_test = None
+            X_train = None
+            X_test = None
+            y_train = None
+            y_test = None
 
         preprocessor = None
         feature_names_out = feature_names
 
         # ── Init contrat ─────────────────────────────────────────────────
         contract     = "tabular"
-        texts_train  = []; texts_test = []
-        dates_train  = None; dates_future = None
-        durations    = None; events = None; df_survival = None
+        texts_train  = []
+        texts_test = []
+        dates_train  = None
+        dates_future = None
+        durations    = None
+        events = None
+        df_survival = None
         
         print(f"[TABULAR] task_type='{task_type}' | features={len(feature_names)} | target='{target_name}'")
         print(f"          shape={df.shape}")
@@ -3094,7 +3491,8 @@ catalog:
         RANDOM_STATE = 42
         STRATIFY     = True
         task_type  = "classification"
-        N_ROWS = 100; N_FEATS = 5
+        N_ROWS = 100
+        N_FEATS = 5
 
         # ════════════════════════════════════════════════════════════════
         # REMPLACEZ PAR VOTRE LOGIQUE DE CHARGEMENT
@@ -3103,10 +3501,13 @@ catalog:
         # ════════════════════════════════════════════════════════════════
 
         if TARGET_COL and TARGET_COL in df.columns:
-            X = df.drop(columns=[TARGET_COL]); y = df[TARGET_COL]
+            X = df.drop(columns=[TARGET_COL])
+            y = df[TARGET_COL]
         else:
-            X = df.copy(); y = None
-        feature_names = X.columns.tolist(); target_name = TARGET_COL
+            X = df.copy()
+            y = None
+        feature_names = X.columns.tolist()
+        target_name = TARGET_COL
         meta = {"source": "free_source", "shape": df.shape}
 
                 # ── Split Train/Test ─────────────────────────────────────────────
@@ -3121,7 +3522,8 @@ catalog:
                 X_train, X_test = train_test_split(
                     X, test_size=TEST_SIZE, random_state=RANDOM_STATE
                 )
-                y_train = None; y_test = None
+                y_train = None
+                y_test = None
             else:
                 # Timeseries
                 split_idx = int(len(X) * (1 - TEST_SIZE))
@@ -3129,16 +3531,23 @@ catalog:
                 y_train, y_test = ((y.iloc[:split_idx], y.iloc[split_idx:]) if y is not None else (None, None))
         except Exception as e:
             print(f"Split error (fallback to None): {e}")
-            X_train = None; X_test = None; y_train = None; y_test = None
+            X_train = None
+            X_test = None
+            y_train = None
+            y_test = None
 
         preprocessor = None
         feature_names_out = feature_names
 
         # ── Init contrat ─────────────────────────────────────────────────
         contract     = "tabular"
-        texts_train  = []; texts_test = []
-        dates_train  = None; dates_future = None
-        durations    = None; events = None; df_survival = None
+        texts_train  = []
+        texts_test = []
+        dates_train  = None
+        dates_future = None
+        durations    = None
+        events = None
+        df_survival = None
         
         print(f"[TABULAR] task_type='{task_type}' | features={len(feature_names)} | target='{target_name}'")
         print(f"          shape={df.shape}")
@@ -3246,9 +3655,12 @@ catalog:
                 for fname in os.listdir(os.path.join(DATA_DIR,cls)):
                     if fname.lower().endswith(EXTS):
                         all_files.append((os.path.join(DATA_DIR,cls,fname), cls))
-            rng = np.random.default_rng(SEED); perm = rng.permutation(len(all_files))
-            n_val = int(len(all_files)*VAL_RATIO); n_test = int(len(all_files)*TEST_RATIO)
-            idx_test = perm[:n_test]; idx_val = perm[n_test:n_test+n_val]
+            rng = np.random.default_rng(SEED)
+            perm = rng.permutation(len(all_files))
+            n_val = int(len(all_files)*VAL_RATIO)
+            n_test = int(len(all_files)*TEST_RATIO)
+            idx_test = perm[:n_test]
+            idx_val = perm[n_test:n_test+n_val]
             idx_train = perm[n_test+n_val:]
             splits_map = {"train":[all_files[i] for i in idx_train],
                           "val":  [all_files[i] for i in idx_val],
@@ -3256,7 +3668,8 @@ catalog:
 
         # ── Chargement ────────────────────────────────────────────────
         def load_split(entries):
-            imgs=[]; lbls=[]
+            imgs=[]
+            lbls=[]
             for path, cls in entries:
                 try: imgs.append(load_img(path)); lbls.append(cls2idx[cls])
                 except Exception as e: print(f"Ignorée ({path}) : {e}")
@@ -3284,7 +3697,8 @@ catalog:
                 "n_test": len(images_test), "val_images": _val_imgs, "val_labels": _val_lbls}
 
         # ── DataLoaders PyTorch ────────────────────────────────────────
-        dl_train = None; dl_test = None
+        dl_train = None
+        dl_test = None
         try:
             import torch
             from torch.utils.data import TensorDataset, DataLoader
@@ -3326,8 +3740,10 @@ catalog:
         NORMALIZE    = True
         MAX_IMAGES   = 5000
         LABEL_KEY    = b"__labels__"  # clé spéciale labels globaux — None si absent
-        TEST_RATIO   = 0.2; SEED = 42
-        BATCH_SIZE   = 32; NUM_WORKERS = 4
+        TEST_RATIO   = 0.2
+        SEED = 42
+        BATCH_SIZE   = 32
+        NUM_WORKERS = 4
 
         _MEAN = np.array([0.485,0.456,0.406],dtype=np.float32)
         _STD  = np.array([0.229,0.224,0.225],dtype=np.float32)
@@ -3348,7 +3764,9 @@ catalog:
             print(f"Entrées LMDB : {n_total}")
             labels_global = pickle.loads(txn.get(LABEL_KEY)) if LABEL_KEY and txn.get(LABEL_KEY) else None
             n_load = min(MAX_IMAGES, n_total) if MAX_IMAGES else n_total
-            images=[]; indices=[]; cursor=txn.cursor()
+            images=[]
+            indices=[]
+            cursor=txn.cursor()
             for i,(key,value) in enumerate(cursor.iternext(keys=True,values=True)):
                 if key == LABEL_KEY: continue
                 if len(images) >= n_load: break
@@ -3365,10 +3783,13 @@ catalog:
         print(f"Images chargées : {images.shape}")
 
         labels_all = np.array(labels_global)[indices] if labels_global is not None else None
-        rng = np.random.default_rng(SEED); perm = rng.permutation(len(images))
+        rng = np.random.default_rng(SEED)
+        perm = rng.permutation(len(images))
         n_test = int(len(images)*TEST_RATIO)
-        idx_test=perm[:n_test]; idx_train=perm[n_test:]
-        images_train=images[idx_train]; images_test=images[idx_test]
+        idx_test=perm[:n_test]
+        idx_train=perm[n_test:]
+        images_train=images[idx_train]
+        images_test=images[idx_test]
         labels_train=(labels_all[idx_train] if labels_all is not None else None)
         labels_test =(labels_all[idx_test]  if labels_all is not None else None)
 
@@ -3382,7 +3803,8 @@ catalog:
         meta = {"lmdb_path": LMDB_PATH, "n_total": n_total, "img_size": IMG_SIZE,
                 "value_format": VALUE_FORMAT, "n_classes": n_classes, "shape": images.shape}
 
-        dl_train=None; dl_test=None
+        dl_train=None
+        dl_test=None
         try:
             import torch
             from torch.utils.data import TensorDataset, DataLoader
@@ -3390,7 +3812,8 @@ catalog:
                 t_l = torch.from_numpy(lbls).long() if lbls is not None else torch.zeros(len(imgs),dtype=torch.long)
                 return DataLoader(TensorDataset(torch.from_numpy(imgs).permute(0,3,1,2),t_l),
                                   batch_size=BATCH_SIZE,shuffle=shuffle,num_workers=NUM_WORKERS)
-            dl_train=_dl(images_train,labels_train,True); dl_test=_dl(images_test,labels_test,False)
+            dl_train=_dl(images_train,labels_train,True)
+            dl_test=_dl(images_test,labels_test,False)
         except ImportError: pass
 
         contract = "vision"
@@ -3432,7 +3855,8 @@ catalog:
         IMG_SIZE      = 224
         NORMALIZE     = True
         MAX_IMAGES    = None         # None = tout
-        BATCH_SIZE    = 32; NUM_WORKERS = 4
+        BATCH_SIZE    = 32
+        NUM_WORKERS = 4
         IMG_PATTERN   = "image_{idx:05d}.jpg"   # pattern nom de fichier (1-indexed)
 
         _MEAN = np.array([0.485,0.456,0.406],dtype=np.float32)
@@ -3460,8 +3884,10 @@ catalog:
             print(f"Split officiel : train={len(idx_trn)} val={len(idx_val)} test={len(idx_tst)}")
         else:
             perm    = np.random.default_rng(42).permutation(n_total)
-            n_tst   = int(n_total*0.2); n_val = int(n_total*0.1)
-            idx_tst = perm[:n_tst]; idx_val = perm[n_tst:n_tst+n_val]
+            n_tst   = int(n_total*0.2)
+            n_val = int(n_total*0.1)
+            idx_tst = perm[:n_tst]
+            idx_val = perm[n_tst:n_tst+n_val]
             idx_trn = perm[n_tst+n_val:]
             print("Split aléatoire 70/10/20 (setid.mat absent)")
 
@@ -3469,8 +3895,12 @@ catalog:
         if MAX_IMAGES: all_indices = all_indices[:MAX_IMAGES]
 
         print(f"Chargement de {len(all_indices)} images...")
-        imgs=[]; lbls=[]; split_tags=[]
-        set_trn=set(idx_trn); set_val=set(idx_val); set_tst=set(idx_tst)
+        imgs=[]
+        lbls=[]
+        split_tags=[]
+        set_trn=set(idx_trn)
+        set_val=set(idx_val)
+        set_tst=set(idx_tst)
         for i_abs in all_indices:
             try:
                 imgs.append(load_img(i_abs)); lbls.append(labels_all[i_abs])
@@ -3478,11 +3908,15 @@ catalog:
                                   else "val" if i_abs in set_val else "test")
             except Exception as e: print(f"Image {i_abs} ignorée : {e}")
 
-        imgs = np.array(imgs,dtype=np.float32); lbls = np.array(lbls,dtype=np.int64)
+        imgs = np.array(imgs,dtype=np.float32)
+        lbls = np.array(lbls,dtype=np.int64)
         split_tags = np.array(split_tags)
-        images_train = imgs[split_tags=="train"]; labels_train = lbls[split_tags=="train"]
-        images_test  = imgs[split_tags=="test"];  labels_test  = lbls[split_tags=="test"]
-        _val_imgs    = imgs[split_tags=="val"];   _val_lbls    = lbls[split_tags=="val"]
+        images_train = imgs[split_tags=="train"]
+        labels_train = lbls[split_tags=="train"]
+        images_test  = imgs[split_tags=="test"]
+        labels_test  = lbls[split_tags=="test"]
+        _val_imgs    = imgs[split_tags=="val"]
+        _val_lbls    = lbls[split_tags=="val"]
 
         # ── Matrice de distance optionnelle ───────────────────────────
         dist_matrix = None
@@ -3506,14 +3940,16 @@ catalog:
                 "dist_matrix": dist_matrix,
                 "official_split": os.path.isfile(SETID_MAT)}
 
-        dl_train=None; dl_test=None
+        dl_train=None
+        dl_test=None
         try:
             import torch
             from torch.utils.data import TensorDataset, DataLoader
             def _dl(im,lb,sh): return DataLoader(
                 TensorDataset(torch.from_numpy(im).permute(0,3,1,2),torch.from_numpy(lb).long()),
                 batch_size=BATCH_SIZE,shuffle=sh,num_workers=NUM_WORKERS)
-            dl_train=_dl(images_train,labels_train,True); dl_test=_dl(images_test,labels_test,False)
+            dl_train=_dl(images_train,labels_train,True)
+            dl_test=_dl(images_test,labels_test,False)
         except ImportError: pass
 
         contract = "vision"
@@ -3540,10 +3976,13 @@ catalog:
         FILE_PATH    = "data/images.h5"
         X_KEY        = "images"     # clé tenseur images
         Y_KEY        = "labels"     # None si non supervisé
-        IMG_SIZE     = None         # None = garder taille native ; int = redimensionner
+        IMG_SIZE     = None         # None = garder taille native
+        int = redimensionner
         NORMALIZE    = True
-        TEST_RATIO   = 0.2; SEED = 42
-        BATCH_SIZE   = 32; NUM_WORKERS = 4
+        TEST_RATIO   = 0.2
+        SEED = 42
+        BATCH_SIZE   = 32
+        NUM_WORKERS = 4
         MAX_IMAGES   = None
 
         _MEAN = np.array([0.485,0.456,0.406],dtype=np.float32)
@@ -3584,10 +4023,13 @@ catalog:
         if NORMALIZE: imgs_raw = (imgs_raw - _MEAN) / _STD
 
         # ── Split ─────────────────────────────────────────────────────
-        rng = np.random.default_rng(SEED); perm=rng.permutation(len(imgs_raw))
+        rng = np.random.default_rng(SEED)
+        perm=rng.permutation(len(imgs_raw))
         n_test = int(len(imgs_raw)*TEST_RATIO)
-        idx_test=perm[:n_test]; idx_train=perm[n_test:]
-        images_train=imgs_raw[idx_train]; images_test=imgs_raw[idx_test]
+        idx_test=perm[:n_test]
+        idx_train=perm[n_test:]
+        images_train=imgs_raw[idx_train]
+        images_test=imgs_raw[idx_test]
         labels_train=(y_raw[idx_train].ravel().astype(np.int64) if y_raw is not None else None)
         labels_test =(y_raw[idx_test].ravel().astype(np.int64)  if y_raw is not None else None)
 
@@ -3602,7 +4044,8 @@ catalog:
                 "n_classes": n_classes,"img_shape": img_shape,
                 "normalize": NORMALIZE,"shape": imgs_raw.shape}
 
-        dl_train=None; dl_test=None
+        dl_train=None
+        dl_test=None
         try:
             import torch
             from torch.utils.data import TensorDataset, DataLoader
@@ -3611,7 +4054,8 @@ catalog:
                               torch.from_numpy(lb).long() if lb is not None
                               else torch.zeros(len(im),dtype=torch.long)),
                 batch_size=BATCH_SIZE,shuffle=sh,num_workers=NUM_WORKERS)
-            dl_train=_dl(images_train,labels_train,True); dl_test=_dl(images_test,labels_test,False)
+            dl_train=_dl(images_train,labels_train,True)
+            dl_test=_dl(images_test,labels_test,False)
         except ImportError: pass
 
         contract = "vision"
@@ -3640,14 +4084,19 @@ catalog:
 
         # ── Paramètres ──────────────────────────────────────────────────
         FILE_PATH  = "data/mnist.npz"
-        X_TRAIN_KEY = "x_train"; Y_TRAIN_KEY = "y_train"
-        X_TEST_KEY  = "x_test";  Y_TEST_KEY  = "y_test"
+        X_TRAIN_KEY = "x_train"
+        Y_TRAIN_KEY = "y_train"
+        X_TEST_KEY  = "x_test"
+        Y_TEST_KEY  = "y_test"
         # Si pas de split natif, laisser TEST_KEYS vides et utiliser TEST_RATIO
         HAS_NATIVE_SPLIT = True
-        TEST_RATIO = 0.2; SEED = 42
-        IMG_SIZE   = None    # None = taille native ; int = resize
+        TEST_RATIO = 0.2
+        SEED = 42
+        IMG_SIZE   = None    # None = taille native
+        int = resize
         NORMALIZE  = True    # normalisation ImageNet ou [0,1] selon n_channels
-        BATCH_SIZE = 64; NUM_WORKERS = 4
+        BATCH_SIZE = 64
+        NUM_WORKERS = 4
 
         _MEAN = np.array([0.485,0.456,0.406],dtype=np.float32)
         _STD  = np.array([0.229,0.224,0.225],dtype=np.float32)
@@ -3656,15 +4105,19 @@ catalog:
         print(f"Clés .npz : {list(archive.files)}")
 
         if HAS_NATIVE_SPLIT:
-            X_tr = archive[X_TRAIN_KEY]; y_tr = archive[Y_TRAIN_KEY]
-            X_te = archive[X_TEST_KEY];  y_te = archive[Y_TEST_KEY]
+            X_tr = archive[X_TRAIN_KEY]
+            y_tr = archive[Y_TRAIN_KEY]
+            X_te = archive[X_TEST_KEY]
+            y_te = archive[Y_TEST_KEY]
         else:
             _xc = ["X","x","data","images","x_train"]
             _yc = ["y","labels","label","y_train"]
             xk  = next((k for k in _xc if k in archive.files), archive.files[0])
             yk  = next((k for k in _yc if k in archive.files), None)
-            X_all = archive[xk]; y_all = archive[yk] if yk else None
-            rng = np.random.default_rng(SEED); perm=rng.permutation(len(X_all))
+            X_all = archive[xk]
+            y_all = archive[yk] if yk else None
+            rng = np.random.default_rng(SEED)
+            perm=rng.permutation(len(X_all))
             n_te = int(len(X_all)*TEST_RATIO)
             X_tr,X_te = X_all[perm[n_te:]], X_all[perm[:n_te]]
             y_tr,y_te = ((y_all[perm[n_te:]],y_all[perm[:n_te]]) if y_all is not None else (None,None))
@@ -3685,7 +4138,8 @@ catalog:
             if arr.shape[3] == 1: arr = np.repeat(arr,3,axis=3)   # grey→RGB si normalize ImageNet
             return (arr-_MEAN)/_STD if NORMALIZE else arr
 
-        images_train = prep(X_tr); images_test = prep(X_te)
+        images_train = prep(X_tr)
+        images_test = prep(X_te)
         labels_train = y_tr.ravel().astype(np.int64) if y_tr is not None else None
         labels_test  = y_te.ravel().astype(np.int64) if y_te is not None else None
 
@@ -3700,7 +4154,8 @@ catalog:
         meta = {"file": FILE_PATH,"n_classes": n_classes,"img_shape": img_shape,
                 "normalize": NORMALIZE,"shape": images_train.shape}
 
-        dl_train=None; dl_test=None
+        dl_train=None
+        dl_test=None
         try:
             import torch
             from torch.utils.data import TensorDataset, DataLoader
@@ -3709,7 +4164,8 @@ catalog:
                               torch.from_numpy(lb).long() if lb is not None
                               else torch.zeros(len(im),dtype=torch.long)),
                 batch_size=BATCH_SIZE,shuffle=sh,num_workers=NUM_WORKERS)
-            dl_train=_dl(images_train,labels_train,True); dl_test=_dl(images_test,labels_test,False)
+            dl_train=_dl(images_train,labels_train,True)
+            dl_test=_dl(images_test,labels_test,False)
         except ImportError: pass
 
         contract = "vision"
@@ -3744,11 +4200,13 @@ catalog:
         # ImageNet (root = chemin du dossier ILSVRC), MNIST, FashionMNIST
         DATA_ROOT   = "./data/torchvision"
         IMG_SIZE    = 224
-        BATCH_SIZE  = 64; NUM_WORKERS = 4
+        BATCH_SIZE  = 64
+        NUM_WORKERS = 4
         DOWNLOAD    = True
         AUGMENT_TRAIN = True    # RandomCrop + HorizontalFlip pour train
 
-        _MEAN = [0.485,0.456,0.406]; _STD = [0.229,0.224,0.225]
+        _MEAN = [0.485,0.456,0.406]
+        _STD = [0.229,0.224,0.225]
 
         train_transform = T.Compose([
             T.Resize(256), T.RandomCrop(IMG_SIZE), T.RandomHorizontalFlip(),
@@ -3825,7 +4283,8 @@ catalog:
         NORMALIZE     = True
         IMAGE_COL     = "image"
         LABEL_COL     = "labels"
-        BATCH_SIZE    = 32; NUM_WORKERS = 4
+        BATCH_SIZE    = 32
+        NUM_WORKERS = 4
         STREAMING     = False
 
         _MEAN = np.array([0.485,0.456,0.406],dtype=np.float32)
@@ -3842,7 +4301,8 @@ catalog:
             if split_name not in dataset: return np.array([]),np.array([])
             split = dataset[split_name]
             if STREAMING: split = list(split.take(2000))
-            imgs=[]; lbls=[]
+            imgs=[]
+            lbls=[]
             for ex in (split if STREAMING else split):
                 try:
                     pil = ex[IMAGE_COL] if isinstance(ex[IMAGE_COL],Image.Image) else Image.open(ex[IMAGE_COL])
@@ -3870,7 +4330,8 @@ catalog:
         meta = {"dataset": DATASET_NAME, "n_classes": n_classes, "img_shape": img_shape,
                 "class_names": class_names, "n_train": len(images_train), "n_test": len(images_test)}
 
-        dl_train=None; dl_test=None
+        dl_train=None
+        dl_test=None
         try:
             from torch.utils.data import TensorDataset
             def _dl(im,lb,sh): return DataLoader(
@@ -3878,7 +4339,8 @@ catalog:
                               torch.from_numpy(lb).long() if lb is not None
                               else torch.zeros(len(im),dtype=torch.long)),
                 batch_size=BATCH_SIZE,shuffle=sh,num_workers=NUM_WORKERS)
-            dl_train=_dl(images_train,labels_train,True); dl_test=_dl(images_test,labels_test,False)
+            dl_train=_dl(images_train,labels_train,True)
+            dl_test=_dl(images_test,labels_test,False)
         except Exception: pass
 
         contract = "vision"
@@ -3908,8 +4370,10 @@ catalog:
         CLASSES     = ["circle","square","cross","noise"]
         IMG_SIZE    = 64
         NORMALIZE   = True
-        TEST_RATIO  = 0.2; SEED = 42
-        BATCH_SIZE  = 32; NUM_WORKERS = 2
+        TEST_RATIO  = 0.2
+        SEED = 42
+        BATCH_SIZE  = 32
+        NUM_WORKERS = 2
 
         _MEAN = np.array([0.485,0.456,0.406],dtype=np.float32)
         _STD  = np.array([0.229,0.224,0.225],dtype=np.float32)
@@ -3919,7 +4383,8 @@ catalog:
             img = Image.new("RGB",(size,size),(255,255,255))
             draw = ImageDraw.Draw(img)
             c = rng.integers(50,200,3).tolist()
-            m = size//2; r = size//4
+            m = size//2
+            r = size//4
             if cls_name == "circle":
                 draw.ellipse([m-r,m-r,m+r,m+r], fill=tuple(c))
             elif cls_name == "square":
@@ -3931,7 +4396,8 @@ catalog:
                 return np.random.randint(0,255,(size,size,3),dtype=np.uint8)
             return np.array(img, dtype=np.uint8)
 
-        all_imgs=[]; all_lbls=[]
+        all_imgs=[]
+        all_lbls=[]
         for cls_idx, cls_name in enumerate(CLASSES):
             for _ in range(N_PER_CLASS):
                 arr = make_sample(cls_name, IMG_SIZE).astype(np.float32)/255.0
@@ -3949,22 +4415,26 @@ catalog:
             images_train = (images_train-_MEAN)/_STD
             images_test  = (images_test -_MEAN)/_STD
 
-        n_classes   = len(CLASSES); class_names = CLASSES
+        n_classes   = len(CLASSES)
+        class_names = CLASSES
         img_shape   = (IMG_SIZE, IMG_SIZE, 3)
         split_indices = {"train":perm[n_test:],"val":np.array([]),"test":perm[:n_test]}
         transforms  = {"train":None,"test":None}
-        task_type   = "image_classification"; target_name = "label"
+        task_type   = "image_classification"
+        target_name = "label"
         meta = {"classes": CLASSES, "n_per_class": N_PER_CLASS,
                 "img_shape": img_shape, "synthetic": True, "shape": all_imgs.shape}
 
-        dl_train=None; dl_test=None
+        dl_train=None
+        dl_test=None
         try:
             import torch
             from torch.utils.data import TensorDataset, DataLoader
             def _dl(im,lb,sh): return DataLoader(
                 TensorDataset(torch.from_numpy(im).permute(0,3,1,2),torch.from_numpy(lb).long()),
                 batch_size=BATCH_SIZE,shuffle=sh,num_workers=NUM_WORKERS)
-            dl_train=_dl(images_train,labels_train,True); dl_test=_dl(images_test,labels_test,False)
+            dl_train=_dl(images_train,labels_train,True)
+            dl_test=_dl(images_test,labels_test,False)
         except ImportError: pass
 
         contract = "vision"
@@ -3988,7 +4458,9 @@ catalog:
         N_CLASSES = 10
         N_TRAIN = 1000
         N_TEST = 200
-        task_type = "image_classification"; BATCH_SIZE = 32; NUM_WORKERS = 4
+        task_type = "image_classification"
+        BATCH_SIZE = 32
+        NUM_WORKERS = 4
 
         # ════════════════════════════════════════════════════════════════
         # REMPLACEZ PAR VOTRE LOGIQUE DE CHARGEMENT
@@ -3999,7 +4471,8 @@ catalog:
         labels_test  = np.random.randint(0,N_CLASSES,N_TEST ).astype(np.int64)
         # ════════════════════════════════════════════════════════════════
 
-        n_classes   = N_CLASSES; class_names = [str(i) for i in range(N_CLASSES)]
+        n_classes   = N_CLASSES
+        class_names = [str(i) for i in range(N_CLASSES)]
         img_shape   = (IMG_SIZE, IMG_SIZE, 3)
         target_name = "label"
         split_indices = {"train":np.arange(N_TRAIN),"val":np.array([]),"test":np.arange(N_TEST)}
@@ -4007,14 +4480,16 @@ catalog:
         meta = {"source":"free_source","n_classes":N_CLASSES,"img_shape":img_shape,
                 "shape":images_train.shape}
 
-        dl_train=None; dl_test=None
+        dl_train=None
+        dl_test=None
         try:
             import torch
             from torch.utils.data import TensorDataset, DataLoader
             def _dl(im,lb,sh): return DataLoader(
                 TensorDataset(torch.from_numpy(im).permute(0,3,1,2),torch.from_numpy(lb).long()),
                 batch_size=BATCH_SIZE,shuffle=sh,num_workers=NUM_WORKERS)
-            dl_train=_dl(images_train,labels_train,True); dl_test=_dl(images_test,labels_test,False)
+            dl_train=_dl(images_train,labels_train,True)
+            dl_test=_dl(images_test,labels_test,False)
         except ImportError: pass
 
         contract = "vision"
@@ -4081,7 +4556,8 @@ catalog:
         LABEL_COL     = "label"
         MODEL_NAME    = "bert-base-uncased"   # tokenizer HuggingFace
         MAX_LENGTH    = 128
-        BATCH_SIZE    = 32; NUM_WORKERS = 4
+        BATCH_SIZE    = 32
+        NUM_WORKERS = 4
         STREAMING     = False
         MAX_SAMPLES   = None   # None = tout
 
@@ -4106,8 +4582,10 @@ catalog:
         print("Tokenisation train..."); seq_tr, lbl_tr = tokenize_split("train")
         print("Tokenisation test...");  seq_te, lbl_te = tokenize_split("test")
 
-        sequences_train = seq_tr; sequences_test = seq_te if seq_te is not None else np.array([])
-        labels_train    = lbl_tr; labels_test    = lbl_te
+        sequences_train = seq_tr
+        sequences_test = seq_te if seq_te is not None else np.array([])
+        labels_train    = lbl_tr
+        labels_test    = lbl_te
         seq_lengths     = np.full(len(sequences_train), MAX_LENGTH, dtype=np.int64)
         n_features      = 1   # F=1 : chaque pas de temps = 1 token ID
 
@@ -4121,7 +4599,9 @@ catalog:
         # NLP uniquement
         vocab     = dict(tokenizer.vocab)
         tokenizer_obj = tokenizer
-        sr        = None; seq_dates = None; horizon = None
+        sr        = None
+        seq_dates = None
+        horizon = None
 
         task_type   = "text_classification"
         target_name = LABEL_COL
@@ -4129,7 +4609,8 @@ catalog:
                 "n_classes": n_classes, "n_train": len(sequences_train),
                 "n_test": len(sequences_test), "vocab_size": tokenizer.vocab_size}
 
-        dl_train=None; dl_test=None
+        dl_train=None
+        dl_test=None
         try:
             def _dl(seqs,lbls,sh):
                 t_s = torch.from_numpy(seqs.squeeze(-1))
@@ -4189,7 +4670,8 @@ catalog:
                         with open(fpath,encoding="utf-8") as f:
                             records.append({TEXT_COL:f.read(),"label":label})
                     except: pass
-            df = pd.DataFrame(records); LABEL_COL="label"
+            df = pd.DataFrame(records)
+            LABEL_COL="label"
 
         df[TEXT_COL] = df[TEXT_COL].astype(str).str.strip().str.replace(r"\s+"," ",regex=True)
         df = df[df[TEXT_COL].str.len() >= MIN_LEN].reset_index(drop=True)
@@ -4222,23 +4704,31 @@ catalog:
             lbls = df[LABEL_COL].map(lbl2idx).values.astype(np.int64)
             n_classes = len(uniq)
         else:
-            lbls = None; n_classes = None
+            lbls = None
+            n_classes = None
 
         # Split
-        rng=np.random.default_rng(SEED); perm=rng.permutation(len(seqs))
+        rng=np.random.default_rng(SEED)
+        perm=rng.permutation(len(seqs))
         n_te=int(len(seqs)*TEST_RATIO)
-        sequences_train=seqs[perm[n_te:]]; sequences_test=seqs[perm[:n_te]]
+        sequences_train=seqs[perm[n_te:]]
+        sequences_test=seqs[perm[:n_te]]
         labels_train=(lbls[perm[n_te:]] if lbls is not None else None)
         labels_test =(lbls[perm[:n_te]] if lbls is not None else None)
         seq_lengths=lengths[perm[n_te:]]
 
-        n_features=1; sr=None; seq_dates=None; horizon=None
+        n_features=1
+        sr=None
+        seq_dates=None
+        horizon=None
         tokenizer=None
-        task_type="text_classification"; target_name=LABEL_COL
+        task_type="text_classification"
+        target_name=LABEL_COL
         meta={"vocab_size":len(vocab),"max_len":MAX_LEN,"tokenize":TOKENIZE,
               "n_classes":n_classes,"shape":seqs.shape}
 
-        dl_train=None; dl_test=None
+        dl_train=None
+        dl_test=None
         try:
             def _dl(sq,lb,sh): return DataLoader(
                 TensorDataset(torch.from_numpy(sq.squeeze(-1)),
@@ -4278,8 +4768,10 @@ catalog:
         SR          = 22050
         DURATION    = 4.0       # secondes (tronque / pad)
         NORMALIZE   = True      # normalisation L∞ par clip
-        TEST_RATIO  = 0.2; SEED = 42
-        BATCH_SIZE  = 32; NUM_WORKERS = 4
+        TEST_RATIO  = 0.2
+        SEED = 42
+        BATCH_SIZE  = 32
+        NUM_WORKERS = 4
         EXTS        = (".wav",".mp3",".flac",".ogg",".m4a")
 
         MAX_LEN = int(SR * DURATION)
@@ -4298,7 +4790,8 @@ catalog:
         all_classes = sorted([d for d in os.listdir(AUDIO_DIR)
                                if os.path.isdir(os.path.join(AUDIO_DIR,d))])
         cls2idx = {c:i for i,c in enumerate(all_classes)}
-        waveforms=[]; labels=[]
+        waveforms=[]
+        labels=[]
         for cls in all_classes:
             cls_dir = os.path.join(AUDIO_DIR,cls)
             for fname in os.listdir(cls_dir):
@@ -4312,20 +4805,29 @@ catalog:
         labels_all= np.array(labels,dtype=np.int64)
         print(f"Waveforms : {waveforms.shape} | Classes : {all_classes}")
 
-        rng=np.random.default_rng(SEED); perm=rng.permutation(len(waveforms))
+        rng=np.random.default_rng(SEED)
+        perm=rng.permutation(len(waveforms))
         n_te=int(len(waveforms)*TEST_RATIO)
-        sequences_train=waveforms[perm[n_te:]]; sequences_test=waveforms[perm[:n_te]]
-        labels_train=labels_all[perm[n_te:]];   labels_test=labels_all[perm[:n_te]]
+        sequences_train=waveforms[perm[n_te:]]
+        sequences_test=waveforms[perm[:n_te]]
+        labels_train=labels_all[perm[n_te:]]
+        labels_test=labels_all[perm[:n_te]]
         seq_lengths=np.full(len(sequences_train),MAX_LEN,dtype=np.int64)
 
-        n_features=1; n_classes=len(all_classes)
-        vocab=None; tokenizer=None; seq_dates=None; horizon=None
+        n_features=1
+        n_classes=len(all_classes)
+        vocab=None
+        tokenizer=None
+        seq_dates=None
+        horizon=None
         sr=SR
-        task_type="audio_classification"; target_name="label"
+        task_type="audio_classification"
+        target_name="label"
         meta={"audio_dir":AUDIO_DIR,"sr":SR,"duration":DURATION,"max_len":MAX_LEN,
               "n_classes":n_classes,"class_names":all_classes,"shape":waveforms.shape}
 
-        dl_train=None; dl_test=None
+        dl_train=None
+        dl_test=None
         try:
             def _dl(sq,lb,sh): return DataLoader(
                 TensorDataset(torch.from_numpy(sq).permute(0,2,1),   # (N,1,T) pour CNN1D
@@ -4360,7 +4862,11 @@ catalog:
 
         # ── Paramètres ──────────────────────────────────────────────────
         AUDIO_DIR  = "data/audio_dataset/"
-        SR=22050; N_MFCC=40; N_FFT=2048; HOP_LENGTH=512; DURATION=None
+        SR=22050
+        N_MFCC=40
+        N_FFT=2048
+        HOP_LENGTH=512
+        DURATION=None
         EXTS = (".wav",".mp3",".flac",".ogg",".m4a")
         TEST_SIZE    = 0.2
         RANDOM_STATE = 42
@@ -4394,8 +4900,11 @@ catalog:
                 except Exception as e: print(f"Ignoré ({fname}) : {e}")
 
         df=pd.DataFrame(records)
-        X=df.drop(columns=["label","filename"]); y=df["label"]
-        feature_names=X.columns.tolist(); target_name="label"; task_type="classification"
+        X=df.drop(columns=["label","filename"])
+        y=df["label"]
+        feature_names=X.columns.tolist()
+        target_name="label"
+        task_type="classification"
         meta={"n_files":len(records),"sr":SR,"n_mfcc":N_MFCC,"shape":df.shape}
 
                 # ── Split Train/Test ─────────────────────────────────────────────
@@ -4410,7 +4919,8 @@ catalog:
                 X_train, X_test = train_test_split(
                     X, test_size=TEST_SIZE, random_state=RANDOM_STATE
                 )
-                y_train = None; y_test = None
+                y_train = None
+                y_test = None
             else:
                 # Timeseries
                 split_idx = int(len(X) * (1 - TEST_SIZE))
@@ -4418,16 +4928,23 @@ catalog:
                 y_train, y_test = ((y.iloc[:split_idx], y.iloc[split_idx:]) if y is not None else (None, None))
         except Exception as e:
             print(f"Split error (fallback to None): {e}")
-            X_train = None; X_test = None; y_train = None; y_test = None
+            X_train = None
+            X_test = None
+            y_train = None
+            y_test = None
 
         preprocessor = None
         feature_names_out = feature_names
 
         # ── Init contrat ─────────────────────────────────────────────────
         contract     = "tabular"
-        texts_train  = []; texts_test = []
-        dates_train  = None; dates_future = None
-        durations    = None; events = None; df_survival = None
+        texts_train  = []
+        texts_test = []
+        dates_train  = None
+        dates_future = None
+        durations    = None
+        events = None
+        df_survival = None
         
         print(f"[TABULAR] task_type='{task_type}' | features={len(feature_names)} | target='{target_name}'")
         print(f"          shape={df.shape}")
@@ -4469,8 +4986,10 @@ catalog:
         HORIZON     = 1           # nb de pas à prévoir
         STEP        = 1           # pas du fenêtrage glissant
         NORMALIZE   = True        # z-score par colonne sur train
-        TEST_RATIO  = 0.2; SEED = 42
-        BATCH_SIZE  = 64; NUM_WORKERS = 4
+        TEST_RATIO  = 0.2
+        SEED = 42
+        BATCH_SIZE  = 64
+        NUM_WORKERS = 4
 
         df = pd.read_csv(FILE_PATH, parse_dates=[DATE_COL])
         df = df.set_index(DATE_COL).sort_index().resample(FREQ).mean().ffill()
@@ -4479,8 +4998,10 @@ catalog:
         data = df[all_cols].values.astype(np.float32)   # (T_total, F)
 
         # Split temporel strict AVANT normalisation ────────────────────
-        n_total = len(data); n_test = int(n_total * TEST_RATIO)
-        data_train = data[:n_total-n_test]; data_test = data[n_total-n_test:]
+        n_total = len(data)
+        n_test = int(n_total * TEST_RATIO)
+        data_train = data[:n_total-n_test]
+        data_test = data[n_total-n_test:]
 
         # Z-score sur train, appliqué au test
         if NORMALIZE:
@@ -4492,7 +5013,8 @@ catalog:
         target_idx = all_cols.index(TARGET_COL) if TARGET_COL in all_cols else -1
 
         def make_windows(d):
-            X_w=[]; y_w=[]
+            X_w=[]
+            y_w=[]
             for i in range(0, len(d)-WINDOW-HORIZON+1, STEP):
                 X_w.append(d[i:i+WINDOW])
                 y_w.append(d[i+WINDOW:i+WINDOW+HORIZON, target_idx])
@@ -4502,7 +5024,8 @@ catalog:
         seq_te, lbl_te = make_windows(data_test)
         print(f"Windows : train={len(seq_tr)} | test={len(seq_te)} | shape={seq_tr.shape}")
 
-        sequences_train = seq_tr; sequences_test = seq_te
+        sequences_train = seq_tr
+        sequences_test = seq_te
         labels_train    = lbl_tr.squeeze(-1) if HORIZON==1 else lbl_tr
         labels_test     = lbl_te.squeeze(-1) if HORIZON==1 else lbl_te
         seq_lengths     = np.full(len(sequences_train), WINDOW, dtype=np.int64)
@@ -4510,14 +5033,18 @@ catalog:
         n_classes       = None
         seq_dates       = df.index
         horizon         = HORIZON
-        vocab=None; tokenizer=None; sr=None
-        task_type   = "timeseries_forecasting"; target_name = TARGET_COL
+        vocab=None
+        tokenizer=None
+        sr=None
+        task_type   = "timeseries_forecasting"
+        target_name = TARGET_COL
         meta = {"window": WINDOW,"horizon": HORIZON,"step": STEP,"freq": FREQ,
                 "normalize": NORMALIZE,"n_features": n_features,
                 "n_train_windows": len(seq_tr),"n_test_windows": len(seq_te),
                 "mu": mu if NORMALIZE else None,"std": std if NORMALIZE else None}
 
-        dl_train=None; dl_test=None
+        dl_train=None
+        dl_test=None
         try:
             def _dl(sq,lb,sh): return DataLoader(
                 TensorDataset(torch.from_numpy(sq), torch.from_numpy(lb)),
@@ -4552,11 +5079,15 @@ catalog:
         FILE_PATH    = "data/climate.nc"
         VARIABLES    = None          # None = toutes les variables
         TARGET_VAR   = None          # variable à prévoir (None = non supervisé)
-        WINDOW       = 30; HORIZON = 7; STEP = 1
+        WINDOW       = 30
+        HORIZON = 7
+        STEP = 1
         NORMALIZE    = True
-        TEST_RATIO   = 0.2; SEED = 42
+        TEST_RATIO   = 0.2
+        SEED = 42
         MAX_LOCATIONS= 500           # limiter le nb de points (lat,lon) traités
-        BATCH_SIZE   = 64; NUM_WORKERS = 4
+        BATCH_SIZE   = 64
+        NUM_WORKERS = 4
 
         ds = xr.open_dataset(FILE_PATH, chunks="auto" if True else None)
         if VARIABLES: ds = ds[VARIABLES]
@@ -4583,14 +5114,16 @@ catalog:
         target_idx = var_list.index(TARGET_VAR) if TARGET_VAR in var_list else -1
 
         def make_windows(d3):   # d3 : (N_loc, T, F)
-            Xw=[]; yw=[]
+            Xw=[]
+            yw=[]
             for loc in d3:      # loc : (T, F)
                 for i in range(0, len(loc)-WINDOW-HORIZON+1, STEP):
                     Xw.append(loc[i:i+WINDOW])
                     yw.append(loc[i+WINDOW:i+WINDOW+HORIZON, target_idx])
             return np.array(Xw,dtype=np.float32), np.array(yw,dtype=np.float32)
 
-        n_total   = spatial.shape[1]; n_test = int(n_total*TEST_RATIO)
+        n_total   = spatial.shape[1]
+        n_test = int(n_total*TEST_RATIO)
         sp_train  = spatial[:, :n_total-n_test, :]
         sp_test   = spatial[:, n_total-n_test:, :]
 
@@ -4603,18 +5136,25 @@ catalog:
         print("Fenêtrage train..."); seq_tr,lbl_tr = make_windows(sp_train)
         print("Fenêtrage test...");  seq_te,lbl_te = make_windows(sp_test)
 
-        sequences_train = seq_tr; sequences_test = seq_te
+        sequences_train = seq_tr
+        sequences_test = seq_te
         labels_train    = lbl_tr.squeeze(-1) if HORIZON==1 else lbl_tr
         labels_test     = lbl_te.squeeze(-1) if HORIZON==1 else lbl_te
         seq_lengths     = np.full(len(seq_tr),WINDOW,dtype=np.int64)
-        n_features      = seq_tr.shape[2]; n_classes = None
+        n_features      = seq_tr.shape[2]
+        n_classes = None
         seq_dates       = pd.DatetimeIndex(ds.time.values) if "time" in ds.coords else None
-        horizon         = HORIZON; vocab=None; tokenizer=None; sr=None
-        task_type   = "timeseries_forecasting"; target_name = TARGET_VAR
+        horizon         = HORIZON
+        vocab=None
+        tokenizer=None
+        sr=None
+        task_type   = "timeseries_forecasting"
+        target_name = TARGET_VAR
         meta = {"window":WINDOW,"horizon":HORIZON,"n_features":n_features,
                 "n_locations":len(spatial),"variables":var_list,"shape":seq_tr.shape}
 
-        dl_train=None; dl_test=None
+        dl_train=None
+        dl_test=None
         try:
             def _dl(sq,lb,sh): return DataLoader(
                 TensorDataset(torch.from_numpy(sq),torch.from_numpy(lb)),
@@ -4649,9 +5189,15 @@ catalog:
 
         # ── Paramètres ──────────────────────────────────────────────────
         MODE       = "Sinusoïdes"    # "Sinusoïdes" | "ECG stylisé" | "HAR"
-        N_CLASSES  = 3; N_PER_CLASS = 300; SEQ_LEN = 128; N_FEATURES = 6
-        NOISE      = 0.1; TEST_RATIO = 0.2; SEED = 42
-        BATCH_SIZE = 64; NUM_WORKERS = 2
+        N_CLASSES  = 3
+        N_PER_CLASS = 300
+        SEQ_LEN = 128
+        N_FEATURES = 6
+        NOISE      = 0.1
+        TEST_RATIO = 0.2
+        SEED = 42
+        BATCH_SIZE = 64
+        NUM_WORKERS = 2
 
         rng = np.random.default_rng(SEED)
         t   = np.linspace(0, 2*np.pi, SEQ_LEN)
@@ -4662,14 +5208,16 @@ catalog:
                 seq   = np.stack([np.sin(f*t) + NOISE*rng.standard_normal(SEQ_LEN) for f in freqs], axis=1)
             elif MODE == "ECG stylisé":
                 base = np.sin(2*np.pi*(cls_idx+1)*t/SEQ_LEN*10)
-                spike= np.zeros(SEQ_LEN); spike[SEQ_LEN//2]=3.0*(cls_idx+1)
+                spike= np.zeros(SEQ_LEN)
+                spike[SEQ_LEN//2]=3.0*(cls_idx+1)
                 seq  = np.stack([base+spike+NOISE*rng.standard_normal(SEQ_LEN)]*N_FEATURES, axis=1)
             else:  # HAR
                 feqs = np.array([0.5,1.0,2.0,3.0,4.0,5.0])*(cls_idx+1)
                 seq  = np.stack([np.sin(f*t)+NOISE*rng.standard_normal(SEQ_LEN) for f in feqs[:N_FEATURES]], axis=1)
             return seq.astype(np.float32)
 
-        all_seqs=[]; all_lbls=[]
+        all_seqs=[]
+        all_lbls=[]
         for cls in range(N_CLASSES):
             for _ in range(N_PER_CLASS):
                 all_seqs.append(gen_sample(cls)); all_lbls.append(cls)
@@ -4678,17 +5226,26 @@ catalog:
         all_lbls = np.array(all_lbls,dtype=np.int64)
         perm     = rng.permutation(len(all_seqs))
         n_te     = int(len(all_seqs)*TEST_RATIO)
-        sequences_train=all_seqs[perm[n_te:]]; sequences_test=all_seqs[perm[:n_te]]
-        labels_train=all_lbls[perm[n_te:]];    labels_test=all_lbls[perm[:n_te]]
+        sequences_train=all_seqs[perm[n_te:]]
+        sequences_test=all_seqs[perm[:n_te]]
+        labels_train=all_lbls[perm[n_te:]]
+        labels_test=all_lbls[perm[:n_te]]
         seq_lengths=np.full(len(sequences_train),SEQ_LEN,dtype=np.int64)
 
-        n_features=N_FEATURES; n_classes=N_CLASSES
-        vocab=None; tokenizer=None; sr=None; seq_dates=None; horizon=None
-        task_type="timeseries_classification"; target_name="label"
+        n_features=N_FEATURES
+        n_classes=N_CLASSES
+        vocab=None
+        tokenizer=None
+        sr=None
+        seq_dates=None
+        horizon=None
+        task_type="timeseries_classification"
+        target_name="label"
         meta={"mode":MODE,"n_classes":N_CLASSES,"seq_len":SEQ_LEN,
               "n_features":N_FEATURES,"synthetic":True,"shape":all_seqs.shape}
 
-        dl_train=None; dl_test=None
+        dl_train=None
+        dl_test=None
         try:
             def _dl(sq,lb,sh): return DataLoader(
                 TensorDataset(torch.from_numpy(sq).permute(0,2,1),   # (N,F,T) pour CNN1D
@@ -4721,7 +5278,8 @@ catalog:
         SEQ_LEN=64
         N_FEATURES=4
         N_CLASSES=3
-        task_type="timeseries_classification"; BATCH_SIZE  = 32
+        task_type="timeseries_classification"
+        BATCH_SIZE  = 32
         NUM_WORKERS = 2
 
         # ════════════════════════════════════════════════════════════════
@@ -4734,13 +5292,19 @@ catalog:
         # ════════════════════════════════════════════════════════════════
 
         seq_lengths = np.full(N_TRAIN, SEQ_LEN, dtype=np.int64)
-        n_features  = N_FEATURES; n_classes = N_CLASSES
-        vocab=None; tokenizer=None; sr=None; seq_dates=None; horizon=None
+        n_features  = N_FEATURES
+        n_classes = N_CLASSES
+        vocab=None
+        tokenizer=None
+        sr=None
+        seq_dates=None
+        horizon=None
         target_name = "label"
         meta = {"source":"free_source","shape":sequences_train.shape,
                 "n_features":N_FEATURES,"n_classes":N_CLASSES}
 
-        dl_train=None; dl_test=None
+        dl_train=None
+        dl_test=None
         try:
             def _dl(sq,lb,sh): return DataLoader(
                 TensorDataset(torch.from_numpy(sq),torch.from_numpy(lb).long()),
