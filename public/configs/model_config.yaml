@@ -411,6 +411,714 @@ dimensionality_reduction:
 
 neural_networks:
 
+  # ── BRIQUE FONDAMENTALE : NEURONE ARTIFICIEL ────────────────────────────
+ 
+  - id: neuron_from_scratch
+    name: "Neurone Artificiel — From Scratch (NumPy)"
+    enabled: true
+    library: numpy
+    class: null
+    category: "Feedforward — From Scratch"
+    description: >
+      Implémentation complète d'un neurone artificiel (perceptron sigmoïde)
+      en NumPy pur, sans aucune librairie ML. Constitue la brique élémentaire
+      de tout réseau de neurones. Comprend :
+        - initialisation aléatoire des poids W et biais b,
+        - fonction de modèle : Z = X·W + b  →  A = σ(Z),
+        - log-loss (cross-entropie binaire),
+        - calcul des gradients ∂L/∂W et ∂L/∂b par backpropagation analytique,
+        - descente de gradient avec learning rate configurable,
+        - early stopping optionnel via convergence de la loss,
+        - historique complet de (W, b) à chaque epoch.
+ 
+      Ce neurone est la brique de base assemblée dans `mlp_from_scratch`.
+      En classification binaire, il est équivalent à une régression logistique.
+    use_cases:
+      - "pédagogie : comprendre le fonctionnement interne d'un neurone"
+      - "baseline ultra-léger, aucune dépendance"
+      - "brique pour construire un MLP from scratch"
+      - "régression logistique avec descente de gradient explicite"
+    pros:
+      - "zéro dépendance (numpy uniquement)"
+      - "code entièrement lisible et modifiable"
+      - "historique complet des poids pour visualisation"
+      - "contrat I/O compatible avec le reste du catalogue"
+    cons:
+      - "une seule couche → frontière de décision linéaire uniquement"
+      - "pas de GPU, pas de vectorisation avancée"
+      - "classification binaire uniquement (tel quel)"
+    hyperparameters:
+      learning_rate:
+        type: float
+        range: [0.0001, 1.0]
+        default: 0.1
+        description: "Pas de descente de gradient. Trop grand → divergence. Trop petit → lent."
+      epochs:
+        type: int
+        range: [10, 10000]
+        default: 1000
+      tol:
+        type: float
+        default: 1e-6
+        description: "Convergence : arrêt si |loss[t] - loss[t-1]| < tol."
+    eval_metrics: ["accuracy", "f1_weighted", "roc_auc", "log_loss"]
+    io_contract:
+      inputs:  [X_train, X_test, y_train, y_test, feature_names]
+      outputs: [model, y_pred, y_proba, metrics, feature_importances, fit_time_s]
+      notes: >
+        y_train doit être binaire (0/1), shape (n,) ou (n,1).
+        model est un dict {"W": array, "b": float, "loss_history": list, "weight_history": list}.
+        feature_importances = valeurs absolues de W (proxy d'importance).
+    code_template: |
+      import time
+      import numpy as np
+      import matplotlib.pyplot as plt
+      from sklearn.preprocessing import StandardScaler, LabelEncoder
+      from sklearn.metrics import (accuracy_score, f1_score,
+                                   roc_auc_score, log_loss, classification_report)
+ 
+      # ══════════════════════════════════════════════════════════════════
+      # HYPERPARAMÈTRES
+      # ══════════════════════════════════════════════════════════════════
+      LEARNING_RATE = 0.1
+      EPOCHS        = 1000
+      TOL           = 1e-6          # critère de convergence (0 = désactivé)
+ 
+      # ══════════════════════════════════════════════════════════════════
+      # PRÉPARATION
+      # ══════════════════════════════════════════════════════════════════
+      _scaler = StandardScaler()
+      _X_tr = _scaler.fit_transform(X_train)
+      _X_te = _scaler.transform(X_test)
+ 
+      _le = LabelEncoder()
+      _y_tr = _le.fit_transform(y_train).reshape(-1, 1).astype(np.float64)
+      _y_te = _le.transform(y_test).reshape(-1, 1).astype(np.float64)
+ 
+      # ══════════════════════════════════════════════════════════════════
+      # BRIQUES FONDAMENTALES
+      # ══════════════════════════════════════════════════════════════════
+ 
+      def initialisation(X):
+          """Initialisation aléatoire des paramètres du neurone."""
+          W = np.random.randn(X.shape[1], 1)    # (n_features, 1)
+          b = np.random.randn(1)                  # scalaire
+          return W, b
+ 
+      def _sigmoid(Z):
+          """Fonction d'activation sigmoïde : σ(Z) = 1 / (1 + e^{-Z})."""
+          return 1.0 / (1.0 + np.exp(-np.clip(Z, -500, 500)))
+ 
+      def model(X, W, b):
+          """Propagation avant : Z = X·W + b  →  A = σ(Z)."""
+          Z = X.dot(W) + b                       # (n, 1)
+          A = _sigmoid(Z)                        # (n, 1)  ∈ ]0,1[
+          return A
+ 
+      def log_loss_fn(A, y):
+          """Cross-entropie binaire : L = -1/n · Σ [y·ln(A) + (1-y)·ln(1-A)]."""
+          A = np.clip(A, 1e-15, 1 - 1e-15)      # stabilité numérique
+          return float(np.mean(-y * np.log(A) - (1 - y) * np.log(1 - A)))
+ 
+      def gradients(X, y, A):
+          """Backpropagation : ∂L/∂W = X^T·(A-y)/n   ∂L/∂b = mean(A-y)."""
+          n   = len(y)
+          dW  = (1 / n) * X.T.dot(A - y)        # (n_features, 1)
+          db  = (1 / n) * np.sum(A - y)          # scalaire
+          return dW, db
+ 
+      def update(W, b, dW, db, learning_rate):
+          """Mise à jour par descente de gradient."""
+          W = W - learning_rate * dW
+          b = b - learning_rate * db
+          return W, b
+ 
+      def predict_proba_neuron(X, W, b):
+          """Probabilités prédites par le neurone."""
+          return model(X, W, b)                  # (n, 1)
+ 
+      def predict_neuron(X, W, b, threshold=0.5):
+          """Classe prédite (0 ou 1)."""
+          return (predict_proba_neuron(X, W, b) >= threshold).astype(int)
+ 
+      # ══════════════════════════════════════════════════════════════════
+      # BOUCLE D'ENTRAÎNEMENT
+      # ══════════════════════════════════════════════════════════════════
+ 
+      def artificial_neuron(X, y, learning_rate=0.1, epochs=1000, tol=1e-6):
+          """
+          Entraîne un neurone artificiel sigmoïde par descente de gradient.
+ 
+          Retourne
+          --------
+          W              : poids finaux  (n_features, 1)
+          b              : biais final
+          loss_history   : liste des losses par epoch
+          weight_history : liste de (W_copy, b) après chaque epoch
+          """
+          W, b = initialisation(X)
+          loss_history   = []
+          weight_history = []
+ 
+          for epoch in range(epochs):
+              A = model(X, W, b)
+              loss = log_loss_fn(A, y)
+              loss_history.append(loss)
+ 
+              dW, db = gradients(X, y, A)
+              W, b   = update(W, b, dW, db, learning_rate)
+ 
+              weight_history.append((W.copy(), float(b)))
+ 
+              # Critère de convergence
+              if tol > 0 and epoch > 0 and abs(loss_history[-2] - loss) < tol:
+                  print(f"Convergence à l'epoch {epoch+1} (Δloss < {tol})")
+                  break
+ 
+          return W, b, loss_history, weight_history
+ 
+      # ══════════════════════════════════════════════════════════════════
+      # ENTRAÎNEMENT
+      # ══════════════════════════════════════════════════════════════════
+ 
+      _t0 = time.perf_counter()
+      _W, _b, _loss_history, _weight_history = artificial_neuron(
+          _X_tr, _y_tr,
+          learning_rate = LEARNING_RATE,
+          epochs        = EPOCHS,
+          tol           = TOL
+      )
+      fit_time_s = time.perf_counter() - _t0
+ 
+      # ══════════════════════════════════════════════════════════════════
+      # INFÉRENCE & MÉTRIQUES
+      # ══════════════════════════════════════════════════════════════════
+ 
+      _proba_raw = predict_proba_neuron(_X_te, _W, _b)          # (n, 1)
+      y_proba    = np.hstack([1 - _proba_raw, _proba_raw])       # (n, 2) sklearn-like
+      _pred_raw  = predict_neuron(_X_te, _W, _b).ravel()
+      y_pred     = _le.inverse_transform(_pred_raw)
+ 
+      print(classification_report(y_test, y_pred))
+ 
+      metrics = {
+          "accuracy"   : float(accuracy_score(y_test, y_pred)),
+          "f1_weighted": float(f1_score(y_test, y_pred, average="weighted")),
+          "roc_auc"    : float(roc_auc_score(_y_te, _proba_raw)),
+          "log_loss"   : float(log_loss(_y_te, _proba_raw)),
+          "fit_time_s" : fit_time_s,
+      }
+      print(metrics)
+ 
+      # Importances (|W| normalisé)
+      import pandas as pd
+      feature_importances = pd.Series(
+          np.abs(_W.ravel()) / (np.abs(_W).sum() + 1e-12),
+          index=feature_names
+      ).sort_values(ascending=False)
+ 
+      # Modèle sérialisable
+      model = {
+          "W"             : _W,
+          "b"             : float(_b),
+          "loss_history"  : _loss_history,
+          "weight_history": _weight_history,
+          "scaler"        : _scaler,
+          "label_encoder" : _le,
+      }
+ 
+      # Courbe de loss
+      plt.figure(figsize=(8, 3))
+      plt.plot(_loss_history, linewidth=1.5, color="#1D9E75")
+      plt.xlabel("Epoch"); plt.ylabel("Log-loss"); plt.title("Courbe de perte")
+      plt.tight_layout(); plt.show()
+ 
+ 
+  # ── ASSEMBLAGE : RÉSEAU DE NEURONES MLP FROM SCRATCH ───────────────────
+ 
+  - id: mlp_from_scratch
+    name: "MLP From Scratch — Réseau de neurones NumPy (multi-couches)"
+    enabled: true
+    library: numpy
+    class: null
+    category: "Feedforward — From Scratch"
+    description: >
+      Réseau de neurones multi-couches (MLP) implémenté en NumPy pur,
+      en assemblant les briques du `neuron_from_scratch`. Architecture
+      configurable : nombre de couches, taille de chaque couche,
+      activation par couche (relu, sigmoid, tanh, softmax sur la dernière).
+ 
+      Algorithme complet :
+        - initialisation He/Xavier selon l'activation,
+        - propagation avant multi-couche (forward pass),
+        - backpropagation générique via la règle de la chaîne,
+        - descente de gradient mini-batch,
+        - régularisation L2 (weight decay),
+        - early stopping sur la validation loss.
+ 
+      Supporte classification binaire (sortie sigmoid + binary cross-entropy)
+      et multi-classe (sortie softmax + cross-entropie catégorielle).
+      Ce code illustre exactement ce que font sklearn.MLPClassifier et
+      pytorch.nn.Linear sous le capot.
+    use_cases:
+      - "pédagogie : comprendre le forward et le backward pass couche par couche"
+      - "réseau custom sans dépendance ML"
+      - "base pour implémenter ses propres variantes (dropout, BN, etc.)"
+      - "classification multi-classe sur données tabulaires légères"
+    pros:
+      - "zéro dépendance (numpy uniquement)"
+      - "chaque étape du backprop est explicite et lisible"
+      - "architecture configurable par simple liste"
+      - "compatible avec le contrat I/O du catalogue"
+    cons:
+      - "pas de GPU (numpy = CPU)"
+      - "pas de BatchNorm ni Dropout (ajout manuel possible)"
+      - "performances inférieures aux librairies optimisées sur gros datasets"
+    hyperparameters:
+      layer_dims:
+        type: list
+        default: "[n_features, 64, 32, n_classes]"
+        description: >
+          Dimensions de chaque couche, de l'entrée à la sortie.
+          Exemple : [5, 64, 32, 3] = entrée 5, couche 64, couche 32, sortie 3 classes.
+          La première valeur = X.shape[1], la dernière = nombre de classes.
+      activations:
+        type: list
+        default: "['relu', 'relu', 'softmax']"
+        description: >
+          Activation de chaque couche (sauf l'entrée). Longueur = len(layer_dims) - 1.
+          Dernière valeur : 'sigmoid' (binaire) ou 'softmax' (multi-classe).
+      learning_rate:
+        type: float
+        range: [0.0001, 1.0]
+        default: 0.01
+      epochs:
+        type: int
+        range: [10, 10000]
+        default: 500
+      batch_size:
+        type: int
+        choices: [16, 32, 64, 128, 256, "full"]
+        default: 32
+        description: "Taille du mini-batch. 'full' = gradient batch complet."
+      lambda_reg:
+        type: float
+        range: [0.0, 0.1]
+        default: 0.0
+        description: "Régularisation L2 (weight decay). 0 = désactivée."
+      patience:
+        type: int
+        default: 50
+        description: "Early stopping si val_loss n'améliore pas pendant N epochs."
+      val_fraction:
+        type: float
+        range: [0.0, 0.3]
+        default: 0.1
+        description: "Fraction de X_train utilisée pour la validation (early stopping)."
+    eval_metrics: ["accuracy", "f1_weighted", "roc_auc", "log_loss"]
+    io_contract:
+      inputs:  [X_train, X_test, y_train, y_test, feature_names]
+      outputs: [model, y_pred, y_proba, metrics, feature_importances, fit_time_s]
+      notes: >
+        model est une instance de MLPFromScratch avec méthodes .predict() et .predict_proba().
+        feature_importances = None (pas de méthode simple pour MLP multi-couche).
+    code_template: |
+      import time
+      import numpy as np
+      import matplotlib.pyplot as plt
+      from sklearn.preprocessing import StandardScaler, LabelEncoder
+      from sklearn.metrics import (accuracy_score, f1_score, roc_auc_score,
+                                   log_loss, classification_report)
+ 
+      # ══════════════════════════════════════════════════════════════════
+      # HYPERPARAMÈTRES
+      # ══════════════════════════════════════════════════════════════════
+      # Adapter layer_dims : [n_features, couche1, couche2, ..., n_classes]
+      LAYER_DIMS   = [X_train.shape[1], 64, 32, len(np.unique(y_train))]
+      ACTIVATIONS  = ["relu", "relu", "softmax"]   # len = len(LAYER_DIMS) - 1
+      LEARNING_RATE= 0.01
+      EPOCHS       = 500
+      BATCH_SIZE   = 32        # None ou 0 = full batch
+      LAMBDA_REG   = 0.0       # régularisation L2
+      PATIENCE     = 50        # early stopping
+      VAL_FRACTION = 0.1
+ 
+      # ══════════════════════════════════════════════════════════════════
+      # BRIQUES ÉLÉMENTAIRES (réutilisées depuis neuron_from_scratch)
+      # ══════════════════════════════════════════════════════════════════
+ 
+      # ── Activations ────────────────────────────────────────────────────
+ 
+      def _sigmoid(Z):
+          return 1.0 / (1.0 + np.exp(-np.clip(Z, -500, 500)))
+ 
+      def _relu(Z):
+          return np.maximum(0, Z)
+ 
+      def _tanh(Z):
+          return np.tanh(Z)
+ 
+      def _softmax(Z):
+          """Softmax numériquement stable par soustraction du max."""
+          eZ = np.exp(Z - Z.max(axis=0, keepdims=True))
+          return eZ / (eZ.sum(axis=0, keepdims=True) + 1e-15)
+ 
+      # Dérivées (pour le backward pass)
+      def _sigmoid_prime(A): return A * (1 - A)
+      def _relu_prime(Z):    return (Z > 0).astype(float)
+      def _tanh_prime(A):    return 1 - A ** 2
+ 
+      _ACTIVATION_FN = {
+          "sigmoid": (_sigmoid, _sigmoid_prime),
+          "relu"   : (_relu,    _relu_prime),
+          "tanh"   : (_tanh,    _tanh_prime),
+          "softmax": (_softmax, None),   # dérivée absorbée dans dZ de la dernière couche
+      }
+ 
+      # ── Initialisation He / Xavier ──────────────────────────────────────
+ 
+      def _init_params(layer_dims, activations):
+          """
+          Initialise W[l] et b[l] pour chaque couche l = 1..L.
+          He  si relu/leaky_relu, Xavier sinon.
+          """
+          params = {}
+          L = len(layer_dims) - 1
+          for l in range(1, L + 1):
+              fan_in  = layer_dims[l - 1]
+              fan_out = layer_dims[l]
+              if activations[l - 1] in ("relu",):
+                  scale = np.sqrt(2.0 / fan_in)          # He
+              else:
+                  scale = np.sqrt(1.0 / fan_in)          # Xavier
+              params[f"W{l}"] = np.random.randn(fan_out, fan_in) * scale
+              params[f"b{l}"] = np.zeros((fan_out, 1))
+          return params
+ 
+      # ══════════════════════════════════════════════════════════════════
+      # PROPAGATION AVANT (FORWARD PASS)
+      # ══════════════════════════════════════════════════════════════════
+ 
+      def forward_pass(X, params, activations):
+          """
+          Propage X à travers toutes les couches.
+ 
+          X : (n_features, n_samples)
+ 
+          Retourne
+          --------
+          caches : liste de (A_prev, W, b, Z) pour chaque couche
+          AL     : activation de la dernière couche (n_classes, n_samples)
+          """
+          caches = []
+          A = X                          # (n_features, n_samples)
+          L = len(activations)
+ 
+          for l in range(1, L + 1):
+              W  = params[f"W{l}"]       # (n_l, n_{l-1})
+              b  = params[f"b{l}"]       # (n_l, 1)
+              Z  = W.dot(A) + b          # (n_l, n_samples)
+ 
+              act_fn, _ = _ACTIVATION_FN[activations[l - 1]]
+              A_prev = A
+              A = act_fn(Z)              # (n_l, n_samples)
+              caches.append((A_prev, W, b, Z))
+ 
+          AL = A
+          return AL, caches
+ 
+      # ══════════════════════════════════════════════════════════════════
+      # FONCTIONS DE COÛT
+      # ══════════════════════════════════════════════════════════════════
+ 
+      def compute_cost(AL, Y, params, lambda_reg):
+          """
+          Cross-entropie + régularisation L2.
+          Y  : (n_classes, n_samples) one-hot
+          AL : (n_classes, n_samples) probabilités
+          """
+          n = Y.shape[1]
+          AL = np.clip(AL, 1e-15, 1 - 1e-15)
+          cost = -np.sum(Y * np.log(AL)) / n
+ 
+          # Terme L2
+          if lambda_reg > 0:
+              L2 = sum(
+                  np.sum(params[k] ** 2)
+                  for k in params if k.startswith("W")
+              )
+              cost += (lambda_reg / (2 * n)) * L2
+ 
+          return float(cost)
+ 
+      # ══════════════════════════════════════════════════════════════════
+      # RÉTROPROPAGATION (BACKWARD PASS)
+      # ══════════════════════════════════════════════════════════════════
+ 
+      def backward_pass(AL, Y, caches, activations, lambda_reg):
+          """
+          Calcule les gradients dW[l] et db[l] pour chaque couche
+          par application de la règle de la chaîne.
+ 
+          Y  : (n_classes, n_samples) one-hot
+          AL : (n_classes, n_samples)
+          """
+          grads = {}
+          n = Y.shape[1]
+          L = len(caches)
+ 
+          # Gradient de la dernière couche
+          # Pour softmax + cross-entropie : dZ_L = AL - Y (simplification analytique)
+          # Pour sigmoid  + cross-entropie : dZ_L = AL - Y (idem)
+          dA = AL - Y                    # (n_classes, n_samples)
+ 
+          for l in reversed(range(L)):
+              A_prev, W, b, Z = caches[l]
+              act_name = activations[l]
+ 
+              if act_name in ("softmax", "sigmoid"):
+                  # dZ déjà calculé ci-dessus (ou initialisé au dernier tour)
+                  dZ = dA
+              else:
+                  _, act_prime = _ACTIVATION_FN[act_name]
+                  # Pour les activations intermédiaires : dZ = dA ⊙ g'(Z)
+                  # Mais on reçoit dA ; il faut recalculer A à partir de Z
+                  _act_fn, _ = _ACTIVATION_FN[act_name]
+                  A_curr = _act_fn(Z)
+                  dZ = dA * act_prime(A_curr)
+ 
+              dW = (1 / n) * dZ.dot(A_prev.T)
+              db = (1 / n) * dZ.sum(axis=1, keepdims=True)
+ 
+              # Régularisation L2 sur dW
+              if lambda_reg > 0:
+                  dW += (lambda_reg / n) * W
+ 
+              grads[f"dW{l+1}"] = dW
+              grads[f"db{l+1}"] = db
+ 
+              # Propagation du gradient vers la couche précédente
+              dA = W.T.dot(dZ)           # (n_{l}, n_samples)
+ 
+          return grads
+ 
+      # ══════════════════════════════════════════════════════════════════
+      # MISE À JOUR DES PARAMÈTRES
+      # ══════════════════════════════════════════════════════════════════
+ 
+      def update_params(params, grads, learning_rate):
+          """Descente de gradient : θ ← θ - α · ∇θ."""
+          L = len([k for k in params if k.startswith("W")])
+          for l in range(1, L + 1):
+              params[f"W{l}"] -= learning_rate * grads[f"dW{l}"]
+              params[f"b{l}"] -= learning_rate * grads[f"db{l}"]
+          return params
+ 
+      # ══════════════════════════════════════════════════════════════════
+      # CLASSE MLP — ASSEMBLAGE DES BRIQUES
+      # ══════════════════════════════════════════════════════════════════
+ 
+      class MLPFromScratch:
+          """
+          Réseau de neurones multi-couches NumPy.
+ 
+          Paramètres
+          ----------
+          layer_dims    : [n_entrée, couche1, ..., n_classes]
+          activations   : activation par couche (longueur = len(layer_dims)-1)
+          learning_rate : pas de descente de gradient
+          epochs        : nombre max d'itérations
+          batch_size    : taille du mini-batch (None = full batch)
+          lambda_reg    : poids de la régularisation L2
+          patience      : early stopping (0 = désactivé)
+          val_fraction  : fraction de train pour la validation
+          """
+ 
+          def __init__(self, layer_dims, activations, learning_rate=0.01,
+                       epochs=500, batch_size=32, lambda_reg=0.0,
+                       patience=50, val_fraction=0.1):
+              self.layer_dims    = layer_dims
+              self.activations   = activations
+              self.learning_rate = learning_rate
+              self.epochs        = epochs
+              self.batch_size    = batch_size
+              self.lambda_reg    = lambda_reg
+              self.patience      = patience
+              self.val_fraction  = val_fraction
+              self.params_       = None
+              self.loss_history_ = []
+              self.val_loss_history_ = []
+ 
+          def _one_hot(self, y, n_classes):
+              """Encodage one-hot : (n,) → (n_classes, n)."""
+              Y = np.zeros((n_classes, len(y)))
+              Y[y.astype(int), np.arange(len(y))] = 1
+              return Y
+ 
+          def fit(self, X, y):
+              """
+              Entraîne le réseau.
+              X : (n_samples, n_features)
+              y : (n_samples,) entiers 0..n_classes-1
+              """
+              n_samples  = X.shape[0]
+              n_classes  = self.layer_dims[-1]
+ 
+              # Séparation train / validation pour early stopping
+              if self.patience > 0 and self.val_fraction > 0:
+                  n_val = max(1, int(n_samples * self.val_fraction))
+                  idx   = np.random.permutation(n_samples)
+                  idx_val, idx_tr = idx[:n_val], idx[n_val:]
+                  X_val, y_val = X[idx_val], y[idx_val]
+                  X_tr,  y_tr  = X[idx_tr],  y[idx_tr]
+              else:
+                  X_tr, y_tr, X_val, y_val = X, y, None, None
+ 
+              # Encodage one-hot
+              Y_tr = self._one_hot(y_tr, n_classes)   # (n_classes, n_tr)
+ 
+              # Initialisation des paramètres
+              self.params_ = _init_params(self.layer_dims, self.activations)
+ 
+              _best_val_loss = np.inf
+              _no_improve    = 0
+              _best_params   = None
+ 
+              for epoch in range(self.epochs):
+ 
+                  # ── Mini-batch shuffle ────────────────────────────────
+                  perm   = np.random.permutation(X_tr.shape[0])
+                  X_shuf = X_tr[perm].T     # (n_features, n_tr)
+                  Y_shuf = Y_tr[:, perm]    # (n_classes, n_tr)
+ 
+                  bs = self.batch_size if self.batch_size else X_tr.shape[0]
+                  n_batches = max(1, X_tr.shape[0] // bs)
+ 
+                  batch_losses = []
+                  for i in range(n_batches):
+                      Xb = X_shuf[:, i*bs:(i+1)*bs]
+                      Yb = Y_shuf[:, i*bs:(i+1)*bs]
+ 
+                      # Forward
+                      AL, caches = forward_pass(Xb, self.params_, self.activations)
+                      # Coût
+                      batch_losses.append(compute_cost(AL, Yb, self.params_, self.lambda_reg))
+                      # Backward
+                      grads = backward_pass(AL, Yb, caches, self.activations, self.lambda_reg)
+                      # Update
+                      self.params_ = update_params(self.params_, grads, self.learning_rate)
+ 
+                  self.loss_history_.append(np.mean(batch_losses))
+ 
+                  # ── Early stopping ────────────────────────────────────
+                  if X_val is not None:
+                      Y_val_oh = self._one_hot(y_val, n_classes)
+                      AL_val, _ = forward_pass(X_val.T, self.params_, self.activations)
+                      val_loss  = compute_cost(AL_val, Y_val_oh, self.params_, 0)
+                      self.val_loss_history_.append(val_loss)
+ 
+                      if val_loss < _best_val_loss - 1e-7:
+                          _best_val_loss = val_loss
+                          _no_improve    = 0
+                          _best_params   = {k: v.copy() for k, v in self.params_.items()}
+                      else:
+                          _no_improve += 1
+ 
+                      if _no_improve >= self.patience:
+                          print(f"Early stop epoch {epoch+1} (val_loss={val_loss:.5f})")
+                          self.params_ = _best_params
+                          break
+ 
+                  if (epoch + 1) % 100 == 0:
+                      vl = f"| val_loss {self.val_loss_history_[-1]:.5f}" if self.val_loss_history_ else ""
+                      print(f"Epoch {epoch+1:4d} | loss {self.loss_history_[-1]:.5f} {vl}")
+ 
+              return self
+ 
+          def predict_proba(self, X):
+              """Retourne les probabilités : (n_samples, n_classes)."""
+              AL, _ = forward_pass(X.T, self.params_, self.activations)
+              return AL.T           # (n_samples, n_classes)
+ 
+          def predict(self, X):
+              """Retourne la classe prédite : (n_samples,)."""
+              return self.predict_proba(X).argmax(axis=1)
+ 
+          def plot_loss(self):
+              plt.figure(figsize=(9, 3))
+              plt.plot(self.loss_history_, label="Train loss", linewidth=1.5, color="#1D9E75")
+              if self.val_loss_history_:
+                  plt.plot(self.val_loss_history_, label="Val loss", linewidth=1.5,
+                           color="#D85A30", linestyle="--")
+              plt.xlabel("Epoch"); plt.ylabel("Cross-entropie")
+              plt.title("Courbes de perte — MLP from scratch")
+              plt.legend(); plt.tight_layout(); plt.show()
+ 
+      # ══════════════════════════════════════════════════════════════════
+      # PRÉPARATION DES DONNÉES
+      # ══════════════════════════════════════════════════════════════════
+ 
+      _scaler = StandardScaler()
+      _X_tr   = _scaler.fit_transform(X_train)
+      _X_te   = _scaler.transform(X_test)
+ 
+      _le   = LabelEncoder()
+      _y_tr = _le.fit_transform(y_train)
+      _y_te = _le.transform(y_test)
+ 
+      # Adapter LAYER_DIMS si besoin
+      n_classes = len(_le.classes_)
+      LAYER_DIMS[-1] = n_classes
+      if n_classes == 2:
+          ACTIVATIONS[-1] = "sigmoid"
+          LAYER_DIMS[-1]  = 2      # softmax à 2 sorties (ou sigmoid à 1)
+ 
+      # ══════════════════════════════════════════════════════════════════
+      # ENTRAÎNEMENT
+      # ══════════════════════════════════════════════════════════════════
+ 
+      _t0 = time.perf_counter()
+      model = MLPFromScratch(
+          layer_dims    = LAYER_DIMS,
+          activations   = ACTIVATIONS,
+          learning_rate = LEARNING_RATE,
+          epochs        = EPOCHS,
+          batch_size    = BATCH_SIZE,
+          lambda_reg    = LAMBDA_REG,
+          patience      = PATIENCE,
+          val_fraction  = VAL_FRACTION,
+      )
+      model.fit(_X_tr, _y_tr)
+      fit_time_s = time.perf_counter() - _t0
+ 
+      # ══════════════════════════════════════════════════════════════════
+      # INFÉRENCE & MÉTRIQUES
+      # ══════════════════════════════════════════════════════════════════
+ 
+      y_proba  = model.predict_proba(_X_te)
+      _pred_raw = model.predict(_X_te)
+      y_pred   = _le.inverse_transform(_pred_raw)
+ 
+      print(classification_report(y_test, y_pred))
+      model.plot_loss()
+ 
+      _is_binary = n_classes == 2
+      metrics = {
+          "accuracy"   : float(accuracy_score(y_test, y_pred)),
+          "f1_weighted": float(f1_score(y_test, y_pred, average="weighted")),
+          "roc_auc"    : float(roc_auc_score(
+                             _y_te,
+                             y_proba[:, 1] if _is_binary else y_proba,
+                             multi_class="ovr", average="weighted"
+                         )),
+          "log_loss"   : float(log_loss(_y_te, y_proba)),
+          "fit_time_s" : fit_time_s,
+      }
+      print(metrics)
+ 
+      # Pas d'importance de feature analytique pour un MLP multi-couche
+      feature_importances = None
+
   # ── 1. FEEDFORWARD / MLP ────────────────────────────────────────────────
 
   - id: mlp_sklearn
