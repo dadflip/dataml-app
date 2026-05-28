@@ -1,6 +1,5 @@
-// components/CellOutput.tsx
 import { useState } from "react";
-import type { ExecResult } from "@/lib/kernel";
+import type { ExecResult, DisplayOut } from "@/lib/kernel";
 import {
   AlertTriangle,
   CheckCircle2,
@@ -11,15 +10,18 @@ import {
   Maximize2,
   Terminal,
   X,
+  Table,
+  FileText,
+  Braces,
+  SquareCode,
 } from "lucide-react";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
+import ReactMarkdown from "react-markdown";
+import { Prism as SyntaxHighlighter } from "prism-react-renderer";
 
 // ─── ANSI stripping ───────────────────────────────────────────────────────────
-// Removes ANSI escape sequences (colors, cursor moves, etc.) that the kernel
-// sends back as terminal output. Without this they appear as raw garbage like
-// [31m-----------[39m or [32m      9[39m in the output panel.
 const ANSI_RE = /\x1b\[[0-9;]*[a-zA-Z]|\x1b\][^\x07]*\x07|\x1b[()][AB]/g;
-const CTRL_RE = /[\x00-\x08\x0b\x0c\x0e-\x1f\x7f]/g; // non-printable except \t \n \r
+const CTRL_RE = /[\x00-\x08\x0b\x0c\x0e-\x1f\x7f]/g;
 
 export function stripAnsi(text: string): string {
   return text.replace(ANSI_RE, "").replace(CTRL_RE, "");
@@ -74,20 +76,24 @@ function OutputBlock({
   );
 }
 
+// ─── Image Display ───────────────────────────────────────────────────────────
 function ImageDisplay({ mime, data }: { mime: string; data: string }) {
   const [open, setOpen] = useState(false);
   const isSvg = mime === "image/svg+xml";
-  const src = isSvg ? `data:${mime};utf8,${encodeURIComponent(data)}` : `data:${mime};base64,${data}`;
+  const src = isSvg
+    ? `data:${mime};utf8,${encodeURIComponent(data)}`
+    : `data:${mime};base64,${data}`;
+
   return (
     <>
       <OutputBlock
         icon={<Image className="h-3 w-3" />}
-        kind="image"
+        kind={mime}
         badge={
           <div className="flex items-center gap-1.5">
             <a
               href={src}
-              download="output.png"
+              download={`output.${mime.split("/")[1]}`}
               onClick={(e) => e.stopPropagation()}
               className="rounded-md p-1 text-muted-foreground hover:bg-accent hover:text-foreground"
               title="Télécharger"
@@ -111,11 +117,18 @@ function ImageDisplay({ mime, data }: { mime: string; data: string }) {
           className="group block w-full overflow-hidden rounded-lg border border-border transition hover:border-foreground/30"
           title="Cliquer pour agrandir"
         >
-          <img
-            src={src}
-            alt="output"
-            className="max-h-[420px] w-full object-contain transition group-hover:opacity-95"
-          />
+          {isSvg ? (
+            <div
+              className="max-h-[420px] w-full object-contain transition group-hover:opacity-95"
+              dangerouslySetInnerHTML={{ __html: data }}
+            />
+          ) : (
+            <img
+              src={src}
+              alt="output"
+              className="max-h-[420px] w-full object-contain transition group-hover:opacity-95"
+            />
+          )}
         </button>
       </OutputBlock>
 
@@ -128,7 +141,7 @@ function ImageDisplay({ mime, data }: { mime: string; data: string }) {
             <div className="flex items-center gap-1">
               <a
                 href={src}
-                download="output.png"
+                download={`output.${mime.split("/")[1]}`}
                 className="inline-flex items-center gap-1 rounded-full border border-border bg-card px-2.5 py-1 font-mono text-[10px] text-muted-foreground hover:text-foreground"
               >
                 <Download className="h-3 w-3" />
@@ -144,7 +157,18 @@ function ImageDisplay({ mime, data }: { mime: string; data: string }) {
             </div>
           </div>
           <div className="flex max-h-[85vh] items-center justify-center overflow-auto rounded-lg bg-[oklch(0.08_0.004_260)] p-2">
-            <img src={src} alt="output" className="max-h-[80vh] w-auto max-w-full object-contain" />
+            {isSvg ? (
+              <div
+                className="max-h-[80vh] w-auto max-w-full object-contain"
+                dangerouslySetInnerHTML={{ __html: data }}
+              />
+            ) : (
+              <img
+                src={src}
+                alt="output"
+                className="max-h-[80vh] w-auto max-w-full object-contain"
+              />
+            )}
           </div>
         </DialogContent>
       </Dialog>
@@ -152,7 +176,198 @@ function ImageDisplay({ mime, data }: { mime: string; data: string }) {
   );
 }
 
-function DisplayBlock({ mime, data }: { mime: string; data: string }) {
+// ─── HTML Display ───────────────────────────────────────────────────────────
+function HtmlDisplay({ data }: { data: string }) {
+  return (
+    <div
+      className="overflow-auto text-xs"
+      dangerouslySetInnerHTML={{ __html: data }}
+    />
+  );
+}
+
+// ─── Markdown Display ────────────────────────────────────────────────────────
+function MarkdownDisplay({ data }: { data: string }) {
+  return (
+    <div className="prose max-w-none text-xs dark:prose-invert">
+      <ReactMarkdown>{data}</ReactMarkdown>
+    </div>
+  );
+}
+
+// ─── LaTeX Display ─────────────────────────────────────────────────────────
+function LatexDisplay({ data }: { data: string }) {
+  return (
+    <div
+      className="overflow-auto text-xs"
+      dangerouslySetInnerHTML={{
+        __html: `<div class="katex">$$${data}$$</div>`,
+      }}
+    />
+  );
+}
+
+// ─── JSON Display ─────────────────────────────────────────────────────────
+function JsonDisplay({ data }: { data: string }) {
+  try {
+    const parsed = JSON.parse(data);
+    return (
+      <pre className="max-h-64 overflow-auto p-2 bg-gray-100 dark:bg-gray-800 rounded font-mono text-[11px]">
+        {JSON.stringify(parsed, null, 2)}
+      </pre>
+    );
+  } catch {
+    return (
+      <pre className="max-h-64 overflow-auto p-2 bg-red-50 dark:bg-red-900/20 rounded font-mono text-[11px] text-red-500">
+        {data}
+      </pre>
+    );
+  }
+}
+
+// ─── Table Display (CSV/TSV) ────────────────────────────────────────────────
+function TableDisplay({ data, mime }: { data: string; mime: string }) {
+  const separator = mime === "text/csv" ? "," : "\t";
+  const rows = data.split("\n").map((row) => row.split(separator));
+
+  return (
+    <div className="overflow-auto">
+      <table className="border-collapse border border-gray-300 dark:border-gray-600 w-full">
+        <tbody>
+          {rows.map((row, i) => (
+            <tr
+              key={i}
+              className={i % 2 === 0 ? "bg-gray-50 dark:bg-gray-800" : ""}
+            >
+              {row.map((cell, j) => (
+                <td
+                  key={j}
+                  className="border border-gray-300 dark:border-gray-600 p-2 font-mono text-[11px]"
+                >
+                  {cell}
+                </td>
+              ))}
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  );
+}
+
+// ─── Code Display (Syntax Highlighting) ────────────────────────────────────
+function CodeDisplay({ data, language }: { data: string; language: string }) {
+  return (
+    <SyntaxHighlighter
+      language={language}
+      theme={undefined} // Utilise le thème par défaut (adapté au mode sombre/clair)
+      className="rounded font-mono text-[11px]"
+    >
+      {data}
+    </SyntaxHighlighter>
+  );
+}
+
+// ─── Text Display (Fallback) ────────────────────────────────────────────────
+function TextDisplay({ data }: { data: string }) {
+  return (
+    <pre className="max-h-32 overflow-auto whitespace-pre-wrap font-mono text-[11px] leading-relaxed text-foreground/80">
+      {stripAnsi(data)}
+    </pre>
+  );
+}
+
+// ─── DisplayBlock (Main Logic) ───────────────────────────────────────────────
+function DisplayBlock({ mime, data, metadata }: DisplayOut) {
+  // Utiliser les métadonnées pour déterminer le rendu
+  const renderAs = metadata?.renderAs;
+  const isTrusted = metadata?.isTrusted || false;
+
+  // Si renderAs est défini, l'utiliser
+  if (renderAs) {
+    switch (renderAs) {
+      case "image":
+        return <ImageDisplay mime={mime} data={data} />;
+      case "html":
+        return (
+          <OutputBlock
+            icon={<Code2 className="h-3 w-3" />}
+            kind={mime}
+            badge={<Badge tone="success">ok</Badge>}
+          >
+            <HtmlDisplay data={data} />
+            {!isTrusted && (
+              <p className="text-xs text-yellow-500 mt-2">
+                Contenu HTML non vérifié. Utilisez un sanitizer comme DOMPurify.
+              </p>
+            )}
+          </OutputBlock>
+        );
+      case "markdown":
+        return (
+          <OutputBlock
+            icon={<FileText className="h-3 w-3" />}
+            kind={mime}
+            badge={<Badge tone="success">ok</Badge>}
+          >
+            <MarkdownDisplay data={data} />
+          </OutputBlock>
+        );
+      case "latex":
+        return (
+          <OutputBlock
+            icon={<SquareCode className="h-3 w-3" />}
+            kind={mime}
+            badge={<Badge tone="success">ok</Badge>}
+          >
+            <LatexDisplay data={data} />
+          </OutputBlock>
+        );
+      case "json":
+        return (
+          <OutputBlock
+            icon={<Braces className="h-3 w-3" />}
+            kind={mime}
+            badge={<Badge tone="success">ok</Badge>}
+          >
+            <JsonDisplay data={data} />
+          </OutputBlock>
+        );
+      case "table":
+        return (
+          <OutputBlock
+            icon={<Table className="h-3 w-3" />}
+            kind={mime}
+            badge={<Badge tone="success">ok</Badge>}
+          >
+            <TableDisplay data={data} mime={mime} />
+          </OutputBlock>
+        );
+      case "code":
+        const language = mime.split("/")[1] || "text";
+        return (
+          <OutputBlock
+            icon={<Code2 className="h-3 w-3" />}
+            kind={mime}
+            badge={<Badge tone="success">ok</Badge>}
+          >
+            <CodeDisplay data={data} language={language} />
+          </OutputBlock>
+        );
+      default:
+        return (
+          <OutputBlock
+            icon={<Code2 className="h-3 w-3" />}
+            kind={mime}
+            badge={<Badge tone="success">ok</Badge>}
+          >
+            <TextDisplay data={data} />
+          </OutputBlock>
+        );
+    }
+  }
+
+  // Fallback pour les anciens appels sans métadonnées
   if (mime.startsWith("image/")) {
     return <ImageDisplay mime={mime} data={data} />;
   }
@@ -164,11 +379,7 @@ function DisplayBlock({ mime, data }: { mime: string; data: string }) {
         kind="text/html"
         badge={<Badge tone="success">ok</Badge>}
       >
-        {/* HTML generated by the user's local kernel */}
-        <div
-          className="overflow-auto text-xs"
-          dangerouslySetInnerHTML={{ __html: data }}
-        />
+        <HtmlDisplay data={data} />
       </OutputBlock>
     );
   }
@@ -179,23 +390,15 @@ function DisplayBlock({ mime, data }: { mime: string; data: string }) {
       kind={mime}
       badge={<Badge tone="success">ok</Badge>}
     >
-      <pre className="max-h-32 overflow-auto whitespace-pre-wrap font-mono text-[11px] leading-relaxed text-foreground/80">
-        {mime.includes("text/") || mime.includes("json") ? stripAnsi(data) : `[${mime}] ${data.slice(0, 500)}`}
-      </pre>
+      <TextDisplay data={data} />
     </OutputBlock>
   );
 }
 
 // ─── ErrorBlock ───────────────────────────────────────────────────────────────
-// The kernel sends tracebacks as raw ANSI-colored strings. We strip the escape
-// codes and also clean up the leading "---...---" separator lines that Jupyter
-// adds but that are meaningless here.
-
 function ErrorBlock({ text }: { text: string }) {
   const clean = stripAnsi(text)
-    // remove pure separator lines (e.g. "-----------…-----------")
     .replace(/^[-─═]+\s*$/gm, "")
-    // collapse 3+ consecutive blank lines into 2
     .replace(/\n{3,}/g, "\n\n")
     .trim();
 
@@ -213,7 +416,6 @@ function ErrorBlock({ text }: { text: string }) {
 }
 
 // ─── Main export ─────────────────────────────────────────────────────────────
-
 interface Props {
   output: ExecResult;
 }
@@ -245,7 +447,9 @@ export function CellOutput({ output }: Props) {
           icon={<Terminal className="h-3 w-3" />}
           kind="stdout"
           badge={
-            <Badge tone={output.status === "ok" ? "success" : "muted"}>ok</Badge>
+            <Badge tone={output.status === "ok" ? "success" : "muted"}>
+              ok
+            </Badge>
           }
         >
           <pre className="max-h-48 overflow-auto whitespace-pre-wrap font-mono text-[11px] leading-relaxed text-foreground/90">
@@ -257,7 +461,7 @@ export function CellOutput({ output }: Props) {
       {output.stderr && <ErrorBlock text={output.stderr} />}
 
       {output.displays.map((d, i) => (
-        <DisplayBlock key={i} mime={d.mime} data={d.data} />
+        <DisplayBlock key={i} {...d} />
       ))}
     </div>
   );
