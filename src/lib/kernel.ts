@@ -1,14 +1,23 @@
 // Jupyter Kernel Gateway client (REST + WS, message protocol v5.3)
-// Docs: https://jupyter-kernel-gateway.readthedocs.io/
+// Étendu pour supporter un large éventail de types MIME
 
 export interface KernelConfig {
-  baseUrl: string; // ex: http://localhost:8888
+  baseUrl: string;
   token?: string;
+}
+
+// Métadonnées pour aider le frontend à afficher le contenu
+export interface DisplayMetadata {
+  isTrusted?: boolean; // Pour HTML/Markdown : indique si le contenu est sécurisé (sanitized)
+  renderAs?: "image" | "html" | "markdown" | "latex" | "json" | "table" | "code" | "text"; // Suggestion de rendu
+  isBinary?: boolean; // Si les données sont binaires (ex: image)
+  fileExtension?: string; // Extension de fichier suggérée (ex: "png", "csv")
 }
 
 export interface DisplayOut {
   mime: string;
   data: string;
+  metadata?: DisplayMetadata;
 }
 
 export interface ExecResult {
@@ -69,6 +78,116 @@ function randomId(): string {
   return Math.random().toString(36).slice(2) + Date.now().toString(36);
 }
 
+// Liste des types MIME prioritaires (du plus riche au plus simple)
+const MIME_PRIORITY: Record<string, number> = {
+  // Images
+  "image/png": 100,
+  "image/jpeg": 99,
+  "image/svg+xml": 98,
+  "image/gif": 97,
+  // Textes enrichis
+  "text/html": 90,
+  "text/markdown": 89,
+  "text/latex": 88,
+  // Données structurées
+  "application/json": 80,
+  "application/vnd.plotly.v1+json": 79,
+  "text/csv": 78,
+  "text/tab-separated-values": 77,
+  // Code
+  "application/javascript": 70,
+  "text/x-python": 69,
+  // Texte brut
+  "text/plain": 10,
+};
+
+// Fonction pour déterminer le meilleur MIME et ses métadonnées
+function getBestMimeAndMetadata(data: Record<string, unknown>): { mime: string; data: string; metadata: DisplayMetadata } | null {
+  const mimes = Object.keys(data);
+  if (mimes.length === 0) return null;
+
+  // Trouver le MIME avec la priorité la plus élevée
+  let bestMime = mimes[0];
+  let bestPriority = MIME_PRIORITY[bestMime] || 0;
+  for (const mime of mimes) {
+    const priority = MIME_PRIORITY[mime] || 0;
+    if (priority > bestPriority) {
+      bestMime = mime;
+      bestPriority = priority;
+    }
+  }
+
+  const rawData = data[bestMime];
+  let strData: string;
+  let metadata: DisplayMetadata = {};
+
+  // Traiter selon le type MIME
+  if (bestMime.startsWith("image/")) {
+    // Images : encoder en base64 si ce n'est pas déjà le cas
+    if (typeof rawData === "string") {
+      strData = rawData;
+    } else if (Array.isArray(rawData) && rawData.every((x) => typeof x === "number")) {
+      // Cas des données binaires (ex: [255, 216, 255, ...] pour une image)
+      strData = btoa(String.fromCharCode(...(rawData as number[])));
+    } else {
+      strData = String(rawData);
+    }
+    metadata = {
+      isBinary: true,
+      renderAs: "image",
+      fileExtension: bestMime.split("/")[1],
+    };
+  }
+  else if (bestMime === "text/html") {
+    strData = Array.isArray(rawData) ? rawData.join("") : String(rawData);
+    metadata = {
+      isTrusted: false, // Par défaut, HTML non sécurisé
+      renderAs: "html",
+    };
+  }
+  else if (bestMime === "text/markdown") {
+    strData = Array.isArray(rawData) ? rawData.join("") : String(rawData);
+    metadata = {
+      isTrusted: false,
+      renderAs: "markdown",
+    };
+  }
+  else if (bestMime === "text/latex") {
+    strData = Array.isArray(rawData) ? rawData.join("") : String(rawData);
+    metadata = {
+      renderAs: "latex",
+    };
+  }
+  else if (bestMime === "application/json" || bestMime.includes("json")) {
+    strData = typeof rawData === "object" ? JSON.stringify(rawData, null, 2) : String(rawData);
+    metadata = {
+      renderAs: "json",
+    };
+  }
+  else if (bestMime === "text/csv" || bestMime === "text/tab-separated-values") {
+    strData = Array.isArray(rawData) ? rawData.join("\n") : String(rawData);
+    metadata = {
+      renderAs: "table",
+      fileExtension: bestMime === "text/csv" ? "csv" : "tsv",
+    };
+  }
+  else if (bestMime.startsWith("text/")) {
+    strData = Array.isArray(rawData) ? rawData.join("") : String(rawData);
+    metadata = {
+      renderAs: "text",
+    };
+  }
+  else {
+    // Type inconnu : traiter comme texte brut
+    strData = Array.isArray(rawData) ? rawData.join("") : String(rawData);
+    metadata = {
+      renderAs: "text",
+    };
+  }
+
+  return { mime: bestMime, data: strData, metadata };
+}
+
 export function executeCode(
   cfg: KernelConfig,
   kernelId: string,
@@ -78,11 +197,22 @@ export function executeCode(
   const result: ExecResult = { status: "running", stdout: "", stderr: "", displays: [] };
   let ws: WebSocket | null = null;
   let settled = false;
+  let wsTimeout: ReturnType<typeof setTimeout> | null = null;
 
   const promise = new Promise<ExecResult>((resolve, reject) => {
+    // Timeout pour la connexion WebSocket
+    wsTimeout = setTimeout(() => {
+      if (!settled) {
+        settled = true;
+        ws?.close();
+        reject(new Error("WebSocket connection timeout"));
+      }
+    }, 5000);
+
     try {
       ws = new WebSocket(wsUrl(cfg, `/api/kernels/${kernelId}/channels`));
     } catch (e) {
+      if (wsTimeout) clearTimeout(wsTimeout);
       reject(e);
       return;
     }
@@ -93,6 +223,7 @@ export function executeCode(
     const finish = (status: ExecResult["status"]) => {
       if (settled) return;
       settled = true;
+      if (wsTimeout) clearTimeout(wsTimeout);
       result.status = status;
       onUpdate?.({ ...result });
       ws?.close();
@@ -100,6 +231,7 @@ export function executeCode(
     };
 
     ws.onopen = () => {
+      if (wsTimeout) clearTimeout(wsTimeout);
       ws?.send(
         JSON.stringify({
           header: {
@@ -131,13 +263,17 @@ export function executeCode(
         header: { msg_type: string };
         parent_header: { msg_id?: string; msg_type?: string };
         content: Record<string, unknown>;
+        buffers?: Uint8Array[];
       };
       try {
         msg = JSON.parse(evt.data as string);
-      } catch {
+      } catch (e) {
+        console.error("Failed to parse message:", e);
         return;
       }
+
       if (msg.parent_header?.msg_id !== msgId) return;
+
       const t = msg.header.msg_type;
       const c = msg.content as Record<string, unknown>;
 
@@ -147,35 +283,31 @@ export function executeCode(
         if (name === "stdout") result.stdout += text;
         else result.stderr += text;
         onUpdate?.({ ...result });
-      } else if (t === "execute_result" || t === "display_data") {
+      }
+      else if (t === "execute_result" || t === "display_data") {
         const data = (c.data ?? {}) as Record<string, unknown>;
-        
-        // Find best representation (from richest to poorest)
-        const mimes = Object.keys(data);
-        if (mimes.length > 0) {
-          const priority = ["image/png", "image/jpeg", "image/svg+xml", "text/html", "text/markdown", "text/plain"];
-          let bestMime = mimes[0];
-          for (const p of priority) {
-            if (mimes.includes(p)) {
-              bestMime = p;
-              break;
-            }
-          }
-          const val = data[bestMime];
-          const strData = Array.isArray(val) ? val.join("") : (typeof val === "object" ? JSON.stringify(val, null, 2) : String(val));
-          result.displays.push({ mime: bestMime, data: strData });
+        const best = getBestMimeAndMetadata(data);
+        if (best) {
+          result.displays.push({
+            mime: best.mime,
+            data: best.data,
+            metadata: best.metadata,
+          });
         }
-        
         onUpdate?.({ ...result });
-      } else if (t === "error") {
+      }
+      else if (t === "error") {
         const tb = (c.traceback as string[]) ?? [];
         result.stderr += tb.join("\n");
         result.traceback = tb;
         onUpdate?.({ ...result });
-      } else if (t === "execute_reply") {
+      }
+      else if (t === "execute_reply") {
         const s = c.status as string;
         if (s === "error") finish("error");
-      } else if (t === "status") {
+        else if (s === "ok") finish("ok");
+      }
+      else if (t === "status") {
         const state = c.execution_state as string;
         if (state === "idle" && msg.parent_header.msg_type === "execute_request") {
           finish(result.traceback ? "error" : "ok");
@@ -186,12 +318,15 @@ export function executeCode(
     ws.onerror = () => {
       if (!settled) {
         settled = true;
+        if (wsTimeout) clearTimeout(wsTimeout);
         reject(new Error("Erreur WebSocket — vérifiez le kernel gateway."));
       }
     };
+
     ws.onclose = () => {
       if (!settled) {
         settled = true;
+        if (wsTimeout) clearTimeout(wsTimeout);
         resolve({ ...result, status: result.status === "running" ? "aborted" : result.status });
       }
     };
@@ -202,6 +337,7 @@ export function executeCode(
     cancel: () => {
       if (!settled) {
         settled = true;
+        if (wsTimeout) clearTimeout(wsTimeout);
         ws?.close();
       }
     },
