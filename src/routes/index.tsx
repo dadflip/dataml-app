@@ -1,11 +1,18 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { CatalogBrowser } from "@/components/CatalogBrowser";
 import { NotebookBuilder } from "@/components/NotebookBuilder";
 import { IntegrationsPanel } from "@/components/IntegrationsPanel";
 import { useCatalogs } from "@/lib/use-catalogs";
 import { makeCell, type CatalogBlock, type NotebookCell } from "@/lib/pipeline";
-import { loadIntegrations, type IntegrationsConfig } from "@/lib/integrations";
+import {
+  loadIntegrationsCatalog,
+  loadIntegrationsState,
+  saveIntegrationsState,
+  syncIntegrationCells,
+  type IntegrationsCatalog,
+  type IntegrationsState,
+} from "@/lib/integrations";
 import { Library, Notebook, Workflow, Github } from "lucide-react";
 
 export const Route = createFileRoute("/")({
@@ -28,12 +35,34 @@ function Index() {
   const { catalogs, loading, error } = useCatalogs();
   const [cells, setCells] = useState<NotebookCell[]>([]);
   const [tab, setTab] = useState<Tab>("catalog");
-  const [integrations, setIntegrations] = useState<IntegrationsConfig>(() =>
-    loadIntegrations(),
+  const [integrationsCatalog, setIntegrationsCatalog] =
+    useState<IntegrationsCatalog | null>(null);
+  const [integrationsState, setIntegrationsState] = useState<IntegrationsState>(() =>
+    loadIntegrationsState(),
   );
+
+  // Load integrations YAML once
+  useEffect(() => {
+    loadIntegrationsCatalog()
+      .then((cat) => {
+        setIntegrationsCatalog(cat);
+        // Re-sync cells once the catalog is available so persisted state
+        // produces cells on first paint.
+        setCells((cur) => syncIntegrationCells(cur, cat, integrationsState));
+      })
+      .catch(() => setIntegrationsCatalog({ integrations: [] }));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const addBlock = (b: CatalogBlock) => {
     setCells((cs) => [...cs, makeCell(b)]);
+    setTab("notebook");
+  };
+
+  const applyIntegrations = (next: IntegrationsState) => {
+    setIntegrationsState(next);
+    saveIntegrationsState(next);
+    setCells((cs) => syncIntegrationCells(cs, integrationsCatalog, next));
     setTab("notebook");
   };
 
@@ -91,7 +120,11 @@ function Index() {
 
           {/* ─── Actions ─── */}
           <div className="flex items-center gap-1.5">
-            <IntegrationsPanel cfg={integrations} setCfg={setIntegrations} />
+            <IntegrationsPanel
+              catalog={integrationsCatalog}
+              state={integrationsState}
+              onApply={applyIntegrations}
+            />
             <a
               href="https://github.com/jupyter/kernel_gateway"
               target="_blank"
@@ -111,7 +144,9 @@ function Index() {
           Chargement des catalogues YAML…
         </div>
       )}
-      {error && <div className="grid flex-1 place-items-center text-sm text-destructive">{error}</div>}
+      {error && (
+        <div className="grid flex-1 place-items-center text-sm text-destructive">{error}</div>
+      )}
       {catalogs && (
         <main className="min-h-0 flex-1 overflow-hidden">
           {/* Keep BOTH panes mounted so the kernel connection, outputs and
@@ -120,12 +155,7 @@ function Index() {
             <CatalogBrowser catalogs={catalogs} onAdd={addBlock} />
           </div>
           <div className={`h-full ${tab === "notebook" ? "block" : "hidden"}`}>
-            <NotebookBuilder
-              cells={cells}
-              setCells={setCells}
-              catalogs={catalogs}
-              integrations={integrations}
-            />
+            <NotebookBuilder cells={cells} setCells={setCells} catalogs={catalogs} />
           </div>
         </main>
       )}

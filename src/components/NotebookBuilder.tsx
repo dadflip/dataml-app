@@ -28,7 +28,7 @@ import {
   type ParsedCatalog,
 } from "@/lib/pipeline";
 import { executeCode, type ExecResult, type KernelConfig } from "@/lib/kernel";
-import { buildPrelude, type IntegrationsConfig } from "@/lib/integrations";
+import { isIntegrationCell } from "@/lib/integrations";
 import { Button } from "@/components/ui/button";
 import { ParamInput } from "@/components/ParamInput";
 import { KernelPanel, loadStoredCfg } from "@/components/KernelPanel";
@@ -89,10 +89,9 @@ interface Props {
   cells: NotebookCell[];
   setCells: (c: NotebookCell[]) => void;
   catalogs: ParsedCatalog[];
-  integrations?: IntegrationsConfig;
 }
 
-export function NotebookBuilder({ cells, setCells, catalogs, integrations }: Props) {
+export function NotebookBuilder({ cells, setCells, catalogs }: Props) {
   const [openUid, setOpenUid] = useState<string | null>(null);
   const [kernelCfg, setKernelCfg] = useState<KernelConfig>(() => loadStoredCfg());
   const [kernelId, setKernelId] = useState<string | null>(null);
@@ -167,8 +166,7 @@ export function NotebookBuilder({ cells, setCells, catalogs, integrations }: Pro
       ...o,
       [cell.uid]: { status: "running", stdout: "", stderr: "", displays: [] },
     }));
-    const prelude = integrations ? buildPrelude(integrations) : "";
-    const code = (prelude ? prelude + "\n" : "") + applyParamOverrides(cell.code, cell.overrides);
+    const code = applyParamOverrides(cell.code, cell.overrides);
     try {
       const { promise } = executeCode(kernelCfg, kernelId, code, (r) =>
         setOutputs((o) => ({ ...o, [cell.uid]: r })),
