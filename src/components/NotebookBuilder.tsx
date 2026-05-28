@@ -28,7 +28,7 @@ import {
   type ParsedCatalog,
 } from "@/lib/pipeline";
 import { executeCode, type ExecResult, type KernelConfig } from "@/lib/kernel";
-import { isIntegrationCell } from "@/lib/integrations";
+
 import { Button } from "@/components/ui/button";
 import { ParamInput } from "@/components/ParamInput";
 import { KernelPanel, loadStoredCfg } from "@/components/KernelPanel";
