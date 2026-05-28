@@ -56,6 +56,12 @@ pipeline_contracts:
       df:            "pd.DataFrame — données brutes complètes"
       X:             "pd.DataFrame — features"
       y:             "pd.Series | None — target"
+      X_train:       "pd.DataFrame | np.ndarray | None"
+      X_test:        "pd.DataFrame | np.ndarray | None"
+      y_train:       "pd.Series | np.ndarray | None"
+      y_test:        "pd.Series | np.ndarray | None"
+      preprocessor:  "sklearn Pipeline | ColumnTransformer | None"
+      feature_names_out: "list[str]"
       feature_names: "list[str]"
       target_name:   "str | None"
       contract:      "str = 'tabular'"
@@ -63,8 +69,6 @@ pipeline_contracts:
       meta:          "dict"
 
       # ── Timeseries uniquement ──────────────────────────────────────
-      y_train:       "pd.Series | None"
-      y_test:        "pd.Series | None"
       dates_train:   "pd.DatetimeIndex | None"
       dates_future:  "pd.DatetimeIndex | None"
 
@@ -79,18 +83,41 @@ pipeline_contracts:
 
     init_snippet: |
       # Initialisation systématique — copier en fin de chaque snippet TABULAR
+      # ── Split Train/Test ─────────────────────────────────────────────
+      try:
+          from sklearn.model_selection import train_test_split
+          strat = y if (STRATIFY and task_type == "classification" and y is not None) else None
+          if y is not None and task_type != "timeseries":
+              X_train, X_test, y_train, y_test = train_test_split(
+                  X, y, test_size=TEST_SIZE, random_state=RANDOM_STATE, stratify=strat
+              )
+          elif task_type != "timeseries":
+              X_train, X_test = train_test_split(
+                  X, test_size=TEST_SIZE, random_state=RANDOM_STATE
+              )
+              y_train = None; y_test = None
+          else:
+              # Timeseries
+              split_idx = int(len(X) * (1 - TEST_SIZE))
+              X_train, X_test = X.iloc[:split_idx], X.iloc[split_idx:]
+              y_train, y_test = ((y.iloc[:split_idx], y.iloc[split_idx:]) if y is not None else (None, None))
+      except Exception as e:
+          print(f"Split error (fallback to None): {e}")
+          X_train = None; X_test = None; y_train = None; y_test = None
+
+      preprocessor = None
+      feature_names_out = feature_names
+
+      # ── Init contrat ─────────────────────────────────────────────────
       contract     = "tabular"
-      texts_train  = texts_train  if task_type == "nlp"        else []
-      texts_test   = texts_test   if task_type == "nlp"        else []
-      y_train      = y_train      if task_type == "timeseries" else None
-      y_test       = y_test       if task_type == "timeseries" else None
-      dates_train  = dates_train  if task_type == "timeseries" else None
-      dates_future = dates_future if task_type == "timeseries" else None
-      durations    = durations    if task_type == "survival"   else None
-      events       = events       if task_type == "survival"   else None
-      df_survival  = df_survival  if task_type == "survival"   else None
-      print(f"[TABULAR] task_type='{task_type}' | features={len(feature_names)} | target='{target_name}'")
+      texts_train  = []; texts_test = []
+      dates_train  = None; dates_future = None
+      durations    = None; events = None; df_survival = None
+      
+      print(f"[TABULAR] task_type={task_type!r} | features={len(feature_names)} | target={target_name!r}")
       print(f"          shape={df.shape}")
+      if X_train is not None:
+          print(f"          X_train={X_train.shape} | X_test={X_test.shape}")
       print(df.head(3))
 
   # ────────────────────────────────────────────────────────────────────────
@@ -269,16 +296,41 @@ catalog:
         target_name   = TARGET_COL
         meta = {"file_path": FILE_PATH, "shape": df.shape, "encoding": ENCODING}
 
+                # ── Split Train/Test ─────────────────────────────────────────────
+        try:
+            from sklearn.model_selection import train_test_split
+            strat = y if (STRATIFY and task_type == "classification" and y is not None) else None
+            if y is not None and task_type != "timeseries":
+                X_train, X_test, y_train, y_test = train_test_split(
+                    X, y, test_size=TEST_SIZE, random_state=RANDOM_STATE, stratify=strat
+                )
+            elif task_type != "timeseries":
+                X_train, X_test = train_test_split(
+                    X, test_size=TEST_SIZE, random_state=RANDOM_STATE
+                )
+                y_train = None; y_test = None
+            else:
+                # Timeseries
+                split_idx = int(len(X) * (1 - TEST_SIZE))
+                X_train, X_test = X.iloc[:split_idx], X.iloc[split_idx:]
+                y_train, y_test = ((y.iloc[:split_idx], y.iloc[split_idx:]) if y is not None else (None, None))
+        except Exception as e:
+            print(f"Split error (fallback to None): {e}")
+            X_train = None; X_test = None; y_train = None; y_test = None
+
+        preprocessor = None
+        feature_names_out = feature_names
+
         # ── Init contrat ─────────────────────────────────────────────────
         contract     = "tabular"
         texts_train  = []; texts_test = []
-        y_train      = None; y_test = None
         dates_train  = None; dates_future = None
         durations    = None; events = None; df_survival = None
-        X_train      = None; X_test = None
-        preprocessor = None; feature_names_out = feature_names
+        
         print(f"[TABULAR] task_type='{task_type}' | features={len(feature_names)} | target='{target_name}'")
         print(f"          shape={df.shape}")
+        if X_train is not None:
+            print(f"          X_train={X_train.shape} | X_test={X_test.shape}")
         print(df.head(3))
 
     - id: excel_local
@@ -319,15 +371,41 @@ catalog:
         feature_names = X.columns.tolist(); target_name = TARGET_COL
         meta = {"file": FILE_PATH, "sheet": SHEET_NAME, "shape": df.shape}
 
+                # ── Split Train/Test ─────────────────────────────────────────────
+        try:
+            from sklearn.model_selection import train_test_split
+            strat = y if (STRATIFY and task_type == "classification" and y is not None) else None
+            if y is not None and task_type != "timeseries":
+                X_train, X_test, y_train, y_test = train_test_split(
+                    X, y, test_size=TEST_SIZE, random_state=RANDOM_STATE, stratify=strat
+                )
+            elif task_type != "timeseries":
+                X_train, X_test = train_test_split(
+                    X, test_size=TEST_SIZE, random_state=RANDOM_STATE
+                )
+                y_train = None; y_test = None
+            else:
+                # Timeseries
+                split_idx = int(len(X) * (1 - TEST_SIZE))
+                X_train, X_test = X.iloc[:split_idx], X.iloc[split_idx:]
+                y_train, y_test = ((y.iloc[:split_idx], y.iloc[split_idx:]) if y is not None else (None, None))
+        except Exception as e:
+            print(f"Split error (fallback to None): {e}")
+            X_train = None; X_test = None; y_train = None; y_test = None
+
+        preprocessor = None
+        feature_names_out = feature_names
+
+        # ── Init contrat ─────────────────────────────────────────────────
         contract     = "tabular"
         texts_train  = []; texts_test = []
-        y_train      = None; y_test = None
         dates_train  = None; dates_future = None
         durations    = None; events = None; df_survival = None
-        X_train      = None; X_test = None
-        preprocessor = None; feature_names_out = feature_names
+        
         print(f"[TABULAR] task_type='{task_type}' | features={len(feature_names)} | target='{target_name}'")
         print(f"          shape={df.shape}")
+        if X_train is not None:
+            print(f"          X_train={X_train.shape} | X_test={X_test.shape}")
         print(df.head(3))
 
     - id: parquet_local
@@ -363,15 +441,41 @@ catalog:
         feature_names = X.columns.tolist(); target_name = TARGET_COL
         meta = {"engine": ENGINE, "file": FILE_PATH, "shape": df.shape}
 
+                # ── Split Train/Test ─────────────────────────────────────────────
+        try:
+            from sklearn.model_selection import train_test_split
+            strat = y if (STRATIFY and task_type == "classification" and y is not None) else None
+            if y is not None and task_type != "timeseries":
+                X_train, X_test, y_train, y_test = train_test_split(
+                    X, y, test_size=TEST_SIZE, random_state=RANDOM_STATE, stratify=strat
+                )
+            elif task_type != "timeseries":
+                X_train, X_test = train_test_split(
+                    X, test_size=TEST_SIZE, random_state=RANDOM_STATE
+                )
+                y_train = None; y_test = None
+            else:
+                # Timeseries
+                split_idx = int(len(X) * (1 - TEST_SIZE))
+                X_train, X_test = X.iloc[:split_idx], X.iloc[split_idx:]
+                y_train, y_test = ((y.iloc[:split_idx], y.iloc[split_idx:]) if y is not None else (None, None))
+        except Exception as e:
+            print(f"Split error (fallback to None): {e}")
+            X_train = None; X_test = None; y_train = None; y_test = None
+
+        preprocessor = None
+        feature_names_out = feature_names
+
+        # ── Init contrat ─────────────────────────────────────────────────
         contract     = "tabular"
         texts_train  = []; texts_test = []
-        y_train      = None; y_test = None
         dates_train  = None; dates_future = None
         durations    = None; events = None; df_survival = None
-        X_train      = None; X_test = None
-        preprocessor = None; feature_names_out = feature_names
+        
         print(f"[TABULAR] task_type='{task_type}' | features={len(feature_names)} | target='{target_name}'")
         print(f"          shape={df.shape}")
+        if X_train is not None:
+            print(f"          X_train={X_train.shape} | X_test={X_test.shape}")
         print(df.head(3))
 
     - id: json_local
@@ -417,15 +521,41 @@ catalog:
         feature_names = X.columns.tolist(); target_name = TARGET_COL
         meta = {"nested_cols_expanded": nested_cols, "shape": df.shape}
 
+                # ── Split Train/Test ─────────────────────────────────────────────
+        try:
+            from sklearn.model_selection import train_test_split
+            strat = y if (STRATIFY and task_type == "classification" and y is not None) else None
+            if y is not None and task_type != "timeseries":
+                X_train, X_test, y_train, y_test = train_test_split(
+                    X, y, test_size=TEST_SIZE, random_state=RANDOM_STATE, stratify=strat
+                )
+            elif task_type != "timeseries":
+                X_train, X_test = train_test_split(
+                    X, test_size=TEST_SIZE, random_state=RANDOM_STATE
+                )
+                y_train = None; y_test = None
+            else:
+                # Timeseries
+                split_idx = int(len(X) * (1 - TEST_SIZE))
+                X_train, X_test = X.iloc[:split_idx], X.iloc[split_idx:]
+                y_train, y_test = ((y.iloc[:split_idx], y.iloc[split_idx:]) if y is not None else (None, None))
+        except Exception as e:
+            print(f"Split error (fallback to None): {e}")
+            X_train = None; X_test = None; y_train = None; y_test = None
+
+        preprocessor = None
+        feature_names_out = feature_names
+
+        # ── Init contrat ─────────────────────────────────────────────────
         contract     = "tabular"
         texts_train  = []; texts_test = []
-        y_train      = None; y_test = None
         dates_train  = None; dates_future = None
         durations    = None; events = None; df_survival = None
-        X_train      = None; X_test = None
-        preprocessor = None; feature_names_out = feature_names
+        
         print(f"[TABULAR] task_type='{task_type}' | features={len(feature_names)} | target='{target_name}'")
         print(f"          shape={df.shape}")
+        if X_train is not None:
+            print(f"          X_train={X_train.shape} | X_test={X_test.shape}")
         print(df.head(3))
 
     - id: matlab_mat_tabular
@@ -513,15 +643,41 @@ catalog:
         meta = {"file": FILE_PATH, "version": version,
                 "mat_keys": list(mat.keys()), "shape": df.shape}
 
+                # ── Split Train/Test ─────────────────────────────────────────────
+        try:
+            from sklearn.model_selection import train_test_split
+            strat = y if (STRATIFY and task_type == "classification" and y is not None) else None
+            if y is not None and task_type != "timeseries":
+                X_train, X_test, y_train, y_test = train_test_split(
+                    X, y, test_size=TEST_SIZE, random_state=RANDOM_STATE, stratify=strat
+                )
+            elif task_type != "timeseries":
+                X_train, X_test = train_test_split(
+                    X, test_size=TEST_SIZE, random_state=RANDOM_STATE
+                )
+                y_train = None; y_test = None
+            else:
+                # Timeseries
+                split_idx = int(len(X) * (1 - TEST_SIZE))
+                X_train, X_test = X.iloc[:split_idx], X.iloc[split_idx:]
+                y_train, y_test = ((y.iloc[:split_idx], y.iloc[split_idx:]) if y is not None else (None, None))
+        except Exception as e:
+            print(f"Split error (fallback to None): {e}")
+            X_train = None; X_test = None; y_train = None; y_test = None
+
+        preprocessor = None
+        feature_names_out = feature_names
+
+        # ── Init contrat ─────────────────────────────────────────────────
         contract     = "tabular"
         texts_train  = []; texts_test = []
-        y_train      = None; y_test = None
         dates_train  = None; dates_future = None
         durations    = None; events = None; df_survival = None
-        X_train      = None; X_test = None
-        preprocessor = None; feature_names_out = feature_names
+        
         print(f"[TABULAR] task_type='{task_type}' | features={len(feature_names)} | target='{target_name}'")
         print(f"          shape={df.shape}")
+        if X_train is not None:
+            print(f"          X_train={X_train.shape} | X_test={X_test.shape}")
         print(df.head(3))
 
     - id: hdf5_tabular
@@ -593,15 +749,41 @@ catalog:
         feature_names = X.columns.tolist(); target_name = TARGET_COL if y is not None else None
         meta = {"file": FILE_PATH, "mode": MODE, "key": H5_KEY, "shape": df.shape}
 
+                # ── Split Train/Test ─────────────────────────────────────────────
+        try:
+            from sklearn.model_selection import train_test_split
+            strat = y if (STRATIFY and task_type == "classification" and y is not None) else None
+            if y is not None and task_type != "timeseries":
+                X_train, X_test, y_train, y_test = train_test_split(
+                    X, y, test_size=TEST_SIZE, random_state=RANDOM_STATE, stratify=strat
+                )
+            elif task_type != "timeseries":
+                X_train, X_test = train_test_split(
+                    X, test_size=TEST_SIZE, random_state=RANDOM_STATE
+                )
+                y_train = None; y_test = None
+            else:
+                # Timeseries
+                split_idx = int(len(X) * (1 - TEST_SIZE))
+                X_train, X_test = X.iloc[:split_idx], X.iloc[split_idx:]
+                y_train, y_test = ((y.iloc[:split_idx], y.iloc[split_idx:]) if y is not None else (None, None))
+        except Exception as e:
+            print(f"Split error (fallback to None): {e}")
+            X_train = None; X_test = None; y_train = None; y_test = None
+
+        preprocessor = None
+        feature_names_out = feature_names
+
+        # ── Init contrat ─────────────────────────────────────────────────
         contract     = "tabular"
         texts_train  = []; texts_test = []
-        y_train      = None; y_test = None
         dates_train  = None; dates_future = None
         durations    = None; events = None; df_survival = None
-        X_train      = None; X_test = None
-        preprocessor = None; feature_names_out = feature_names
+        
         print(f"[TABULAR] task_type='{task_type}' | features={len(feature_names)} | target='{target_name}'")
         print(f"          shape={df.shape}")
+        if X_train is not None:
+            print(f"          X_train={X_train.shape} | X_test={X_test.shape}")
         print(df.head(3))
 
     - id: numpy_npz_tabular
@@ -672,15 +854,41 @@ catalog:
         target_name = TARGET_COL if y is not None else None
         meta = {"file": FILE_PATH, "format": "npz" if is_npz else "npy", "shape": df.shape}
 
+                # ── Split Train/Test ─────────────────────────────────────────────
+        try:
+            from sklearn.model_selection import train_test_split
+            strat = y if (STRATIFY and task_type == "classification" and y is not None) else None
+            if y is not None and task_type != "timeseries":
+                X_train, X_test, y_train, y_test = train_test_split(
+                    X, y, test_size=TEST_SIZE, random_state=RANDOM_STATE, stratify=strat
+                )
+            elif task_type != "timeseries":
+                X_train, X_test = train_test_split(
+                    X, test_size=TEST_SIZE, random_state=RANDOM_STATE
+                )
+                y_train = None; y_test = None
+            else:
+                # Timeseries
+                split_idx = int(len(X) * (1 - TEST_SIZE))
+                X_train, X_test = X.iloc[:split_idx], X.iloc[split_idx:]
+                y_train, y_test = ((y.iloc[:split_idx], y.iloc[split_idx:]) if y is not None else (None, None))
+        except Exception as e:
+            print(f"Split error (fallback to None): {e}")
+            X_train = None; X_test = None; y_train = None; y_test = None
+
+        preprocessor = None
+        feature_names_out = feature_names
+
+        # ── Init contrat ─────────────────────────────────────────────────
         contract     = "tabular"
         texts_train  = []; texts_test = []
-        y_train      = None; y_test = None
         dates_train  = None; dates_future = None
         durations    = None; events = None; df_survival = None
-        X_train      = None; X_test = None
-        preprocessor = None; feature_names_out = feature_names
+        
         print(f"[TABULAR] task_type='{task_type}' | features={len(feature_names)} | target='{target_name}'")
         print(f"          shape={df.shape}")
+        if X_train is not None:
+            print(f"          X_train={X_train.shape} | X_test={X_test.shape}")
         print(df.head(3))
 
     # ──────────────────────────────────────────────────────────────────────
@@ -725,15 +933,41 @@ catalog:
         feature_names = X.columns.tolist(); target_name = TARGET_COL
         meta = {"query": QUERY[:200], "db": DB_URL.split("@")[-1], "shape": df.shape}
 
+                # ── Split Train/Test ─────────────────────────────────────────────
+        try:
+            from sklearn.model_selection import train_test_split
+            strat = y if (STRATIFY and task_type == "classification" and y is not None) else None
+            if y is not None and task_type != "timeseries":
+                X_train, X_test, y_train, y_test = train_test_split(
+                    X, y, test_size=TEST_SIZE, random_state=RANDOM_STATE, stratify=strat
+                )
+            elif task_type != "timeseries":
+                X_train, X_test = train_test_split(
+                    X, test_size=TEST_SIZE, random_state=RANDOM_STATE
+                )
+                y_train = None; y_test = None
+            else:
+                # Timeseries
+                split_idx = int(len(X) * (1 - TEST_SIZE))
+                X_train, X_test = X.iloc[:split_idx], X.iloc[split_idx:]
+                y_train, y_test = ((y.iloc[:split_idx], y.iloc[split_idx:]) if y is not None else (None, None))
+        except Exception as e:
+            print(f"Split error (fallback to None): {e}")
+            X_train = None; X_test = None; y_train = None; y_test = None
+
+        preprocessor = None
+        feature_names_out = feature_names
+
+        # ── Init contrat ─────────────────────────────────────────────────
         contract     = "tabular"
         texts_train  = []; texts_test = []
-        y_train      = None; y_test = None
         dates_train  = None; dates_future = None
         durations    = None; events = None; df_survival = None
-        X_train      = None; X_test = None
-        preprocessor = None; feature_names_out = feature_names
+        
         print(f"[TABULAR] task_type='{task_type}' | features={len(feature_names)} | target='{target_name}'")
         print(f"          shape={df.shape}")
+        if X_train is not None:
+            print(f"          X_train={X_train.shape} | X_test={X_test.shape}")
         print(df.head(3))
 
     - id: mongodb
@@ -774,15 +1008,41 @@ catalog:
         feature_names = X.columns.tolist(); target_name = TARGET_COL
         meta = {"collection": COLLECTION, "filter": QUERY_FILTER, "shape": df.shape}
 
+                # ── Split Train/Test ─────────────────────────────────────────────
+        try:
+            from sklearn.model_selection import train_test_split
+            strat = y if (STRATIFY and task_type == "classification" and y is not None) else None
+            if y is not None and task_type != "timeseries":
+                X_train, X_test, y_train, y_test = train_test_split(
+                    X, y, test_size=TEST_SIZE, random_state=RANDOM_STATE, stratify=strat
+                )
+            elif task_type != "timeseries":
+                X_train, X_test = train_test_split(
+                    X, test_size=TEST_SIZE, random_state=RANDOM_STATE
+                )
+                y_train = None; y_test = None
+            else:
+                # Timeseries
+                split_idx = int(len(X) * (1 - TEST_SIZE))
+                X_train, X_test = X.iloc[:split_idx], X.iloc[split_idx:]
+                y_train, y_test = ((y.iloc[:split_idx], y.iloc[split_idx:]) if y is not None else (None, None))
+        except Exception as e:
+            print(f"Split error (fallback to None): {e}")
+            X_train = None; X_test = None; y_train = None; y_test = None
+
+        preprocessor = None
+        feature_names_out = feature_names
+
+        # ── Init contrat ─────────────────────────────────────────────────
         contract     = "tabular"
         texts_train  = []; texts_test = []
-        y_train      = None; y_test = None
         dates_train  = None; dates_future = None
         durations    = None; events = None; df_survival = None
-        X_train      = None; X_test = None
-        preprocessor = None; feature_names_out = feature_names
+        
         print(f"[TABULAR] task_type='{task_type}' | features={len(feature_names)} | target='{target_name}'")
         print(f"          shape={df.shape}")
+        if X_train is not None:
+            print(f"          X_train={X_train.shape} | X_test={X_test.shape}")
         print(df.head(3))
 
     - id: bigquery
@@ -821,15 +1081,41 @@ catalog:
         feature_names = X.columns.tolist(); target_name = TARGET_COL
         meta = {"project": PROJECT_ID, "shape": df.shape}
 
+                # ── Split Train/Test ─────────────────────────────────────────────
+        try:
+            from sklearn.model_selection import train_test_split
+            strat = y if (STRATIFY and task_type == "classification" and y is not None) else None
+            if y is not None and task_type != "timeseries":
+                X_train, X_test, y_train, y_test = train_test_split(
+                    X, y, test_size=TEST_SIZE, random_state=RANDOM_STATE, stratify=strat
+                )
+            elif task_type != "timeseries":
+                X_train, X_test = train_test_split(
+                    X, test_size=TEST_SIZE, random_state=RANDOM_STATE
+                )
+                y_train = None; y_test = None
+            else:
+                # Timeseries
+                split_idx = int(len(X) * (1 - TEST_SIZE))
+                X_train, X_test = X.iloc[:split_idx], X.iloc[split_idx:]
+                y_train, y_test = ((y.iloc[:split_idx], y.iloc[split_idx:]) if y is not None else (None, None))
+        except Exception as e:
+            print(f"Split error (fallback to None): {e}")
+            X_train = None; X_test = None; y_train = None; y_test = None
+
+        preprocessor = None
+        feature_names_out = feature_names
+
+        # ── Init contrat ─────────────────────────────────────────────────
         contract     = "tabular"
         texts_train  = []; texts_test = []
-        y_train      = None; y_test = None
         dates_train  = None; dates_future = None
         durations    = None; events = None; df_survival = None
-        X_train      = None; X_test = None
-        preprocessor = None; feature_names_out = feature_names
+        
         print(f"[TABULAR] task_type='{task_type}' | features={len(feature_names)} | target='{target_name}'")
         print(f"          shape={df.shape}")
+        if X_train is not None:
+            print(f"          X_train={X_train.shape} | X_test={X_test.shape}")
         print(df.head(3))
 
     - id: multi_table_relational
@@ -917,82 +1203,41 @@ catalog:
         feature_names = X.columns.tolist(); target_name = TARGET_COL
         meta = {"tables": list(dfs_dict.keys()), "n_dfs_features": len(feature_defs), "shape": X.shape}
 
+                # ── Split Train/Test ─────────────────────────────────────────────
+        try:
+            from sklearn.model_selection import train_test_split
+            strat = y if (STRATIFY and task_type == "classification" and y is not None) else None
+            if y is not None and task_type != "timeseries":
+                X_train, X_test, y_train, y_test = train_test_split(
+                    X, y, test_size=TEST_SIZE, random_state=RANDOM_STATE, stratify=strat
+                )
+            elif task_type != "timeseries":
+                X_train, X_test = train_test_split(
+                    X, test_size=TEST_SIZE, random_state=RANDOM_STATE
+                )
+                y_train = None; y_test = None
+            else:
+                # Timeseries
+                split_idx = int(len(X) * (1 - TEST_SIZE))
+                X_train, X_test = X.iloc[:split_idx], X.iloc[split_idx:]
+                y_train, y_test = ((y.iloc[:split_idx], y.iloc[split_idx:]) if y is not None else (None, None))
+        except Exception as e:
+            print(f"Split error (fallback to None): {e}")
+            X_train = None; X_test = None; y_train = None; y_test = None
+
+        preprocessor = None
+        feature_names_out = feature_names
+
+        # ── Init contrat ─────────────────────────────────────────────────
         contract     = "tabular"
         texts_train  = []; texts_test = []
-        y_train      = None; y_test = None
         dates_train  = None; dates_future = None
         durations    = None; events = None; df_survival = None
-        X_train      = None; X_test = None
-        preprocessor = None; feature_names_out = feature_names
-        print(f"[TABULAR] task_type='{task_type}' | features={len(feature_names)} | target='{target_name}'")
-        print(f"          shape={X.shape}")
-        print(X.head(3))
-
-    # ──────────────────────────────────────────────────────────────────────
-    api_and_web:
-    # ──────────────────────────────────────────────────────────────────────
-
-    - id: rest_api
-      contract: tabular
-      name: "REST API (HTTP/JSON)"
-      category: "API Web"
-      format: "JSON / XML"
-      description: "Collecte depuis une API REST avec pagination, auth et retry."
-      use_cases: ["données financières", "météo", "réseaux sociaux", "SaaS"]
-      pros: ["données fraîches", "standardisé", "flexible"]
-      cons: ["rate limiting", "pagination complexe", "instable"]
-      code_template: |
-        import requests, pandas as pd, numpy as np, time
-
-        # ── Paramètres ──────────────────────────────────────────────────
-        BASE_URL   = "https://api.example.com/v1"
-        API_KEY    = ""
-        ENDPOINT   = "/data"
-        TARGET_COL = "label"
-        PAGE_SIZE  = 100
-        MAX_PAGES  = 100
-        SLEEP      = 0.2
-        AUTH_TYPE  = "Bearer"
-
-        HEADERS = {"Content-Type": "application/json"}
-        if AUTH_TYPE == "Bearer" and API_KEY:
-            HEADERS["Authorization"] = f"Bearer {API_KEY}"
-
-        records = []
-        for page in range(1, MAX_PAGES + 1):
-            try:
-                r = requests.get(BASE_URL + ENDPOINT, headers=HEADERS,
-                                 params={"limit": PAGE_SIZE, "page": page}, timeout=30)
-                r.raise_for_status()
-                items = r.json().get("results", r.json().get("data", []))
-                if not items: break
-                records.extend(items)
-                print(f"Page {page} : {len(items)}")
-                time.sleep(SLEEP)
-            except requests.RequestException as e:
-                print(f"Erreur page {page} : {e}"); break
-
-        df = pd.json_normalize(records)
-        print(f"Shape brut : {df.shape}")
-
-        if TARGET_COL and TARGET_COL in df.columns:
-            X = df.drop(columns=[TARGET_COL]); y = df[TARGET_COL]
-            task_type = "classification" if (y.dtype == object or y.nunique() < 20) else "regression"
-        else:
-            X = df.copy(); y = None; task_type = "clustering"
-
-        feature_names = X.columns.tolist(); target_name = TARGET_COL
-        meta = {"base_url": BASE_URL, "n_records": len(records), "shape": df.shape}
-
-        contract     = "tabular"
-        texts_train  = []; texts_test = []
-        y_train      = None; y_test = None
-        dates_train  = None; dates_future = None
-        durations    = None; events = None; df_survival = None
-        X_train      = None; X_test = None
-        preprocessor = None; feature_names_out = feature_names
+        
         print(f"[TABULAR] task_type='{task_type}' | features={len(feature_names)} | target='{target_name}'")
         print(f"          shape={df.shape}")
+        if X_train is not None:
+            print(f"          X_train={X_train.shape} | X_test={X_test.shape}")
         print(df.head(3))
 
     - id: web_scraping
@@ -1044,15 +1289,41 @@ catalog:
         feature_names = X.columns.tolist(); target_name = TARGET_COL
         meta = {"url": URL, "shape": df.shape}
 
+                # ── Split Train/Test ─────────────────────────────────────────────
+        try:
+            from sklearn.model_selection import train_test_split
+            strat = y if (STRATIFY and task_type == "classification" and y is not None) else None
+            if y is not None and task_type != "timeseries":
+                X_train, X_test, y_train, y_test = train_test_split(
+                    X, y, test_size=TEST_SIZE, random_state=RANDOM_STATE, stratify=strat
+                )
+            elif task_type != "timeseries":
+                X_train, X_test = train_test_split(
+                    X, test_size=TEST_SIZE, random_state=RANDOM_STATE
+                )
+                y_train = None; y_test = None
+            else:
+                # Timeseries
+                split_idx = int(len(X) * (1 - TEST_SIZE))
+                X_train, X_test = X.iloc[:split_idx], X.iloc[split_idx:]
+                y_train, y_test = ((y.iloc[:split_idx], y.iloc[split_idx:]) if y is not None else (None, None))
+        except Exception as e:
+            print(f"Split error (fallback to None): {e}")
+            X_train = None; X_test = None; y_train = None; y_test = None
+
+        preprocessor = None
+        feature_names_out = feature_names
+
+        # ── Init contrat ─────────────────────────────────────────────────
         contract     = "tabular"
         texts_train  = []; texts_test = []
-        y_train      = None; y_test = None
         dates_train  = None; dates_future = None
         durations    = None; events = None; df_survival = None
-        X_train      = None; X_test = None
-        preprocessor = None; feature_names_out = feature_names
+        
         print(f"[TABULAR] task_type='{task_type}' | features={len(feature_names)} | target='{target_name}'")
         print(f"          shape={df.shape}")
+        if X_train is not None:
+            print(f"          X_train={X_train.shape} | X_test={X_test.shape}")
         print(df.head(3))
 
     # ──────────────────────────────────────────────────────────────────────
@@ -1105,15 +1376,41 @@ catalog:
         meta = {"source": "sklearn", "dataset": LOADER_NAME, "shape": df.shape,
                 "classes": list(bunch.target_names) if bunch and hasattr(bunch,"target_names") else None}
 
+                # ── Split Train/Test ─────────────────────────────────────────────
+        try:
+            from sklearn.model_selection import train_test_split
+            strat = y if (STRATIFY and task_type == "classification" and y is not None) else None
+            if y is not None and task_type != "timeseries":
+                X_train, X_test, y_train, y_test = train_test_split(
+                    X, y, test_size=TEST_SIZE, random_state=RANDOM_STATE, stratify=strat
+                )
+            elif task_type != "timeseries":
+                X_train, X_test = train_test_split(
+                    X, test_size=TEST_SIZE, random_state=RANDOM_STATE
+                )
+                y_train = None; y_test = None
+            else:
+                # Timeseries
+                split_idx = int(len(X) * (1 - TEST_SIZE))
+                X_train, X_test = X.iloc[:split_idx], X.iloc[split_idx:]
+                y_train, y_test = ((y.iloc[:split_idx], y.iloc[split_idx:]) if y is not None else (None, None))
+        except Exception as e:
+            print(f"Split error (fallback to None): {e}")
+            X_train = None; X_test = None; y_train = None; y_test = None
+
+        preprocessor = None
+        feature_names_out = feature_names
+
+        # ── Init contrat ─────────────────────────────────────────────────
         contract     = "tabular"
         texts_train  = []; texts_test = []
-        y_train      = None; y_test = None
         dates_train  = None; dates_future = None
         durations    = None; events = None; df_survival = None
-        X_train      = None; X_test = None
-        preprocessor = None; feature_names_out = feature_names
+        
         print(f"[TABULAR] task_type='{task_type}' | features={len(feature_names)} | target='{target_name}'")
         print(f"          shape={df.shape}")
+        if X_train is not None:
+            print(f"          X_train={X_train.shape} | X_test={X_test.shape}")
         print(df.head(3))
 
     - id: openml
@@ -1146,15 +1443,41 @@ catalog:
         meta = {"openml_id": DATASET_ID, "name": dataset.name, "shape": df.shape,
                 "categorical": [attr_names[i] for i, c in enumerate(cat_indicator) if c]}
 
+                # ── Split Train/Test ─────────────────────────────────────────────
+        try:
+            from sklearn.model_selection import train_test_split
+            strat = y if (STRATIFY and task_type == "classification" and y is not None) else None
+            if y is not None and task_type != "timeseries":
+                X_train, X_test, y_train, y_test = train_test_split(
+                    X, y, test_size=TEST_SIZE, random_state=RANDOM_STATE, stratify=strat
+                )
+            elif task_type != "timeseries":
+                X_train, X_test = train_test_split(
+                    X, test_size=TEST_SIZE, random_state=RANDOM_STATE
+                )
+                y_train = None; y_test = None
+            else:
+                # Timeseries
+                split_idx = int(len(X) * (1 - TEST_SIZE))
+                X_train, X_test = X.iloc[:split_idx], X.iloc[split_idx:]
+                y_train, y_test = ((y.iloc[:split_idx], y.iloc[split_idx:]) if y is not None else (None, None))
+        except Exception as e:
+            print(f"Split error (fallback to None): {e}")
+            X_train = None; X_test = None; y_train = None; y_test = None
+
+        preprocessor = None
+        feature_names_out = feature_names
+
+        # ── Init contrat ─────────────────────────────────────────────────
         contract     = "tabular"
         texts_train  = []; texts_test = []
-        y_train      = None; y_test = None
         dates_train  = None; dates_future = None
         durations    = None; events = None; df_survival = None
-        X_train      = None; X_test = None
-        preprocessor = None; feature_names_out = feature_names
+        
         print(f"[TABULAR] task_type='{task_type}' | features={len(feature_names)} | target='{target_name}'")
         print(f"          shape={df.shape}")
+        if X_train is not None:
+            print(f"          X_train={X_train.shape} | X_test={X_test.shape}")
         print(df.head(3))
 
     # ──────────────────────────────────────────────────────────────────────
@@ -1203,133 +1526,41 @@ catalog:
         meta = {"freq": FREQ, "horizon": HORIZON, "n_train": len(y_train),
                 "n_test": len(y_test), "shape": df.shape}
 
-        contract    = "tabular"
-        texts_train = []; texts_test = []
-        durations   = None; events = None; df_survival = None
-        print(f"[TABULAR] task_type='{task_type}' | features={len(feature_names)} | target='{target_name}'")
-        print(f"          shape={df.shape} | n_train={len(y_train)} | n_test={len(y_test)} | horizon={HORIZON}")
-        print(df.tail(5))
+                # ── Split Train/Test ─────────────────────────────────────────────
+        try:
+            from sklearn.model_selection import train_test_split
+            strat = y if (STRATIFY and task_type == "classification" and y is not None) else None
+            if y is not None and task_type != "timeseries":
+                X_train, X_test, y_train, y_test = train_test_split(
+                    X, y, test_size=TEST_SIZE, random_state=RANDOM_STATE, stratify=strat
+                )
+            elif task_type != "timeseries":
+                X_train, X_test = train_test_split(
+                    X, test_size=TEST_SIZE, random_state=RANDOM_STATE
+                )
+                y_train = None; y_test = None
+            else:
+                # Timeseries
+                split_idx = int(len(X) * (1 - TEST_SIZE))
+                X_train, X_test = X.iloc[:split_idx], X.iloc[split_idx:]
+                y_train, y_test = ((y.iloc[:split_idx], y.iloc[split_idx:]) if y is not None else (None, None))
+        except Exception as e:
+            print(f"Split error (fallback to None): {e}")
+            X_train = None; X_test = None; y_train = None; y_test = None
 
-    - id: financial_data
-      contract: tabular
-      name: "Données Financières (yfinance)"
-      category: "Séries Temporelles"
-      format: "API / DataFrame OHLCV"
-      description: "Téléchargement de cours boursiers via yfinance avec indicateurs techniques."
-      use_cases: ["prévision de prix", "détection d'anomalies financières"]
-      pros: ["gratuit", "historique long", "multi-actifs"]
-      cons: ["qualité variable", "délai ~15min"]
-      # Indicateurs :
-      #   Rendement    : r_t = (P_t - P_{t-1}) / P_{t-1}
-      #   Log-rendement: ln(P_t / P_{t-1})
-      #   MA_k         : moyenne glissante sur k périodes
-      #   Volatilité   : std des rendements sur 20 périodes
-      #   RSI(14)      : 100 - 100/(1 + mean_gain/mean_loss)
-      code_template: |
-        import yfinance as yf, pandas as pd, numpy as np
+        preprocessor = None
+        feature_names_out = feature_names
 
-        # ── Paramètres ──────────────────────────────────────────────────
-        TICKER     = "AAPL"
-        START_DATE = "2020-01-01"; END_DATE = "2024-12-31"
-        INTERVAL   = "1d"
-        TARGET_COL = "Close"
-        TEST_RATIO = 0.2; HORIZON = 30
-
-        ticker = yf.Ticker(TICKER)
-        df = ticker.history(start=START_DATE, end=END_DATE, interval=INTERVAL)
-        df["returns"]     = df["Close"].pct_change()
-        df["log_returns"] = np.log(df["Close"] / df["Close"].shift(1))
-        df["MA_20"]       = df["Close"].rolling(20).mean()
-        df["MA_50"]       = df["Close"].rolling(50).mean()
-        df["volatility"]  = df["returns"].rolling(20).std()
-        df["RSI"] = 100 - (100 / (1 + df["returns"].clip(lower=0).rolling(14).mean()
-                                     / (-df["returns"].clip(upper=0)).rolling(14).mean()))
-        df = df.dropna()
-
-        feat_cols = [c for c in ["Open","High","Low","Close","Volume",
-                                  "MA_20","MA_50","volatility","RSI"] if c in df.columns]
-        X = df[feat_cols]; y = df[TARGET_COL]
-        feature_names = feat_cols; target_name = TARGET_COL; task_type = "timeseries"
-
-        n_test = int(len(df) * TEST_RATIO)
-        y_train = y.iloc[:-n_test]; y_test = y.iloc[-n_test:]
-        dates_train  = y_train.index
-        dates_future = pd.date_range(start=y_test.index[-1], periods=HORIZON+1, freq=INTERVAL)[1:]
-        meta = {"ticker": TICKER, "interval": INTERVAL, "shape": df.shape, "horizon": HORIZON}
-
-        contract    = "tabular"
-        texts_train = []; texts_test = []
-        durations   = None; events = None; df_survival = None
-        print(f"[TABULAR] task_type='{task_type}' | features={len(feature_names)} | target='{target_name}'")
-        print(f"          shape={df.shape} | n_train={len(y_train)} | n_test={len(y_test)} | horizon={HORIZON}")
-        print(df.tail(5))
-
-    - id: netcdf_xarray
-      contract: tabular
-      name: "NetCDF / Zarr (xarray → DataFrame tabulaire)"
-      category: "Séries Temporelles / Géospatial"
-      format: "NetCDF-3/4 . Zarr . OpenDAP"
-      description: >
-        Chargement xarray et conversion en DataFrame tabulaire par empilement
-        des dimensions (lat × lon × time → lignes). Adapté aux features
-        climatiques pour modèles ML classiques.
-        Pour les séquences temporelles DL, utiliser netcdf_sequence (SEQUENCE).
-      use_cases: ["ERA5 / CMIP6 features tabulaires", "données satellite aplaties", "séries météo ML"]
-      pros: ["lazy loading dask", "accès OpenDAP distant", "CF-conventions"]
-      cons: ["stacking → DataFrames très larges", "NaN côtiers/masques"]
-      # Empilement xarray → DataFrame :
-      #   ds.to_dataframe() empile (lat, lon, time) en MultiIndex
-      #   .reset_index() aplatit pour obtenir des colonnes ML-compatibles
-      code_template: |
-        import xarray as xr, numpy as np, pandas as pd
-
-        # ── Paramètres ──────────────────────────────────────────────────
-        FILE_PATH     = "data/climate.nc"
-        VARIABLES     = None        # liste ou None = toutes
-        TARGET_VAR    = None        # variable cible — None = non supervisé
-        LAZY          = True
-        TIME_SLICE    = None        # slice("2020-01","2023-12")
-        RESAMPLE_FREQ = None        # "ME","YE","6h" ou None
-        DROPNA        = True
-        MAX_ROWS      = 100_000
-
-        open_kw = {"engine": "zarr"} if str(FILE_PATH).endswith(".zarr") else {}
-        if LAZY: open_kw["chunks"] = "auto"
-        ds = xr.open_dataset(FILE_PATH, **open_kw)
-        print(f"Dims : {dict(ds.dims)} | Vars : {list(ds.data_vars)}")
-        if VARIABLES: ds = ds[VARIABLES]
-        if TIME_SLICE and "time" in ds.dims: ds = ds.sel(time=TIME_SLICE)
-        if RESAMPLE_FREQ and "time" in ds.dims: ds = ds.resample(time=RESAMPLE_FREQ).mean()
-
-        df = ds.to_dataframe()
-        if LAZY: df = df.compute()
-        df = df.reset_index()
-        if DROPNA: df = df.dropna()
-        if MAX_ROWS and len(df) > MAX_ROWS:
-            df = df.sample(MAX_ROWS, random_state=42).reset_index(drop=True)
-
-        coord_cols = [c for c in ["time","lat","lon","latitude","longitude","level"] if c in df.columns]
-        var_cols   = [c for c in df.columns if c in list(ds.data_vars)]
-        if TARGET_VAR and TARGET_VAR in df.columns:
-            X = df[[c for c in var_cols+coord_cols if c != TARGET_VAR]]
-            y = df[TARGET_VAR]
-            task_type = "regression" if y.nunique() > 50 else "classification"
-        else:
-            X = df[var_cols] if var_cols else df.drop(columns=coord_cols, errors="ignore")
-            y = None; task_type = "clustering"
-
-        feature_names = X.columns.tolist(); target_name = TARGET_VAR
-        meta = {"dims": dict(ds.dims), "variables": list(ds.data_vars), "shape": df.shape, "ds": ds}
-
+        # ── Init contrat ─────────────────────────────────────────────────
         contract     = "tabular"
         texts_train  = []; texts_test = []
-        y_train      = None; y_test = None
         dates_train  = None; dates_future = None
         durations    = None; events = None; df_survival = None
-        X_train      = None; X_test = None
-        preprocessor = None; feature_names_out = feature_names
+        
         print(f"[TABULAR] task_type='{task_type}' | features={len(feature_names)} | target='{target_name}'")
         print(f"          shape={df.shape}")
+        if X_train is not None:
+            print(f"          X_train={X_train.shape} | X_test={X_test.shape}")
         print(df.head(3))
 
     # ──────────────────────────────────────────────────────────────────────
@@ -1395,15 +1626,41 @@ catalog:
         meta = {"n_nodes": G.number_of_nodes(), "n_edges": G.number_of_edges(),
                 "density": nx.density(G), "graph_obj": G}
 
+                # ── Split Train/Test ─────────────────────────────────────────────
+        try:
+            from sklearn.model_selection import train_test_split
+            strat = y if (STRATIFY and task_type == "classification" and y is not None) else None
+            if y is not None and task_type != "timeseries":
+                X_train, X_test, y_train, y_test = train_test_split(
+                    X, y, test_size=TEST_SIZE, random_state=RANDOM_STATE, stratify=strat
+                )
+            elif task_type != "timeseries":
+                X_train, X_test = train_test_split(
+                    X, test_size=TEST_SIZE, random_state=RANDOM_STATE
+                )
+                y_train = None; y_test = None
+            else:
+                # Timeseries
+                split_idx = int(len(X) * (1 - TEST_SIZE))
+                X_train, X_test = X.iloc[:split_idx], X.iloc[split_idx:]
+                y_train, y_test = ((y.iloc[:split_idx], y.iloc[split_idx:]) if y is not None else (None, None))
+        except Exception as e:
+            print(f"Split error (fallback to None): {e}")
+            X_train = None; X_test = None; y_train = None; y_test = None
+
+        preprocessor = None
+        feature_names_out = feature_names
+
+        # ── Init contrat ─────────────────────────────────────────────────
         contract     = "tabular"
         texts_train  = []; texts_test = []
-        y_train      = None; y_test = None
         dates_train  = None; dates_future = None
         durations    = None; events = None; df_survival = None
-        X_train      = None; X_test = None
-        preprocessor = None; feature_names_out = feature_names
+        
         print(f"[TABULAR] task_type='{task_type}' | features={len(feature_names)} | target='{target_name}'")
-        print(f"          shape={df.shape} | nodes={G.number_of_nodes()}")
+        print(f"          shape={df.shape}")
+        if X_train is not None:
+            print(f"          X_train={X_train.shape} | X_test={X_test.shape}")
         print(df.head(3))
 
     - id: rdf_owl_ontology
@@ -1469,15 +1726,41 @@ catalog:
         meta = {"n_triplets": len(df_triplets), "n_entities": len(subjects),
                 "n_relations": df_triplets["predicate"].nunique(), "rdf_graph": g}
 
+                # ── Split Train/Test ─────────────────────────────────────────────
+        try:
+            from sklearn.model_selection import train_test_split
+            strat = y if (STRATIFY and task_type == "classification" and y is not None) else None
+            if y is not None and task_type != "timeseries":
+                X_train, X_test, y_train, y_test = train_test_split(
+                    X, y, test_size=TEST_SIZE, random_state=RANDOM_STATE, stratify=strat
+                )
+            elif task_type != "timeseries":
+                X_train, X_test = train_test_split(
+                    X, test_size=TEST_SIZE, random_state=RANDOM_STATE
+                )
+                y_train = None; y_test = None
+            else:
+                # Timeseries
+                split_idx = int(len(X) * (1 - TEST_SIZE))
+                X_train, X_test = X.iloc[:split_idx], X.iloc[split_idx:]
+                y_train, y_test = ((y.iloc[:split_idx], y.iloc[split_idx:]) if y is not None else (None, None))
+        except Exception as e:
+            print(f"Split error (fallback to None): {e}")
+            X_train = None; X_test = None; y_train = None; y_test = None
+
+        preprocessor = None
+        feature_names_out = feature_names
+
+        # ── Init contrat ─────────────────────────────────────────────────
         contract     = "tabular"
         texts_train  = []; texts_test = []
-        y_train      = None; y_test = None
         dates_train  = None; dates_future = None
         durations    = None; events = None; df_survival = None
-        X_train      = None; X_test = None
-        preprocessor = None; feature_names_out = feature_names
+        
         print(f"[TABULAR] task_type='{task_type}' | features={len(feature_names)} | target='{target_name}'")
-        print(f"          shape={df.shape} | entities={len(subjects)}")
+        print(f"          shape={df.shape}")
+        if X_train is not None:
+            print(f"          X_train={X_train.shape} | X_test={X_test.shape}")
         print(df.head(3))
 
     - id: wikidata_sparql
@@ -1542,15 +1825,41 @@ catalog:
         feature_names = X.columns.tolist(); target_name = TARGET_COL
         meta = {"n_entities": len(df), "query_vars": cols, "shape": df.shape}
 
+                # ── Split Train/Test ─────────────────────────────────────────────
+        try:
+            from sklearn.model_selection import train_test_split
+            strat = y if (STRATIFY and task_type == "classification" and y is not None) else None
+            if y is not None and task_type != "timeseries":
+                X_train, X_test, y_train, y_test = train_test_split(
+                    X, y, test_size=TEST_SIZE, random_state=RANDOM_STATE, stratify=strat
+                )
+            elif task_type != "timeseries":
+                X_train, X_test = train_test_split(
+                    X, test_size=TEST_SIZE, random_state=RANDOM_STATE
+                )
+                y_train = None; y_test = None
+            else:
+                # Timeseries
+                split_idx = int(len(X) * (1 - TEST_SIZE))
+                X_train, X_test = X.iloc[:split_idx], X.iloc[split_idx:]
+                y_train, y_test = ((y.iloc[:split_idx], y.iloc[split_idx:]) if y is not None else (None, None))
+        except Exception as e:
+            print(f"Split error (fallback to None): {e}")
+            X_train = None; X_test = None; y_train = None; y_test = None
+
+        preprocessor = None
+        feature_names_out = feature_names
+
+        # ── Init contrat ─────────────────────────────────────────────────
         contract     = "tabular"
         texts_train  = []; texts_test = []
-        y_train      = None; y_test = None
         dates_train  = None; dates_future = None
         durations    = None; events = None; df_survival = None
-        X_train      = None; X_test = None
-        preprocessor = None; feature_names_out = feature_names
+        
         print(f"[TABULAR] task_type='{task_type}' | features={len(feature_names)} | target='{target_name}'")
-        print(f"          shape={df.shape} | entities={len(df)}")
+        print(f"          shape={df.shape}")
+        if X_train is not None:
+            print(f"          X_train={X_train.shape} | X_test={X_test.shape}")
         print(df.head(3))
 
     # ──────────────────────────────────────────────────────────────────────
@@ -1614,72 +1923,41 @@ catalog:
         feature_names = X.columns.tolist(); target_name = TARGET_COL
         meta = {"crs": str(gdf.crs), "bbox": list(gdf.total_bounds), "shape": gdf.shape, "gdf": gdf}
 
+                # ── Split Train/Test ─────────────────────────────────────────────
+        try:
+            from sklearn.model_selection import train_test_split
+            strat = y if (STRATIFY and task_type == "classification" and y is not None) else None
+            if y is not None and task_type != "timeseries":
+                X_train, X_test, y_train, y_test = train_test_split(
+                    X, y, test_size=TEST_SIZE, random_state=RANDOM_STATE, stratify=strat
+                )
+            elif task_type != "timeseries":
+                X_train, X_test = train_test_split(
+                    X, test_size=TEST_SIZE, random_state=RANDOM_STATE
+                )
+                y_train = None; y_test = None
+            else:
+                # Timeseries
+                split_idx = int(len(X) * (1 - TEST_SIZE))
+                X_train, X_test = X.iloc[:split_idx], X.iloc[split_idx:]
+                y_train, y_test = ((y.iloc[:split_idx], y.iloc[split_idx:]) if y is not None else (None, None))
+        except Exception as e:
+            print(f"Split error (fallback to None): {e}")
+            X_train = None; X_test = None; y_train = None; y_test = None
+
+        preprocessor = None
+        feature_names_out = feature_names
+
+        # ── Init contrat ─────────────────────────────────────────────────
         contract     = "tabular"
         texts_train  = []; texts_test = []
-        y_train      = None; y_test = None
         dates_train  = None; dates_future = None
         durations    = None; events = None; df_survival = None
-        X_train      = None; X_test = None
-        preprocessor = None; feature_names_out = feature_names
-        print(f"[TABULAR] task_type='{task_type}' | features={len(GEO_FEAT)} | target='{target_name}'")
-        print(f"          shape={df.shape}")
-        print(df[GEO_FEAT].head(3))
-
-    - id: geospatial_raster
-      contract: tabular
-      name: "Raster Géospatial (GeoTIFF / NetCDF) → features tabulaires"
-      category: "Géospatial"
-      format: "GeoTIFF . NetCDF . Zarr . HDF5"
-      description: >
-        Chargement de rasters satellite/météo et extraction de features
-        scalaires (NDVI, indices spectraux, statistiques de bandes) pour
-        pipeline ML tabulaire.
-      use_cases: ["classification couverture du sol", "NDVI agricole", "features météo pixel"]
-      pros: ["rasterio/xarray natifs", "NDVI et indices calculés automatiquement"]
-      cons: ["pixels → DataFrame potentiellement très large"]
-      # NDVI = (NIR - Red) / (NIR + Red)  ∈ [-1, 1]
-      # Végétation dense : >0.5 ; sol nu : ~0 ; eau : <0
-      code_template: |
-        import numpy as np, pandas as pd
-
-        # ── Paramètres ──────────────────────────────────────────────────
-        RASTER_FILE  = "data/satellite.tif"
-        BAND_NAMES   = ["red","green","blue","nir"]
-        VARIABLE     = None      # variable NetCDF — None = première
-        COMPUTE_NDVI = True
-
-        if RASTER_FILE.endswith((".tif",".tiff")):
-            import rasterio
-            with rasterio.open(RASTER_FILE) as src:
-                print(f"Bandes : {src.count} | CRS : {src.crs} | Shape : {src.shape}")
-                data = src.read()
-            n_bands = data.shape[0]
-            _names  = BAND_NAMES[:n_bands] if BAND_NAMES else [f"band_{i+1}" for i in range(n_bands)]
-            df      = pd.DataFrame(data.reshape(n_bands,-1).T, columns=_names)
-            if COMPUTE_NDVI and "red" in df.columns and "nir" in df.columns:
-                df["ndvi"] = (df["nir"]-df["red"]) / (df["nir"]+df["red"]+1e-8)
-        else:
-            import xarray as xr
-            ds  = xr.open_zarr(RASTER_FILE) if RASTER_FILE.endswith(".zarr") else xr.open_dataset(RASTER_FILE)
-            var = VARIABLE or list(ds.data_vars)[0]
-            df  = ds[var].to_dataframe().reset_index().dropna(subset=[var])
-
-        feat_cols = [c for c in df.columns if c not in
-                     ["x","y","lat","lon","latitude","longitude","time","spatial_ref"]]
-        df = df[feat_cols].replace([np.inf,-np.inf], np.nan).dropna()
-        X = df.copy(); y = None; task_type = "clustering"
-        feature_names = X.columns.tolist(); target_name = None
-        meta = {"file": RASTER_FILE, "shape": df.shape, "bands": feat_cols}
-
-        contract     = "tabular"
-        texts_train  = []; texts_test = []
-        y_train      = None; y_test = None
-        dates_train  = None; dates_future = None
-        durations    = None; events = None; df_survival = None
-        X_train      = None; X_test = None
-        preprocessor = None; feature_names_out = feature_names
+        
         print(f"[TABULAR] task_type='{task_type}' | features={len(feature_names)} | target='{target_name}'")
         print(f"          shape={df.shape}")
+        if X_train is not None:
+            print(f"          X_train={X_train.shape} | X_test={X_test.shape}")
         print(df.head(3))
 
     # ──────────────────────────────────────────────────────────────────────
@@ -1734,15 +2012,41 @@ catalog:
         meta = {"collection": COLLECTION_NAME, "n_vectors": len(embeddings),
                 "embedding_dim": dim, "shape": embeddings.shape}
 
+                # ── Split Train/Test ─────────────────────────────────────────────
+        try:
+            from sklearn.model_selection import train_test_split
+            strat = y if (STRATIFY and task_type == "classification" and y is not None) else None
+            if y is not None and task_type != "timeseries":
+                X_train, X_test, y_train, y_test = train_test_split(
+                    X, y, test_size=TEST_SIZE, random_state=RANDOM_STATE, stratify=strat
+                )
+            elif task_type != "timeseries":
+                X_train, X_test = train_test_split(
+                    X, test_size=TEST_SIZE, random_state=RANDOM_STATE
+                )
+                y_train = None; y_test = None
+            else:
+                # Timeseries
+                split_idx = int(len(X) * (1 - TEST_SIZE))
+                X_train, X_test = X.iloc[:split_idx], X.iloc[split_idx:]
+                y_train, y_test = ((y.iloc[:split_idx], y.iloc[split_idx:]) if y is not None else (None, None))
+        except Exception as e:
+            print(f"Split error (fallback to None): {e}")
+            X_train = None; X_test = None; y_train = None; y_test = None
+
+        preprocessor = None
+        feature_names_out = feature_names
+
+        # ── Init contrat ─────────────────────────────────────────────────
         contract     = "tabular"
         texts_train  = []; texts_test = []
-        y_train      = None; y_test = None
         dates_train  = None; dates_future = None
         durations    = None; events = None; df_survival = None
-        X_train      = None; X_test = None
-        preprocessor = None; feature_names_out = feature_names
+        
         print(f"[TABULAR] task_type='{task_type}' | features={len(feature_names)} | target='{target_name}'")
-        print(f"          shape={df.shape} | dim={dim}")
+        print(f"          shape={df.shape}")
+        if X_train is not None:
+            print(f"          X_train={X_train.shape} | X_test={X_test.shape}")
         print(df.head(3))
 
     - id: pinecone_vectordb
@@ -1788,15 +2092,41 @@ catalog:
         meta = {"index": PINECONE_INDEX, "n_vectors": len(vectors),
                 "embedding_dim": dim, "shape": vectors.shape}
 
+                # ── Split Train/Test ─────────────────────────────────────────────
+        try:
+            from sklearn.model_selection import train_test_split
+            strat = y if (STRATIFY and task_type == "classification" and y is not None) else None
+            if y is not None and task_type != "timeseries":
+                X_train, X_test, y_train, y_test = train_test_split(
+                    X, y, test_size=TEST_SIZE, random_state=RANDOM_STATE, stratify=strat
+                )
+            elif task_type != "timeseries":
+                X_train, X_test = train_test_split(
+                    X, test_size=TEST_SIZE, random_state=RANDOM_STATE
+                )
+                y_train = None; y_test = None
+            else:
+                # Timeseries
+                split_idx = int(len(X) * (1 - TEST_SIZE))
+                X_train, X_test = X.iloc[:split_idx], X.iloc[split_idx:]
+                y_train, y_test = ((y.iloc[:split_idx], y.iloc[split_idx:]) if y is not None else (None, None))
+        except Exception as e:
+            print(f"Split error (fallback to None): {e}")
+            X_train = None; X_test = None; y_train = None; y_test = None
+
+        preprocessor = None
+        feature_names_out = feature_names
+
+        # ── Init contrat ─────────────────────────────────────────────────
         contract     = "tabular"
         texts_train  = []; texts_test = []
-        y_train      = None; y_test = None
         dates_train  = None; dates_future = None
         durations    = None; events = None; df_survival = None
-        X_train      = None; X_test = None
-        preprocessor = None; feature_names_out = feature_names
+        
         print(f"[TABULAR] task_type='{task_type}' | features={len(feature_names)} | target='{target_name}'")
-        print(f"          shape={df.shape} | dim={dim}")
+        print(f"          shape={df.shape}")
+        if X_train is not None:
+            print(f"          X_train={X_train.shape} | X_test={X_test.shape}")
         print(df.head(3))
 
     # ──────────────────────────────────────────────────────────────────────
@@ -1856,15 +2186,41 @@ catalog:
         feature_names = X.columns.tolist(); target_name = TARGET_COL
         meta = {"table": SUPABASE_TABLE, "n_records": len(df), "shape": df.shape}
 
+                # ── Split Train/Test ─────────────────────────────────────────────
+        try:
+            from sklearn.model_selection import train_test_split
+            strat = y if (STRATIFY and task_type == "classification" and y is not None) else None
+            if y is not None and task_type != "timeseries":
+                X_train, X_test, y_train, y_test = train_test_split(
+                    X, y, test_size=TEST_SIZE, random_state=RANDOM_STATE, stratify=strat
+                )
+            elif task_type != "timeseries":
+                X_train, X_test = train_test_split(
+                    X, test_size=TEST_SIZE, random_state=RANDOM_STATE
+                )
+                y_train = None; y_test = None
+            else:
+                # Timeseries
+                split_idx = int(len(X) * (1 - TEST_SIZE))
+                X_train, X_test = X.iloc[:split_idx], X.iloc[split_idx:]
+                y_train, y_test = ((y.iloc[:split_idx], y.iloc[split_idx:]) if y is not None else (None, None))
+        except Exception as e:
+            print(f"Split error (fallback to None): {e}")
+            X_train = None; X_test = None; y_train = None; y_test = None
+
+        preprocessor = None
+        feature_names_out = feature_names
+
+        # ── Init contrat ─────────────────────────────────────────────────
         contract     = "tabular"
         texts_train  = []; texts_test = []
-        y_train      = None; y_test = None
         dates_train  = None; dates_future = None
         durations    = None; events = None; df_survival = None
-        X_train      = None; X_test = None
-        preprocessor = None; feature_names_out = feature_names
+        
         print(f"[TABULAR] task_type='{task_type}' | features={len(feature_names)} | target='{target_name}'")
         print(f"          shape={df.shape}")
+        if X_train is not None:
+            print(f"          X_train={X_train.shape} | X_test={X_test.shape}")
         print(df.head(3))
 
     - id: aws_s3_athena
@@ -1920,15 +2276,41 @@ catalog:
         feature_names = X.columns.tolist(); target_name = TARGET_COL
         meta = {"bucket": S3_BUCKET, "shape": df.shape, "athena_exec_id": exec_id}
 
+                # ── Split Train/Test ─────────────────────────────────────────────
+        try:
+            from sklearn.model_selection import train_test_split
+            strat = y if (STRATIFY and task_type == "classification" and y is not None) else None
+            if y is not None and task_type != "timeseries":
+                X_train, X_test, y_train, y_test = train_test_split(
+                    X, y, test_size=TEST_SIZE, random_state=RANDOM_STATE, stratify=strat
+                )
+            elif task_type != "timeseries":
+                X_train, X_test = train_test_split(
+                    X, test_size=TEST_SIZE, random_state=RANDOM_STATE
+                )
+                y_train = None; y_test = None
+            else:
+                # Timeseries
+                split_idx = int(len(X) * (1 - TEST_SIZE))
+                X_train, X_test = X.iloc[:split_idx], X.iloc[split_idx:]
+                y_train, y_test = ((y.iloc[:split_idx], y.iloc[split_idx:]) if y is not None else (None, None))
+        except Exception as e:
+            print(f"Split error (fallback to None): {e}")
+            X_train = None; X_test = None; y_train = None; y_test = None
+
+        preprocessor = None
+        feature_names_out = feature_names
+
+        # ── Init contrat ─────────────────────────────────────────────────
         contract     = "tabular"
         texts_train  = []; texts_test = []
-        y_train      = None; y_test = None
         dates_train  = None; dates_future = None
         durations    = None; events = None; df_survival = None
-        X_train      = None; X_test = None
-        preprocessor = None; feature_names_out = feature_names
+        
         print(f"[TABULAR] task_type='{task_type}' | features={len(feature_names)} | target='{target_name}'")
         print(f"          shape={df.shape}")
+        if X_train is not None:
+            print(f"          X_train={X_train.shape} | X_test={X_test.shape}")
         print(df.head(3))
 
     - id: azure_blob_synapse
@@ -1974,15 +2356,41 @@ catalog:
         feature_names = X.columns.tolist(); target_name = TARGET_COL
         meta = {"shape": df.shape}
 
+                # ── Split Train/Test ─────────────────────────────────────────────
+        try:
+            from sklearn.model_selection import train_test_split
+            strat = y if (STRATIFY and task_type == "classification" and y is not None) else None
+            if y is not None and task_type != "timeseries":
+                X_train, X_test, y_train, y_test = train_test_split(
+                    X, y, test_size=TEST_SIZE, random_state=RANDOM_STATE, stratify=strat
+                )
+            elif task_type != "timeseries":
+                X_train, X_test = train_test_split(
+                    X, test_size=TEST_SIZE, random_state=RANDOM_STATE
+                )
+                y_train = None; y_test = None
+            else:
+                # Timeseries
+                split_idx = int(len(X) * (1 - TEST_SIZE))
+                X_train, X_test = X.iloc[:split_idx], X.iloc[split_idx:]
+                y_train, y_test = ((y.iloc[:split_idx], y.iloc[split_idx:]) if y is not None else (None, None))
+        except Exception as e:
+            print(f"Split error (fallback to None): {e}")
+            X_train = None; X_test = None; y_train = None; y_test = None
+
+        preprocessor = None
+        feature_names_out = feature_names
+
+        # ── Init contrat ─────────────────────────────────────────────────
         contract     = "tabular"
         texts_train  = []; texts_test = []
-        y_train      = None; y_test = None
         dates_train  = None; dates_future = None
         durations    = None; events = None; df_survival = None
-        X_train      = None; X_test = None
-        preprocessor = None; feature_names_out = feature_names
+        
         print(f"[TABULAR] task_type='{task_type}' | features={len(feature_names)} | target='{target_name}'")
         print(f"          shape={df.shape}")
+        if X_train is not None:
+            print(f"          X_train={X_train.shape} | X_test={X_test.shape}")
         print(df.head(3))
 
     # ──────────────────────────────────────────────────────────────────────
@@ -2033,15 +2441,41 @@ catalog:
         feature_names = X.columns.tolist(); target_name = TARGET_COL
         meta = {"path": DELTA_TABLE_PATH, "version": DELTA_VERSION, "shape": df.shape}
 
+                # ── Split Train/Test ─────────────────────────────────────────────
+        try:
+            from sklearn.model_selection import train_test_split
+            strat = y if (STRATIFY and task_type == "classification" and y is not None) else None
+            if y is not None and task_type != "timeseries":
+                X_train, X_test, y_train, y_test = train_test_split(
+                    X, y, test_size=TEST_SIZE, random_state=RANDOM_STATE, stratify=strat
+                )
+            elif task_type != "timeseries":
+                X_train, X_test = train_test_split(
+                    X, test_size=TEST_SIZE, random_state=RANDOM_STATE
+                )
+                y_train = None; y_test = None
+            else:
+                # Timeseries
+                split_idx = int(len(X) * (1 - TEST_SIZE))
+                X_train, X_test = X.iloc[:split_idx], X.iloc[split_idx:]
+                y_train, y_test = ((y.iloc[:split_idx], y.iloc[split_idx:]) if y is not None else (None, None))
+        except Exception as e:
+            print(f"Split error (fallback to None): {e}")
+            X_train = None; X_test = None; y_train = None; y_test = None
+
+        preprocessor = None
+        feature_names_out = feature_names
+
+        # ── Init contrat ─────────────────────────────────────────────────
         contract     = "tabular"
         texts_train  = []; texts_test = []
-        y_train      = None; y_test = None
         dates_train  = None; dates_future = None
         durations    = None; events = None; df_survival = None
-        X_train      = None; X_test = None
-        preprocessor = None; feature_names_out = feature_names
+        
         print(f"[TABULAR] task_type='{task_type}' | features={len(feature_names)} | target='{target_name}'")
         print(f"          shape={df.shape}")
+        if X_train is not None:
+            print(f"          X_train={X_train.shape} | X_test={X_test.shape}")
         print(df.head(3))
 
     - id: apache_iceberg
@@ -2076,15 +2510,41 @@ catalog:
         feature_names = X.columns.tolist(); target_name = TARGET_COL
         meta = {"namespace": NAMESPACE, "table": TABLE, "snapshot_id": SNAPSHOT_ID, "shape": df.shape}
 
+                # ── Split Train/Test ─────────────────────────────────────────────
+        try:
+            from sklearn.model_selection import train_test_split
+            strat = y if (STRATIFY and task_type == "classification" and y is not None) else None
+            if y is not None and task_type != "timeseries":
+                X_train, X_test, y_train, y_test = train_test_split(
+                    X, y, test_size=TEST_SIZE, random_state=RANDOM_STATE, stratify=strat
+                )
+            elif task_type != "timeseries":
+                X_train, X_test = train_test_split(
+                    X, test_size=TEST_SIZE, random_state=RANDOM_STATE
+                )
+                y_train = None; y_test = None
+            else:
+                # Timeseries
+                split_idx = int(len(X) * (1 - TEST_SIZE))
+                X_train, X_test = X.iloc[:split_idx], X.iloc[split_idx:]
+                y_train, y_test = ((y.iloc[:split_idx], y.iloc[split_idx:]) if y is not None else (None, None))
+        except Exception as e:
+            print(f"Split error (fallback to None): {e}")
+            X_train = None; X_test = None; y_train = None; y_test = None
+
+        preprocessor = None
+        feature_names_out = feature_names
+
+        # ── Init contrat ─────────────────────────────────────────────────
         contract     = "tabular"
         texts_train  = []; texts_test = []
-        y_train      = None; y_test = None
         dates_train  = None; dates_future = None
         durations    = None; events = None; df_survival = None
-        X_train      = None; X_test = None
-        preprocessor = None; feature_names_out = feature_names
+        
         print(f"[TABULAR] task_type='{task_type}' | features={len(feature_names)} | target='{target_name}'")
         print(f"          shape={df.shape}")
+        if X_train is not None:
+            print(f"          X_train={X_train.shape} | X_test={X_test.shape}")
         print(df.head(3))
 
     # ──────────────────────────────────────────────────────────────────────
@@ -2130,15 +2590,41 @@ catalog:
         feature_names = X.columns.tolist(); target_name = None
         meta = {"topic": TOPIC, "batch_size": BATCH_SIZE, "shape": df.shape}
 
+                # ── Split Train/Test ─────────────────────────────────────────────
+        try:
+            from sklearn.model_selection import train_test_split
+            strat = y if (STRATIFY and task_type == "classification" and y is not None) else None
+            if y is not None and task_type != "timeseries":
+                X_train, X_test, y_train, y_test = train_test_split(
+                    X, y, test_size=TEST_SIZE, random_state=RANDOM_STATE, stratify=strat
+                )
+            elif task_type != "timeseries":
+                X_train, X_test = train_test_split(
+                    X, test_size=TEST_SIZE, random_state=RANDOM_STATE
+                )
+                y_train = None; y_test = None
+            else:
+                # Timeseries
+                split_idx = int(len(X) * (1 - TEST_SIZE))
+                X_train, X_test = X.iloc[:split_idx], X.iloc[split_idx:]
+                y_train, y_test = ((y.iloc[:split_idx], y.iloc[split_idx:]) if y is not None else (None, None))
+        except Exception as e:
+            print(f"Split error (fallback to None): {e}")
+            X_train = None; X_test = None; y_train = None; y_test = None
+
+        preprocessor = None
+        feature_names_out = feature_names
+
+        # ── Init contrat ─────────────────────────────────────────────────
         contract     = "tabular"
         texts_train  = []; texts_test = []
-        y_train      = None; y_test = None
         dates_train  = None; dates_future = None
         durations    = None; events = None; df_survival = None
-        X_train      = None; X_test = None
-        preprocessor = None; feature_names_out = feature_names
+        
         print(f"[TABULAR] task_type='{task_type}' | features={len(feature_names)} | target='{target_name}'")
-        print(f"          shape={df.shape} | records={len(records)}")
+        print(f"          shape={df.shape}")
+        if X_train is not None:
+            print(f"          X_train={X_train.shape} | X_test={X_test.shape}")
         print(df.head(3))
 
     # ──────────────────────────────────────────────────────────────────────
@@ -2194,15 +2680,41 @@ catalog:
         feature_names = X.columns.tolist(); target_name = "target"
         meta = {"n_samples": N, "synthetic": True, "shape": df.shape, "mode": MODE}
 
+                # ── Split Train/Test ─────────────────────────────────────────────
+        try:
+            from sklearn.model_selection import train_test_split
+            strat = y if (STRATIFY and task_type == "classification" and y is not None) else None
+            if y is not None and task_type != "timeseries":
+                X_train, X_test, y_train, y_test = train_test_split(
+                    X, y, test_size=TEST_SIZE, random_state=RANDOM_STATE, stratify=strat
+                )
+            elif task_type != "timeseries":
+                X_train, X_test = train_test_split(
+                    X, test_size=TEST_SIZE, random_state=RANDOM_STATE
+                )
+                y_train = None; y_test = None
+            else:
+                # Timeseries
+                split_idx = int(len(X) * (1 - TEST_SIZE))
+                X_train, X_test = X.iloc[:split_idx], X.iloc[split_idx:]
+                y_train, y_test = ((y.iloc[:split_idx], y.iloc[split_idx:]) if y is not None else (None, None))
+        except Exception as e:
+            print(f"Split error (fallback to None): {e}")
+            X_train = None; X_test = None; y_train = None; y_test = None
+
+        preprocessor = None
+        feature_names_out = feature_names
+
+        # ── Init contrat ─────────────────────────────────────────────────
         contract     = "tabular"
         texts_train  = []; texts_test = []
-        y_train      = None; y_test = None
         dates_train  = None; dates_future = None
         durations    = None; events = None; df_survival = None
-        X_train      = None; X_test = None
-        preprocessor = None; feature_names_out = feature_names
+        
         print(f"[TABULAR] task_type='{task_type}' | features={len(feature_names)} | target='{target_name}'")
         print(f"          shape={df.shape}")
+        if X_train is not None:
+            print(f"          X_train={X_train.shape} | X_test={X_test.shape}")
         print(df.head(3))
 
     - id: synthetic_timeseries
@@ -2258,69 +2770,41 @@ catalog:
         meta = {"model": MODEL, "n_points": N_POINTS, "freq": FREQ,
                 "horizon": HORIZON, "synthetic": True, "shape": df.shape}
 
-        contract    = "tabular"
-        texts_train = []; texts_test = []
-        durations   = None; events = None; df_survival = None
-        print(f"[TABULAR] task_type='{task_type}' | target='{target_name}'")
-        print(f"          shape={df.shape} | n_train={len(y_train)} | n_test={len(y_test)} | horizon={HORIZON}")
-        print(series.tail(5).to_frame())
+                # ── Split Train/Test ─────────────────────────────────────────────
+        try:
+            from sklearn.model_selection import train_test_split
+            strat = y if (STRATIFY and task_type == "classification" and y is not None) else None
+            if y is not None and task_type != "timeseries":
+                X_train, X_test, y_train, y_test = train_test_split(
+                    X, y, test_size=TEST_SIZE, random_state=RANDOM_STATE, stratify=strat
+                )
+            elif task_type != "timeseries":
+                X_train, X_test = train_test_split(
+                    X, test_size=TEST_SIZE, random_state=RANDOM_STATE
+                )
+                y_train = None; y_test = None
+            else:
+                # Timeseries
+                split_idx = int(len(X) * (1 - TEST_SIZE))
+                X_train, X_test = X.iloc[:split_idx], X.iloc[split_idx:]
+                y_train, y_test = ((y.iloc[:split_idx], y.iloc[split_idx:]) if y is not None else (None, None))
+        except Exception as e:
+            print(f"Split error (fallback to None): {e}")
+            X_train = None; X_test = None; y_train = None; y_test = None
 
-    - id: synthetic_graph
-      contract: tabular
-      name: "Graphes Synthétiques (SBM / BA / WS / ER) → features tabulaires"
-      category: "Synthétique — Graphe"
-      format: "NetworkX / numpy"
-      description: "Génère des graphes synthétiques et extrait des features par noeud."
-      # SBM : P(u-v) = p_intra si même bloc, p_inter sinon
-      # BA  : P(i) ∝ deg(i) — loi de puissance P(k)~k^{-3}
-      # WS  : anneau k-voisins + rewiring p → small-world
-      # ER  : chaque arête avec prob p indépendamment
-      code_template: |
-        import networkx as nx, numpy as np, pandas as pd
+        preprocessor = None
+        feature_names_out = feature_names
 
-        # ── Paramètres ──────────────────────────────────────────────────
-        MODEL   = "SBM (Stochastic Block)"
-        N_NODES = 1000; N_COMM = 4; P_INTRA = 0.3; P_INTER = 0.01; M_BA = 3
-
-        if "SBM" in MODEL:
-            sizes = [N_NODES//N_COMM]*N_COMM; sizes[-1] += N_NODES-sum(sizes)
-            p_mat = [[P_INTRA if i==j else P_INTER for j in range(N_COMM)] for i in range(N_COMM)]
-            G = nx.stochastic_block_model(sizes, p_mat, seed=42)
-            labels_gt = np.array([G.nodes[n]["block"] for n in G.nodes()])
-        elif "BA" in MODEL:
-            G = nx.barabasi_albert_graph(N_NODES, M_BA, seed=42); labels_gt = None
-        elif "WS" in MODEL:
-            G = nx.watts_strogatz_graph(N_NODES, max(4,N_NODES//50), 0.1, seed=42); labels_gt = None
-        else:
-            G = nx.erdos_renyi_graph(N_NODES, 0.05, seed=42); labels_gt = None
-
-        print(f"Graphe : {G.number_of_nodes()} noeuds | Densité : {nx.density(G):.4f}")
-        rows = [{"node_id": n, "degree": dict(G.degree())[n],
-                 "pagerank": nx.pagerank(G,alpha=0.85)[n],
-                 "betweenness": nx.betweenness_centrality(G,normalized=True)[n],
-                 "clustering_coeff": nx.clustering(G)[n]} for n in G.nodes()]
-        df = pd.DataFrame(rows).set_index("node_id")
-        if labels_gt is not None: df["community"] = labels_gt
-
-        if labels_gt is not None:
-            y = df.pop("community"); task_type = "node_classification"
-        else:
-            y = None; task_type = "graph"
-
-        X = df.copy(); feature_names = X.columns.tolist()
-        target_name = "community" if labels_gt is not None else None
-        meta = {"model": MODEL, "n_nodes": G.number_of_nodes(),
-                "n_edges": G.number_of_edges(), "density": nx.density(G), "graph_obj": G}
-
+        # ── Init contrat ─────────────────────────────────────────────────
         contract     = "tabular"
         texts_train  = []; texts_test = []
-        y_train      = None; y_test = None
         dates_train  = None; dates_future = None
         durations    = None; events = None; df_survival = None
-        X_train      = None; X_test = None
-        preprocessor = None; feature_names_out = feature_names
+        
         print(f"[TABULAR] task_type='{task_type}' | features={len(feature_names)} | target='{target_name}'")
         print(f"          shape={df.shape}")
+        if X_train is not None:
+            print(f"          X_train={X_train.shape} | X_test={X_test.shape}")
         print(df.head(3))
 
     - id: survival_dataset
@@ -2360,12 +2844,41 @@ catalog:
         meta = {"duration_col": DURATION_COL, "event_col": EVENT_COL,
                 "censoring_rate": f"{(1-events.mean())*100:.1f}%", "shape": df.shape}
 
+                # ── Split Train/Test ─────────────────────────────────────────────
+        try:
+            from sklearn.model_selection import train_test_split
+            strat = y if (STRATIFY and task_type == "classification" and y is not None) else None
+            if y is not None and task_type != "timeseries":
+                X_train, X_test, y_train, y_test = train_test_split(
+                    X, y, test_size=TEST_SIZE, random_state=RANDOM_STATE, stratify=strat
+                )
+            elif task_type != "timeseries":
+                X_train, X_test = train_test_split(
+                    X, test_size=TEST_SIZE, random_state=RANDOM_STATE
+                )
+                y_train = None; y_test = None
+            else:
+                # Timeseries
+                split_idx = int(len(X) * (1 - TEST_SIZE))
+                X_train, X_test = X.iloc[:split_idx], X.iloc[split_idx:]
+                y_train, y_test = ((y.iloc[:split_idx], y.iloc[split_idx:]) if y is not None else (None, None))
+        except Exception as e:
+            print(f"Split error (fallback to None): {e}")
+            X_train = None; X_test = None; y_train = None; y_test = None
+
+        preprocessor = None
+        feature_names_out = feature_names
+
+        # ── Init contrat ─────────────────────────────────────────────────
         contract     = "tabular"
         texts_train  = []; texts_test = []
-        y_train      = None; y_test = None
         dates_train  = None; dates_future = None
+        durations    = None; events = None; df_survival = None
+        
         print(f"[TABULAR] task_type='{task_type}' | features={len(feature_names)} | target='{target_name}'")
-        print(f"          shape={df.shape} | censoring={meta['censoring_rate']}")
+        print(f"          shape={df.shape}")
+        if X_train is not None:
+            print(f"          X_train={X_train.shape} | X_test={X_test.shape}")
         print(df.head(3))
 
     - id: federated_flower
@@ -2434,15 +2947,41 @@ catalog:
         meta = {"num_clients": NUM_CLIENTS, "num_rounds": NUM_ROUNDS,
                 "global_coef": global_coef, "clients": clients, "shape": df.shape}
 
+                # ── Split Train/Test ─────────────────────────────────────────────
+        try:
+            from sklearn.model_selection import train_test_split
+            strat = y if (STRATIFY and task_type == "classification" and y is not None) else None
+            if y is not None and task_type != "timeseries":
+                X_train, X_test, y_train, y_test = train_test_split(
+                    X, y, test_size=TEST_SIZE, random_state=RANDOM_STATE, stratify=strat
+                )
+            elif task_type != "timeseries":
+                X_train, X_test = train_test_split(
+                    X, test_size=TEST_SIZE, random_state=RANDOM_STATE
+                )
+                y_train = None; y_test = None
+            else:
+                # Timeseries
+                split_idx = int(len(X) * (1 - TEST_SIZE))
+                X_train, X_test = X.iloc[:split_idx], X.iloc[split_idx:]
+                y_train, y_test = ((y.iloc[:split_idx], y.iloc[split_idx:]) if y is not None else (None, None))
+        except Exception as e:
+            print(f"Split error (fallback to None): {e}")
+            X_train = None; X_test = None; y_train = None; y_test = None
+
+        preprocessor = None
+        feature_names_out = feature_names
+
+        # ── Init contrat ─────────────────────────────────────────────────
         contract     = "tabular"
         texts_train  = []; texts_test = []
-        y_train      = None; y_test = None
         dates_train  = None; dates_future = None
         durations    = None; events = None; df_survival = None
-        X_train      = None; X_test = None
-        preprocessor = None; feature_names_out = feature_names
+        
         print(f"[TABULAR] task_type='{task_type}' | features={len(feature_names)} | target='{target_name}'")
-        print(f"          shape={df.shape} | client_id={CLIENT_ID}")
+        print(f"          shape={df.shape}")
+        if X_train is not None:
+            print(f"          X_train={X_train.shape} | X_test={X_test.shape}")
         print(df.head(3))
 
     # ──────────────────────────────────────────────────────────────────────
@@ -2475,15 +3014,41 @@ catalog:
         feature_names = X.columns.tolist(); target_name = TARGET_COL
         meta = {"source": "free_source", "shape": df.shape}
 
+                # ── Split Train/Test ─────────────────────────────────────────────
+        try:
+            from sklearn.model_selection import train_test_split
+            strat = y if (STRATIFY and task_type == "classification" and y is not None) else None
+            if y is not None and task_type != "timeseries":
+                X_train, X_test, y_train, y_test = train_test_split(
+                    X, y, test_size=TEST_SIZE, random_state=RANDOM_STATE, stratify=strat
+                )
+            elif task_type != "timeseries":
+                X_train, X_test = train_test_split(
+                    X, test_size=TEST_SIZE, random_state=RANDOM_STATE
+                )
+                y_train = None; y_test = None
+            else:
+                # Timeseries
+                split_idx = int(len(X) * (1 - TEST_SIZE))
+                X_train, X_test = X.iloc[:split_idx], X.iloc[split_idx:]
+                y_train, y_test = ((y.iloc[:split_idx], y.iloc[split_idx:]) if y is not None else (None, None))
+        except Exception as e:
+            print(f"Split error (fallback to None): {e}")
+            X_train = None; X_test = None; y_train = None; y_test = None
+
+        preprocessor = None
+        feature_names_out = feature_names
+
+        # ── Init contrat ─────────────────────────────────────────────────
         contract     = "tabular"
         texts_train  = []; texts_test = []
-        y_train      = None; y_test = None
         dates_train  = None; dates_future = None
         durations    = None; events = None; df_survival = None
-        X_train      = None; X_test = None
-        preprocessor = None; feature_names_out = feature_names
+        
         print(f"[TABULAR] task_type='{task_type}' | features={len(feature_names)} | target='{target_name}'")
         print(f"          shape={df.shape}")
+        if X_train is not None:
+            print(f"          X_train={X_train.shape} | X_test={X_test.shape}")
         print(df.head(3))
 
 
@@ -3729,15 +4294,41 @@ catalog:
         feature_names=X.columns.tolist(); target_name="label"; task_type="classification"
         meta={"n_files":len(records),"sr":SR,"n_mfcc":N_MFCC,"shape":df.shape}
 
+                # ── Split Train/Test ─────────────────────────────────────────────
+        try:
+            from sklearn.model_selection import train_test_split
+            strat = y if (STRATIFY and task_type == "classification" and y is not None) else None
+            if y is not None and task_type != "timeseries":
+                X_train, X_test, y_train, y_test = train_test_split(
+                    X, y, test_size=TEST_SIZE, random_state=RANDOM_STATE, stratify=strat
+                )
+            elif task_type != "timeseries":
+                X_train, X_test = train_test_split(
+                    X, test_size=TEST_SIZE, random_state=RANDOM_STATE
+                )
+                y_train = None; y_test = None
+            else:
+                # Timeseries
+                split_idx = int(len(X) * (1 - TEST_SIZE))
+                X_train, X_test = X.iloc[:split_idx], X.iloc[split_idx:]
+                y_train, y_test = ((y.iloc[:split_idx], y.iloc[split_idx:]) if y is not None else (None, None))
+        except Exception as e:
+            print(f"Split error (fallback to None): {e}")
+            X_train = None; X_test = None; y_train = None; y_test = None
+
+        preprocessor = None
+        feature_names_out = feature_names
+
+        # ── Init contrat ─────────────────────────────────────────────────
         contract     = "tabular"
         texts_train  = []; texts_test = []
-        y_train      = None; y_test = None
         dates_train  = None; dates_future = None
         durations    = None; events = None; df_survival = None
-        X_train      = None; X_test = None
-        preprocessor = None; feature_names_out = feature_names
+        
         print(f"[TABULAR] task_type='{task_type}' | features={len(feature_names)} | target='{target_name}'")
-        print(f"          shape={df.shape} | files={len(records)}")
+        print(f"          shape={df.shape}")
+        if X_train is not None:
+            print(f"          X_train={X_train.shape} | X_test={X_test.shape}")
         print(df.head(3))
 
     timeseries_deep:
@@ -4093,48 +4684,8 @@ catalog:
 # vision       any                          vision_free_source
 # sequence     any                          sequence_free_source
 # ══════════════════════════════════════════════════════════════════════════
-    # ──────────────────────────────────────────────────────────────────────
-    utilities:
-    # ──────────────────────────────────────────────────────────────────────
 
-    - id: train_test_split_tabular
-      contract: tabular
-      name: "Split Train/Test (Tabulaire)"
-      category: "Utilitaires Data"
-      format: "N/A"
-      description: "Sépare le DataFrame (X et y) en ensembles d'entraînement et de test."
-      use_cases: ["avant feature engineering", "avant Bloc 2", "pour valider un modèle"]
-      pros: ["stratification automatique pour la classification"]
-      cons: ["pas pour les séries temporelles"]
-      code_template: |
-        from sklearn.model_selection import train_test_split
-
-        # ── Paramètres ──────────────────────────────────────────────────
-        TEST_SIZE    = 0.2
-        RANDOM_STATE = 42
-        STRATIFY     = True
-
-        # ── Execution ───────────────────────────────────────────────────
-        strat = y if (STRATIFY and task_type == "classification" and y is not None) else None
-
-        if y is not None:
-            X_train, X_test, y_train, y_test = train_test_split(
-                X, y, test_size=TEST_SIZE, random_state=RANDOM_STATE, stratify=strat
-            )
-        else:
-            X_train, X_test = train_test_split(
-                X, test_size=TEST_SIZE, random_state=RANDOM_STATE
-            )
-            y_train, y_test = None, None
-
-        # preprocessor et feature_names sont propagés
-        preprocessor = locals().get("preprocessor", None)
-        feature_names_out = feature_names
-
-        print(f"Shape X_train : {X_train.shape}")
-        print(f"Shape X_test  : {X_test.shape}")
-
-
+# ══════════════════════════════════════════════════════════════════════════
 # ══════════════════════════════════════════════════════════════════════════
 # SECTION 3 — VALIDATION CONTRATS DE SORTIE (BLOC 1)
 # ══════════════════════════════════════════════════════════════════════════
@@ -4144,41 +4695,41 @@ validator:
     name: "Validateur Contrat Bloc 1"
     description: "Vérifie que les variables obligatoires du Bloc 1 sont bien définies selon le contrat."
     code_template: |
+      import pandas as pd
+      import numpy as np
+
       print("=" * 70)
       print("VALIDATION CONTRAT DE SORTIE — BLOC 1")
       print("=" * 70)
       
       errors = []
       
-      try:
-          print(f"Contract actif : {contract}")
-      except NameError:
+      locs = locals()
+      globs = globals()
+      def get_var(n): return locs.get(n, globs.get(n, None))
+      
+      contract = get_var("contract")
+      
+      if not contract:
           errors.append("Variable 'contract' non définie (choisir 'tabular', 'vision' ou 'sequence').")
-          contract = None
-
-      if contract == "tabular":
-          try:
-              if not isinstance(df, pd.DataFrame): errors.append("'df' doit être un pd.DataFrame")
-              if not isinstance(X, pd.DataFrame): errors.append("'X' doit être un pd.DataFrame")
-              if y is not None and not isinstance(y, pd.Series): errors.append("'y' doit être None ou pd.Series")
-              if not isinstance(feature_names, list): errors.append("'feature_names' doit être une liste de str")
-          except NameError as e:
-              errors.append(f"Variable tabular manquante : {e}")
+      elif contract == "tabular":
+          for name in ["df", "X", "X_train", "X_test", "feature_names", "feature_names_out"]:
+              if get_var(name) is None:
+                  errors.append(f"Variable tabular manquante : {name}")
+          
+          df_tmp = get_var("df")
+          if df_tmp is not None and not isinstance(df_tmp, (pd.DataFrame, np.ndarray)):
+              errors.append("'df' doit être un DataFrame ou ndarray")
               
       elif contract == "vision":
-          try:
-              if not isinstance(images_train, np.ndarray): errors.append("'images_train' doit être un np.ndarray")
-              if not isinstance(images_test, np.ndarray): errors.append("'images_test' doit être un np.ndarray")
-              if labels_train is not None and not isinstance(labels_train, np.ndarray): errors.append("'labels_train' doit être un ndarray")
-          except NameError as e:
-              errors.append(f"Variable vision manquante : {e}")
-
+          for name in ["images_train", "images_test", "img_shape", "n_classes"]:
+              if get_var(name) is None:
+                  errors.append(f"Variable vision manquante : {name}")
+                  
       elif contract == "sequence":
-          try:
-              if not isinstance(sequences_train, np.ndarray) and not isinstance(sequences_train, list): 
-                  errors.append("'sequences_train' doit être un array ou list")
-          except NameError as e:
-              errors.append(f"Variable sequence manquante : {e}")
+          for name in ["sequences_train", "sequences_test", "n_features"]:
+              if get_var(name) is None:
+                  errors.append(f"Variable sequence manquante : {name}")
 
       if not errors:
           print(f"Contrat {contract} validé. Prêt pour le Bloc 2.")
