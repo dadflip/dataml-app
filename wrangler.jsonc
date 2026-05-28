@@ -3,9 +3,5 @@
   "name": "dataml-app",
   "compatibility_date": "2025-09-24",
   "compatibility_flags": ["nodejs_compat"],
-  "main": "./dist/server/server.js",
-  "no_bundle": true,
-  "assets": {
-    "directory": "./dist/client"
-  }
+  "main": "src/server.ts",
 }
