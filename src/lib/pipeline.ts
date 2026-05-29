@@ -350,6 +350,7 @@ export interface NotebookCell {
   name: string;
   section: string;
   code: string;
+  type?: "code" | "markdown";
   params: ParamDef[];
   overrides: Record<string, string>;
   required: string[];
@@ -550,17 +551,21 @@ export function buildNotebookJSON(
       ],
     });
 
-    nbCells.push({
-      cell_type: "code",
-      metadata: {},
-      execution_count: null,
-      outputs: [],
-      source: code
-        .split("\n")
-        .map((l, i, arr) =>
-          i === arr.length - 1 ? l : `${l}\n`
-        ),
-    });
+    if (cell.type === "markdown") {
+      nbCells.push({
+        cell_type: "markdown",
+        metadata: {},
+        source: cell.code.split("\n").map((l, i, arr) => (i === arr.length - 1 ? l : `${l}\n`)),
+      });
+    } else {
+      nbCells.push({
+        cell_type: "code",
+        metadata: {},
+        execution_count: null,
+        outputs: [],
+        source: code.split("\n").map((l, i, arr) => (i === arr.length - 1 ? l : `${l}\n`)),
+      });
+    }
   }
 
   const nb = {
@@ -610,12 +615,18 @@ export function buildPythonScript(
       `# ── ${cell.name} (${cell.section}) ──────────────────────────`
     );
 
-    lines.push(
-      applyParamOverrides(
-        cell.code,
-        cell.overrides
-      ).trimEnd()
-    );
+    if (cell.type === "markdown") {
+      lines.push('"""');
+      lines.push(cell.code.trimEnd());
+      lines.push('"""');
+    } else {
+      lines.push(
+        applyParamOverrides(
+          cell.code,
+          cell.overrides
+        ).trimEnd()
+      );
+    }
   }
 
   return `${lines.join("\n")}\n`;
@@ -672,4 +683,57 @@ export function openInColab(
   );
 
   void dataUrl;
+}
+
+export function parseNotebookJSON(jsonStr: string): NotebookCell[] {
+  let data;
+  try {
+    data = JSON.parse(jsonStr);
+  } catch {
+    throw new Error("Fichier non valide (JSON invalide)");
+  }
+  
+  if (!data || !Array.isArray(data.cells)) {
+    throw new Error("Le fichier ne semble pas être un notebook Jupyter valide.");
+  }
+
+  const cells: NotebookCell[] = [];
+  let cellCount = 1;
+
+  for (const cell of data.cells) {
+    if (!cell.source) continue;
+    let code = Array.isArray(cell.source) ? cell.source.join("") : String(cell.source);
+    
+    // Convert markdown cells to python comments so we can run them
+    let type: "code" | "markdown" = "code";
+    if (cell.cell_type === "markdown") {
+      // Ignore empty markdown cells or pipeline generated headings
+      if (!code.trim()) continue;
+      if (code.startsWith("# ML Pipeline Notebook")) continue;
+      if (code.startsWith("## Bloc ")) continue;
+      if (code.match(/^### Cellule [0-9]+/)) continue;
+      
+      type = "markdown";
+    }
+
+    if (!code.trim()) continue; // Ignore totally empty cells
+
+    cells.push({
+      uid: `import-${Math.random().toString(36).slice(2, 8)}`,
+      blockId: "custom-import",
+      bloc: 99,
+      blocName: "Importé",
+      name: `Cellule ${cellCount++}`,
+      section: "Notebook externe",
+      code,
+      type,
+      params: type === "code" ? extractParams(code) : [],
+      overrides: {},
+      required: [],
+      produced: [],
+      producedMeta: {},
+    });
+  }
+
+  return cells;
 }

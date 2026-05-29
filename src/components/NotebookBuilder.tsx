@@ -1,4 +1,4 @@
-import { useMemo, useState, useEffect, useCallback } from "react";
+import { useMemo, useState, useEffect, useCallback, useRef } from "react";
 import {
   DndContext,
   closestCenter,
@@ -22,12 +22,14 @@ import {
   downloadText,
   extractParams,
   openInColab,
+  parseNotebookJSON,
   validateNotebook,
   type CatalogBlock,
   type NotebookCell,
   type ParsedCatalog,
 } from "@/lib/pipeline";
 import { executeCode, type ExecResult, type KernelConfig } from "@/lib/kernel";
+import ReactMarkdown from "react-markdown";
 
 import { Button } from "@/components/ui/button";
 import { ParamInput } from "@/components/ParamInput";
@@ -37,6 +39,8 @@ import {
   AlertTriangle,
   CheckCircle2,
   ChevronDown,
+  ChevronsUpDown,
+  ChevronsDownUp,
   Download,
   FileCode,
   GripVertical,
@@ -49,6 +53,7 @@ import {
   Square,
   Trash2,
   Eraser,
+  Upload,
 } from "lucide-react";
 import {
   Dialog,
@@ -92,7 +97,7 @@ interface Props {
 }
 
 export function NotebookBuilder({ cells, setCells, catalogs }: Props) {
-  const [openUid, setOpenUid] = useState<string | null>(null);
+  const [openUids, setOpenUids] = useState<Set<string>>(new Set());
   const [kernelCfg, setKernelCfg] = useState<KernelConfig>(() => loadStoredCfg());
   const [kernelId, setKernelId] = useState<string | null>(null);
   const [outputs, setOutputs] = useState<Record<string, ExecResult>>({});
@@ -111,6 +116,27 @@ export function NotebookBuilder({ cells, setCells, catalogs }: Props) {
   useEffect(() => {
     saveStoredCells(cells);
   }, [cells]);
+
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const handleImport = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (evt) => {
+      try {
+        const json = evt.target?.result as string;
+        const imported = parseNotebookJSON(json);
+        if (imported.length > 0) {
+          setCells(cells.length === 0 ? imported : [...cells, ...imported]);
+        }
+      } catch (err) {
+        alert((err as Error).message);
+      }
+    };
+    reader.readAsText(file);
+    e.target.value = ""; // Reset for next time
+  };
 
   const validations = useMemo(() => validateNotebook(cells, catalogs), [cells, catalogs]);
   const blockIndex = useMemo(() => {
@@ -134,7 +160,7 @@ export function NotebookBuilder({ cells, setCells, catalogs }: Props) {
   const clearAll = useCallback(() => {
     setCells([]);
     setOutputs({});
-    setOpenUid(null);
+    setOpenUids(new Set());
   }, [setCells]);
 
   const updateOverride = (uid: string, name: string, value: string) =>
@@ -236,6 +262,28 @@ export function NotebookBuilder({ cells, setCells, catalogs }: Props) {
 
           {/* Right: actions */}
           <div className="flex items-center gap-1 sm:gap-1.5">
+            {cells.length > 0 && (
+              <div className="mr-1 flex items-center gap-1 border-r border-border pr-1 sm:mr-1.5 sm:pr-1.5">
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="h-8 w-8 p-0 text-muted-foreground hover:text-foreground"
+                  onClick={() => setOpenUids(new Set(cells.map((c) => c.uid)))}
+                  title="Tout déplier"
+                >
+                  <ChevronsUpDown className="h-4 w-4" />
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="h-8 w-8 p-0 text-muted-foreground hover:text-foreground"
+                  onClick={() => setOpenUids(new Set())}
+                  title="Tout replier"
+                >
+                  <ChevronsDownUp className="h-4 w-4" />
+                </Button>
+              </div>
+            )}
             <Button
               variant="outline"
               size="sm"
@@ -265,6 +313,22 @@ export function NotebookBuilder({ cells, setCells, catalogs }: Props) {
             >
               <FileCode className="h-3.5 w-3.5" />
               <span className="hidden md:inline">.py</span>
+            </Button>
+            <input
+              type="file"
+              accept=".ipynb"
+              className="hidden"
+              ref={fileInputRef}
+              onChange={handleImport}
+            />
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => fileInputRef.current?.click()}
+              title="Importer un notebook externe"
+            >
+              <Upload className="h-3.5 w-3.5" />
+              <span className="hidden sm:inline">Importer</span>
             </Button>
             <Button
               size="sm"
@@ -316,8 +380,15 @@ export function NotebookBuilder({ cells, setCells, catalogs }: Props) {
                       index={i}
                       validation={validations[i]}
                       blockMeta={blockIndex.get(cell.blockId)}
-                      isOpen={openUid === cell.uid}
-                      onToggle={() => setOpenUid(openUid === cell.uid ? null : cell.uid)}
+                      isOpen={openUids.has(cell.uid)}
+                      onToggle={() => {
+                        setOpenUids((prev) => {
+                          const next = new Set(prev);
+                          if (next.has(cell.uid)) next.delete(cell.uid);
+                          else next.add(cell.uid);
+                          return next;
+                        });
+                      }}
                       onRemove={() => remove(cell.uid)}
                       onOverride={(n, v) => updateOverride(cell.uid, n, v)}
                       onResetOverride={(n) => resetOverride(cell.uid, n)}
@@ -521,10 +592,10 @@ function SortableCell({
 
         <button
           onClick={onRun}
-          disabled={!canRun || isRunning}
+          disabled={!canRun || isRunning || cell.type === "markdown"}
           className="rounded-md p-1 text-muted-foreground enabled:hover:bg-[color:var(--color-success)]/15 enabled:hover:text-[color:var(--color-success)] disabled:opacity-30"
           aria-label="Exécuter"
-          title={canRun ? "Exécuter cette cellule" : "Connectez un kernel"}
+          title={cell.type === "markdown" ? "Cellule markdown" : canRun ? "Exécuter cette cellule" : "Connectez un kernel"}
         >
           {isRunning ? (
             <Square className="h-3.5 w-3.5" />
@@ -591,21 +662,23 @@ function SortableCell({
           )}
 
           {/* Variables I/O */}
-          <div className="grid gap-3 text-xs sm:grid-cols-2">
-            <VarGroup
-              title="Requiert"
-              vars={cell.required}
-              missing={validation.missing}
-              tone="muted"
-            />
-            <ProducedRecap vars={cell.produced} meta={cell.producedMeta} />
-          </div>
+          {cell.type !== "markdown" && (
+            <div className="grid gap-3 text-xs sm:grid-cols-2">
+              <VarGroup
+                title="Requiert"
+                vars={cell.required}
+                missing={validation.missing}
+                tone="muted"
+              />
+              <ProducedRecap vars={cell.produced} meta={cell.producedMeta} />
+            </div>
+          )}
 
-          {/* Code */}
+          {/* Code ou Markdown */}
           <div>
             <div className="mb-2 flex items-center justify-between">
               <h4 className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
-                Code
+                {cell.type === "markdown" ? "Markdown" : "Code"}
               </h4>
               <button
                 onClick={() => setEditing((v) => !v)}
@@ -622,6 +695,41 @@ function SortableCell({
                 className="block w-full resize-y rounded-xl border border-border bg-[oklch(0.1_0.004_260)] p-4 font-mono text-[11px] leading-relaxed text-foreground/95 outline-none focus:border-foreground/30"
                 style={{ minHeight: "20rem", tabSize: 4 }}
               />
+            ) : cell.type === "markdown" ? (
+              <div className="text-[13px] leading-relaxed text-foreground/90">
+                <ReactMarkdown
+                  components={{
+                    h1: ({ node, ...props }) => <h1 className="mt-5 mb-3 text-lg font-bold text-foreground" {...props} />,
+                    h2: ({ node, ...props }) => <h2 className="mt-4 mb-2 text-base font-bold text-foreground" {...props} />,
+                    h3: ({ node, ...props }) => <h3 className="mt-3 mb-2 text-sm font-semibold text-foreground" {...props} />,
+                    p: ({ node, ...props }) => <p className="mb-3 last:mb-0" {...props} />,
+                    ul: ({ node, ...props }) => <ul className="mb-3 list-disc pl-5" {...props} />,
+                    ol: ({ node, ...props }) => <ol className="mb-3 list-decimal pl-5" {...props} />,
+                    li: ({ node, ...props }) => <li className="mb-1" {...props} />,
+                    a: ({ node, ...props }) => <a className="font-medium text-[color:var(--color-primary)] hover:underline" {...props} />,
+                    blockquote: ({ node, ...props }) => (
+                      <blockquote className="my-3 border-l-2 border-primary/50 pl-4 italic text-muted-foreground" {...props} />
+                    ),
+                    code(props) {
+                      const { children, className, node, ...rest } = props;
+                      const match = /language-(\w+)/.exec(className || '');
+                      return match || String(children).includes("\n") ? (
+                        <pre className="my-3 overflow-x-auto rounded-xl border border-border bg-[oklch(0.1_0.004_260)] p-4 font-mono text-[11px] leading-relaxed">
+                          <code className={className} {...rest}>
+                            {children}
+                          </code>
+                        </pre>
+                      ) : (
+                        <code className="rounded-md bg-muted/60 px-1.5 py-0.5 font-mono text-[11px] text-[color:var(--color-primary)]" {...rest}>
+                          {children}
+                        </code>
+                      );
+                    },
+                  }}
+                >
+                  {cell.code}
+                </ReactMarkdown>
+              </div>
             ) : (
               <pre className="max-h-[28rem] overflow-auto rounded-xl border border-border bg-[oklch(0.1_0.004_260)] p-4 font-mono text-[11px] leading-relaxed">
                 <code>{finalCode}</code>
