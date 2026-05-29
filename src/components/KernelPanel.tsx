@@ -55,15 +55,32 @@ export function KernelPanel({ cfg, setCfg, kernelId, setKernelId }: Props) {
   const [status, setStatus] = useState<"off" | "reachable" | "unreachable">("off");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [history, setHistory] = useState<string[]>([]);
 
   useEffect(() => {
     try { window.localStorage.setItem(STORAGE_KEY, JSON.stringify(cfg)); } catch { /* ignore */ }
   }, [cfg]);
 
+  useEffect(() => {
+    try {
+      const raw = window.localStorage.getItem("pipeline-studio:kernel-history");
+      if (raw) setHistory(JSON.parse(raw));
+    } catch { /* ignore */ }
+  }, []);
+
+  const saveHistory = (url: string) => {
+    setHistory((prev) => {
+      const next = [url, ...prev.filter((u) => u !== url)].slice(0, 10);
+      try { window.localStorage.setItem("pipeline-studio:kernel-history", JSON.stringify(next)); } catch {}
+      return next;
+    });
+  };
+
   const test = async () => {
     setBusy(true); setError(null);
     const ok = await pingGateway(cfg);
     setStatus(ok ? "reachable" : "unreachable");
+    if (ok) saveHistory(cfg.baseUrl);
     if (!ok) setError("Gateway injoignable. Vérifiez CORS, URL ou token.");
     setBusy(false);
   };
@@ -72,6 +89,7 @@ export function KernelPanel({ cfg, setCfg, kernelId, setKernelId }: Props) {
     setBusy(true); setError(null);
     try {
       const id = await startKernel(cfg);
+      saveHistory(cfg.baseUrl);
       setKernelId(id); setStatus("reachable");
     } catch (e) {
       setError((e as Error).message); setStatus("unreachable");
@@ -102,9 +120,15 @@ export function KernelPanel({ cfg, setCfg, kernelId, setKernelId }: Props) {
           {kernelId ? `kernel ${kernelId.slice(0, 6)}` : "no kernel"}
         </span>
       </div>
-      <Input value={cfg.baseUrl} onChange={(e) => setCfg({ ...cfg, baseUrl: e.target.value })}
+      <Input 
+        list="kernel-url-history"
+        value={cfg.baseUrl} onChange={(e) => setCfg({ ...cfg, baseUrl: e.target.value })}
         placeholder="http://localhost:8888"
-        className="h-8 min-w-0 flex-1 basis-36 rounded-lg text-xs sm:w-44 sm:flex-none" />
+        className="h-8 min-w-0 flex-1 basis-36 rounded-lg text-xs sm:w-44 sm:flex-none" 
+      />
+      <datalist id="kernel-url-history">
+        {history.map(url => <option key={url} value={url} />)}
+      </datalist>
       <Input value={cfg.token ?? ""} onChange={(e) => setCfg({ ...cfg, token: e.target.value })}
         placeholder="token" className="h-8 min-w-0 w-24 rounded-lg text-xs" />
       <Button size="sm" variant="outline" onClick={test} disabled={busy}>
