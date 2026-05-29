@@ -12,10 +12,9 @@ import {
   pingGateway,
   shutdownKernel,
   startKernel,
-  executeCode,
-  type ExecResult,
   type KernelConfig,
 } from "@/lib/kernel";
+import { KernelConsole } from "./KernelConsole";
 import {
   CircleDot,
   HelpCircle,
@@ -28,9 +27,6 @@ import {
   ShieldAlert,
   Sparkles,
   Trophy,
-  Terminal,
-  AlertTriangle,
-  Send,
 } from "lucide-react";
 
 interface Props {
@@ -548,92 +544,5 @@ function Note({ children, type = "info", className = "" }: {
     >
       {children}
     </div>
-  );
-}
-
-function KernelConsole({ cfg, kernelId }: { cfg: KernelConfig; kernelId: string | null }) {
-  const [cmd, setCmd] = useState("");
-  const [running, setRunning] = useState(false);
-  const [result, setResult] = useState<ExecResult | null>(null);
-
-  const runCmd = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!kernelId || !cmd.trim() || running) return;
-
-    let code = cmd.trim();
-    if (!code.startsWith("!") && !code.startsWith("%") && !code.includes("\n")) {
-      code = `!${code}`;
-    }
-
-    setRunning(true);
-    setResult({ status: "running", stdout: "", stderr: "", displays: [] });
-
-    const { promise } = executeCode(cfg, kernelId, code, (r) => setResult(r));
-    try {
-      await promise;
-    } catch (e) {
-      setResult((prev) => ({
-        ...(prev || { status: "error", stdout: "", stderr: "", displays: [] }),
-        status: "error",
-        stderr: (prev?.stderr || "") + "\n" + (e as Error).message
-      }));
-    } finally {
-      setRunning(false);
-      setCmd("");
-    }
-  };
-
-  return (
-    <Dialog>
-      <DialogTrigger asChild>
-        <Button size="sm" variant="outline" disabled={!kernelId} title="Console (pip install...)">
-          <Terminal className="h-3.5 w-3.5" />
-          <span className="hidden sm:inline">Console</span>
-        </Button>
-      </DialogTrigger>
-      <DialogContent className="max-w-2xl">
-        <DialogHeader>
-          <DialogTitle className="flex items-center gap-2 text-base">
-            <Terminal className="h-4 w-4" /> Console distante
-          </DialogTitle>
-        </DialogHeader>
-        
-        <div className="flex gap-3 rounded-xl p-3 text-xs bg-[color:var(--color-warning)]/10 border border-[color:var(--color-warning)]/30 text-[color:var(--color-warning)]">
-          <AlertTriangle size={16} className="shrink-0 mt-0.5" />
-          <p className="leading-relaxed">
-            <strong>Avertissement de sécurité :</strong> Les commandes sont exécutées directement sur la machine hôte du Kernel distant. Ne lancez que des commandes de confiance (ex: <Mono>pip install pandas</Mono>).
-          </p>
-        </div>
-
-        <div className="flex flex-col gap-2 mt-2">
-          <div className="h-64 rounded-lg bg-black/90 border border-border p-3 overflow-y-auto font-mono text-[11px] text-zinc-300">
-            {result ? (
-              <>
-                <div className="text-zinc-500 mb-2">$ {result.status === "running" ? "Exécution en cours..." : "Terminé"}</div>
-                {result.stdout && <pre className="whitespace-pre-wrap text-green-400">{result.stdout}</pre>}
-                {result.stderr && <pre className="whitespace-pre-wrap text-red-400">{result.stderr}</pre>}
-                {(!result.stdout && !result.stderr && result.status !== "running") && <div className="text-zinc-500 italic">Aucune sortie</div>}
-              </>
-            ) : (
-              <div className="text-zinc-500 italic">Prêt. Tapez une commande (ex: pip install xgboost).</div>
-            )}
-          </div>
-          
-          <form onSubmit={runCmd} className="flex gap-2">
-            <Input 
-              value={cmd}
-              onChange={e => setCmd(e.target.value)}
-              placeholder="pip install scikit-learn..."
-              className="font-mono text-xs flex-1"
-              disabled={running || !kernelId}
-              autoFocus
-            />
-            <Button type="submit" size="sm" disabled={running || !cmd.trim() || !kernelId}>
-              {running ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
-            </Button>
-          </form>
-        </div>
-      </DialogContent>
-    </Dialog>
   );
 }

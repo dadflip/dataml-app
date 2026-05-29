@@ -1,0 +1,331 @@
+export type PackageCategory = 
+  | "Deep Learning"
+  | "Machine Learning"
+  | "Data Manipulation"
+  | "NLP & GenAI"
+  | "Visualisation"
+  | "MLOps & Tracking"
+  | "Utils";
+
+export interface PackageMeta {
+  id: string;
+  name: string;
+  category: PackageCategory;
+  description: string;
+  url: string;
+  command: string;
+  architectures: string[]; // e.g. "Linux", "Windows", "CUDA", "CPU"
+}
+
+export const PACKAGES_CATALOG: PackageMeta[] = [
+  // Deep Learning
+  {
+    id: "torch",
+    name: "PyTorch",
+    category: "Deep Learning",
+    description: "Framework open source incontournable pour le Deep Learning, privilégié pour la recherche.",
+    url: "https://pytorch.org/",
+    command: "pip install torch torchvision torchaudio",
+    architectures: ["CUDA", "CPU", "MPS"],
+  },
+  {
+    id: "tensorflow",
+    name: "TensorFlow",
+    category: "Deep Learning",
+    description: "Plateforme complète pour le ML et Deep Learning développée par Google.",
+    url: "https://www.tensorflow.org/",
+    command: "pip install tensorflow",
+    architectures: ["CUDA", "CPU"],
+  },
+  {
+    id: "jax",
+    name: "JAX",
+    category: "Deep Learning",
+    description: "Autograd et XLA pour du calcul scientifique très haute performance (Google).",
+    url: "https://github.com/google/jax",
+    command: "pip install jax jaxlib",
+    architectures: ["CUDA", "TPU", "CPU"],
+  },
+  {
+    id: "keras",
+    name: "Keras",
+    category: "Deep Learning",
+    description: "API de Deep Learning simple, flexible et puissante (backend multi-framework).",
+    url: "https://keras.io/",
+    command: "pip install keras",
+    architectures: ["Any"],
+  },
+
+  // Machine Learning
+  {
+    id: "scikit-learn",
+    name: "Scikit-Learn",
+    category: "Machine Learning",
+    description: "Outils simples et efficaces pour l'analyse prédictive de données.",
+    url: "https://scikit-learn.org/",
+    command: "pip install scikit-learn",
+    architectures: ["Any"],
+  },
+  {
+    id: "xgboost",
+    name: "XGBoost",
+    category: "Machine Learning",
+    description: "Bibliothèque optimisée d'arbres de gradient boosting (très rapide et performante).",
+    url: "https://xgboost.readthedocs.io/",
+    command: "pip install xgboost",
+    architectures: ["CUDA", "CPU"],
+  },
+  {
+    id: "lightgbm",
+    name: "LightGBM",
+    category: "Machine Learning",
+    description: "Framework de gradient boosting rapide, distribué et performant par Microsoft.",
+    url: "https://lightgbm.readthedocs.io/",
+    command: "pip install lightgbm",
+    architectures: ["CUDA", "CPU"],
+  },
+  {
+    id: "catboost",
+    name: "CatBoost",
+    category: "Machine Learning",
+    description: "Gradient boosting rapide et performant, spécialisé dans les variables catégorielles (Yandex).",
+    url: "https://catboost.ai/",
+    command: "pip install catboost",
+    architectures: ["CUDA", "CPU"],
+  },
+  {
+    id: "statsmodels",
+    name: "Statsmodels",
+    category: "Machine Learning",
+    description: "Modèles statistiques, tests, et exploration de données.",
+    url: "https://www.statsmodels.org/",
+    command: "pip install statsmodels",
+    architectures: ["Any"],
+  },
+
+  // Data Manipulation
+  {
+    id: "pandas",
+    name: "Pandas",
+    category: "Data Manipulation",
+    description: "Analyse et manipulation de données structurelles rapides, flexibles et expressives.",
+    url: "https://pandas.pydata.org/",
+    command: "pip install pandas",
+    architectures: ["Any"],
+  },
+  {
+    id: "numpy",
+    name: "NumPy",
+    category: "Data Manipulation",
+    description: "Calcul scientifique fondamental pour Python (matrices, algèbre linéaire).",
+    url: "https://numpy.org/",
+    command: "pip install numpy",
+    architectures: ["Any"],
+  },
+  {
+    id: "polars",
+    name: "Polars",
+    category: "Data Manipulation",
+    description: "DataFrame ultra-rapide basé sur Apache Arrow, écrit en Rust.",
+    url: "https://pola.rs/",
+    command: "pip install polars",
+    architectures: ["Any"],
+  },
+  {
+    id: "duckdb",
+    name: "DuckDB",
+    category: "Data Manipulation",
+    description: "Système de gestion de base de données SQL analytique en cours de traitement.",
+    url: "https://duckdb.org/",
+    command: "pip install duckdb",
+    architectures: ["Any"],
+  },
+  {
+    id: "dask",
+    name: "Dask",
+    category: "Data Manipulation",
+    description: "Analyse de données parallèle (mise à l'échelle de NumPy, Pandas et Scikit-Learn).",
+    url: "https://dask.org/",
+    command: "pip install dask[complete]",
+    architectures: ["Any"],
+  },
+  {
+    id: "pyarrow",
+    name: "PyArrow",
+    category: "Data Manipulation",
+    description: "Interface Python pour Apache Arrow (format de données en mémoire).",
+    url: "https://arrow.apache.org/docs/python/",
+    command: "pip install pyarrow",
+    architectures: ["Any"],
+  },
+
+  // NLP & GenAI
+  {
+    id: "transformers",
+    name: "Transformers (HF)",
+    category: "NLP & GenAI",
+    description: "Modèles d'apprentissage automatique de pointe (LLM, Vision, Audio) par Hugging Face.",
+    url: "https://huggingface.co/docs/transformers/",
+    command: "pip install transformers",
+    architectures: ["CUDA", "CPU"],
+  },
+  {
+    id: "diffusers",
+    name: "Diffusers (HF)",
+    category: "NLP & GenAI",
+    description: "Génération d'images et audio de pointe (Stable Diffusion) par Hugging Face.",
+    url: "https://huggingface.co/docs/diffusers/",
+    command: "pip install diffusers",
+    architectures: ["CUDA", "CPU"],
+  },
+  {
+    id: "datasets",
+    name: "Datasets (HF)",
+    category: "NLP & GenAI",
+    description: "Accès facile et rapide aux datasets pour l'IA et le ML.",
+    url: "https://huggingface.co/docs/datasets/",
+    command: "pip install datasets",
+    architectures: ["Any"],
+  },
+  {
+    id: "langchain",
+    name: "LangChain",
+    category: "NLP & GenAI",
+    description: "Framework pour développer des applications alimentées par des LLMs.",
+    url: "https://www.langchain.com/",
+    command: "pip install langchain langchain-openai langchain-community",
+    architectures: ["Any"],
+  },
+  {
+    id: "spacy",
+    name: "spaCy",
+    category: "NLP & GenAI",
+    description: "Traitement du langage naturel de niveau industriel (tokenization, NER, parsing).",
+    url: "https://spacy.io/",
+    command: "pip install spacy",
+    architectures: ["Any"],
+  },
+  {
+    id: "nltk",
+    name: "NLTK",
+    category: "NLP & GenAI",
+    description: "Outils de base pour travailler avec des données de langage humain.",
+    url: "https://www.nltk.org/",
+    command: "pip install nltk",
+    architectures: ["Any"],
+  },
+  {
+    id: "openai",
+    name: "OpenAI",
+    category: "NLP & GenAI",
+    description: "Bibliothèque officielle pour accéder aux API d'OpenAI (GPT, DALL-E, etc).",
+    url: "https://github.com/openai/openai-python",
+    command: "pip install openai",
+    architectures: ["Any"],
+  },
+
+  // Visualisation
+  {
+    id: "matplotlib",
+    name: "Matplotlib",
+    category: "Visualisation",
+    description: "Création de visualisations statiques, animées et interactives (fondation).",
+    url: "https://matplotlib.org/",
+    command: "pip install matplotlib",
+    architectures: ["Any"],
+  },
+  {
+    id: "seaborn",
+    name: "Seaborn",
+    category: "Visualisation",
+    description: "Visualisation de données statistiques basée sur Matplotlib (très élégant).",
+    url: "https://seaborn.pydata.org/",
+    command: "pip install seaborn",
+    architectures: ["Any"],
+  },
+  {
+    id: "plotly",
+    name: "Plotly",
+    category: "Visualisation",
+    description: "Graphiques interactifs et de qualité publication.",
+    url: "https://plotly.com/python/",
+    command: "pip install plotly",
+    architectures: ["Any"],
+  },
+  {
+    id: "bokeh",
+    name: "Bokeh",
+    category: "Visualisation",
+    description: "Visualisation interactive pour les navigateurs web modernes.",
+    url: "https://docs.bokeh.org/",
+    command: "pip install bokeh",
+    architectures: ["Any"],
+  },
+
+  // MLOps & Tracking
+  {
+    id: "wandb",
+    name: "Weights & Biases",
+    category: "MLOps & Tracking",
+    description: "L'outil de référence pour suivre et visualiser vos expériences d'entraînement.",
+    url: "https://wandb.ai/",
+    command: "pip install wandb",
+    architectures: ["Any"],
+  },
+  {
+    id: "mlflow",
+    name: "MLflow",
+    category: "MLOps & Tracking",
+    description: "Plateforme open source pour le cycle de vie du Machine Learning.",
+    url: "https://mlflow.org/",
+    command: "pip install mlflow",
+    architectures: ["Any"],
+  },
+  {
+    id: "optuna",
+    name: "Optuna",
+    category: "MLOps & Tracking",
+    description: "Optimisation des hyperparamètres automatique et très efficace.",
+    url: "https://optuna.org/",
+    command: "pip install optuna",
+    architectures: ["Any"],
+  },
+  {
+    id: "ray",
+    name: "Ray",
+    category: "MLOps & Tracking",
+    description: "Mise à l'échelle d'applications IA/ML en cluster.",
+    url: "https://www.ray.io/",
+    command: "pip install 'ray[default]'",
+    architectures: ["Any"],
+  },
+
+  // Utils
+  {
+    id: "jupyter",
+    name: "Jupyter",
+    category: "Utils",
+    description: "L'écosystème classique pour exécuter des notebooks.",
+    url: "https://jupyter.org/",
+    command: "pip install jupyter",
+    architectures: ["Any"],
+  },
+  {
+    id: "tqdm",
+    name: "tqdm",
+    category: "Utils",
+    description: "Barres de progression intelligentes et extensibles.",
+    url: "https://tqdm.github.io/",
+    command: "pip install tqdm",
+    architectures: ["Any"],
+  },
+  {
+    id: "opencv",
+    name: "OpenCV-Python",
+    category: "Utils",
+    description: "Bibliothèque majeure de vision par ordinateur (Computer Vision).",
+    url: "https://pypi.org/project/opencv-python/",
+    command: "pip install opencv-python",
+    architectures: ["CUDA", "CPU"],
+  }
+];
