@@ -201,78 +201,84 @@ export function NotebookBuilder({ cells, setCells, catalogs }: Props) {
 
   return (
     <div className="flex h-full min-h-0 flex-col">
-      <header className="flex shrink-0 flex-col gap-2.5 border-b border-border bg-card/30 px-5 py-3">
-        <div className="flex flex-wrap items-center justify-between gap-3">
-          <div className="flex items-center gap-3">
-            <span className="text-sm font-medium">Notebook</span>
-            <span className="font-mono text-xs text-muted-foreground">
-              {cells.length} {cells.length > 1 ? "cellules" : "cellule"}
+      <header
+        className="flex shrink-0 flex-col gap-3 px-4 sm:px-5 py-3 border-b"
+        style={{ background: "oklch(0.12 0.016 260 / 0.7)", borderColor: "oklch(0.22 0.012 260)" }}
+      >
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          {/* Left: title + status */}
+          <div className="flex items-center gap-2 min-w-0">
+            <span className="text-sm font-bold text-foreground">Notebook</span>
+            <span
+              className="rounded-md px-2 py-0.5 font-mono text-[10px] text-muted-foreground shrink-0"
+              style={{ background: "oklch(0.16 0.014 260)", border: "1px solid oklch(0.22 0.012 260)" }}
+            >
+              {cells.length}
             </span>
             {errorCount > 0 ? (
-              <span className="inline-flex items-center gap-1 rounded-full border border-destructive/40 bg-destructive/10 px-2.5 py-0.5 font-mono text-[10px] text-destructive">
+              <span
+                className="inline-flex items-center gap-1 rounded-md px-2 py-0.5 text-[10px] font-semibold text-destructive shrink-0"
+                style={{ background: "oklch(0.18 0.05 22)", border: "1px solid oklch(0.30 0.08 22)" }}
+              >
                 <AlertTriangle className="h-3 w-3" />
-                {errorCount} I/O
+                <span className="hidden xs:inline">{errorCount} erreur{errorCount > 1 ? "s" : ""}</span>
               </span>
             ) : cells.length > 0 ? (
-              <span className="inline-flex items-center gap-1 rounded-full border border-[color:var(--color-success)]/40 bg-[color:var(--color-success)]/10 px-2.5 py-0.5 font-mono text-[10px] text-[color:var(--color-success)]">
+              <span
+                className="inline-flex items-center gap-1 rounded-md px-2 py-0.5 text-[10px] font-semibold shrink-0"
+                style={{ color: "var(--color-success)", background: "oklch(0.16 0.06 155)", border: "1px solid oklch(0.28 0.1 155)" }}
+              >
                 <CheckCircle2 className="h-3 w-3" />
-                I/O valide
+                <span className="hidden sm:inline">I/O valide</span>
               </span>
             ) : null}
           </div>
-          <div className="flex flex-wrap gap-1.5">
+
+          {/* Right: actions */}
+          <div className="flex items-center gap-1 sm:gap-1.5">
             <Button
               variant="outline"
               size="sm"
-              className="rounded-full"
               disabled={!cells.length || !kernelId || running !== null}
               onClick={runAll}
+              title="Run all"
             >
               <PlayCircle className="h-3.5 w-3.5" />
-              Run all
+              <span className="hidden sm:inline">Run all</span>
             </Button>
             <Button
               variant="outline"
               size="sm"
-              className="rounded-full"
               disabled={!cells.length}
-              onClick={() =>
-                downloadText(
-                  "pipeline.ipynb",
-                  buildNotebookJSON(cells),
-                  "application/x-ipynb+json",
-                )
-              }
+              onClick={() => downloadText("pipeline.ipynb", buildNotebookJSON(cells), "application/x-ipynb+json")}
+              title="Télécharger .ipynb"
             >
               <Download className="h-3.5 w-3.5" />
-              .ipynb
+              <span className="hidden md:inline">.ipynb</span>
             </Button>
             <Button
               variant="outline"
               size="sm"
-              className="rounded-full"
               disabled={!cells.length}
-              onClick={() =>
-                downloadText("pipeline.py", buildPythonScript(cells), "text/x-python")
-              }
+              onClick={() => downloadText("pipeline.py", buildPythonScript(cells), "text/x-python")}
+              title="Télécharger .py"
             >
               <FileCode className="h-3.5 w-3.5" />
-              .py
+              <span className="hidden md:inline">.py</span>
             </Button>
             <Button
               size="sm"
-              className="rounded-full"
               disabled={!cells.length}
               onClick={() => openInColab(buildNotebookJSON(cells))}
+              title="Ouvrir dans Colab"
             >
               <Sparkles className="h-3.5 w-3.5" />
-              Colab
+              <span className="hidden sm:inline">Colab</span>
             </Button>
-
-            {/* ── Clear notebook ── */}
             <ClearNotebookDialog onConfirm={clearAll} disabled={!cells.length} />
           </div>
         </div>
+
         <KernelPanel
           cfg={kernelCfg}
           setCfg={setKernelCfg}
@@ -280,6 +286,8 @@ export function NotebookBuilder({ cells, setCells, catalogs }: Props) {
           setKernelId={setKernelId}
         />
       </header>
+
+
 
       <div className="min-h-0 flex-1 overflow-y-auto">
         <div className="mx-auto max-w-4xl p-5 lg:p-6">

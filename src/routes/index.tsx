@@ -1,201 +1,113 @@
-import { createFileRoute } from "@tanstack/react-router";
-import { useEffect, useState } from "react";
-import { CatalogBrowser } from "@/components/CatalogBrowser";
-import { NotebookBuilder } from "@/components/NotebookBuilder";
-import { IntegrationsPanel } from "@/components/IntegrationsPanel";
-import { useCatalogs } from "@/lib/use-catalogs";
-import { makeCell, type CatalogBlock, type NotebookCell } from "@/lib/pipeline";
-import {
-  loadIntegrationsCatalog,
-  loadIntegrationsState,
-  saveIntegrationsState,
-  syncIntegrationCells,
-  type IntegrationsCatalog,
-  type IntegrationsState,
-} from "@/lib/integrations";
-import { Library, Notebook, Workflow, Github } from "lucide-react";
+import { createFileRoute, Link } from "@tanstack/react-router";
+import { ArrowRight, Workflow } from "lucide-react";
 
 export const Route = createFileRoute("/")({
-  component: Index,
-  head: () => ({
-    meta: [
-      { title: "DataML — Pipeline Studio · Générateur de notebook ML" },
-      {
-        name: "description",
-        content:
-          "DataML — Composez votre pipeline ML à partir de 5 catalogues YAML : datasets, EDA, modèles, évaluation, export.",
-      },
-    ],
-  }),
+  component: LandingPage,
 });
 
-type Tab = "catalog" | "notebook";
-
-function Index() {
-  const { catalogs, loading, error } = useCatalogs();
-  const [cells, setCells] = useState<NotebookCell[]>([]);
-  const [tab, setTab] = useState<Tab>("catalog");
-  const [integrationsCatalog, setIntegrationsCatalog] =
-    useState<IntegrationsCatalog | null>(null);
-  const [integrationsState, setIntegrationsState] = useState<IntegrationsState>(() =>
-    loadIntegrationsState(),
-  );
-
-  // Load integrations YAML once
-  useEffect(() => {
-    loadIntegrationsCatalog()
-      .then((cat) => {
-        setIntegrationsCatalog(cat);
-        // Re-sync cells once the catalog is available so persisted state
-        // produces cells on first paint.
-        setCells((cur) => syncIntegrationCells(cur, cat, integrationsState));
-      })
-      .catch(() => setIntegrationsCatalog({ integrations: [] }));
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
-
-  const addBlock = (b: CatalogBlock) => {
-    setCells((cs) => [...cs, makeCell(b)]);
-    setTab("notebook");
-  };
-
-  const applyIntegrations = (next: IntegrationsState) => {
-    setIntegrationsState(next);
-    saveIntegrationsState(next);
-    setCells((cs) => syncIntegrationCells(cs, integrationsCatalog, next));
-    setTab("notebook");
-  };
-
-  const blockTotal = catalogs?.reduce(
-    (s, c) => s + c.sections.reduce((s2, sec) => s2 + sec.blocks.length, 0),
-    0,
-  );
-
+function LandingPage() {
   return (
-    <div className="flex h-screen flex-col bg-background text-foreground">
-      <header className="relative shrink-0 border-b border-border bg-gradient-to-b from-card/60 to-card/20 backdrop-blur">
-        <div className="pointer-events-none absolute inset-x-0 -bottom-px h-px bg-gradient-to-r from-transparent via-foreground/15 to-transparent" />
-        <div className="flex flex-wrap items-center justify-between gap-3 px-5 py-3">
-          {/* ─── Brand ─── */}
-          <div className="flex items-center gap-3">
-            <div className="relative">
-              <div className="grid h-10 w-10 place-items-center rounded-2xl bg-gradient-to-br from-foreground to-foreground/70 text-background shadow-lg shadow-foreground/10">
-                <Workflow className="h-4 w-4" />
-              </div>
-              <span className="absolute -bottom-0.5 -right-0.5 h-2.5 w-2.5 rounded-full border-2 border-background bg-[color:var(--color-success)]" />
-            </div>
-            <div>
-              <h1 className="flex items-center gap-1.5 text-sm font-semibold leading-tight tracking-tight">
-                DataML
-                <span className="text-muted-foreground/60">—</span>
-                <span className="font-normal text-foreground/80">Pipeline Studio</span>
-              </h1>
-              <p className="mt-0.5 font-mono text-[10px] tracking-wide text-muted-foreground">
-                datasets → eda → model → eval → report
-                {blockTotal !== undefined && (
-                  <span className="ml-2 text-muted-foreground/60">· {blockTotal} blocs</span>
-                )}
-              </p>
-            </div>
-          </div>
+    <div className="relative flex min-h-screen flex-col items-center justify-center overflow-hidden bg-background">
 
-          {/* ─── Tabs ─── */}
-          <nav className="flex items-center gap-1 rounded-full border border-border bg-card/70 p-1 shadow-sm">
-            <TabBtn
-              active={tab === "catalog"}
-              onClick={() => setTab("catalog")}
-              icon={<Library className="h-3.5 w-3.5" />}
-            >
-              Catalogue
-            </TabBtn>
-            <TabBtn
-              active={tab === "notebook"}
-              onClick={() => setTab("notebook")}
-              icon={<Notebook className="h-3.5 w-3.5" />}
-              badge={cells.length}
-            >
-              Notebook
-            </TabBtn>
-          </nav>
+      {/* ── Tech grid ── */}
+      <div
+        className="pointer-events-none absolute inset-0"
+        style={{
+          backgroundImage: `
+            linear-gradient(to right, rgba(59,63,245,0.07) 1px, transparent 1px),
+            linear-gradient(to bottom, rgba(59,63,245,0.07) 1px, transparent 1px)
+          `,
+          backgroundSize: "56px 56px",
+        }}
+      />
 
-          {/* ─── Actions ─── */}
-          <div className="flex items-center gap-1.5">
-            <IntegrationsPanel
-              catalog={integrationsCatalog}
-              state={integrationsState}
-              onApply={applyIntegrations}
-            />
-            <a
-              href="https://github.com/jupyter/kernel_gateway"
-              target="_blank"
-              rel="noreferrer"
-              className="hidden items-center gap-1.5 rounded-full border border-border bg-card/60 px-3 py-1.5 text-xs text-muted-foreground transition hover:text-foreground sm:inline-flex"
-              title="Jupyter Kernel Gateway"
-            >
-              <Github className="h-3.5 w-3.5" />
-              gateway
-            </a>
+      {/* ── Glow centre ── */}
+      <div
+        className="pointer-events-none absolute inset-0"
+        style={{
+          background:
+            "radial-gradient(ellipse 65% 55% at 50% 50%, rgba(59,63,245,0.12) 0%, transparent 100%)",
+        }}
+      />
+
+      {/* ── Top-left large blob ── */}
+      <div
+        className="pointer-events-none absolute -left-64 -top-64 h-[700px] w-[700px] rounded-full blur-[120px] opacity-25"
+        style={{ background: "radial-gradient(circle, #3b3ff5 0%, transparent 70%)" }}
+      />
+      {/* ── Bottom-right blob ── */}
+      <div
+        className="pointer-events-none absolute -bottom-48 -right-48 h-[500px] w-[500px] rounded-full blur-[100px] opacity-15"
+        style={{ background: "radial-gradient(circle, #6366f1 0%, transparent 70%)" }}
+      />
+
+      {/* ── Scanline overlay for depth ── */}
+      <div
+        className="pointer-events-none absolute inset-0 opacity-[0.015]"
+        style={{
+          backgroundImage: "repeating-linear-gradient(0deg, transparent, transparent 2px, #fff 2px, #fff 3px)",
+          backgroundSize: "100% 4px",
+        }}
+      />
+
+      {/* ── Content ── */}
+      <div className="relative z-10 flex flex-col items-center text-center px-6">
+
+        {/* Logo */}
+        <div className="mb-10">
+          <div
+            className="flex h-16 w-16 items-center justify-center rounded-2xl shadow-2xl"
+            style={{
+              background: "linear-gradient(135deg, #3b3ff5 0%, #000091 100%)",
+              boxShadow: "0 0 40px rgba(59,63,245,0.4), 0 8px 32px rgba(0,0,0,0.4)",
+            }}
+          >
+            <Workflow size={30} className="text-white" />
           </div>
         </div>
-      </header>
 
-      {loading && (
-        <div className="grid flex-1 place-items-center text-sm text-muted-foreground">
-          Chargement des catalogues YAML…
-        </div>
-      )}
-      {error && (
-        <div className="grid flex-1 place-items-center text-sm text-destructive">{error}</div>
-      )}
-      {catalogs && (
-        <main className="min-h-0 flex-1 overflow-hidden">
-          {/* Keep BOTH panes mounted so the kernel connection, outputs and
-              in-progress executions survive tab switches. */}
-          <div className={`h-full ${tab === "catalog" ? "block" : "hidden"}`}>
-            <CatalogBrowser catalogs={catalogs} onAdd={addBlock} />
-          </div>
-          <div className={`h-full ${tab === "notebook" ? "block" : "hidden"}`}>
-            <NotebookBuilder cells={cells} setCells={setCells} catalogs={catalogs} />
-          </div>
-        </main>
-      )}
-    </div>
-  );
-}
-
-function TabBtn({
-  active,
-  onClick,
-  icon,
-  children,
-  badge,
-}: {
-  active: boolean;
-  onClick: () => void;
-  icon: React.ReactNode;
-  children: React.ReactNode;
-  badge?: number;
-}) {
-  return (
-    <button
-      onClick={onClick}
-      className={`inline-flex items-center gap-1.5 rounded-full px-3.5 py-1.5 text-xs font-medium transition ${
-        active
-          ? "bg-foreground text-background shadow-sm"
-          : "text-muted-foreground hover:text-foreground"
-      }`}
-    >
-      {icon}
-      {children}
-      {badge !== undefined && badge > 0 && (
-        <span
-          className={`ml-0.5 rounded-full px-1.5 py-0.5 font-mono text-[9px] ${
-            active ? "bg-background/20 text-background" : "bg-muted text-muted-foreground"
-          }`}
+        {/* Title */}
+        <h1
+          className="text-[4.5rem] sm:text-[6rem] md:text-[8rem] font-bold leading-[0.95] tracking-tight text-foreground mb-3"
+          style={{ textShadow: "0 0 80px rgba(59,63,245,0.25)" }}
         >
-          {badge}
-        </span>
-      )}
-    </button>
+          DataML
+        </h1>
+        <p className="text-xl sm:text-2xl font-light text-muted-foreground mb-12 max-w-md">
+          Composez, entraînez,{" "}
+          <span className="text-foreground/70">exportez.</span>
+        </p>
+
+        {/* CTA */}
+        <Link
+          to="/app"
+          className="group inline-flex items-center gap-3 rounded-full px-10 py-4 text-base font-semibold text-white transition-all duration-200 hover:scale-105"
+          style={{
+            background: "linear-gradient(135deg, #3b3ff5 0%, #000091 100%)",
+            boxShadow: "0 0 30px rgba(59,63,245,0.35), 0 4px 20px rgba(0,0,0,0.3)",
+          }}
+        >
+          Démarrer{" "}
+          <ArrowRight size={18} className="transition-transform duration-200 group-hover:translate-x-1" />
+        </Link>
+
+        {/* Hint */}
+        <p className="mt-5 text-xs text-muted-foreground/60">
+          Gratuit · Open source · Aucune installation requise
+        </p>
+      </div>
+
+      {/* ── Bottom pipeline bar ── */}
+      <div className="absolute bottom-8 left-0 right-0 flex justify-center items-center gap-4 text-[11px] font-semibold tracking-widest uppercase text-muted-foreground/40">
+        {["Datasets", "EDA", "Modèles", "Évaluation", "Export"].map((s, i, arr) => (
+          <span key={s} className="flex items-center gap-4">
+            {s}
+            {i < arr.length - 1 && (
+              <span className="h-px w-4 bg-muted-foreground/20 block" />
+            )}
+          </span>
+        ))}
+      </div>
+    </div>
   );
 }

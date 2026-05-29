@@ -7,7 +7,7 @@
 integrations:
   - id: gdrive
     name: Google Drive
-    description: Télécharger des datasets depuis Google Drive (lien public ou compte de service).
+    description: Télécharger un dataset ou dossier depuis Google Drive.
     icon: HardDrive
     docs_url: https://github.com/wkentaro/gdown
     fields:
@@ -18,10 +18,21 @@ integrations:
         options:
           - { value: gdown, label: "Lien public (gdown)" }
           - { value: service_account, label: "Compte de service" }
-      - id: folder_id
-        label: Folder ID par défaut (optionnel)
+      - id: target_id
+        label: File ID / Folder ID à télécharger (requis)
         type: text
         placeholder: "1AbCdEf..."
+      - id: dest_path
+        label: Dossier de destination
+        type: text
+        default: "./data"
+      - id: is_folder
+        label: Est-ce un dossier ?
+        type: select
+        default: "false"
+        options:
+          - { value: "false", label: "Non (Fichier unique)" }
+          - { value: "true", label: "Oui (Dossier complet)" }
       - id: service_account_json
         label: Service Account JSON
         type: textarea
@@ -32,45 +43,64 @@ integrations:
       # ── Intégration : Google Drive ───────────────────────────────
       import os, sys, subprocess
       MODE = {{mode|repr}}
-      GDRIVE_FOLDER_ID = {{folder_id|repr}}
+      TARGET_ID = {{target_id|repr}}
+      DEST_PATH = {{dest_path|repr}}
+      IS_FOLDER = {{is_folder|repr}} == "true"
 
-      if MODE == "gdown":
-          try:
-              import gdown  # noqa
-          except ImportError:
-              subprocess.check_call([sys.executable, "-m", "pip", "install", "-q", "gdown"])
-              import gdown  # noqa
-
-          def gdrive_download(file_id: str, dest: str) -> str:
-              """Télécharge un fichier Drive public via gdown."""
-              import gdown
-              return gdown.download(id=file_id, output=dest, quiet=False)
+      if not TARGET_ID:
+          print("[DataML] ⚠️ Veuillez renseigner le File/Folder ID dans l'intégration Google Drive.")
       else:
-          os.makedirs("/tmp/dataml", exist_ok=True)
-          _SA_PATH = "/tmp/dataml/gdrive_sa.json"
-          with open(_SA_PATH, "w") as _f:
-              _f.write({{service_account_json|repr}})
-          os.environ["GOOGLE_APPLICATION_CREDENTIALS"] = _SA_PATH
+          os.makedirs(DEST_PATH, exist_ok=True)
+          
+          if MODE == "gdown":
+              try:
+                  import gdown  # noqa
+              except ImportError:
+                  subprocess.check_call([sys.executable, "-m", "pip", "install", "-q", "gdown"])
+                  import gdown  # noqa
+              
+              print(f"[DataML] Téléchargement public via gdown de {TARGET_ID}...")
+              if IS_FOLDER:
+                  gdown.download_folder(id=TARGET_ID, output=DEST_PATH, quiet=False, use_cookies=False)
+              else:
+                  gdown.download(id=TARGET_ID, output=os.path.join(DEST_PATH, "dataset_gdrive"), quiet=False)
+          else:
+              _SA_PATH = "/tmp/dataml/gdrive_sa.json"
+              os.makedirs("/tmp/dataml", exist_ok=True)
+              with open(_SA_PATH, "w") as _f:
+                  _f.write({{service_account_json|repr}})
+              os.environ["GOOGLE_APPLICATION_CREDENTIALS"] = _SA_PATH
+              
+              try:
+                  from googleapiclient.discovery import build
+              except ImportError:
+                  subprocess.check_call([sys.executable, "-m", "pip", "install", "-q", "google-api-python-client", "google-auth"])
+                  from googleapiclient.discovery import build
+                  
+              print("[DataML] Service Account configuré. (Téléchargement de dossier non implémenté automatiquement, utilisez gdrive_download)")
 
-          def gdrive_download(file_id: str, dest: str) -> str:
-              """Télécharge un fichier Drive via service account."""
-              from googleapiclient.discovery import build
-              from googleapiclient.http import MediaIoBaseDownload
-              from google.oauth2 import service_account
-              import io
-              creds = service_account.Credentials.from_service_account_file(
-                  _SA_PATH, scopes=["https://www.googleapis.com/auth/drive.readonly"]
-              )
-              svc = build("drive", "v3", credentials=creds)
-              req = svc.files().get_media(fileId=file_id)
-              with io.FileIO(dest, "wb") as fh:
-                  dl = MediaIoBaseDownload(fh, req)
-                  done = False
-                  while not done:
-                      _, done = dl.next_chunk()
-              return dest
+              def gdrive_download(file_id: str, dest: str) -> str:
+                  from googleapiclient.discovery import build
+                  from googleapiclient.http import MediaIoBaseDownload
+                  from google.oauth2 import service_account
+                  import io
+                  creds = service_account.Credentials.from_service_account_file(
+                      _SA_PATH, scopes=["https://www.googleapis.com/auth/drive.readonly"]
+                  )
+                  svc = build("drive", "v3", credentials=creds)
+                  req = svc.files().get_media(fileId=file_id)
+                  with io.FileIO(dest, "wb") as fh:
+                      dl = MediaIoBaseDownload(fh, req)
+                      done = False
+                      while not done:
+                          _, done = dl.next_chunk()
+                  return dest
+              
+              if not IS_FOLDER:
+                  print(f"[DataML] Téléchargement privé de {TARGET_ID}...")
+                  gdrive_download(TARGET_ID, os.path.join(DEST_PATH, "dataset_gdrive"))
 
-      print("[DataML] Google Drive prêt — helper: gdrive_download(file_id, dest)")
+          print("[DataML] Opération Google Drive terminée.")
 
   - id: kaggle
     name: Kaggle Datasets
@@ -87,26 +117,37 @@ integrations:
         type: password
         placeholder: "xxxxxxxxxxxxxxxx"
         hint: Account → Create New API Token (kaggle.json).
+      - id: dataset
+        label: Dataset à télécharger (ex: owner/dataset)
+        type: text
+        placeholder: mlg-ulb/creditcardfraud
+      - id: dest_path
+        label: Dossier de destination
+        type: text
+        default: "./data"
     code_template: |
       # ── Intégration : Kaggle ─────────────────────────────────────
       import os, sys, subprocess
       os.environ["KAGGLE_USERNAME"] = {{username|repr}}
       os.environ["KAGGLE_KEY"]      = {{key|repr}}
+      DATASET = {{dataset|repr}}
+      DEST_PATH = {{dest_path|repr}}
 
       try:
           import kaggle  # noqa
       except Exception:
           subprocess.check_call([sys.executable, "-m", "pip", "install", "-q", "kaggle"])
+          import kaggle  # noqa
 
-      def kaggle_download(dataset: str, path: str = "./data") -> str:
-          """Ex: kaggle_download('owner/dataset-name', './data')."""
-          os.makedirs(path, exist_ok=True)
+      if DATASET:
+          print(f"[DataML] Téléchargement du dataset Kaggle '{DATASET}'...")
+          os.makedirs(DEST_PATH, exist_ok=True)
           subprocess.check_call(
-              ["kaggle", "datasets", "download", "-d", dataset, "-p", path, "--unzip"]
+              ["kaggle", "datasets", "download", "-d", DATASET, "-p", DEST_PATH, "--unzip"]
           )
-          return path
-
-      print("[DataML] Kaggle prêt — helper: kaggle_download('owner/name', './data')")
+          print(f"[DataML] Kaggle: {DATASET} téléchargé dans {DEST_PATH}")
+      else:
+          print("[DataML] Kaggle: Aucun dataset spécifié.")
 
   - id: hf
     name: Hugging Face Hub
@@ -162,13 +203,12 @@ integrations:
           subprocess.check_call([sys.executable, "-m", "pip", "install", "-q", "wandb"])
           import wandb  # noqa
 
-      def wandb_init(**kwargs):
-          """Démarre un run avec entity/project par défaut."""
-          kwargs.setdefault("project", os.environ.get("WANDB_PROJECT") or None)
-          kwargs.setdefault("entity",  os.environ.get("WANDB_ENTITY")  or None)
-          return wandb.init(**{k: v for k, v in kwargs.items() if v})
-
-      print("[DataML] W&B prêt — helper: run = wandb_init(name='exp-01')")
+      wandb.login()
+      if os.environ.get("WANDB_PROJECT"):
+          wandb.init(project=os.environ["WANDB_PROJECT"], entity=os.environ.get("WANDB_ENTITY") or None)
+          print(f"[DataML] W&B initialisé sur le projet: {os.environ['WANDB_PROJECT']}")
+      else:
+          print("[DataML] W&B authentifié. Utilisez wandb.init(project='...') pour démarrer.")
 
   - id: mlflow
     name: MLflow

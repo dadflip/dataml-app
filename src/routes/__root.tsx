@@ -4,11 +4,9 @@ import {
   Link,
   createRootRouteWithContext,
   useRouter,
-  HeadContent,
-  Scripts,
 } from "@tanstack/react-router";
 
-import appCss from "../styles.css?url";
+import "../styles.css";
 
 function NotFoundComponent() {
   return (
@@ -67,51 +65,6 @@ function ErrorComponent({ error, reset }: { error: Error; reset: () => void }) {
   );
 }
 
-export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()({
-  head: () => ({
-    meta: [
-      { charSet: "utf-8" },
-      { name: "viewport", content: "width=device-width, initial-scale=1" },
-      { title: "DataML" },
-      { name: "description", content: "Block Builder Studio creates and manages code notebooks with a visual drag-and-drop interface." },
-      { name: "author", content: "Lovable" },
-      { property: "og:title", content: "DataML" },
-      { property: "og:description", content: "Block Builder Studio creates and manages code notebooks with a visual drag-and-drop interface." },
-      { property: "og:type", content: "website" },
-      { name: "twitter:card", content: "summary" },
-      { name: "twitter:site", content: "@Lovable" },
-      { name: "twitter:title", content: "DataML" },
-      { name: "twitter:description", content: "Block Builder Studio creates and manages code notebooks with a visual drag-and-drop interface." },
-      { property: "og:image", content: "https://storage.googleapis.com/gpt-engineer-file-uploads/RiyYhuD1TVYvdlYqxIVVExgec7z1/social-images/social-1778970528648-splash-icon.webp" },
-      { name: "twitter:image", content: "https://storage.googleapis.com/gpt-engineer-file-uploads/RiyYhuD1TVYvdlYqxIVVExgec7z1/social-images/social-1778970528648-splash-icon.webp" },
-    ],
-    links: [
-      {
-        rel: "stylesheet",
-        href: appCss,
-      },
-    ],
-  }),
-  shellComponent: RootShell,
-  component: RootComponent,
-  notFoundComponent: NotFoundComponent,
-  errorComponent: ErrorComponent,
-});
-
-function RootShell({ children }: { children: React.ReactNode }) {
-  return (
-    <html lang="en">
-      <head>
-        <HeadContent />
-      </head>
-      <body>
-        {children}
-        <Scripts />
-      </body>
-    </html>
-  );
-}
-
 function RootComponent() {
   const { queryClient } = Route.useRouteContext();
 
@@ -121,3 +74,9 @@ function RootComponent() {
     </QueryClientProvider>
   );
 }
+
+export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()({
+  component: RootComponent,
+  notFoundComponent: NotFoundComponent,
+  errorComponent: ErrorComponent,
+});
