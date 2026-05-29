@@ -24,6 +24,8 @@ import {
   Globe,
   Network,
   ShieldAlert,
+  Sparkles,
+  Trophy,
 } from "lucide-react";
 
 interface Props {
@@ -123,13 +125,15 @@ export function KernelPanel({ cfg, setCfg, kernelId, setKernelId }: Props) {
 
 // ─── SetupHelp ────────────────────────────────────────────────────────────────
 
-type Mode = "local" | "lan" | "chromebook" | "remote";
+type Mode = "local" | "lan" | "chromebook" | "remote" | "colab" | "kaggle";
 
 const MODES: { key: Mode; icon: React.ComponentType<{ size?: number }>; label: string }[] = [
   { key: "local",       icon: Monitor, label: "Même machine"  },
   { key: "lan",         icon: Network, label: "Réseau local"  },
   { key: "chromebook",  icon: Globe,   label: "Chromebook"    },
-  { key: "remote",      icon: Globe,   label: "ngrok / Colab" },
+  { key: "remote",      icon: Globe,   label: "ngrok / Serveur" },
+  { key: "colab",       icon: Sparkles,label: "Colab (Gratuit)" },
+  { key: "kaggle",      icon: Trophy,  label: "Kaggle (Gratuit)" },
 ];
 
 function SetupHelp({ origin }: { origin: string }) {
@@ -172,21 +176,21 @@ function SetupHelp({ origin }: { origin: string }) {
 
         {/* ── Mode switcher ── */}
         <div
-          className="grid grid-cols-2 sm:grid-cols-4 gap-1 p-1 rounded-xl mt-1"
+          className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-1 p-1 rounded-xl mt-1"
           style={{ background: "oklch(0.10 0.014 260)", border: "1px solid oklch(0.22 0.012 260)" }}
         >
           {MODES.map(({ key, icon: Icon, label }) => (
             <button
               key={key}
               onClick={() => setMode(key)}
-              className="flex items-center justify-center gap-1.5 rounded-lg px-2 py-2 text-[11px] font-semibold transition-all duration-150"
+              className="flex flex-col items-center justify-center gap-1.5 rounded-lg px-1 py-2 text-[10px] font-semibold transition-all duration-150 text-center"
               style={
                 mode === key
                   ? { background: "linear-gradient(135deg, #3b3ff5, #000091)", color: "#fff", boxShadow: "0 0 10px rgba(59,63,245,0.3)" }
                   : { color: "oklch(0.50 0.015 260)", background: "transparent" }
               }
             >
-              <Icon size={12} />
+              <Icon size={14} />
               {label}
             </button>
           ))}
@@ -194,14 +198,16 @@ function SetupHelp({ origin }: { origin: string }) {
 
         <div className="space-y-4 text-sm mt-2">
 
-          {/* STEP 1 — always shown */}
-          <Step n={1} title="Installer les dépendances">
-            <Code lines={[
-              "pip install jupyter_kernel_gateway notebook ipykernel",
-              "# Libs ML recommandées",
-              "pip install pandas scikit-learn matplotlib seaborn xgboost",
-            ]} />
-          </Step>
+          {/* STEP 1 — always shown (except Colab/Kaggle) */}
+          {!["colab", "kaggle"].includes(mode) && (
+            <Step n={1} title="Installer les dépendances">
+              <Code lines={[
+                "pip install jupyter_kernel_gateway notebook ipykernel",
+                "# Libs ML recommandées",
+                "pip install pandas scikit-learn matplotlib seaborn xgboost",
+              ]} />
+            </Step>
+          )}
 
           {/* STEP 2 — varies by mode */}
           {mode === "local" && (
@@ -316,7 +322,7 @@ function SetupHelp({ origin }: { origin: string }) {
           )}
 
           {mode === "remote" && (
-            <Step n={2} title="Tunnel ngrok (internet / Colab / VM)">
+            <Step n={2} title="Tunnel ngrok (internet / Serveur externe / VM)">
               <p className="mb-2 text-xs text-muted-foreground">ngrok crée un tunnel HTTPS public vers votre gateway local.</p>
               <Code lines={[
                 "# 1. Lancer le gateway",
@@ -335,28 +341,98 @@ function SetupHelp({ origin }: { origin: string }) {
             </Step>
           )}
 
-          {/* STEP 3 — file paths */}
-          <Step n={3} title="Accès aux fichiers">
-            <p className="mb-2 text-xs text-muted-foreground">
-              Le kernel s'exécute <em>sur la machine hôte</em> — les chemins sont ceux de cette machine.
-            </p>
-            <Code lines={[
-              "# Chemin absolu (recommandé)",
-              'FILE_PATH = "/home/moi/data/dataset.csv"       # Linux / macOS',
-              'FILE_PATH = "C:/Users/moi/data/dataset.csv"    # Windows',
-              "",
-              "# Relatif au dossier de lancement du gateway",
-              'FILE_PATH = "data/dataset.csv"',
-            ]} />
-            {mode === "chromebook" && (
-              <Note type="warn">
-                Sur Chromebook, les fichiers sont dans le conteneur Linux. Accédez-y via <Mono>Fichiers → Linux</Mono> depuis Chrome OS, ou via le chemin <Mono>/home/votre_user/</Mono> dans le terminal.
-              </Note>
-            )}
-          </Step>
+          {mode === "colab" && (
+            <Step n={1} title="Créer un Kernel gratuit sur Google Colab (GPU/TPU)">
+              <p className="mb-2 text-xs text-muted-foreground">Colab offre d'excellents GPUs gratuits (T4). Nous utilisons un tunnel Cloudflare pour exposer le kernel en 1 clic, sans compte.</p>
+              
+              <Label>① Ouvrez un nouveau notebook Colab</Label>
+              <Button size="sm" variant="outline" className="mb-4 h-7 text-xs" onClick={() => window.open('https://colab.research.google.com/#create=true', '_blank')}>
+                <Sparkles className="mr-1.5 h-3 w-3" /> Ouvrir Google Colab
+              </Button>
+
+              <Label>② Collez et exécutez ce code Python dans la première cellule</Label>
+              <Code lines={[
+                "!pip install -q jupyter_kernel_gateway",
+                "import subprocess, time",
+                "",
+                "# 1. Lancer le Kernel Gateway",
+                "subprocess.Popen([",
+                "    'jupyter', 'kernelgateway', ",
+                "    '--KernelGatewayApp.ip=0.0.0.0', ",
+                "    '--KernelGatewayApp.port=8888',",
+                "    '--KernelGatewayApp.allow_origin=\"*\"',",
+                "    '--KernelGatewayApp.allow_headers=\"Content-Type,Authorization,X-XSRFToken\"',",
+                "    '--KernelGatewayApp.auth_token=\"dataml\"'",
+                "])",
+                "time.sleep(3)",
+                "",
+                "# 2. Lancer le tunnel Cloudflare",
+                "!wget -q https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-linux-amd64 -O cloudflared",
+                "!chmod +x cloudflared",
+                "!./cloudflared tunnel --url http://localhost:8888"
+              ]} />
+              <Note className="mt-2">Dans les logs affichés, trouvez l'URL <Mono>https://xxxx.trycloudflare.com</Mono>. Copiez-la dans DataML avec le token <Mono>dataml</Mono>.</Note>
+            </Step>
+          )}
+
+          {mode === "kaggle" && (
+            <Step n={1} title="Créer un Kernel gratuit sur Kaggle (GPU/TPU)">
+              <p className="mb-2 text-xs text-muted-foreground">Kaggle offre d'excellents GPUs gratuits (P100, T4x2). Idéal si vous n'avez plus de quota Colab.</p>
+              
+              <Label>① Ouvrez un nouveau notebook Kaggle</Label>
+              <Button size="sm" variant="outline" className="mb-4 h-7 text-xs" onClick={() => window.open('https://www.kaggle.com/code', '_blank')}>
+                <Trophy className="mr-1.5 h-3 w-3" /> Ouvrir Kaggle Notebooks
+              </Button>
+
+              <Label>② Collez et exécutez ce code Python dans la première cellule</Label>
+              <Code lines={[
+                "!pip install -q jupyter_kernel_gateway",
+                "import subprocess, time",
+                "",
+                "# 1. Lancer le Kernel Gateway",
+                "subprocess.Popen([",
+                "    'jupyter', 'kernelgateway', ",
+                "    '--KernelGatewayApp.ip=0.0.0.0', ",
+                "    '--KernelGatewayApp.port=8888',",
+                "    '--KernelGatewayApp.allow_origin=\"*\"',",
+                "    '--KernelGatewayApp.allow_headers=\"Content-Type,Authorization,X-XSRFToken\"',",
+                "    '--KernelGatewayApp.auth_token=\"dataml\"'",
+                "])",
+                "time.sleep(3)",
+                "",
+                "# 2. Lancer le tunnel Cloudflare",
+                "!wget -q https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-linux-amd64 -O cloudflared",
+                "!chmod +x cloudflared",
+                "!./cloudflared tunnel --url http://localhost:8888"
+              ]} />
+              <Note className="mt-2">Activez l'accès Internet dans les paramètres du notebook Kaggle. Récupérez l'URL <Mono>trycloudflare.com</Mono> et mettez <Mono>dataml</Mono> comme token.</Note>
+            </Step>
+          )}
+
+          {/* STEP 3 — file paths (only for non-cloud) */}
+          {!["colab", "kaggle"].includes(mode) && (
+            <Step n={3} title="Accès aux fichiers">
+              <p className="mb-2 text-xs text-muted-foreground">
+                Le kernel s'exécute <em>sur la machine hôte</em> — les chemins sont ceux de cette machine.
+              </p>
+              <Code lines={[
+                "# Chemin absolu (recommandé)",
+                'FILE_PATH = "/home/moi/data/dataset.csv"       # Linux / macOS',
+                'FILE_PATH = "C:/Users/moi/data/dataset.csv"    # Windows',
+                "",
+                "# Relatif au dossier de lancement du gateway",
+                'FILE_PATH = "data/dataset.csv"',
+              ]} />
+              {mode === "chromebook" && (
+                <Note type="warn">
+                  Sur Chromebook, les fichiers sont dans le conteneur Linux. Accédez-y via <Mono>Fichiers → Linux</Mono> depuis Chrome OS, ou via le chemin <Mono>/home/votre_user/</Mono> dans le terminal.
+                </Note>
+              )}
+            </Step>
+          )}
 
           {/* STEP 4 — connect */}
-          <Step n={4} title="Connecter">
+          <Step n={["colab", "kaggle"].includes(mode) ? 2 : 4} title="Connecter">
             <p className="text-xs text-muted-foreground">
               Remplissez les champs URL et token, cliquez <Mono>Test</Mono> pour vérifier l'accessibilité, puis <Mono>Connecter</Mono>. Un bouton <Mono>Run</Mono> apparaît sur chaque cellule du notebook.
             </p>
