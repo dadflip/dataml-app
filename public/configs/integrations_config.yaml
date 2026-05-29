@@ -118,7 +118,7 @@ integrations:
         placeholder: "xxxxxxxxxxxxxxxx"
         hint: Account → Create New API Token (kaggle.json).
       - id: dataset
-        label: Dataset à télécharger (ex: owner/dataset)
+        label: "Dataset à télécharger (ex: owner/dataset)"
         type: text
         placeholder: mlg-ulb/creditcardfraud
       - id: dest_path

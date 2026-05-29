@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -11,7 +11,7 @@ import {
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Terminal, AlertTriangle, Send, Loader2, Search, Download, PackageSearch } from "lucide-react";
 import { executeCode, type ExecResult, type KernelConfig } from "@/lib/kernel";
-import { PACKAGES_CATALOG, type PackageCategory } from "@/lib/packages-catalog";
+import { loadPackagesCatalog, type PackageCategory, type PackageMeta } from "@/lib/packages-catalog";
 
 function Mono({ children }: { children: React.ReactNode }) {
   return (
@@ -31,6 +31,11 @@ export function KernelConsole({ cfg, kernelId }: { cfg: KernelConfig; kernelId: 
   
   const [search, setSearch] = useState("");
   const [activeCategory, setActiveCategory] = useState<PackageCategory | "All">("All");
+  const [catalog, setCatalog] = useState<PackageMeta[]>([]);
+
+  useEffect(() => {
+    loadPackagesCatalog().then(c => setCatalog(c.packages));
+  }, []);
 
   const runCmdStr = async (codeStr: string) => {
     if (!kernelId || !codeStr.trim() || running) return;
@@ -95,13 +100,13 @@ export function KernelConsole({ cfg, kernelId }: { cfg: KernelConfig; kernelId: 
     runCmdStr(pkgCmd);
   };
 
-  const filteredPackages = PACKAGES_CATALOG.filter(p => {
+  const filteredPackages = catalog.filter(p => {
     const matchSearch = p.name.toLowerCase().includes(search.toLowerCase()) || p.description.toLowerCase().includes(search.toLowerCase());
     const matchCat = activeCategory === "All" || p.category === activeCategory;
     return matchSearch && matchCat;
   });
 
-  const categories = ["All", ...Array.from(new Set(PACKAGES_CATALOG.map(p => p.category)))];
+  const categories = ["All", ...Array.from(new Set(catalog.map(p => p.category)))];
 
   return (
     <Dialog>

@@ -46,7 +46,10 @@ function Index() {
         setIntegrationsCatalog(cat);
         setCells((cur) => syncIntegrationCells(cur, cat, integrationsState));
       })
-      .catch(() => setIntegrationsCatalog({ integrations: [] }));
+      .catch((e) => {
+        console.error("Failed to load integrations catalog:", e);
+        setIntegrationsCatalog({ integrations: [] });
+      });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
