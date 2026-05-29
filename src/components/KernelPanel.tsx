@@ -416,7 +416,11 @@ function SetupHelp({ origin }: { origin: string }) {
                 "!chmod +x cloudflared",
                 "!./cloudflared tunnel --url http://localhost:8888"
               ]} />
-              <Note className="mt-2">Dans les logs affichés, trouvez l'URL <Mono>https://xxxx.trycloudflare.com</Mono>. Copiez-la dans DataML avec le token <Mono>dataml</Mono>.</Note>
+              <Note className="mt-2">
+                Dans les logs affichés, trouvez l'URL <Mono>https://xxxx.trycloudflare.com</Mono>. 
+                <strong>Attention : Ne cliquez pas sur le lien !</strong> Copiez-le (Ctrl+C) et collez-le dans DataML avec le token <Mono>dataml</Mono>. 
+                Si vous cliquez dessus, Colab bloquera la page avec l'erreur "Unsafe attempt to load URL...".
+              </Note>
             </Step>
           )}
 

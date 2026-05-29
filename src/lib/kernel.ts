@@ -38,6 +38,7 @@ export interface ExecResult {
 function authHeaders(cfg: KernelConfig): HeadersInit {
   const h: Record<string, string> = {
     "Content-Type": "application/json",
+    "Bypass-Tunnel-Reminder": "true", // Bypasses Cloudflare Quick Tunnels and Localtunnel warning pages
   };
 
   if (cfg.token) {
