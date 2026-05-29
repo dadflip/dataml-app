@@ -38,9 +38,18 @@ export interface ExecResult {
 function authHeaders(cfg: KernelConfig): HeadersInit {
   const h: Record<string, string> = {
     "Content-Type": "application/json",
-    "Bypass-Tunnel-Reminder": "true",
-    "ngrok-skip-browser-warning": "true",
   };
+
+  if (
+    cfg.baseUrl.includes("loca.lt") ||
+    cfg.baseUrl.includes("trycloudflare.com")
+  ) {
+    h["Bypass-Tunnel-Reminder"] = "true";
+  }
+
+  if (cfg.baseUrl.includes("ngrok")) {
+    h["ngrok-skip-browser-warning"] = "true";
+  }
 
   if (cfg.token) {
     h["Authorization"] = `token ${cfg.token}`;
