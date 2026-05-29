@@ -262,7 +262,7 @@ function SetupHelp({ origin }: { origin: string }) {
                 `  --KernelGatewayApp.ip=127.0.0.1 \\`,
                 `  --KernelGatewayApp.port=8888 \\`,
                 `  --KernelGatewayApp.allow_origin='${origin}' \\`,
-                `  --KernelGatewayApp.allow_headers='Content-Type,Authorization,X-XSRFToken' \\`,
+                `  --KernelGatewayApp.allow_headers='Content-Type,Authorization,X-XSRFToken,Bypass-Tunnel-Reminder,ngrok-skip-browser-warning' \\`,
                 `  --KernelGatewayApp.auth_token='monjeton'`,
               ]} />
               <Note>Entrez <Mono>http://localhost:8888</Mono> et le token <Mono>monjeton</Mono> dans les champs ci-dessus.</Note>
@@ -290,7 +290,7 @@ function SetupHelp({ origin }: { origin: string }) {
                 "  --KernelGatewayApp.ip=0.0.0.0 \\",
                 "  --KernelGatewayApp.port=8888 \\",
                 "  --KernelGatewayApp.allow_origin='*' \\",
-                "  --KernelGatewayApp.allow_headers='Content-Type,Authorization,X-XSRFToken' \\",
+                "  --KernelGatewayApp.allow_headers='Content-Type,Authorization,X-XSRFToken,Bypass-Tunnel-Reminder,ngrok-skip-browser-warning' \\",
                 "  --KernelGatewayApp.auth_token='monjeton'",
               ]} />
 
@@ -320,7 +320,7 @@ function SetupHelp({ origin }: { origin: string }) {
                 "  --KernelGatewayApp.ip=0.0.0.0 \\",
                 "  --KernelGatewayApp.port=8888 \\",
                 "  --KernelGatewayApp.allow_origin='*' \\",
-                "  --KernelGatewayApp.allow_headers='Content-Type,Authorization,X-XSRFToken' \\",
+                "  --KernelGatewayApp.allow_headers='Content-Type,Authorization,X-XSRFToken,Bypass-Tunnel-Reminder,ngrok-skip-browser-warning' \\",
                 "  --KernelGatewayApp.auth_token='monjeton'",
               ]} />
 
@@ -375,7 +375,7 @@ function SetupHelp({ origin }: { origin: string }) {
                 "  --KernelGatewayApp.ip=0.0.0.0 \\",
                 "  --KernelGatewayApp.port=8888 \\",
                 "  --KernelGatewayApp.allow_origin='*' \\",
-                "  --KernelGatewayApp.allow_headers='Content-Type,Authorization,X-XSRFToken' \\",
+                "  --KernelGatewayApp.allow_headers='Content-Type,Authorization,X-XSRFToken,Bypass-Tunnel-Reminder,ngrok-skip-browser-warning' \\",
                 "  --KernelGatewayApp.auth_token='monjeton'",
                 "",
                 "# 2. Dans un autre terminal",
@@ -388,7 +388,7 @@ function SetupHelp({ origin }: { origin: string }) {
 
           {mode === "colab" && (
             <Step n={1} title="Créer un Kernel gratuit sur Google Colab (GPU/TPU)">
-              <p className="mb-2 text-xs text-muted-foreground">Colab offre d'excellents GPUs gratuits (T4). Nous utilisons un tunnel Cloudflare pour exposer le kernel en 1 clic, sans compte.</p>
+              <p className="mb-2 text-xs text-muted-foreground">Colab offre d'excellents GPUs gratuits (T4). Nous utilisons un tunnel Localtunnel pour exposer le kernel en 1 clic, sans compte.</p>
               
               <Label>① Ouvrez un nouveau notebook Colab</Label>
               <Button size="sm" variant="outline" className="mb-4 h-7 text-xs" onClick={() => window.open('https://colab.research.google.com/#create=true', '_blank')}>
@@ -406,20 +406,17 @@ function SetupHelp({ origin }: { origin: string }) {
                 "    '--KernelGatewayApp.ip=0.0.0.0', ",
                 "    '--KernelGatewayApp.port=8888',",
                 "    '--KernelGatewayApp.allow_origin=\"*\"',",
-                "    '--KernelGatewayApp.allow_headers=\"Content-Type,Authorization,X-XSRFToken\"',",
+                "    '--KernelGatewayApp.allow_headers=\"Content-Type,Authorization,X-XSRFToken,Bypass-Tunnel-Reminder,ngrok-skip-browser-warning\"',",
                 "    '--KernelGatewayApp.auth_token=\"dataml\"'",
                 "])",
                 "time.sleep(3)",
                 "",
-                "# 2. Lancer le tunnel Cloudflare",
-                "!wget -q https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-linux-amd64 -O cloudflared",
-                "!chmod +x cloudflared",
-                "!./cloudflared tunnel --url http://localhost:8888"
+                "# 2. Lancer le tunnel Localtunnel",
+                "!npx localtunnel --port 8888"
               ]} />
               <Note className="mt-2">
-                Dans les logs affichés, trouvez l'URL <Mono>https://xxxx.trycloudflare.com</Mono>. 
-                <strong>Attention : Ne cliquez pas sur le lien !</strong> Copiez-le (Ctrl+C) et collez-le dans DataML avec le token <Mono>dataml</Mono>. 
-                Si vous cliquez dessus, Colab bloquera la page avec l'erreur "Unsafe attempt to load URL...".
+                Dans les logs affichés, trouvez l'URL <Mono>https://xxxx.loca.lt</Mono>. 
+                Copiez-le et collez-le dans DataML avec le token <Mono>dataml</Mono>. 
               </Note>
             </Step>
           )}
@@ -444,17 +441,17 @@ function SetupHelp({ origin }: { origin: string }) {
                 "    '--KernelGatewayApp.ip=0.0.0.0', ",
                 "    '--KernelGatewayApp.port=8888',",
                 "    '--KernelGatewayApp.allow_origin=\"*\"',",
-                "    '--KernelGatewayApp.allow_headers=\"Content-Type,Authorization,X-XSRFToken\"',",
+                "    '--KernelGatewayApp.allow_headers=\"Content-Type,Authorization,X-XSRFToken,Bypass-Tunnel-Reminder,ngrok-skip-browser-warning\"',",
                 "    '--KernelGatewayApp.auth_token=\"dataml\"'",
                 "])",
                 "time.sleep(3)",
                 "",
-                "# 2. Lancer le tunnel Cloudflare",
-                "!wget -q https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-linux-amd64 -O cloudflared",
-                "!chmod +x cloudflared",
-                "!./cloudflared tunnel --url http://localhost:8888"
+                "# 2. Lancer le tunnel Localtunnel",
+                "!npx localtunnel --port 8888"
               ]} />
-              <Note className="mt-2">Activez l'accès Internet dans les paramètres du notebook Kaggle. Récupérez l'URL <Mono>trycloudflare.com</Mono> et mettez <Mono>dataml</Mono> comme token.</Note>
+              <Note className="mt-2">
+                Activez l'accès Internet dans les paramètres du notebook Kaggle. Récupérez l'URL <Mono>https://xxxx.loca.lt</Mono> et mettez <Mono>dataml</Mono> comme token.
+              </Note>
             </Step>
           )}
 
