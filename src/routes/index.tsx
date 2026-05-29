@@ -68,12 +68,12 @@ function LandingPage() {
 
         {/* Title */}
         <h1
-          className="text-[4.5rem] sm:text-[6rem] md:text-[8rem] font-bold leading-[0.95] tracking-tight text-foreground mb-3"
+          className="mb-3 text-6xl sm:text-8xl md:text-[8rem] font-bold leading-[0.95] tracking-tight text-foreground"
           style={{ textShadow: "0 0 80px rgba(59,63,245,0.25)" }}
         >
           DataML
         </h1>
-        <p className="text-xl sm:text-2xl font-light text-muted-foreground mb-12 max-w-md">
+        <p className="mb-8 sm:mb-12 max-w-md text-lg sm:text-2xl font-light text-muted-foreground">
           Composez, entraînez,{" "}
           <span className="text-foreground/70">exportez.</span>
         </p>
@@ -98,12 +98,12 @@ function LandingPage() {
       </div>
 
       {/* ── Bottom pipeline bar ── */}
-      <div className="absolute bottom-8 left-0 right-0 flex justify-center items-center gap-4 text-[11px] font-semibold tracking-widest uppercase text-muted-foreground/40">
+      <div className="absolute bottom-8 left-0 right-0 flex flex-wrap justify-center items-center gap-x-3 gap-y-2 px-4 text-[9px] sm:text-[11px] font-semibold tracking-widest uppercase text-muted-foreground/40">
         {["Datasets", "EDA", "Modèles", "Évaluation", "Export"].map((s, i, arr) => (
-          <span key={s} className="flex items-center gap-4">
+          <span key={s} className="flex items-center gap-3">
             {s}
             {i < arr.length - 1 && (
-              <span className="h-px w-4 bg-muted-foreground/20 block" />
+              <span className="hidden sm:block h-px w-4 bg-muted-foreground/20" />
             )}
           </span>
         ))}
