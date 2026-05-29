@@ -68,6 +68,26 @@ export async function pingGateway(cfg: KernelConfig): Promise<boolean> {
   }
 }
 
+export interface KernelInfo {
+  id: string;
+  name: string;
+  last_activity: string;
+  execution_state: string;
+  connections: number;
+}
+
+export async function listKernels(cfg: KernelConfig): Promise<KernelInfo[]> {
+  try {
+    const r = await fetch(`${cfg.baseUrl.replace(/\/$/, "")}/api/kernels`, {
+      headers: authHeaders(cfg),
+    });
+    if (!r.ok) return [];
+    return (await r.json()) as KernelInfo[];
+  } catch {
+    return [];
+  }
+}
+
 export async function startKernel(cfg: KernelConfig): Promise<string> {
   const r = await fetch(`${cfg.baseUrl.replace(/\/$/, "")}/api/kernels`, {
     method: "POST",

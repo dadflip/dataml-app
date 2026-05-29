@@ -15,6 +15,7 @@ import {
   type KernelConfig,
 } from "@/lib/kernel";
 import { KernelConsole } from "./KernelConsole";
+import { KernelManager } from "./KernelManager";
 import {
   CircleDot,
   HelpCircle,
@@ -99,6 +100,16 @@ export function KernelPanel({ cfg, setCfg, kernelId, setKernelId }: Props) {
     setKernelId(null); setBusy(false);
   };
 
+  const handleSelectKernel = (id: string) => {
+    if (!id) {
+      disconnect();
+      return;
+    }
+    setKernelId(id);
+    setStatus("connected");
+    setError(null);
+  };
+
   const dot =
     kernelId ? "bg-[color:var(--color-success)]"
     : status === "reachable" ? "bg-[color:var(--color-warning)]"
@@ -146,6 +157,12 @@ export function KernelPanel({ cfg, setCfg, kernelId, setKernelId }: Props) {
         </Button>
       )}
       <SetupHelp origin={typeof window !== "undefined" ? window.location.origin : "https://..."} />
+      <KernelManager 
+        cfg={cfg} 
+        currentKernelId={kernelId} 
+        onSelectKernel={handleSelectKernel}
+        disabled={!cfg.baseUrl} 
+      />
       {error && <span className="w-full font-mono text-[10px] text-destructive">{error}</span>}
     </div>
   );
