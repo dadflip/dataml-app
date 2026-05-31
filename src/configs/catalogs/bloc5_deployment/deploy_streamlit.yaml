@@ -21,70 +21,13 @@ code_template: |
           os.makedirs("outputs/deployment", exist_ok=True)
           
           model_path = "outputs/deployment/model.joblib"
-          joblib.dump(full_pipeline, model_path)
-          deployment_artifacts["model_path"] = model_path
-          
-          streamlit_code = """import streamlit as st
-  import joblib
-  import pandas as pd
-  import numpy as np
-  import json
-  
-  st.set_page_config(page_title="DataML App - Model Explorer", layout="wide")
-  
-  st.title("🚀 DataML App - Interface du Modèle")
-  st.markdown("Interface générée automatiquement pour tester votre modèle.")
-  
-  @st.cache_resource
-  def load_model():
-      return joblib.load('model.joblib')
-      
-  model = load_model()
-  
-  st.sidebar.header("Saisie des Données")
-  st.sidebar.markdown("Entrez un dictionnaire JSON valide représentant vos features :")
-  
-  default_json = '{\\n  "feature_1": 0.0,\\n  "feature_2": 1.0\\n}'
-  user_input = st.sidebar.text_area("Données (JSON)", default_json, height=200)
-  
-  if st.sidebar.button("Prédire"):
-      try:
-          data_dict = json.loads(user_input)
-          df = pd.DataFrame([data_dict])
-          
-          st.subheader("Données d'entrée")
-          st.dataframe(df)
-          
-          with st.spinner('Inférence en cours...'):
-              prediction = model.predict(df)
-              
-          st.success("Prédiction Réussie !")
-          st.metric(label="Résultat Prédit", value=str(prediction[0]))
-          
-          if hasattr(model, 'predict_proba'):
-              proba = model.predict_proba(df)[0]
-              st.subheader("Probabilités")
-              
-              prob_df = pd.DataFrame({
-                  "Classe": [str(c) for c in getattr(model, "classes_", range(len(proba)))],
-                  "Probabilité": proba
-              })
-              st.bar_chart(prob_df.set_index("Classe"))
-              
-      except Exception as e:
-          st.error(f"Erreur lors de la prédiction : {str(e)}")
-  """
-          
-          ui_script_path = "outputs/deployment/app.py"
-          with open(ui_script_path, "w", encoding="utf-8") as f:
-              f.write(streamlit_code)
-              
-          deployment_artifacts["streamlit_script"] = ui_script_path
-          print(f"[DEPLOY] Application Streamlit générée sous {ui_script_path}")
-          print(f"[DEPLOY] Pour lancer : cd outputs/deployment && streamlit run app.py")
-      except Exception as e:
-          print(f"[DEPLOY ERREUR] Streamlit : {str(e)}")
-illustration_svg: <svg viewBox="0 0 600 100" xmlns="http://www.w3.org/2000/svg">  <defs>    <linearGradient id="grad_deploy_streamlit" x1="0%" y1="0%" x2="100%" y2="100%">      <stop offset="0%" stop-color="#0f172a" stop-opacity="1" />      <stop offset="100%" stop-color="#1e293b" stop-opacity="1" />    </linearGradient>    <filter id="glow_deploy_streamlit" x="-20%" y="-20%" width="140%" height="140%">      <feGaussianBlur stdDeviation="4" result="blur" />      <feComposite in="SourceGraphic" in2="blur" operator="over" />    </filter>  </defs>  <rect width="600" height="100" rx="12" fill="url(#grad_deploy_streamlit)" stroke="#ef4444" stroke-width="2" stroke-opacity="0.3"/>  <circle cx="50" cy="50" r="30" fill="#ef4444" opacity="0.15" filter="url(#glow_deploy_streamlit)"/>  <g transform="translate(10, 15) scale(0.7)" fill="none" stroke="#f87171" stroke-width="4" stroke-linecap="round" stroke-linejoin="round">    <path d="M50 20 L80 80 L20 80 Z" />  </g>  <path d="M 120 50 L 550 50" stroke="#ef4444" stroke-width="1" stroke-dasharray="4 8" opacity="0.5"/>  <circle cx="200" cy="50" r="4" fill="#ef4444"/>  <circle cx="350" cy="50" r="4" fill="#ef4444"/>  <circle cx="500" cy="50" r="4" fill="#ef4444"/></svg>
+illustration_mermaid: |
+    graph LR
+      Model((Model)) --> API{{API Endpoint}}
+      API --> Client([Client App])
+      style API fill:#ef4444,stroke:#dc2626,stroke-width:2px,color:#fff
+      style Model fill:#8b5cf6,stroke:#7c3aed,stroke-width:2px,color:#fff
+
 _metadata:
   bloc: 5
   section: "3_ui"

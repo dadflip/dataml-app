@@ -26,33 +26,13 @@ code_template: |
           
           # Sauvegarde locale d'abord
           model_path = "outputs/deployment/model.joblib"
-          joblib.dump(full_pipeline, model_path)
-          
-          # [PARAM: AZURE_CONTAINER_NAME | string]
-          AZURE_CONTAINER_NAME = "ml-models"
-          # [/PARAM]
-          
-          # [PARAM: AZURE_BLOB_NAME | string]
-          AZURE_BLOB_NAME = "latest_model.joblib"
-          # [/PARAM]
-          
-          print(f"[DEPLOY] (Simulation) Azure Blob: Uploading {model_path} to {AZURE_CONTAINER_NAME}/{AZURE_BLOB_NAME}")
-          # Code réel décommenté pour l'upload :
-          # conn_str = os.getenv('AZURE_STORAGE_CONNECTION_STRING')
-          # if conn_str:
-          #     blob_service_client = BlobServiceClient.from_connection_string(conn_str)
-          #     blob_client = blob_service_client.get_blob_client(container=AZURE_CONTAINER_NAME, blob=AZURE_BLOB_NAME)
-          #     with open(model_path, "rb") as data:
-          #         blob_client.upload_blob(data, overwrite=True)
-          
-          deployment_artifacts["local_model_path"] = model_path
-          deployment_artifacts["azure_uri"] = f"azure://{AZURE_CONTAINER_NAME}/{AZURE_BLOB_NAME}"
-          print(f"[DEPLOY] Upload simulé réussi vers Azure.")
-      except Exception as e:
-          print(f"[DEPLOY ERREUR] Azure : {str(e)}")
-  elif BlobServiceClient is None:
-      print("[DEPLOY ERREUR] Le package 'azure-storage-blob' n'est pas installé.")
-illustration_svg: <svg viewBox="0 0 600 100" xmlns="http://www.w3.org/2000/svg">  <defs>    <linearGradient id="grad_deploy_azure_blob" x1="0%" y1="0%" x2="100%" y2="100%">      <stop offset="0%" stop-color="#0f172a" stop-opacity="1" />      <stop offset="100%" stop-color="#1e293b" stop-opacity="1" />    </linearGradient>    <filter id="glow_deploy_azure_blob" x="-20%" y="-20%" width="140%" height="140%">      <feGaussianBlur stdDeviation="4" result="blur" />      <feComposite in="SourceGraphic" in2="blur" operator="over" />    </filter>  </defs>  <rect width="600" height="100" rx="12" fill="url(#grad_deploy_azure_blob)" stroke="#ef4444" stroke-width="2" stroke-opacity="0.3"/>  <circle cx="50" cy="50" r="30" fill="#ef4444" opacity="0.15" filter="url(#glow_deploy_azure_blob)"/>  <g transform="translate(10, 15) scale(0.7)" fill="none" stroke="#f87171" stroke-width="4" stroke-linecap="round" stroke-linejoin="round">    <path d="M50 20 L80 80 L20 80 Z" />  </g>  <path d="M 120 50 L 550 50" stroke="#ef4444" stroke-width="1" stroke-dasharray="4 8" opacity="0.5"/>  <circle cx="200" cy="50" r="4" fill="#ef4444"/>  <circle cx="350" cy="50" r="4" fill="#ef4444"/>  <circle cx="500" cy="50" r="4" fill="#ef4444"/></svg>
+illustration_mermaid: |
+    graph LR
+      Model((Model)) --> API{{API Endpoint}}
+      API --> Client([Client App])
+      style API fill:#ef4444,stroke:#dc2626,stroke-width:2px,color:#fff
+      style Model fill:#8b5cf6,stroke:#7c3aed,stroke-width:2px,color:#fff
+
 _metadata:
   bloc: 5
   section: "5_cloud"

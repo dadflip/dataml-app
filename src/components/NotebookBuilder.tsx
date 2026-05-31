@@ -1,5 +1,6 @@
 import { useMemo, useState, useEffect, useCallback, useRef } from "react";
 import { CodeBlock } from "@/components/ui/CodeBlock";
+import { MermaidRenderer } from "@/components/MermaidRenderer";
 import Editor from "@monaco-editor/react";
 import {
   DndContext,
@@ -685,12 +686,9 @@ function SortableCell({
       {isOpen && (
         <div className="space-y-4 border-t border-border px-4 py-4">
 
-          {/* SVG Illustration Banner */}
-          {blockMeta?.illustration_svg && (
-            <div 
-              className="w-full flex justify-center mb-4 transition-opacity hover:opacity-100"
-              dangerouslySetInnerHTML={{ __html: blockMeta.illustration_svg }}
-            />
+          {/* Mermaid Illustration Banner */}
+          {blockMeta?.illustration_mermaid && (
+            <MermaidRenderer chart={blockMeta.illustration_mermaid} />
           )}
 
           {/* Block info (description, use cases, hyperparams, …) */}

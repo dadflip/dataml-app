@@ -24,87 +24,12 @@ code_template: |
   if task_type not in ("classification", "binary", "multiclass"):
       print("[EVAL] Matrice de confusion heatmap: classification uniquement.")
       evaluation_metrics["status"] = "skipped"
-      evaluation_metrics["reason"] = "task_type is not classification"
-  else:
-      try:
-          import seaborn as sns
-          from sklearn.metrics import confusion_matrix
+illustration_mermaid: |
+    graph LR
+      Pred([Predictions]) --> Metric{Evaluation}
+      Actual([Ground Truth]) --> Metric
+      style Metric fill:#f59e0b,stroke:#d97706,stroke-width:2px,color:#fff
 
-          y_true = np.array(y_test)
-          y_p = np.array(y_pred)
-
-          labels = np.unique(np.concatenate([y_true, y_p]))
-          labels.sort()
-          cm = confusion_matrix(y_true, y_p, labels=labels)
-
-          # Compute percentages
-          cm_pct = cm.astype(float) / cm.sum() * 100
-
-          # Create annotation strings with count + percentage
-          n_classes = len(labels)
-          annot = np.empty_like(cm, dtype=object)
-          for i in range(n_classes):
-              for j in range(n_classes):
-                  annot[i, j] = f"{cm[i, j]}\n({cm_pct[i, j]:.1f}%)"
-
-          # Dynamic figure size
-          fig_size = max(6, n_classes * 0.8)
-          fig, ax = plt.subplots(figsize=(fig_size, fig_size))
-
-          sns.heatmap(
-              cm,
-              annot=annot,
-              fmt="",
-              cmap="Blues",
-              xticklabels=labels,
-              yticklabels=labels,
-              square=True,
-              linewidths=0.5,
-              cbar_kws={"shrink": 0.7},
-              ax=ax
-          )
-          ax.set_xlabel("Classe Predite")
-          ax.set_ylabel("Classe Reelle")
-          ax.set_title("Matrice de Confusion (Heatmap)")
-
-          # Rotate labels if many classes
-          if n_classes > 5:
-              ax.set_xticklabels(ax.get_xticklabels(), rotation=45, ha="right")
-              ax.set_yticklabels(ax.get_yticklabels(), rotation=0)
-
-          plt.tight_layout()
-
-          fig_path = "confusion_heatmap.png"
-          fig.savefig(fig_path, dpi=150, bbox_inches="tight")
-          plt.close(fig)
-          print(f"[EVAL] Figure sauvegardee: {fig_path}")
-
-          # Per-class accuracy
-          per_class_acc = {}
-          for i, label in enumerate(labels):
-              total = cm[i, :].sum()
-              correct = cm[i, i]
-              acc = correct / total if total > 0 else 0.0
-              per_class_acc[str(label)] = float(round(acc, 4))
-
-          total_accuracy = float(round(np.trace(cm) / cm.sum(), 6))
-
-          evaluation_metrics["status"] = "success"
-          evaluation_metrics["figure_path"] = fig_path
-          evaluation_metrics["n_classes"] = int(n_classes)
-          evaluation_metrics["total_accuracy"] = total_accuracy
-          evaluation_metrics["per_class_accuracy"] = per_class_acc
-          print(f"[EVAL] {n_classes} classes, accuracy globale: {total_accuracy:.4f}")
-
-      except ImportError:
-          print("[EVAL] seaborn non installe. pip install seaborn")
-          evaluation_metrics["status"] = "skipped"
-          evaluation_metrics["reason"] = "seaborn not installed"
-      except Exception as e:
-          print(f"[EVAL] Erreur matrice de confusion heatmap: {e}")
-          evaluation_metrics["status"] = "error"
-          evaluation_metrics["error"] = str(e)
-illustration_svg: <svg viewBox="0 0 600 100" xmlns="http://www.w3.org/2000/svg">  <defs>    <linearGradient id="grad_eval_multiclass_confusion_heatmap" x1="0%" y1="0%" x2="100%" y2="100%">      <stop offset="0%" stop-color="#0f172a" stop-opacity="1" />      <stop offset="100%" stop-color="#1e293b" stop-opacity="1" />    </linearGradient>    <filter id="glow_eval_multiclass_confusion_heatmap" x="-20%" y="-20%" width="140%" height="140%">      <feGaussianBlur stdDeviation="4" result="blur" />      <feComposite in="SourceGraphic" in2="blur" operator="over" />    </filter>  </defs>  <rect width="600" height="100" rx="12" fill="url(#grad_eval_multiclass_confusion_heatmap)" stroke="#f59e0b" stroke-width="2" stroke-opacity="0.3"/>  <circle cx="50" cy="50" r="30" fill="#f59e0b" opacity="0.15" filter="url(#glow_eval_multiclass_confusion_heatmap)"/>  <g transform="translate(10, 15) scale(0.7)" fill="none" stroke="#fbbf24" stroke-width="4" stroke-linecap="round" stroke-linejoin="round">    <path d="M20 70 L50 30 L80 60 L120 20" />  </g>  <path d="M 120 50 L 550 50" stroke="#f59e0b" stroke-width="1" stroke-dasharray="4 8" opacity="0.5"/>  <circle cx="200" cy="50" r="4" fill="#f59e0b"/>  <circle cx="350" cy="50" r="4" fill="#f59e0b"/>  <circle cx="500" cy="50" r="4" fill="#f59e0b"/></svg>
 _metadata:
   bloc: 4
   section: "1_evaluation"

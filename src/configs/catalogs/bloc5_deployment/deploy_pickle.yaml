@@ -21,15 +21,13 @@ code_template: |
           os.makedirs("outputs/deployment", exist_ok=True)
           
           model_path = "outputs/deployment/model.pkl"
-          with open(model_path, "wb") as f:
-              pickle.dump(full_pipeline, f)
-          
-          deployment_artifacts["model_path"] = model_path
-          deployment_artifacts["format"] = "pickle"
-          print(f"[DEPLOY] Modèle sauvegardé avec succès sous {model_path}")
-      except Exception as e:
-          print(f"[DEPLOY ERREUR] Sauvegarde Pickle : {str(e)}")
-illustration_svg: <svg viewBox="0 0 600 100" xmlns="http://www.w3.org/2000/svg">  <defs>    <linearGradient id="grad_deploy_pickle" x1="0%" y1="0%" x2="100%" y2="100%">      <stop offset="0%" stop-color="#0f172a" stop-opacity="1" />      <stop offset="100%" stop-color="#1e293b" stop-opacity="1" />    </linearGradient>    <filter id="glow_deploy_pickle" x="-20%" y="-20%" width="140%" height="140%">      <feGaussianBlur stdDeviation="4" result="blur" />      <feComposite in="SourceGraphic" in2="blur" operator="over" />    </filter>  </defs>  <rect width="600" height="100" rx="12" fill="url(#grad_deploy_pickle)" stroke="#ef4444" stroke-width="2" stroke-opacity="0.3"/>  <circle cx="50" cy="50" r="30" fill="#ef4444" opacity="0.15" filter="url(#glow_deploy_pickle)"/>  <g transform="translate(10, 15) scale(0.7)" fill="none" stroke="#f87171" stroke-width="4" stroke-linecap="round" stroke-linejoin="round">    <path d="M50 20 L80 80 L20 80 Z" />  </g>  <path d="M 120 50 L 550 50" stroke="#ef4444" stroke-width="1" stroke-dasharray="4 8" opacity="0.5"/>  <circle cx="200" cy="50" r="4" fill="#ef4444"/>  <circle cx="350" cy="50" r="4" fill="#ef4444"/>  <circle cx="500" cy="50" r="4" fill="#ef4444"/></svg>
+illustration_mermaid: |
+    graph LR
+      Model((Model)) --> API{{API Endpoint}}
+      API --> Client([Client App])
+      style API fill:#ef4444,stroke:#dc2626,stroke-width:2px,color:#fff
+      style Model fill:#8b5cf6,stroke:#7c3aed,stroke-width:2px,color:#fff
+
 _metadata:
   bloc: 5
   section: "1_serialization"

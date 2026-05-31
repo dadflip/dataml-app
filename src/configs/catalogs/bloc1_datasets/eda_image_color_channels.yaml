@@ -19,11 +19,6 @@ code_template: "import matplotlib.pyplot as plt\nimport torch\nimport torchvisio
   \            \n        plt.tight_layout()\n        plt.show()\n    else:\n     \
   \   print(\"[EDA] L'image n'est pas RGB (3 canaux).\")\nelse:\n    print(\"[EDA]\
   \ Dataset non trouvé ou vide.\")\n"
-illustration_svg: <svg viewBox="0 0 600 100" xmlns="http://www.w3.org/2000/svg">  <defs>    <linearGradient id="grad_eda_image_color_channels" x1="0%" y1="0%" x2="100%" y2="100%">      <stop offset="0%" stop-color="#0f172a" stop-opacity="1" />      <stop offset="100%" stop-color="#1e293b" stop-opacity="1" />    </linearGradient>    <filter id="glow_eda_image_color_channels" x="-20%" y="-20%" width="140%" height="140%">      <feGaussianBlur stdDeviation="4" result="blur" />      <feComposite in="SourceGraphic" in2="blur" operator="over" />    </filter>  </defs>  <rect width="600" height="100" rx="12" fill="url(#grad_eda_image_color_channels)" stroke="#64748b" stroke-width="2" stroke-opacity="0.3"/>  <circle cx="50" cy="50" r="30" fill="#64748b" opacity="0.15" filter="url(#glow_eda_image_color_channels)"/>  <g transform="translate(10, 15) scale(0.7)" fill="none" stroke="#94a3b8" stroke-width="4" stroke-linecap="round" stroke-linejoin="round">    <path d="M20 50 L100 50 M60 20 L60 80" />  </g>  <path d="M 120 50 L 550 50" stroke="#64748b" stroke-width="1" stroke-dasharray="4 8" opacity="0.5"/>  <circle cx="200" cy="50" r="4" fill="#64748b"/>  <circle cx="350" cy="50" r="4" fill="#64748b"/>  <circle cx="500" cy="50" r="4" fill="#64748b"/></svg>
-  width="400" height="200" fill="#0f172a"/><circle cx="170" cy="90" r="40" fill="#ef4444"
-  style="mix-blend-mode: screen;"/><circle cx="230" cy="90" r="40" fill="#22c55e"
-  style="mix-blend-mode: screen;"/><circle cx="200" cy="130" r="40" fill="#3b82f6"
-  style="mix-blend-mode: screen;"/></svg>'
 _metadata:
   bloc: 1
   section: 3_eda

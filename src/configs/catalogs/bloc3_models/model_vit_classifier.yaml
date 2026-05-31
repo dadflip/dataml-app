@@ -38,60 +38,12 @@ code_template: |
       y_tr_enc = np.array([label2id[y] for y in y_train])
       
       model_name = "google/vit-base-patch16-224-in21k"
-      feature_extractor = ViTFeatureExtractor.from_pretrained(model_name)
-      model_hf = ViTForImageClassification.from_pretrained(model_name, num_labels=len(classes), id2label=id2label, label2id=label2id)
-      
-      train_ds = Dataset.from_dict({'image': X_tr_list, 'label': y_tr_enc})
-      test_ds = Dataset.from_dict({'image': X_te_list})
-      
-      def preprocess_images(examples):
-          # Les images doivent être au format PIL ou Tensor (C, H, W)
-          # On laisse l'extracteur s'en charger
-          return feature_extractor(images=examples['image'], return_tensors="pt")
-          
-      train_ds = train_ds.with_transform(preprocess_images)
-      test_ds = test_ds.with_transform(preprocess_images)
-      
-      training_args = TrainingArguments(
-          output_dir="./results_vit",
-          num_train_epochs=int(EPOCHS),
-          learning_rate=2e-5,
-          per_device_train_batch_size=8,
-          remove_unused_columns=False,
-          evaluation_strategy="no",
-          save_strategy="no"
-      )
-      
-      trainer = Trainer(
-          model=model_hf,
-          args=training_args,
-          train_dataset=train_ds
-      )
-      
-      print("Début de l'entraînement ViT...")
-      trainer.train()
-      
-      predictions = trainer.predict(test_ds)
-      y_pred_idx = np.argmax(predictions.predictions, axis=1)
-      y_pred = np.array([id2label[i] for i in y_pred_idx])
-      
-      y_proba = torch.nn.functional.softmax(torch.tensor(predictions.predictions), dim=-1).numpy()
-      feature_importances = None
-      model = trainer
-      
-      if 'preprocessor' in locals() and preprocessor is not None:
-          try: from imblearn.pipeline import Pipeline
-          except: from sklearn.pipeline import Pipeline
-          full_pipeline = Pipeline(steps=preprocessor.steps + [('model', model)])
-      else:
-          full_pipeline = model
-          
-      training_history = {"status": "success", "type": "hf_vit_finetuned"}
-      task_type = "classification"
-      print("[MODEL] ViT entraîné avec succès.")
-  else:
-      print("[ERREUR] Données ou packages introuvables. Les images doivent être gérées par HuggingFace Datasets.")
-illustration_svg: <svg viewBox="0 0 600 100" xmlns="http://www.w3.org/2000/svg">  <defs>    <linearGradient id="grad_model_vit_classifier" x1="0%" y1="0%" x2="100%" y2="100%">      <stop offset="0%" stop-color="#0f172a" stop-opacity="1" />      <stop offset="100%" stop-color="#1e293b" stop-opacity="1" />    </linearGradient>    <filter id="glow_model_vit_classifier" x="-20%" y="-20%" width="140%" height="140%">      <feGaussianBlur stdDeviation="4" result="blur" />      <feComposite in="SourceGraphic" in2="blur" operator="over" />    </filter>  </defs>  <rect width="600" height="100" rx="12" fill="url(#grad_model_vit_classifier)" stroke="#10b981" stroke-width="2" stroke-opacity="0.3"/>  <circle cx="50" cy="50" r="30" fill="#10b981" opacity="0.15" filter="url(#glow_model_vit_classifier)"/>  <g transform="translate(10, 15) scale(0.7)" fill="none" stroke="#34d399" stroke-width="4" stroke-linecap="round" stroke-linejoin="round">    <path d="M20 50 Q50 20 80 50 T140 50" />  </g>  <path d="M 120 50 L 550 50" stroke="#10b981" stroke-width="1" stroke-dasharray="4 8" opacity="0.5"/>  <circle cx="200" cy="50" r="4" fill="#10b981"/>  <circle cx="350" cy="50" r="4" fill="#10b981"/>  <circle cx="500" cy="50" r="4" fill="#10b981"/></svg>
+illustration_mermaid: |
+    graph LR
+      In([Raw Data]) -->|Process| Out([Clean Data])
+      style In fill:#eff6ff,stroke:#94a3b8,stroke-width:2px,stroke-dasharray: 5 5
+      style Out fill:#10b981,stroke:#059669,stroke-width:2px,color:#fff
+
 _metadata:
   bloc: 3
   section: "4_vision_and_audio"

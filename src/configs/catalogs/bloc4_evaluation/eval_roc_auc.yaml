@@ -23,54 +23,12 @@ code_template: |
       print("[EVAL][WARN] y_proba est None, impossible de calculer le ROC AUC.")
       evaluation_metrics["roc_auc"] = None
       evaluation_metrics["warning"] = "y_proba non disponible, ROC AUC non calculable."
-  else:
-      try:
-          unique_classes = np.unique(y_test)
-          n_classes = len(unique_classes)
+illustration_mermaid: |
+    graph LR
+      Pred([Predictions]) --> Metric{Evaluation}
+      Actual([Ground Truth]) --> Metric
+      style Metric fill:#f59e0b,stroke:#d97706,stroke-width:2px,color:#fff
 
-          if n_classes == 2:
-              if y_proba.ndim == 2 and y_proba.shape[1] == 2:
-                  proba_positive = y_proba[:, 1]
-              elif y_proba.ndim == 1:
-                  proba_positive = y_proba
-              else:
-                  proba_positive = y_proba[:, 1]
-
-              auc_val = roc_auc_score(y_test, proba_positive)
-              evaluation_metrics["roc_auc"] = float(np.round(auc_val, 6))
-              print(f"[EVAL] ROC AUC (binary) : {auc_val:.4f}")
-
-          else:
-              for strategy in ["ovr", "ovo"]:
-                  try:
-                      auc_val = roc_auc_score(
-                          y_test, y_proba,
-                          multi_class=strategy,
-                          average="weighted"
-                      )
-                      evaluation_metrics[f"roc_auc_{strategy}_weighted"] = float(np.round(auc_val, 6))
-                      print(f"[EVAL] ROC AUC ({strategy}, weighted) : {auc_val:.4f}")
-                  except Exception as e_mc:
-                      print(f"[EVAL][WARN] ROC AUC {strategy} echoue : {e_mc}")
-                      evaluation_metrics[f"roc_auc_{strategy}_weighted"] = None
-
-              try:
-                  auc_macro = roc_auc_score(
-                      y_test, y_proba,
-                      multi_class="ovr",
-                      average="macro"
-                  )
-                  evaluation_metrics["roc_auc_ovr_macro"] = float(np.round(auc_macro, 6))
-                  print(f"[EVAL] ROC AUC (ovr, macro) : {auc_macro:.4f}")
-              except Exception:
-                  pass
-
-          evaluation_metrics["n_classes"] = int(n_classes)
-
-      except Exception as e:
-          print(f"[EVAL][ERREUR] Echec du calcul du ROC AUC : {e}")
-          evaluation_metrics["error"] = str(e)
-illustration_svg: <svg viewBox="0 0 600 100" xmlns="http://www.w3.org/2000/svg">  <defs>    <linearGradient id="grad_eval_roc_auc" x1="0%" y1="0%" x2="100%" y2="100%">      <stop offset="0%" stop-color="#0f172a" stop-opacity="1" />      <stop offset="100%" stop-color="#1e293b" stop-opacity="1" />    </linearGradient>    <filter id="glow_eval_roc_auc" x="-20%" y="-20%" width="140%" height="140%">      <feGaussianBlur stdDeviation="4" result="blur" />      <feComposite in="SourceGraphic" in2="blur" operator="over" />    </filter>  </defs>  <rect width="600" height="100" rx="12" fill="url(#grad_eval_roc_auc)" stroke="#f59e0b" stroke-width="2" stroke-opacity="0.3"/>  <circle cx="50" cy="50" r="30" fill="#f59e0b" opacity="0.15" filter="url(#glow_eval_roc_auc)"/>  <g transform="translate(10, 15) scale(0.7)" fill="none" stroke="#fbbf24" stroke-width="4" stroke-linecap="round" stroke-linejoin="round">    <path d="M20 70 L50 30 L80 60 L120 20" />  </g>  <path d="M 120 50 L 550 50" stroke="#f59e0b" stroke-width="1" stroke-dasharray="4 8" opacity="0.5"/>  <circle cx="200" cy="50" r="4" fill="#f59e0b"/>  <circle cx="350" cy="50" r="4" fill="#f59e0b"/>  <circle cx="500" cy="50" r="4" fill="#f59e0b"/></svg>
 _metadata:
   bloc: 4
   section: "1_evaluation"

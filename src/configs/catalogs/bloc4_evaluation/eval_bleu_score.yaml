@@ -27,126 +27,14 @@ code_template: |
       if len(y_ref) != len(y_hyp):
           print(f"[EVAL] BLEU: longueurs differentes: {len(y_ref)} refs vs {len(y_hyp)} hyps")
           evaluation_metrics["status"] = "error"
-          evaluation_metrics["reason"] = f"Length mismatch: {len(y_ref)} vs {len(y_hyp)}"
-      elif len(y_ref) == 0:
-          print("[EVAL] BLEU: aucune donnee.")
-          evaluation_metrics["status"] = "skipped"
-          evaluation_metrics["reason"] = "empty data"
-      else:
-          # Tokenize if strings
-          def tokenize(text):
-              if isinstance(text, str):
-                  return text.lower().split()
-              return list(text)
+illustration_mermaid: |
+    graph LR
+      Data([Features]) --> Model((Machine Learning))
+      Model --> Pred([Predictions])
+      style Model fill:#8b5cf6,stroke:#7c3aed,stroke-width:2px,color:#fff
+      style Data fill:#f8fafc,stroke:#94a3b8,stroke-width:1px
+      style Pred fill:#f8fafc,stroke:#94a3b8,stroke-width:1px
 
-          # BLEU n-gram precision (clipped)
-          def ngrams(tokens, n):
-              return [tuple(tokens[i:i+n]) for i in range(len(tokens)-n+1)]
-
-          def modified_precision(references_tokens, hypothesis_tokens, n):
-              hyp_ngrams = ngrams(hypothesis_tokens, n)
-              if len(hyp_ngrams) == 0:
-                  return 0.0, 0
-              hyp_counts = Counter(hyp_ngrams)
-              ref_counts = Counter(ngrams(references_tokens, n))
-              clipped = {ng: min(count, ref_counts.get(ng, 0)) for ng, count in hyp_counts.items()}
-              return sum(clipped.values()), len(hyp_ngrams)
-
-          def brevity_penalty(ref_len, hyp_len):
-              if hyp_len == 0:
-                  return 0.0
-              ratio = ref_len / hyp_len
-              if ratio <= 1.0:
-                  return 1.0
-              return np.exp(1 - ratio)
-
-          # Try nltk first
-          use_nltk = False
-          try:
-              from nltk.translate.bleu_score import corpus_bleu, sentence_bleu, SmoothingFunction
-              use_nltk = True
-              print("[EVAL] Utilisation de nltk pour le calcul BLEU.")
-          except ImportError:
-              print("[EVAL] nltk non disponible, utilisation de l'implementation interne.")
-
-          if use_nltk:
-              smoother = SmoothingFunction().method1
-              refs_tokenized = [[tokenize(r)] for r in y_ref]
-              hyps_tokenized = [tokenize(h) for h in y_hyp]
-
-              corpus_score = corpus_bleu(refs_tokenized, hyps_tokenized, smoothing_function=smoother)
-
-              # Per-sample scores (sample up to 500 for performance)
-              sample_scores = []
-              sample_indices = range(min(500, len(y_ref)))
-              for i in sample_indices:
-                  s = sentence_bleu(refs_tokenized[i], hyps_tokenized[i], smoothing_function=smoother)
-                  sample_scores.append(s)
-          else:
-              # Manual BLEU-4 computation
-              max_n = 4
-              total_clipped = [0] * max_n
-              total_count = [0] * max_n
-              total_ref_len = 0
-              total_hyp_len = 0
-              sample_scores = []
-
-              for ref_text, hyp_text in zip(y_ref, y_hyp):
-                  ref_tokens = tokenize(ref_text)
-                  hyp_tokens = tokenize(hyp_text)
-                  total_ref_len += len(ref_tokens)
-                  total_hyp_len += len(hyp_tokens)
-
-                  sentence_precisions = []
-                  for n in range(1, max_n + 1):
-                      clipped, count = modified_precision(ref_tokens, hyp_tokens, n)
-                      total_clipped[n-1] += clipped
-                      total_count[n-1] += count
-                      if count > 0:
-                          sentence_precisions.append(clipped / count)
-                      else:
-                          sentence_precisions.append(0.0)
-
-                  # Sentence-level BLEU
-                  bp = brevity_penalty(len(ref_tokens), len(hyp_tokens))
-                  log_avg = 0.0
-                  valid = True
-                  for p in sentence_precisions:
-                      if p == 0:
-                          valid = False
-                          break
-                      log_avg += np.log(p) / max_n
-                  s_bleu = bp * np.exp(log_avg) if valid else 0.0
-                  sample_scores.append(s_bleu)
-
-              # Corpus-level BLEU
-              bp_corpus = brevity_penalty(total_ref_len, total_hyp_len)
-              log_avg_corpus = 0.0
-              valid_corpus = True
-              for n in range(max_n):
-                  if total_count[n] == 0 or total_clipped[n] == 0:
-                      valid_corpus = False
-                      break
-                  log_avg_corpus += np.log(total_clipped[n] / total_count[n]) / max_n
-              corpus_score = bp_corpus * np.exp(log_avg_corpus) if valid_corpus else 0.0
-
-          avg_sentence_score = float(np.mean(sample_scores)) if sample_scores else 0.0
-
-          print(f"[EVAL] BLEU corpus: {corpus_score:.4f}")
-          print(f"[EVAL] BLEU sentence moyen: {avg_sentence_score:.4f}")
-
-          evaluation_metrics["status"] = "success"
-          evaluation_metrics["bleu_corpus"] = float(round(corpus_score, 6))
-          evaluation_metrics["bleu_sentence_mean"] = float(round(avg_sentence_score, 6))
-          evaluation_metrics["bleu_sentence_std"] = float(round(np.std(sample_scores), 6)) if sample_scores else 0.0
-          evaluation_metrics["n_samples"] = len(y_ref)
-          evaluation_metrics["backend"] = "nltk" if use_nltk else "internal"
-
-  except Exception as e:
-      print(f"[EVAL] Erreur calcul BLEU: {e}")
-      evaluation_metrics["status"] = "error"
-      evaluation_metrics["error"] = str(e)
-illustration_svg: <svg viewBox="0 0 600 100" xmlns="http://www.w3.org/2000/svg">  <defs>    <linearGradient id="grad_eval_bleu_score" x1="0%" y1="0%" x2="100%" y2="100%">      <stop offset="0%" stop-color="#0f172a" stop-opacity="1" />      <stop offset="100%" stop-color="#1e293b" stop-opacity="1" />    </linearGradient>    <filter id="glow_eval_bleu_score" x="-20%" y="-20%" width="140%" height="140%">      <feGaussianBlur stdDeviation="4" result="blur" />      <feComposite in="SourceGraphic" in2="blur" operator="over" />    </filter>  </defs>  <rect width="600" height="100" rx="12" fill="url(#grad_eval_bleu_score)" stroke="#8b5cf6" stroke-width="2" stroke-opacity="0.3"/>  <circle cx="50" cy="50" r="30" fill="#8b5cf6" opacity="0.15" filter="url(#glow_eval_bleu_score)"/>  <g transform="translate(10, 15) scale(0.7)" fill="none" stroke="#a78bfa" stroke-width="4" stroke-linecap="round" stroke-linejoin="round">    <path d="M20 70 L40 30 L60 70 M30 50 L50 50 M80 30 v40 M100 30 v40" />  </g>  <path d="M 120 50 L 550 50" stroke="#8b5cf6" stroke-width="1" stroke-dasharray="4 8" opacity="0.5"/>  <circle cx="200" cy="50" r="4" fill="#8b5cf6"/>  <circle cx="350" cy="50" r="4" fill="#8b5cf6"/>  <circle cx="500" cy="50" r="4" fill="#8b5cf6"/></svg>
 _metadata:
   bloc: 4
   section: "1_evaluation"

@@ -16,46 +16,12 @@ code_template: |
 
   # [PARAM: DATASET_NAME | string]
   DATASET_NAME = "Cora"
-  # [/PARAM]
+illustration_mermaid: |
+    graph LR
+      Source[(Source)] -->|Load| Node([Extract Data])
+      style Source fill:#3b82f6,stroke:#2563eb,stroke-width:2px,color:#fff
+      style Node fill:#eff6ff,stroke:#3b82f6,stroke-width:2px
 
-  # [PARAM: ROOT_DIR | string]
-  ROOT_DIR = "./data/raw/graphs"
-  # [/PARAM]
-
-  print(f"[LOAD] Chargement du Graphe {DATASET_NAME} depuis {ROOT_DIR}...")
-
-  try:
-      start_time = time.time()
-      if Planetoid is not None:
-          # On charge le dataset depuis le disque (déjà extrait logiquement)
-          dataset = Planetoid(root=ROOT_DIR, name=DATASET_NAME, transform=T.NormalizeFeatures())
-          data = dataset[0]
-          
-          # 1. df = Node Features + Target
-          # On convertit les tenseurs x et y en DataFrame pour garder l'aspect tabulaire standard de DataML
-          df = pd.DataFrame(data.x.numpy())
-          df['target_node_class'] = data.y.numpy()
-          
-          # 2. meta = Structure du graphe
-          # Le contrat exige meta: "dict". On y glisse l'edge_index pour les GNN (Bloc 3)
-          edge_idx = data.edge_index.numpy()
-          
-          duration = time.time() - start_time
-          print(f"[LOAD] Succès. {data.num_nodes} nœuds, {data.num_edges} arêtes chargées en {duration:.2f}s.")
-          
-          target_name = "target_node_class"
-          task_type = "node_classification"
-          meta = {"format": "graph", "shape": df.shape, "edge_index": edge_idx}
-      else:
-          df = None
-          target_name = None
-          task_type = "unknown"
-          meta = {}
-  except Exception as e:
-      print(f"[ERREUR LOAD] Échec du chargement du graphe : {str(e)}")
-      raise e
-
-illustration_svg: <svg viewBox="0 0 600 100" xmlns="http://www.w3.org/2000/svg">  <defs>    <linearGradient id="grad_load_pytorch_geometric" x1="0%" y1="0%" x2="100%" y2="100%">      <stop offset="0%" stop-color="#0f172a" stop-opacity="1" />      <stop offset="100%" stop-color="#1e293b" stop-opacity="1" />    </linearGradient>    <filter id="glow_load_pytorch_geometric" x="-20%" y="-20%" width="140%" height="140%">      <feGaussianBlur stdDeviation="4" result="blur" />      <feComposite in="SourceGraphic" in2="blur" operator="over" />    </filter>  </defs>  <rect width="600" height="100" rx="12" fill="url(#grad_load_pytorch_geometric)" stroke="#3b82f6" stroke-width="2" stroke-opacity="0.3"/>  <circle cx="50" cy="50" r="30" fill="#3b82f6" opacity="0.15" filter="url(#glow_load_pytorch_geometric)"/>  <g transform="translate(10, 15) scale(0.7)" fill="none" stroke="#60a5fa" stroke-width="4" stroke-linecap="round" stroke-linejoin="round">    <path d="M10 30 L50 70 L90 30" />  </g>  <path d="M 120 50 L 550 50" stroke="#3b82f6" stroke-width="1" stroke-dasharray="4 8" opacity="0.5"/>  <circle cx="200" cy="50" r="4" fill="#3b82f6"/>  <circle cx="350" cy="50" r="4" fill="#3b82f6"/>  <circle cx="500" cy="50" r="4" fill="#3b82f6"/></svg>
 _metadata:
   bloc: 1
   section: "2_load"

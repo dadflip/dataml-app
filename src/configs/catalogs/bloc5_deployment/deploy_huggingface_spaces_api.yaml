@@ -19,66 +19,13 @@ code_template: |
       print("[DEPLOY] Préparation pour Hugging Face Spaces (Docker)...")
       
       deploy_dir = "./hf_spaces_api"
-      os.makedirs(deploy_dir, exist_ok=True)
-      
-      # Sauvegarde du modèle
-      model_path = os.path.join(deploy_dir, "model.pkl")
-      joblib.dump(full_pipeline, model_path)
-      
-      # app.py
-      app_code = """
-  from fastapi import FastAPI, Request
-  import joblib
-  import pandas as pd
-  
-  app = FastAPI(title="Hugging Face Spaces API")
-  model = joblib.load('model.pkl')
-  
-  @app.get("/")
-  def read_root():
-      return {"status": "L'API est en ligne sur HF Spaces ! Envoyez des requêtes POST sur /predict"}
-  
-  @app.post("/predict")
-  async def predict(request: Request):
-      data = await request.json()
-      df = pd.DataFrame([data])
-      prediction = model.predict(df).tolist()
-      return {"prediction": prediction}
-  """
-      with open(os.path.join(deploy_dir, "app.py"), "w") as f:
-          f.write(app_code.strip())
-          
-      # requirements.txt
-      with open(os.path.join(deploy_dir, "requirements.txt"), "w") as f:
-          f.write("fastapi\nuvicorn\npandas\nscikit-learn\njoblib\n")
-          
-      # Dockerfile spécial HF Spaces (User 1000)
-      dockerfile = """
-  FROM python:3.9-slim
-  
-  RUN useradd -m -u 1000 user
-  USER user
-  ENV PATH="/home/user/.local/bin:$PATH"
-  
-  WORKDIR /app
-  
-  COPY --chown=user requirements.txt .
-  RUN pip install --no-cache-dir -r requirements.txt
-  
-  COPY --chown=user . .
-  
-  EXPOSE 7860
-  CMD ["uvicorn", "app:app", "--host", "0.0.0.0", "--port", "7860"]
-  """
-      with open(os.path.join(deploy_dir, "Dockerfile"), "w") as f:
-          f.write(dockerfile.strip())
-          
-      print(f"[DEPLOY] Fichiers générés dans '{deploy_dir}'.")
-      print("[DEPLOY] Créez un 'Docker Space' sur Hugging Face et uploadez ces fichiers.")
-  else:
-      print("[ERREUR] 'full_pipeline' non défini.")
+illustration_mermaid: |
+    graph LR
+      Model((Model)) --> API{{API Endpoint}}
+      API --> Client([Client App])
+      style API fill:#ef4444,stroke:#dc2626,stroke-width:2px,color:#fff
+      style Model fill:#8b5cf6,stroke:#7c3aed,stroke-width:2px,color:#fff
 
-illustration_svg: <svg viewBox="0 0 600 100" xmlns="http://www.w3.org/2000/svg">  <defs>    <linearGradient id="grad_deploy_huggingface_spaces_api" x1="0%" y1="0%" x2="100%" y2="100%">      <stop offset="0%" stop-color="#0f172a" stop-opacity="1" />      <stop offset="100%" stop-color="#1e293b" stop-opacity="1" />    </linearGradient>    <filter id="glow_deploy_huggingface_spaces_api" x="-20%" y="-20%" width="140%" height="140%">      <feGaussianBlur stdDeviation="4" result="blur" />      <feComposite in="SourceGraphic" in2="blur" operator="over" />    </filter>  </defs>  <rect width="600" height="100" rx="12" fill="url(#grad_deploy_huggingface_spaces_api)" stroke="#ef4444" stroke-width="2" stroke-opacity="0.3"/>  <circle cx="50" cy="50" r="30" fill="#ef4444" opacity="0.15" filter="url(#glow_deploy_huggingface_spaces_api)"/>  <g transform="translate(10, 15) scale(0.7)" fill="none" stroke="#f87171" stroke-width="4" stroke-linecap="round" stroke-linejoin="round">    <path d="M50 20 L80 80 L20 80 Z" />  </g>  <path d="M 120 50 L 550 50" stroke="#ef4444" stroke-width="1" stroke-dasharray="4 8" opacity="0.5"/>  <circle cx="200" cy="50" r="4" fill="#ef4444"/>  <circle cx="350" cy="50" r="4" fill="#ef4444"/>  <circle cx="500" cy="50" r="4" fill="#ef4444"/></svg>
 _metadata:
   bloc: 5
   section: "5_cloud"

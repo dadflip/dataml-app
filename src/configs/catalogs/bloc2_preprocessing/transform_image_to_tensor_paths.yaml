@@ -24,48 +24,12 @@ code_template: |
       
   # [PARAM: IMG_PATH_COL | string]
   IMG_PATH_COL = "image_path"
-  # [/PARAM]
+illustration_mermaid: |
+    graph LR
+      In([Raw Data]) -->|Process| Out([Clean Data])
+      style In fill:#eff6ff,stroke:#94a3b8,stroke-width:2px,stroke-dasharray: 5 5
+      style Out fill:#10b981,stroke:#059669,stroke-width:2px,color:#fff
 
-  # [PARAM: RESIZE | number]
-  RESIZE = 224
-  # [/PARAM]
-
-  print(f"[TRANSFORM] Conversion des chemins d'images en tenseurs PyTorch...")
-  if 'df' in locals() and T is not None:
-      if 'pipeline_steps' not in locals(): pipeline_steps = {}
-      
-      if IMG_PATH_COL in df.columns:
-          def load_and_transform(X):
-              X_df = pd.DataFrame(X) if not isinstance(X, pd.DataFrame) else X.copy()
-              tf = T.Compose([
-                  T.Resize((int(RESIZE), int(RESIZE))),
-                  T.ToTensor(), 
-                  T.Normalize([0.485, 0.456, 0.406], [0.229, 0.224, 0.225])
-              ])
-              
-              def process_path(path):
-                  try:
-                      img = Image.open(path).convert('RGB')
-                      return tf(img).numpy() # Convert to numpy for DataFrame storage temporarily
-                  except Exception:
-                      # Fallback dummy tensor
-                      return np.zeros((3, int(RESIZE), int(RESIZE)), dtype=np.float32)
-                      
-              X_df[IMG_PATH_COL] = X_df[IMG_PATH_COL].apply(process_path)
-              return X_df
-
-          transformer = FunctionTransformer(load_and_transform)
-          
-          step_name = 'image_paths_to_tensor'
-          pipeline_steps[step_name] = (step_name, transformer)
-          
-          df = transformer.transform(df)
-          print(f"[TRANSFORM] Tenseurs PyTorch {RESIZE}x{RESIZE} générés depuis les chemins.")
-      else:
-          print(f"[ERREUR] Colonne '{IMG_PATH_COL}' introuvable.")
-  else:
-      print("[ERREUR] 'df' ou torchvision introuvable.")
-illustration_svg: <svg viewBox="0 0 600 100" xmlns="http://www.w3.org/2000/svg">  <defs>    <linearGradient id="grad_transform_image_to_tensor_paths" x1="0%" y1="0%" x2="100%" y2="100%">      <stop offset="0%" stop-color="#0f172a" stop-opacity="1" />      <stop offset="100%" stop-color="#1e293b" stop-opacity="1" />    </linearGradient>    <filter id="glow_transform_image_to_tensor_paths" x="-20%" y="-20%" width="140%" height="140%">      <feGaussianBlur stdDeviation="4" result="blur" />      <feComposite in="SourceGraphic" in2="blur" operator="over" />    </filter>  </defs>  <rect width="600" height="100" rx="12" fill="url(#grad_transform_image_to_tensor_paths)" stroke="#10b981" stroke-width="2" stroke-opacity="0.3"/>  <circle cx="50" cy="50" r="30" fill="#10b981" opacity="0.15" filter="url(#glow_transform_image_to_tensor_paths)"/>  <g transform="translate(10, 15) scale(0.7)" fill="none" stroke="#34d399" stroke-width="4" stroke-linecap="round" stroke-linejoin="round">    <path d="M20 50 Q50 20 80 50 T140 50" />  </g>  <path d="M 120 50 L 550 50" stroke="#10b981" stroke-width="1" stroke-dasharray="4 8" opacity="0.5"/>  <circle cx="200" cy="50" r="4" fill="#10b981"/>  <circle cx="350" cy="50" r="4" fill="#10b981"/>  <circle cx="500" cy="50" r="4" fill="#10b981"/></svg>
 _metadata:
   bloc: 2
   section: "4_preprocessing"

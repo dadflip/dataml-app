@@ -28,75 +28,14 @@ code_template: |
       if y_true.shape != y_p.shape:
           print(f"[EVAL] Shapes incompatibles: y_test={y_true.shape}, y_pred={y_p.shape}")
           evaluation_metrics["status"] = "error"
-          evaluation_metrics["reason"] = f"Shape mismatch: {y_true.shape} vs {y_p.shape}"
-      else:
-          # Flatten if multidimensional (e.g. images)
-          if y_true.ndim > 1:
-              y_true_flat = y_true.reshape(y_true.shape[0], -1)
-              y_p_flat = y_p.reshape(y_p.shape[0], -1)
-          else:
-              y_true_flat = y_true.reshape(-1, 1)
-              y_p_flat = y_p.reshape(-1, 1)
+illustration_mermaid: |
+    graph LR
+      Data([Features]) --> Model((Machine Learning))
+      Model --> Pred([Predictions])
+      style Model fill:#8b5cf6,stroke:#7c3aed,stroke-width:2px,color:#fff
+      style Data fill:#f8fafc,stroke:#94a3b8,stroke-width:1px
+      style Pred fill:#f8fafc,stroke:#94a3b8,stroke-width:1px
 
-          # Per-sample reconstruction error
-          per_sample_mse = np.mean((y_true_flat - y_p_flat) ** 2, axis=1)
-          per_sample_mae = np.mean(np.abs(y_true_flat - y_p_flat), axis=1)
-
-          # Global metrics
-          global_mse = float(np.mean(per_sample_mse))
-          global_mae = float(np.mean(per_sample_mae))
-          global_rmse = float(np.sqrt(global_mse))
-
-          print(f"[EVAL] Erreur de reconstruction - MSE: {global_mse:.6f}")
-          print(f"[EVAL] Erreur de reconstruction - RMSE: {global_rmse:.6f}")
-          print(f"[EVAL] Erreur de reconstruction - MAE: {global_mae:.6f}")
-
-          # Distribution of per-sample errors
-          fig, axes = plt.subplots(1, 2, figsize=(14, 5))
-
-          axes[0].hist(per_sample_mse, bins=50, color="steelblue", alpha=0.8, edgecolor="white")
-          axes[0].axvline(global_mse, color="red", linestyle="--", label=f"Moyenne: {global_mse:.4f}")
-          axes[0].set_xlabel("MSE par echantillon")
-          axes[0].set_ylabel("Frequence")
-          axes[0].set_title("Distribution des MSE de Reconstruction")
-          axes[0].legend()
-          axes[0].grid(True, alpha=0.3)
-
-          axes[1].hist(per_sample_mae, bins=50, color="darkorange", alpha=0.8, edgecolor="white")
-          axes[1].axvline(global_mae, color="red", linestyle="--", label=f"Moyenne: {global_mae:.4f}")
-          axes[1].set_xlabel("MAE par echantillon")
-          axes[1].set_ylabel("Frequence")
-          axes[1].set_title("Distribution des MAE de Reconstruction")
-          axes[1].legend()
-          axes[1].grid(True, alpha=0.3)
-
-          plt.tight_layout()
-          fig_path = "reconstruction_error_dist.png"
-          fig.savefig(fig_path, dpi=150, bbox_inches="tight")
-          plt.close(fig)
-          print(f"[EVAL] Figure sauvegardee: {fig_path}")
-
-          # Percentiles for anomaly detection thresholds
-          p90 = float(np.percentile(per_sample_mse, 90))
-          p95 = float(np.percentile(per_sample_mse, 95))
-          p99 = float(np.percentile(per_sample_mse, 99))
-
-          evaluation_metrics["status"] = "success"
-          evaluation_metrics["figure_path"] = fig_path
-          evaluation_metrics["mse"] = round(global_mse, 6)
-          evaluation_metrics["rmse"] = round(global_rmse, 6)
-          evaluation_metrics["mae"] = round(global_mae, 6)
-          evaluation_metrics["mse_std"] = float(round(np.std(per_sample_mse), 6))
-          evaluation_metrics["mse_p90"] = round(p90, 6)
-          evaluation_metrics["mse_p95"] = round(p95, 6)
-          evaluation_metrics["mse_p99"] = round(p99, 6)
-          evaluation_metrics["n_samples"] = int(len(per_sample_mse))
-
-  except Exception as e:
-      print(f"[EVAL] Erreur calcul reconstruction: {e}")
-      evaluation_metrics["status"] = "error"
-      evaluation_metrics["error"] = str(e)
-illustration_svg: <svg viewBox="0 0 600 100" xmlns="http://www.w3.org/2000/svg">  <defs>    <linearGradient id="grad_eval_reconstruction_error" x1="0%" y1="0%" x2="100%" y2="100%">      <stop offset="0%" stop-color="#0f172a" stop-opacity="1" />      <stop offset="100%" stop-color="#1e293b" stop-opacity="1" />    </linearGradient>    <filter id="glow_eval_reconstruction_error" x="-20%" y="-20%" width="140%" height="140%">      <feGaussianBlur stdDeviation="4" result="blur" />      <feComposite in="SourceGraphic" in2="blur" operator="over" />    </filter>  </defs>  <rect width="600" height="100" rx="12" fill="url(#grad_eval_reconstruction_error)" stroke="#8b5cf6" stroke-width="2" stroke-opacity="0.3"/>  <circle cx="50" cy="50" r="30" fill="#8b5cf6" opacity="0.15" filter="url(#glow_eval_reconstruction_error)"/>  <g transform="translate(10, 15) scale(0.7)" fill="none" stroke="#a78bfa" stroke-width="4" stroke-linecap="round" stroke-linejoin="round">    <path d="M20 70 L40 30 L60 70 M30 50 L50 50 M80 30 v40 M100 30 v40" />  </g>  <path d="M 120 50 L 550 50" stroke="#8b5cf6" stroke-width="1" stroke-dasharray="4 8" opacity="0.5"/>  <circle cx="200" cy="50" r="4" fill="#8b5cf6"/>  <circle cx="350" cy="50" r="4" fill="#8b5cf6"/>  <circle cx="500" cy="50" r="4" fill="#8b5cf6"/></svg>
 _metadata:
   bloc: 4
   section: "1_evaluation"

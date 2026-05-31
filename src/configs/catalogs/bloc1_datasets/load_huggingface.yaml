@@ -20,11 +20,12 @@ code_template: "import time\n\n# [PARAM: DATASET_NAME | string]\nDATASET_NAME = 
   \ e\n\ntarget_name = \"label\" if \"label\" in df.columns else None\ntask_type =\
   \ \"nlp_classification\" if target_name else \"unknown\"\nmeta = {\"format\": \"\
   huggingface\", \"dataset\": DATASET_NAME, \"shape\": df.shape}\n"
-illustration_svg: <svg viewBox="0 0 600 100" xmlns="http://www.w3.org/2000/svg">  <defs>    <linearGradient id="grad_load_huggingface" x1="0%" y1="0%" x2="100%" y2="100%">      <stop offset="0%" stop-color="#0f172a" stop-opacity="1" />      <stop offset="100%" stop-color="#1e293b" stop-opacity="1" />    </linearGradient>    <filter id="glow_load_huggingface" x="-20%" y="-20%" width="140%" height="140%">      <feGaussianBlur stdDeviation="4" result="blur" />      <feComposite in="SourceGraphic" in2="blur" operator="over" />    </filter>  </defs>  <rect width="600" height="100" rx="12" fill="url(#grad_load_huggingface)" stroke="#3b82f6" stroke-width="2" stroke-opacity="0.3"/>  <circle cx="50" cy="50" r="30" fill="#3b82f6" opacity="0.15" filter="url(#glow_load_huggingface)"/>  <g transform="translate(10, 15) scale(0.7)" fill="none" stroke="#60a5fa" stroke-width="4" stroke-linecap="round" stroke-linejoin="round">    <path d="M10 30 L50 70 L90 30" />  </g>  <path d="M 120 50 L 550 50" stroke="#3b82f6" stroke-width="1" stroke-dasharray="4 8" opacity="0.5"/>  <circle cx="200" cy="50" r="4" fill="#3b82f6"/>  <circle cx="350" cy="50" r="4" fill="#3b82f6"/>  <circle cx="500" cy="50" r="4" fill="#3b82f6"/></svg>
-  width="400" height="200" fill="#0f172a"/><rect x="160" y="60" width="80" height="80"
-  rx="8" fill="#fcd34d"/><circle cx="180" cy="90" r="6" fill="#1e293b"/><circle cx="220"
-  cy="90" r="6" fill="#1e293b"/><path d="M 190 110 Q 200 120 210 110" fill="none"
-  stroke="#1e293b" stroke-width="3" stroke-linecap="round"/></svg>
+illustration_mermaid: |
+    graph LR
+      Source[(Source)] -->|Load| Node([Extract Data])
+      style Source fill:#3b82f6,stroke:#2563eb,stroke-width:2px,color:#fff
+      style Node fill:#eff6ff,stroke:#3b82f6,stroke-width:2px
+
 _metadata:
   bloc: 1
   section: 2_load

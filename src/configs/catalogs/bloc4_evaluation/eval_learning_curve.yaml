@@ -40,56 +40,12 @@ code_template: |
 
       if task_type == "classification":
           scoring = "accuracy"
-      else:
-          scoring = "r2"
+illustration_mermaid: |
+    graph LR
+      Pred([Predictions]) --> Metric{Evaluation}
+      Actual([Ground Truth]) --> Metric
+      style Metric fill:#f59e0b,stroke:#d97706,stroke-width:2px,color:#fff
 
-      train_sizes_abs, train_scores, val_scores = learning_curve(
-          full_pipeline, X_train, y_train,
-          cv=int(N_FOLDS),
-          scoring=scoring,
-          train_sizes=np.linspace(0.1, 1.0, int(N_POINTS)),
-          n_jobs=-1,
-          random_state=42
-      )
-
-      train_mean = np.mean(train_scores, axis=1)
-      train_std = np.std(train_scores, axis=1)
-      val_mean = np.mean(val_scores, axis=1)
-      val_std = np.std(val_scores, axis=1)
-
-      fig, ax = plt.subplots(figsize=(10, 6))
-      ax.fill_between(train_sizes_abs, train_mean - train_std, train_mean + train_std, alpha=0.15, color="blue")
-      ax.fill_between(train_sizes_abs, val_mean - val_std, val_mean + val_std, alpha=0.15, color="orange")
-      ax.plot(train_sizes_abs, train_mean, "o-", color="blue", label="Score Entrainement")
-      ax.plot(train_sizes_abs, val_mean, "o-", color="orange", label="Score Validation")
-      ax.set_xlabel("Taille du jeu d'entrainement")
-      ax.set_ylabel(f"Score ({scoring})")
-      ax.set_title("Courbe d'Apprentissage (Learning Curve)")
-      ax.legend(loc="best")
-      ax.grid(True, alpha=0.3)
-      plt.tight_layout()
-
-      save_dir = os.path.join(os.getcwd(), "outputs")
-      os.makedirs(save_dir, exist_ok=True)
-      fig_path = os.path.join(save_dir, "learning_curve.png")
-      fig.savefig(fig_path, dpi=150, bbox_inches="tight")
-      plt.close(fig)
-
-      evaluation_metrics["learning_curve_scoring"] = scoring
-      evaluation_metrics["learning_curve_train_sizes"] = train_sizes_abs.tolist()
-      evaluation_metrics["learning_curve_train_mean"] = train_mean.tolist()
-      evaluation_metrics["learning_curve_val_mean"] = val_mean.tolist()
-      evaluation_metrics["learning_curve_gap_final"] = float(train_mean[-1] - val_mean[-1])
-      evaluation_metrics["learning_curve_figure_path"] = fig_path
-
-      print(f"[EVAL] Score final entrainement: {train_mean[-1]:.4f}")
-      print(f"[EVAL] Score final validation: {val_mean[-1]:.4f}")
-      print(f"[EVAL] Ecart (overfitting gap): {train_mean[-1] - val_mean[-1]:.4f}")
-      print(f"[EVAL] Figure sauvegardee: {fig_path}")
-  except Exception as e:
-      print(f"[EVAL][ERREUR] Learning Curve echouee: {e}")
-      evaluation_metrics["learning_curve_error"] = str(e)
-illustration_svg: <svg viewBox="0 0 600 100" xmlns="http://www.w3.org/2000/svg">  <defs>    <linearGradient id="grad_eval_learning_curve" x1="0%" y1="0%" x2="100%" y2="100%">      <stop offset="0%" stop-color="#0f172a" stop-opacity="1" />      <stop offset="100%" stop-color="#1e293b" stop-opacity="1" />    </linearGradient>    <filter id="glow_eval_learning_curve" x="-20%" y="-20%" width="140%" height="140%">      <feGaussianBlur stdDeviation="4" result="blur" />      <feComposite in="SourceGraphic" in2="blur" operator="over" />    </filter>  </defs>  <rect width="600" height="100" rx="12" fill="url(#grad_eval_learning_curve)" stroke="#f59e0b" stroke-width="2" stroke-opacity="0.3"/>  <circle cx="50" cy="50" r="30" fill="#f59e0b" opacity="0.15" filter="url(#glow_eval_learning_curve)"/>  <g transform="translate(10, 15) scale(0.7)" fill="none" stroke="#fbbf24" stroke-width="4" stroke-linecap="round" stroke-linejoin="round">    <path d="M20 70 L50 30 L80 60 L120 20" />  </g>  <path d="M 120 50 L 550 50" stroke="#f59e0b" stroke-width="1" stroke-dasharray="4 8" opacity="0.5"/>  <circle cx="200" cy="50" r="4" fill="#f59e0b"/>  <circle cx="350" cy="50" r="4" fill="#f59e0b"/>  <circle cx="500" cy="50" r="4" fill="#f59e0b"/></svg>
 _metadata:
   bloc: 4
   section: "1_evaluation"

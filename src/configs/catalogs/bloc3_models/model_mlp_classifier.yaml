@@ -20,40 +20,14 @@ code_template: |
 
   # [PARAM: HIDDEN_LAYER_SIZES | string]
   HIDDEN_LAYER_SIZES = "100, 50"
-  # [/PARAM]
+illustration_mermaid: |
+    graph LR
+      Data([Features]) --> Model((Machine Learning))
+      Model --> Pred([Predictions])
+      style Model fill:#8b5cf6,stroke:#7c3aed,stroke-width:2px,color:#fff
+      style Data fill:#f8fafc,stroke:#94a3b8,stroke-width:1px
+      style Pred fill:#f8fafc,stroke:#94a3b8,stroke-width:1px
 
-  # [PARAM: ACTIVATION | string]
-  ACTIVATION = "relu"
-  # [/PARAM]
-
-  # [PARAM: MAX_ITER | number]
-  MAX_ITER = 200
-  # [/PARAM]
-
-  print(f"[MODEL] Entraînement MLP Classifier (layers={HIDDEN_LAYER_SIZES})...")
-  if 'X_train' in locals() and 'y_train' in locals() and 'X_test' in locals():
-      layers = tuple(int(x.strip()) for x in HIDDEN_LAYER_SIZES.split(','))
-      model = MLPClassifier(hidden_layer_sizes=layers, activation=ACTIVATION, max_iter=int(MAX_ITER), random_state=42)
-      
-      model.fit(X_train, y_train)
-      
-      y_pred = model.predict(X_test)
-      y_proba = model.predict_proba(X_test)
-      feature_importances = None # MLP n'a pas de feature_importances directes
-      
-      if 'preprocessor' in locals() and preprocessor is not None:
-          try: from imblearn.pipeline import Pipeline
-          except: from sklearn.pipeline import Pipeline
-          full_pipeline = Pipeline(steps=preprocessor.steps + [('model', model)])
-      else:
-          full_pipeline = model
-          
-      training_history = {"status": "success", "n_iter": model.n_iter_, "loss": float(model.loss_)}
-      task_type = "classification"
-      print("[MODEL] MLP Classifier entraîné avec succès.")
-  else:
-      print("[ERREUR] Données d'entraînement introuvables.")
-illustration_svg: <svg viewBox="0 0 600 100" xmlns="http://www.w3.org/2000/svg">  <defs>    <linearGradient id="grad_model_mlp_classifier" x1="0%" y1="0%" x2="100%" y2="100%">      <stop offset="0%" stop-color="#0f172a" stop-opacity="1" />      <stop offset="100%" stop-color="#1e293b" stop-opacity="1" />    </linearGradient>    <filter id="glow_model_mlp_classifier" x="-20%" y="-20%" width="140%" height="140%">      <feGaussianBlur stdDeviation="4" result="blur" />      <feComposite in="SourceGraphic" in2="blur" operator="over" />    </filter>  </defs>  <rect width="600" height="100" rx="12" fill="url(#grad_model_mlp_classifier)" stroke="#8b5cf6" stroke-width="2" stroke-opacity="0.3"/>  <circle cx="50" cy="50" r="30" fill="#8b5cf6" opacity="0.15" filter="url(#glow_model_mlp_classifier)"/>  <g transform="translate(10, 15) scale(0.7)" fill="none" stroke="#a78bfa" stroke-width="4" stroke-linecap="round" stroke-linejoin="round">    <path d="M20 70 L40 30 L60 70 M30 50 L50 50 M80 30 v40 M100 30 v40" />  </g>  <path d="M 120 50 L 550 50" stroke="#8b5cf6" stroke-width="1" stroke-dasharray="4 8" opacity="0.5"/>  <circle cx="200" cy="50" r="4" fill="#8b5cf6"/>  <circle cx="350" cy="50" r="4" fill="#8b5cf6"/>  <circle cx="500" cy="50" r="4" fill="#8b5cf6"/></svg>
 _metadata:
   bloc: 3
   section: "6_neural_networks"

@@ -17,15 +17,12 @@ code_template: "import pandas as pd\nimport numpy as np\nimport matplotlib.pyplo
   \ 4 * ((len(cols) + 2) // 3)))\nfor i, col in enumerate(cols):\n    plt.subplot(((len(cols)\
   \ + 2) // 3), 3, i + 1)\n    sns.histplot(df[col].dropna(), bins=NUM_BINS, kde=True)\n\
   \    plt.title(f\"Distribution de {col}\")\nplt.tight_layout()\nplt.show()\n"
-illustration_svg: <svg viewBox="0 0 600 100" xmlns="http://www.w3.org/2000/svg">  <defs>    <linearGradient id="grad_eda_histograms" x1="0%" y1="0%" x2="100%" y2="100%">      <stop offset="0%" stop-color="#0f172a" stop-opacity="1" />      <stop offset="100%" stop-color="#1e293b" stop-opacity="1" />    </linearGradient>    <filter id="glow_eda_histograms" x="-20%" y="-20%" width="140%" height="140%">      <feGaussianBlur stdDeviation="4" result="blur" />      <feComposite in="SourceGraphic" in2="blur" operator="over" />    </filter>  </defs>  <rect width="600" height="100" rx="12" fill="url(#grad_eda_histograms)" stroke="#64748b" stroke-width="2" stroke-opacity="0.3"/>  <circle cx="50" cy="50" r="30" fill="#64748b" opacity="0.15" filter="url(#glow_eda_histograms)"/>  <g transform="translate(10, 15) scale(0.7)" fill="none" stroke="#94a3b8" stroke-width="4" stroke-linecap="round" stroke-linejoin="round">    <path d="M20 50 L100 50 M60 20 L60 80" />  </g>  <path d="M 120 50 L 550 50" stroke="#64748b" stroke-width="1" stroke-dasharray="4 8" opacity="0.5"/>  <circle cx="200" cy="50" r="4" fill="#64748b"/>  <circle cx="350" cy="50" r="4" fill="#64748b"/>  <circle cx="500" cy="50" r="4" fill="#64748b"/></svg>
-  width="400" height="200" fill="#0f172a"/><line x1="40" y1="170" x2="360" y2="170"
-  stroke="#475569" stroke-width="2"/><rect x="60" y="140" width="20" height="30" fill="#8b5cf6"/><rect
-  x="82" y="100" width="20" height="70" fill="#8b5cf6"/><rect x="104" y="70" width="20"
-  height="100" fill="#8b5cf6"/><rect x="126" y="50" width="20" height="120" fill="#8b5cf6"/><rect
-  x="148" y="30" width="20" height="140" fill="#8b5cf6"/><rect x="170" y="45" width="20"
-  height="125" fill="#8b5cf6"/><rect x="192" y="60" width="20" height="110" fill="#8b5cf6"/><rect
-  x="214" y="90" width="20" height="80" fill="#8b5cf6"/><rect x="236" y="120" width="20"
-  height="50" fill="#8b5cf6"/><rect x="258" y="150" width="20" height="20" fill="#8b5cf6"/></svg>
+illustration_mermaid: |
+    graph LR
+      A([Input]) --> B([Operation])
+      B --> C([Output])
+      style B fill:#64748b,stroke:#475569,stroke-width:2px,color:#fff
+
 _metadata:
   bloc: 1
   section: 3_eda

@@ -21,61 +21,13 @@ code_template: |
           os.makedirs("outputs/deployment", exist_ok=True)
           
           model_path = "outputs/deployment/model.joblib"
-          joblib.dump(full_pipeline, model_path)
-          deployment_artifacts["model_path"] = model_path
-          
-          dash_code = """import dash
-  from dash import dcc, html, Input, Output, State
-  import joblib
-  import pandas as pd
-  import json
-  
-  app = dash.Dash(__name__)
-  model = joblib.load('model.joblib')
-  
-  app.layout = html.Div([
-      html.H1("DataML App - Dash Interface"),
-      html.P("Test du modèle avec Plotly Dash."),
-      
-      dcc.Textarea(
-          id='input-json',
-          value='{\\n  "feature_1": 0.0,\\n  "feature_2": 1.0\\n}',
-          style={'width': '100%', 'height': 200}
-      ),
-      html.Button('Prédire', id='predict-val', n_clicks=0),
-      
-      html.Div(id='output-prediction', style={'marginTop': 20, 'fontSize': 24})
-  ])
-  
-  @app.callback(
-      Output('output-prediction', 'children'),
-      Input('predict-val', 'n_clicks'),
-      State('input-json', 'value')
-  )
-  def update_output(n_clicks, json_val):
-      if n_clicks > 0:
-          try:
-              data_dict = json.loads(json_val)
-              df = pd.DataFrame([data_dict])
-              pred = model.predict(df)[0]
-              return f"Prédiction : {pred}"
-          except Exception as e:
-              return f"Erreur : {str(e)}"
-      return ""
-  
-  if __name__ == '__main__':
-      app.run_server(debug=True, port=8050)
-  """
-          ui_script_path = "outputs/deployment/dash_app.py"
-          with open(ui_script_path, "w", encoding="utf-8") as f:
-              f.write(dash_code)
-              
-          deployment_artifacts["dash_script"] = ui_script_path
-          print(f"[DEPLOY] Application Dash générée sous {ui_script_path}")
-          print(f"[DEPLOY] Pour lancer : cd outputs/deployment && python dash_app.py")
-      except Exception as e:
-          print(f"[DEPLOY ERREUR] Dash : {str(e)}")
-illustration_svg: <svg viewBox="0 0 600 100" xmlns="http://www.w3.org/2000/svg">  <defs>    <linearGradient id="grad_deploy_dash" x1="0%" y1="0%" x2="100%" y2="100%">      <stop offset="0%" stop-color="#0f172a" stop-opacity="1" />      <stop offset="100%" stop-color="#1e293b" stop-opacity="1" />    </linearGradient>    <filter id="glow_deploy_dash" x="-20%" y="-20%" width="140%" height="140%">      <feGaussianBlur stdDeviation="4" result="blur" />      <feComposite in="SourceGraphic" in2="blur" operator="over" />    </filter>  </defs>  <rect width="600" height="100" rx="12" fill="url(#grad_deploy_dash)" stroke="#ef4444" stroke-width="2" stroke-opacity="0.3"/>  <circle cx="50" cy="50" r="30" fill="#ef4444" opacity="0.15" filter="url(#glow_deploy_dash)"/>  <g transform="translate(10, 15) scale(0.7)" fill="none" stroke="#f87171" stroke-width="4" stroke-linecap="round" stroke-linejoin="round">    <path d="M50 20 L80 80 L20 80 Z" />  </g>  <path d="M 120 50 L 550 50" stroke="#ef4444" stroke-width="1" stroke-dasharray="4 8" opacity="0.5"/>  <circle cx="200" cy="50" r="4" fill="#ef4444"/>  <circle cx="350" cy="50" r="4" fill="#ef4444"/>  <circle cx="500" cy="50" r="4" fill="#ef4444"/></svg>
+illustration_mermaid: |
+    graph LR
+      Model((Model)) --> API{{API Endpoint}}
+      API --> Client([Client App])
+      style API fill:#ef4444,stroke:#dc2626,stroke-width:2px,color:#fff
+      style Model fill:#8b5cf6,stroke:#7c3aed,stroke-width:2px,color:#fff
+
 _metadata:
   bloc: 5
   section: "3_ui"

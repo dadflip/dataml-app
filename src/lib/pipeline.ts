@@ -29,7 +29,7 @@ export interface CatalogBlock {
     | Record<string, string>;
   output_variables?: Record<string, string> | string[];
   output_contract?: Record<string, string>;
-  illustration_svg?: string;
+  illustration_mermaid?: string;
   code_template?: string;
   reentry_target?: string;
 

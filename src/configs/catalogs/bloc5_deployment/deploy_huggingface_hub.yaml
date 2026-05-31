@@ -26,34 +26,14 @@ code_template: |
           
           # Sauvegarde locale
           model_path = "outputs/deployment/model.joblib"
-          joblib.dump(full_pipeline, model_path)
-          
-          # [PARAM: HF_REPO_ID | string]
-          HF_REPO_ID = "username/my-dataml-model"
-          # [/PARAM]
-          
-          print(f"[DEPLOY] (Simulation) Uploading {model_path} to HF Hub repo {HF_REPO_ID}")
-          
-          # Code réel (commenté pour éviter le blocage sans token)
-          # if 'HF_TOKEN' in os.environ:
-          #     login(token=os.environ['HF_TOKEN'])
-          # api = HfApi()
-          # api.create_repo(repo_id=HF_REPO_ID, exist_ok=True)
-          # api.upload_file(
-          #     path_or_fileobj=model_path,
-          #     path_in_repo="model.joblib",
-          #     repo_id=HF_REPO_ID,
-          #     repo_type="model"
-          # )
-          
-          deployment_artifacts["local_model_path"] = model_path
-          deployment_artifacts["hf_repo_id"] = HF_REPO_ID
-          print(f"[DEPLOY] Upload simulé réussi vers Hugging Face Hub.")
-      except Exception as e:
-          print(f"[DEPLOY ERREUR] Hugging Face Hub : {str(e)}")
-  elif HfApi is None:
-      print("[DEPLOY ERREUR] Le package 'huggingface_hub' n'est pas installé.")
-illustration_svg: <svg viewBox="0 0 600 100" xmlns="http://www.w3.org/2000/svg">  <defs>    <linearGradient id="grad_deploy_huggingface_hub" x1="0%" y1="0%" x2="100%" y2="100%">      <stop offset="0%" stop-color="#0f172a" stop-opacity="1" />      <stop offset="100%" stop-color="#1e293b" stop-opacity="1" />    </linearGradient>    <filter id="glow_deploy_huggingface_hub" x="-20%" y="-20%" width="140%" height="140%">      <feGaussianBlur stdDeviation="4" result="blur" />      <feComposite in="SourceGraphic" in2="blur" operator="over" />    </filter>  </defs>  <rect width="600" height="100" rx="12" fill="url(#grad_deploy_huggingface_hub)" stroke="#8b5cf6" stroke-width="2" stroke-opacity="0.3"/>  <circle cx="50" cy="50" r="30" fill="#8b5cf6" opacity="0.15" filter="url(#glow_deploy_huggingface_hub)"/>  <g transform="translate(10, 15) scale(0.7)" fill="none" stroke="#a78bfa" stroke-width="4" stroke-linecap="round" stroke-linejoin="round">    <path d="M20 70 L40 30 L60 70 M30 50 L50 50 M80 30 v40 M100 30 v40" />  </g>  <path d="M 120 50 L 550 50" stroke="#8b5cf6" stroke-width="1" stroke-dasharray="4 8" opacity="0.5"/>  <circle cx="200" cy="50" r="4" fill="#8b5cf6"/>  <circle cx="350" cy="50" r="4" fill="#8b5cf6"/>  <circle cx="500" cy="50" r="4" fill="#8b5cf6"/></svg>
+illustration_mermaid: |
+    graph LR
+      Data([Features]) --> Model((Machine Learning))
+      Model --> Pred([Predictions])
+      style Model fill:#8b5cf6,stroke:#7c3aed,stroke-width:2px,color:#fff
+      style Data fill:#f8fafc,stroke:#94a3b8,stroke-width:1px
+      style Pred fill:#f8fafc,stroke:#94a3b8,stroke-width:1px
+
 _metadata:
   bloc: 5
   section: "5_cloud"

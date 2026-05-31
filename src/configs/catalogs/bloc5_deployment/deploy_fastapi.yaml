@@ -22,69 +22,13 @@ code_template: |
           
           # D'abord, on sauvegarde le modèle
           model_path = "outputs/deployment/model.joblib"
-          joblib.dump(full_pipeline, model_path)
-          deployment_artifacts["model_path"] = model_path
-          
-          # On tente de récupérer le nom des colonnes (features) si possible
-          features_code = "features: dict"
-          try:
-              if hasattr(full_pipeline, 'feature_names_in_'):
-                  feat_names = full_pipeline.feature_names_in_
-                  features_code = "\\n".join([f"    {f}: float" for f in feat_names])
-          except:
-              pass
-              
-          fastapi_code = f"""import joblib
-  import pandas as pd
-  from fastapi import FastAPI, HTTPException
-  from pydantic import BaseModel
-  import uvicorn
-  
-  # Chargement du modèle
-  model = joblib.load('model.joblib')
-  
-  app = FastAPI(title="DataML App Model API", version="1.0")
-  
-  # Définition dynamique du format d'entrée (basique)
-  class PredictionInput(BaseModel):
-      data: dict # Dictionnaire de features, ex: {{"feature1": 1.0, "feature2": 2.0}}
-  
-  @app.get("/")
-  def root():
-      return {{"message": "API is running. Go to /docs for documentation."}}
-  
-  @app.post("/predict")
-  def predict(payload: PredictionInput):
-      try:
-          # Conversion en DataFrame (le pipeline s'attend souvent à un DataFrame)
-          df = pd.DataFrame([payload.data])
-          prediction = model.predict(df)
-          
-          # Gérer les probabilités si dispo
-          response = {{"prediction": prediction[0].item() if hasattr(prediction[0], 'item') else prediction[0]}}
-          
-          if hasattr(model, 'predict_proba'):
-              proba = model.predict_proba(df)
-              response["probabilities"] = proba[0].tolist()
-              
-          return response
-      except Exception as e:
-          raise HTTPException(status_code=400, detail=str(e))
-  
-  if __name__ == "__main__":
-      uvicorn.run("server:app", host="0.0.0.0", port=8000, reload=True)
-  """
-          
-          api_script_path = "outputs/deployment/server.py"
-          with open(api_script_path, "w", encoding="utf-8") as f:
-              f.write(fastapi_code)
-              
-          deployment_artifacts["fastapi_script"] = api_script_path
-          print(f"[DEPLOY] API FastAPI générée sous {api_script_path}")
-          print(f"[DEPLOY] Pour lancer : cd outputs/deployment && uvicorn server:app --reload")
-      except Exception as e:
-          print(f"[DEPLOY ERREUR] FastAPI : {str(e)}")
-illustration_svg: <svg viewBox="0 0 600 100" xmlns="http://www.w3.org/2000/svg">  <defs>    <linearGradient id="grad_deploy_fastapi" x1="0%" y1="0%" x2="100%" y2="100%">      <stop offset="0%" stop-color="#0f172a" stop-opacity="1" />      <stop offset="100%" stop-color="#1e293b" stop-opacity="1" />    </linearGradient>    <filter id="glow_deploy_fastapi" x="-20%" y="-20%" width="140%" height="140%">      <feGaussianBlur stdDeviation="4" result="blur" />      <feComposite in="SourceGraphic" in2="blur" operator="over" />    </filter>  </defs>  <rect width="600" height="100" rx="12" fill="url(#grad_deploy_fastapi)" stroke="#ef4444" stroke-width="2" stroke-opacity="0.3"/>  <circle cx="50" cy="50" r="30" fill="#ef4444" opacity="0.15" filter="url(#glow_deploy_fastapi)"/>  <g transform="translate(10, 15) scale(0.7)" fill="none" stroke="#f87171" stroke-width="4" stroke-linecap="round" stroke-linejoin="round">    <path d="M50 20 L80 80 L20 80 Z" />  </g>  <path d="M 120 50 L 550 50" stroke="#ef4444" stroke-width="1" stroke-dasharray="4 8" opacity="0.5"/>  <circle cx="200" cy="50" r="4" fill="#ef4444"/>  <circle cx="350" cy="50" r="4" fill="#ef4444"/>  <circle cx="500" cy="50" r="4" fill="#ef4444"/></svg>
+illustration_mermaid: |
+    graph LR
+      Model((Model)) --> API{{API Endpoint}}
+      API --> Client([Client App])
+      style API fill:#ef4444,stroke:#dc2626,stroke-width:2px,color:#fff
+      style Model fill:#8b5cf6,stroke:#7c3aed,stroke-width:2px,color:#fff
+
 _metadata:
   bloc: 5
   section: "2_api"

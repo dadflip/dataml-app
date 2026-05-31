@@ -24,50 +24,14 @@ code_template: |
 
   # [PARAM: TEXT_COL | string]
   TEXT_COL = "text"
-  # [/PARAM]
+illustration_mermaid: |
+    graph LR
+      Data([Features]) --> Model((Machine Learning))
+      Model --> Pred([Predictions])
+      style Model fill:#8b5cf6,stroke:#7c3aed,stroke-width:2px,color:#fff
+      style Data fill:#f8fafc,stroke:#94a3b8,stroke-width:1px
+      style Pred fill:#f8fafc,stroke:#94a3b8,stroke-width:1px
 
-  print(f"[MODEL] Inférence VADER Sentiment Analysis (colonne '{TEXT_COL}')...")
-  if 'X_test' in locals() and nltk is not None:
-      # Téléchargement silencieux du lexique
-      try: nltk.data.find('sentiment/vader_lexicon')
-      except LookupError: nltk.download('vader_lexicon', quiet=True)
-      
-      model = SentimentIntensityAnalyzer()
-      
-      # Extraction des textes
-      texts = []
-      if isinstance(X_test, pd.DataFrame) and TEXT_COL in X_test.columns:
-          texts = X_test[TEXT_COL].astype(str).tolist()
-      elif isinstance(X_test, (pd.Series, np.ndarray, list)):
-          texts = [str(x) for x in X_test]
-      else:
-          print("[ERREUR] Format d'entrée non supporté ou colonne texte introuvable.")
-          texts = []
-          
-      if texts:
-          # VADER renvoie dict: {'neg': 0.0, 'neu': 1.0, 'pos': 0.0, 'compound': 0.0}
-          scores = [model.polarity_scores(t)['compound'] for t in texts]
-          
-          # Seuil standard : < -0.05 (Negatif), > 0.05 (Positif), entre les deux (Neutre)
-          # On mappe sur des classes 0, 1, 2 pour compatibilité avec y_pred classique
-          y_pred = np.array([2 if s > 0.05 else 0 if s < -0.05 else 1 for s in scores])
-          y_proba = None
-          feature_importances = None
-          
-          # VADER ne s'entraîne pas. Le modèle est l'instance pré-entraînée.
-          if 'preprocessor' in locals() and preprocessor is not None:
-              try: from imblearn.pipeline import Pipeline
-              except: from sklearn.pipeline import Pipeline
-              full_pipeline = Pipeline(steps=preprocessor.steps + [('vader', model)])
-          else:
-              full_pipeline = model
-              
-          training_history = {"status": "success", "fitted_on": 0, "type": "pretrained_zero_shot"}
-          task_type = "classification"
-          print("[MODEL] Inférence Zero-Shot VADER terminée avec succès.")
-  else:
-      print("[ERREUR] Données de test ou module nltk introuvables.")
-illustration_svg: <svg viewBox="0 0 600 100" xmlns="http://www.w3.org/2000/svg">  <defs>    <linearGradient id="grad_model_vader_sentiment" x1="0%" y1="0%" x2="100%" y2="100%">      <stop offset="0%" stop-color="#0f172a" stop-opacity="1" />      <stop offset="100%" stop-color="#1e293b" stop-opacity="1" />    </linearGradient>    <filter id="glow_model_vader_sentiment" x="-20%" y="-20%" width="140%" height="140%">      <feGaussianBlur stdDeviation="4" result="blur" />      <feComposite in="SourceGraphic" in2="blur" operator="over" />    </filter>  </defs>  <rect width="600" height="100" rx="12" fill="url(#grad_model_vader_sentiment)" stroke="#8b5cf6" stroke-width="2" stroke-opacity="0.3"/>  <circle cx="50" cy="50" r="30" fill="#8b5cf6" opacity="0.15" filter="url(#glow_model_vader_sentiment)"/>  <g transform="translate(10, 15) scale(0.7)" fill="none" stroke="#a78bfa" stroke-width="4" stroke-linecap="round" stroke-linejoin="round">    <path d="M20 70 L40 30 L60 70 M30 50 L50 50 M80 30 v40 M100 30 v40" />  </g>  <path d="M 120 50 L 550 50" stroke="#8b5cf6" stroke-width="1" stroke-dasharray="4 8" opacity="0.5"/>  <circle cx="200" cy="50" r="4" fill="#8b5cf6"/>  <circle cx="350" cy="50" r="4" fill="#8b5cf6"/>  <circle cx="500" cy="50" r="4" fill="#8b5cf6"/></svg>
 _metadata:
   bloc: 3
   section: "3_nlp_and_timeseries"

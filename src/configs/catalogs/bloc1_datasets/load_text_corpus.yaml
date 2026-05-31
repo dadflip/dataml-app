@@ -11,57 +11,12 @@ code_template: |
 
   # [PARAM: TEXT_DIR | string]
   TEXT_DIR = "./data/raw/text_corpus"
-  # [/PARAM]
+illustration_mermaid: |
+    graph LR
+      Source[(Source)] -->|Load| Node([Extract Data])
+      style Source fill:#3b82f6,stroke:#2563eb,stroke-width:2px,color:#fff
+      style Node fill:#eff6ff,stroke:#3b82f6,stroke-width:2px
 
-  # [PARAM: SPLIT_BY_LINE | boolean]
-  SPLIT_BY_LINE = True
-  # [/PARAM]
-
-  print(f"[LOAD] Chargement du corpus texte depuis {TEXT_DIR}...")
-
-  try:
-      start_time = time.time()
-      texts = []
-      labels = []
-      
-      if os.path.exists(TEXT_DIR):
-          if os.path.isfile(TEXT_DIR):
-              files = [TEXT_DIR]
-          else:
-              files = glob.glob(os.path.join(TEXT_DIR, "*.txt"))
-              
-          for fpath in files:
-              # On peut imaginer que le nom du fichier est un label, ou non. On laisse vide ici.
-              label = os.path.basename(fpath).replace('.txt', '')
-              with open(fpath, 'r', encoding='utf-8', errors='ignore') as f:
-                  if SPLIT_BY_LINE:
-                      for line in f:
-                          if line.strip():
-                              texts.append(line.strip())
-                              labels.append(label)
-                  else:
-                      texts.append(f.read().strip())
-                      labels.append(label)
-                      
-          df = pd.DataFrame({'text_content': texts, 'file_source': labels})
-          
-          duration = time.time() - start_time
-          print(f"[LOAD] Succès. {len(texts)} séquences texte chargées en {duration:.2f}s.")
-          
-          target_name = "file_source" # Peut être modifié
-          task_type = "nlp_unsupervised"
-          meta = {"format": "text_corpus", "shape": df.shape}
-      else:
-          print(f"[ERREUR LOAD] Le chemin {TEXT_DIR} est introuvable.")
-          df = None
-          target_name = None
-          task_type = "unknown"
-          meta = {}
-  except Exception as e:
-      print(f"[ERREUR LOAD] Échec du chargement du texte : {str(e)}")
-      raise e
-
-illustration_svg: <svg viewBox="0 0 600 100" xmlns="http://www.w3.org/2000/svg">  <defs>    <linearGradient id="grad_load_text_corpus" x1="0%" y1="0%" x2="100%" y2="100%">      <stop offset="0%" stop-color="#0f172a" stop-opacity="1" />      <stop offset="100%" stop-color="#1e293b" stop-opacity="1" />    </linearGradient>    <filter id="glow_load_text_corpus" x="-20%" y="-20%" width="140%" height="140%">      <feGaussianBlur stdDeviation="4" result="blur" />      <feComposite in="SourceGraphic" in2="blur" operator="over" />    </filter>  </defs>  <rect width="600" height="100" rx="12" fill="url(#grad_load_text_corpus)" stroke="#3b82f6" stroke-width="2" stroke-opacity="0.3"/>  <circle cx="50" cy="50" r="30" fill="#3b82f6" opacity="0.15" filter="url(#glow_load_text_corpus)"/>  <g transform="translate(10, 15) scale(0.7)" fill="none" stroke="#60a5fa" stroke-width="4" stroke-linecap="round" stroke-linejoin="round">    <path d="M10 30 L50 70 L90 30" />  </g>  <path d="M 120 50 L 550 50" stroke="#3b82f6" stroke-width="1" stroke-dasharray="4 8" opacity="0.5"/>  <circle cx="200" cy="50" r="4" fill="#3b82f6"/>  <circle cx="350" cy="50" r="4" fill="#3b82f6"/>  <circle cx="500" cy="50" r="4" fill="#3b82f6"/></svg>
 _metadata:
   bloc: 1
   section: "2_load"

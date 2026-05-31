@@ -23,78 +23,12 @@ code_template: |
       print("[EVAL][WARN] y_proba est None, impossible de tracer la courbe ROC.")
       evaluation_metrics["roc_curve_path"] = None
       evaluation_metrics["warning"] = "y_proba non disponible, courbe ROC non generee."
-  else:
-      try:
-          import matplotlib
-          matplotlib.use("Agg")
-          import matplotlib.pyplot as plt
-          from sklearn.metrics import roc_curve, auc
-          from sklearn.preprocessing import label_binarize
+illustration_mermaid: |
+    graph LR
+      Pred([Predictions]) --> Metric{Evaluation}
+      Actual([Ground Truth]) --> Metric
+      style Metric fill:#f59e0b,stroke:#d97706,stroke-width:2px,color:#fff
 
-          unique_classes = np.unique(y_test)
-          n_classes = len(unique_classes)
-
-          fig, ax = plt.subplots(1, 1, figsize=(8, 6))
-
-          if n_classes == 2:
-              if y_proba.ndim == 2 and y_proba.shape[1] == 2:
-                  proba_positive = y_proba[:, 1]
-              elif y_proba.ndim == 1:
-                  proba_positive = y_proba
-              else:
-                  proba_positive = y_proba[:, 1]
-
-              fpr, tpr, thresholds = roc_curve(y_test, proba_positive)
-              roc_auc = auc(fpr, tpr)
-
-              ax.plot(fpr, tpr, color="darkorange", lw=2,
-                      label=f"ROC (AUC = {roc_auc:.4f})")
-              evaluation_metrics["roc_auc"] = float(np.round(roc_auc, 6))
-              evaluation_metrics["fpr"] = fpr.tolist()
-              evaluation_metrics["tpr"] = tpr.tolist()
-
-          else:
-              y_test_bin = label_binarize(y_test, classes=unique_classes)
-              colors = plt.cm.tab10(np.linspace(0, 1, n_classes))
-
-              auc_per_class = {}
-              for i, (cls, color) in enumerate(zip(unique_classes, colors)):
-                  if y_proba.ndim == 2 and y_proba.shape[1] == n_classes:
-                      fpr_i, tpr_i, _ = roc_curve(y_test_bin[:, i], y_proba[:, i])
-                      roc_auc_i = auc(fpr_i, tpr_i)
-                      ax.plot(fpr_i, tpr_i, color=color, lw=1.5,
-                              label=f"Classe {cls} (AUC = {roc_auc_i:.3f})")
-                      auc_per_class[str(cls)] = float(np.round(roc_auc_i, 6))
-
-              evaluation_metrics["roc_auc_per_class"] = auc_per_class
-
-          ax.plot([0, 1], [0, 1], color="grey", lw=1, linestyle="--", label="Aleatoire")
-          ax.set_xlim([0.0, 1.0])
-          ax.set_ylim([0.0, 1.05])
-          ax.set_xlabel("Taux de Faux Positifs (FPR)")
-          ax.set_ylabel("Taux de Vrais Positifs (TPR)")
-          ax.set_title("Courbe ROC")
-          ax.legend(loc="lower right", fontsize=8)
-          ax.grid(True, alpha=0.3)
-          plt.tight_layout()
-
-          save_dir = os.path.join(os.getcwd(), "outputs", "evaluation")
-          os.makedirs(save_dir, exist_ok=True)
-          save_path = os.path.join(save_dir, "roc_curve.png")
-          fig.savefig(save_path, dpi=150, bbox_inches="tight")
-          plt.close(fig)
-
-          evaluation_metrics["roc_curve_path"] = save_path
-          print(f"[EVAL] Courbe ROC sauvegardee : {save_path}")
-
-      except Exception as e:
-          print(f"[EVAL][ERREUR] Echec de la generation de la courbe ROC : {e}")
-          evaluation_metrics["error"] = str(e)
-          try:
-              plt.close(fig)
-          except Exception:
-              pass
-illustration_svg: <svg viewBox="0 0 600 100" xmlns="http://www.w3.org/2000/svg">  <defs>    <linearGradient id="grad_eval_roc_curve_plot" x1="0%" y1="0%" x2="100%" y2="100%">      <stop offset="0%" stop-color="#0f172a" stop-opacity="1" />      <stop offset="100%" stop-color="#1e293b" stop-opacity="1" />    </linearGradient>    <filter id="glow_eval_roc_curve_plot" x="-20%" y="-20%" width="140%" height="140%">      <feGaussianBlur stdDeviation="4" result="blur" />      <feComposite in="SourceGraphic" in2="blur" operator="over" />    </filter>  </defs>  <rect width="600" height="100" rx="12" fill="url(#grad_eval_roc_curve_plot)" stroke="#f59e0b" stroke-width="2" stroke-opacity="0.3"/>  <circle cx="50" cy="50" r="30" fill="#f59e0b" opacity="0.15" filter="url(#glow_eval_roc_curve_plot)"/>  <g transform="translate(10, 15) scale(0.7)" fill="none" stroke="#fbbf24" stroke-width="4" stroke-linecap="round" stroke-linejoin="round">    <path d="M20 70 L50 30 L80 60 L120 20" />  </g>  <path d="M 120 50 L 550 50" stroke="#f59e0b" stroke-width="1" stroke-dasharray="4 8" opacity="0.5"/>  <circle cx="200" cy="50" r="4" fill="#f59e0b"/>  <circle cx="350" cy="50" r="4" fill="#f59e0b"/>  <circle cx="500" cy="50" r="4" fill="#f59e0b"/></svg>
 _metadata:
   bloc: 4
   section: "1_evaluation"

@@ -23,49 +23,12 @@ code_template: |
 
   # [PARAM: TEXT_COL | string]
   TEXT_COL = "text"
-  # [/PARAM]
+illustration_mermaid: |
+    graph LR
+      In([Raw Data]) -->|Process| Out([Clean Data])
+      style In fill:#eff6ff,stroke:#94a3b8,stroke-width:2px,stroke-dasharray: 5 5
+      style Out fill:#10b981,stroke:#059669,stroke-width:2px,color:#fff
 
-  # [PARAM: CANDIDATE_LABELS | string]
-  CANDIDATE_LABELS = "positif, négatif, neutre"
-  # [/PARAM]
-
-  print(f"[MODEL] HuggingFace Zero-Shot (labels: {CANDIDATE_LABELS})...")
-  if 'X_test' in locals() and pipeline is not None:
-      labels = [x.strip() for x in CANDIDATE_LABELS.split(',')]
-      
-      texts = []
-      if isinstance(X_test, pd.DataFrame) and TEXT_COL in X_test.columns:
-          texts = X_test[TEXT_COL].astype(str).tolist()
-      elif isinstance(X_test, (pd.Series, np.ndarray, list)):
-          texts = [str(x) for x in X_test]
-          
-      if texts:
-          # Attention: Le téléchargement du modèle (valhalla/distilbart...) peut prendre du temps la 1ère fois
-          print("Chargement du modèle Transformer...")
-          classifier = pipeline("zero-shot-classification", model="valhalla/distilbart-mnli-12-1")
-          
-          print("Inférence en cours (peut être long sur CPU)...")
-          results = classifier(texts, candidate_labels=labels)
-          
-          # results est une liste de dict avec 'labels' et 'scores' triés par ordre décroissant
-          y_pred = np.array([res['labels'][0] for res in results])
-          y_proba = None
-          feature_importances = None
-          model = classifier
-          
-          if 'preprocessor' in locals() and preprocessor is not None:
-              try: from imblearn.pipeline import Pipeline
-              except: from sklearn.pipeline import Pipeline
-              full_pipeline = Pipeline(steps=preprocessor.steps + [('model', model)])
-          else:
-              full_pipeline = model
-              
-          training_history = {"status": "success", "type": "zero_shot_transformer"}
-          task_type = "classification"
-          print("[MODEL] Zero-Shot HuggingFace terminé avec succès.")
-  else:
-      print("[ERREUR] Données introuvables ou transformers non installé.")
-illustration_svg: <svg viewBox="0 0 600 100" xmlns="http://www.w3.org/2000/svg">  <defs>    <linearGradient id="grad_model_hf_zeroshot_classifier" x1="0%" y1="0%" x2="100%" y2="100%">      <stop offset="0%" stop-color="#0f172a" stop-opacity="1" />      <stop offset="100%" stop-color="#1e293b" stop-opacity="1" />    </linearGradient>    <filter id="glow_model_hf_zeroshot_classifier" x="-20%" y="-20%" width="140%" height="140%">      <feGaussianBlur stdDeviation="4" result="blur" />      <feComposite in="SourceGraphic" in2="blur" operator="over" />    </filter>  </defs>  <rect width="600" height="100" rx="12" fill="url(#grad_model_hf_zeroshot_classifier)" stroke="#10b981" stroke-width="2" stroke-opacity="0.3"/>  <circle cx="50" cy="50" r="30" fill="#10b981" opacity="0.15" filter="url(#glow_model_hf_zeroshot_classifier)"/>  <g transform="translate(10, 15) scale(0.7)" fill="none" stroke="#34d399" stroke-width="4" stroke-linecap="round" stroke-linejoin="round">    <path d="M20 50 Q50 20 80 50 T140 50" />  </g>  <path d="M 120 50 L 550 50" stroke="#10b981" stroke-width="1" stroke-dasharray="4 8" opacity="0.5"/>  <circle cx="200" cy="50" r="4" fill="#10b981"/>  <circle cx="350" cy="50" r="4" fill="#10b981"/>  <circle cx="500" cy="50" r="4" fill="#10b981"/></svg>
 _metadata:
   bloc: 3
   section: "3_nlp_and_timeseries"

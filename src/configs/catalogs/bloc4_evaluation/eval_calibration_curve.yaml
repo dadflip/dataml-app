@@ -25,69 +25,12 @@ code_template: |
   if task_type not in ("classification", "binary", "multiclass"):
       print("[EVAL] Courbe de calibration: applicable uniquement en classification.")
       evaluation_metrics["status"] = "skipped"
-      evaluation_metrics["reason"] = "task_type is not classification"
-  elif y_proba is None:
-      print("[EVAL] Courbe de calibration: y_proba requis.")
-      evaluation_metrics["status"] = "skipped"
-      evaluation_metrics["reason"] = "y_proba is None"
-  else:
-      try:
-          proba = y_proba
-          # If y_proba is 2D, take the positive class column
-          if proba.ndim == 2:
-              if proba.shape[1] == 2:
-                  proba = proba[:, 1]
-              else:
-                  # Multiclass: use one-vs-rest for each class, plot the first 5
-                  pass
+illustration_mermaid: |
+    graph LR
+      Pred([Predictions]) --> Metric{Evaluation}
+      Actual([Ground Truth]) --> Metric
+      style Metric fill:#f59e0b,stroke:#d97706,stroke-width:2px,color:#fff
 
-          fig, ax = plt.subplots(figsize=(8, 6))
-
-          if proba.ndim == 1:
-              fraction_of_positives, mean_predicted_value = calibration_curve(
-                  y_test, proba, n_bins=10, strategy="uniform"
-              )
-              ax.plot(mean_predicted_value, fraction_of_positives, "s-", label="Modele")
-              ax.plot([0, 1], [0, 1], "k--", label="Calibration parfaite")
-
-              # Brier score
-              from sklearn.metrics import brier_score_loss
-              brier = brier_score_loss(y_test, proba)
-              evaluation_metrics["brier_score"] = float(round(brier, 6))
-              print(f"[EVAL] Brier Score: {brier:.6f}")
-          else:
-              # Multiclass: plot per-class calibration for up to 5 classes
-              from sklearn.preprocessing import label_binarize
-              classes = np.unique(y_test)
-              y_test_bin = label_binarize(y_test, classes=classes)
-              n_plot = min(len(classes), 5)
-              for i in range(n_plot):
-                  frac_pos, mean_pred = calibration_curve(
-                      y_test_bin[:, i], proba[:, i], n_bins=10, strategy="uniform"
-                  )
-                  ax.plot(mean_pred, frac_pos, "s-", label=f"Classe {classes[i]}")
-              ax.plot([0, 1], [0, 1], "k--", label="Calibration parfaite")
-
-          ax.set_xlabel("Probabilite predite moyenne")
-          ax.set_ylabel("Fraction de positifs")
-          ax.set_title("Courbe de Calibration (Reliability Diagram)")
-          ax.legend(loc="lower right")
-          ax.grid(True, alpha=0.3)
-          plt.tight_layout()
-
-          fig_path = "calibration_curve.png"
-          fig.savefig(fig_path, dpi=150, bbox_inches="tight")
-          plt.close(fig)
-          print(f"[EVAL] Figure sauvegardee: {fig_path}")
-
-          evaluation_metrics["status"] = "success"
-          evaluation_metrics["figure_path"] = fig_path
-
-      except Exception as e:
-          print(f"[EVAL] Erreur courbe de calibration: {e}")
-          evaluation_metrics["status"] = "error"
-          evaluation_metrics["error"] = str(e)
-illustration_svg: <svg viewBox="0 0 600 100" xmlns="http://www.w3.org/2000/svg">  <defs>    <linearGradient id="grad_eval_calibration_curve" x1="0%" y1="0%" x2="100%" y2="100%">      <stop offset="0%" stop-color="#0f172a" stop-opacity="1" />      <stop offset="100%" stop-color="#1e293b" stop-opacity="1" />    </linearGradient>    <filter id="glow_eval_calibration_curve" x="-20%" y="-20%" width="140%" height="140%">      <feGaussianBlur stdDeviation="4" result="blur" />      <feComposite in="SourceGraphic" in2="blur" operator="over" />    </filter>  </defs>  <rect width="600" height="100" rx="12" fill="url(#grad_eval_calibration_curve)" stroke="#f59e0b" stroke-width="2" stroke-opacity="0.3"/>  <circle cx="50" cy="50" r="30" fill="#f59e0b" opacity="0.15" filter="url(#glow_eval_calibration_curve)"/>  <g transform="translate(10, 15) scale(0.7)" fill="none" stroke="#fbbf24" stroke-width="4" stroke-linecap="round" stroke-linejoin="round">    <path d="M20 70 L50 30 L80 60 L120 20" />  </g>  <path d="M 120 50 L 550 50" stroke="#f59e0b" stroke-width="1" stroke-dasharray="4 8" opacity="0.5"/>  <circle cx="200" cy="50" r="4" fill="#f59e0b"/>  <circle cx="350" cy="50" r="4" fill="#f59e0b"/>  <circle cx="500" cy="50" r="4" fill="#f59e0b"/></svg>
 _metadata:
   bloc: 4
   section: "1_evaluation"

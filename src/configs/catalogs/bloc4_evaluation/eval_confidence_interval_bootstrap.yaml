@@ -33,45 +33,12 @@ code_template: |
       if n < 10:
           print("[EVAL] Jeu de test trop petit pour un bootstrap fiable.")
           evaluation_metrics["status"] = "skipped"
-          evaluation_metrics["reason"] = "test set too small (n < 10)"
-      else:
-          is_classif = task_type in ("classification", "binary", "multiclass")
+illustration_mermaid: |
+    graph LR
+      Pred([Predictions]) --> Metric{Evaluation}
+      Actual([Ground Truth]) --> Metric
+      style Metric fill:#f59e0b,stroke:#d97706,stroke-width:2px,color:#fff
 
-          scores = np.zeros(n_bootstrap)
-          for i in range(n_bootstrap):
-              idx = rng.randint(0, n, size=n)
-              if is_classif:
-                  scores[i] = accuracy_score(y_true[idx], y_p[idx])
-              else:
-                  scores[i] = np.sqrt(mean_squared_error(y_true[idx], y_p[idx]))
-
-          # Percentile method
-          lower = float(np.percentile(scores, 100 * alpha / 2))
-          upper = float(np.percentile(scores, 100 * (1 - alpha / 2)))
-          point_estimate = float(np.mean(scores))
-          std_estimate = float(np.std(scores))
-
-          metric_name = "accuracy" if is_classif else "rmse"
-
-          print(f"[EVAL] Bootstrap {metric_name}: {point_estimate:.4f}")
-          print(f"[EVAL] IC {int(confidence_level*100)}%: [{lower:.4f}, {upper:.4f}]")
-          print(f"[EVAL] Ecart-type bootstrap: {std_estimate:.4f}")
-
-          evaluation_metrics["status"] = "success"
-          evaluation_metrics["metric_name"] = metric_name
-          evaluation_metrics["point_estimate"] = round(point_estimate, 6)
-          evaluation_metrics["ci_lower"] = round(lower, 6)
-          evaluation_metrics["ci_upper"] = round(upper, 6)
-          evaluation_metrics["ci_width"] = round(upper - lower, 6)
-          evaluation_metrics["std_bootstrap"] = round(std_estimate, 6)
-          evaluation_metrics["confidence_level"] = confidence_level
-          evaluation_metrics["n_bootstrap"] = n_bootstrap
-
-  except Exception as e:
-      print(f"[EVAL] Erreur bootstrap: {e}")
-      evaluation_metrics["status"] = "error"
-      evaluation_metrics["error"] = str(e)
-illustration_svg: <svg viewBox="0 0 600 100" xmlns="http://www.w3.org/2000/svg">  <defs>    <linearGradient id="grad_eval_confidence_interval_bootstrap" x1="0%" y1="0%" x2="100%" y2="100%">      <stop offset="0%" stop-color="#0f172a" stop-opacity="1" />      <stop offset="100%" stop-color="#1e293b" stop-opacity="1" />    </linearGradient>    <filter id="glow_eval_confidence_interval_bootstrap" x="-20%" y="-20%" width="140%" height="140%">      <feGaussianBlur stdDeviation="4" result="blur" />      <feComposite in="SourceGraphic" in2="blur" operator="over" />    </filter>  </defs>  <rect width="600" height="100" rx="12" fill="url(#grad_eval_confidence_interval_bootstrap)" stroke="#f59e0b" stroke-width="2" stroke-opacity="0.3"/>  <circle cx="50" cy="50" r="30" fill="#f59e0b" opacity="0.15" filter="url(#glow_eval_confidence_interval_bootstrap)"/>  <g transform="translate(10, 15) scale(0.7)" fill="none" stroke="#fbbf24" stroke-width="4" stroke-linecap="round" stroke-linejoin="round">    <path d="M20 70 L50 30 L80 60 L120 20" />  </g>  <path d="M 120 50 L 550 50" stroke="#f59e0b" stroke-width="1" stroke-dasharray="4 8" opacity="0.5"/>  <circle cx="200" cy="50" r="4" fill="#f59e0b"/>  <circle cx="350" cy="50" r="4" fill="#f59e0b"/>  <circle cx="500" cy="50" r="4" fill="#f59e0b"/></svg>
 _metadata:
   bloc: 4
   section: "1_evaluation"

@@ -24,51 +24,13 @@ code_template: |
       print("[DEPLOY] Préparation pour LitServe (Lightning AI)...")
       
       deploy_dir = "./deploy_litserve"
-      os.makedirs(deploy_dir, exist_ok=True)
-      
-      model_path = os.path.join(deploy_dir, "model.pkl")
-      joblib.dump(full_pipeline, model_path)
-      
-      app_code = f"""
-  import litserve as ls
-  import joblib
-  import pandas as pd
-  
-  class ModelAPI(ls.LitAPI):
-      def setup(self, device):
-          # Chargement unique du modèle en mémoire
-          self.model = joblib.load('model.pkl')
-          
-      def decode_request(self, request):
-          # Transforme la requête JSON entrante en DataFrame
-          return pd.DataFrame([request])
-          
-      def predict(self, df):
-          # Prédiction optimisée
-          return self.model.predict(df)
-          
-      def encode_response(self, prediction):
-          # Format de retour
-          return {{"prediction": prediction.tolist()}}
-  
-  if __name__ == "__main__":
-      # Démarre le serveur avec un batching éventuel
-      api = ModelAPI()
-      server = ls.LitServer(api, max_batch_size={MAX_BATCH_SIZE})
-      server.run(port=8000)
-  """
-      with open(os.path.join(deploy_dir, "server.py"), "w") as f:
-          f.write(app_code.strip())
-          
-      with open(os.path.join(deploy_dir, "requirements.txt"), "w") as f:
-          f.write("litserve\npandas\nscikit-learn\njoblib\n")
-          
-      print(f"[DEPLOY] Serveur LitServe généré dans '{deploy_dir}'.")
-      print("[DEPLOY] Pour lancer : cd deploy_litserve && pip install -r requirements.txt && python server.py")
-  else:
-      print("[ERREUR] 'full_pipeline' non défini.")
+illustration_mermaid: |
+    graph LR
+      Model((Model)) --> API{{API Endpoint}}
+      API --> Client([Client App])
+      style API fill:#ef4444,stroke:#dc2626,stroke-width:2px,color:#fff
+      style Model fill:#8b5cf6,stroke:#7c3aed,stroke-width:2px,color:#fff
 
-illustration_svg: <svg viewBox="0 0 600 100" xmlns="http://www.w3.org/2000/svg">  <defs>    <linearGradient id="grad_deploy_litserve_api" x1="0%" y1="0%" x2="100%" y2="100%">      <stop offset="0%" stop-color="#0f172a" stop-opacity="1" />      <stop offset="100%" stop-color="#1e293b" stop-opacity="1" />    </linearGradient>    <filter id="glow_deploy_litserve_api" x="-20%" y="-20%" width="140%" height="140%">      <feGaussianBlur stdDeviation="4" result="blur" />      <feComposite in="SourceGraphic" in2="blur" operator="over" />    </filter>  </defs>  <rect width="600" height="100" rx="12" fill="url(#grad_deploy_litserve_api)" stroke="#ef4444" stroke-width="2" stroke-opacity="0.3"/>  <circle cx="50" cy="50" r="30" fill="#ef4444" opacity="0.15" filter="url(#glow_deploy_litserve_api)"/>  <g transform="translate(10, 15) scale(0.7)" fill="none" stroke="#f87171" stroke-width="4" stroke-linecap="round" stroke-linejoin="round">    <path d="M50 20 L80 80 L20 80 Z" />  </g>  <path d="M 120 50 L 550 50" stroke="#ef4444" stroke-width="1" stroke-dasharray="4 8" opacity="0.5"/>  <circle cx="200" cy="50" r="4" fill="#ef4444"/>  <circle cx="350" cy="50" r="4" fill="#ef4444"/>  <circle cx="500" cy="50" r="4" fill="#ef4444"/></svg>
 _metadata:
   bloc: 5
   section: "5_cloud"

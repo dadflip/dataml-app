@@ -33,40 +33,12 @@ code_template: |
               visualizer.finalize()
               
               plot_path = "outputs/evaluation/cooks_distance.png"
-              fig.savefig(plot_path, dpi=300)
-              plt.close(fig)
-              
-              evaluation_metrics["cooks_distance_plot"] = plot_path
-              print(f"[EVAL] Plot sauvegardé sous {plot_path} (via Yellowbrick)")
-          else:
-              print("[EVAL] 'yellowbrick' non installé. Approximation des outliers via Z-score des erreurs...")
-              # Fallback basique : plot des erreurs absolues standardisées
-              if 'y_test' in locals() and 'y_pred' in locals():
-                  errors = np.abs(np.array(y_test) - np.array(y_pred))
-                  z_scores = (errors - np.mean(errors)) / np.std(errors)
-                  
-                  fig, ax = plt.subplots(figsize=(10, 6))
-                  markerline, stemlines, baseline = ax.stem(range(len(z_scores)), z_scores, linefmt='b-', markerfmt='bo', basefmt='r-')
-                  plt.setp(stemlines, 'linewidth', 1)
-                  plt.setp(markerline, 'markersize', 4)
-                  
-                  ax.axhline(3, color='r', linestyle='--', label='Z-Score = 3 (Outlier Threshold)')
-                  ax.set_title('Approximated Outlier Influence (Error Z-Scores)')
-                  ax.set_xlabel('Instance Index')
-                  ax.set_ylabel('Standardized Absolute Error')
-                  ax.legend()
-                  
-                  plot_path = "outputs/evaluation/cooks_distance_fallback.png"
-                  fig.savefig(plot_path, dpi=300)
-                  plt.close(fig)
-                  
-                  evaluation_metrics["cooks_distance_plot"] = plot_path
-                  print(f"[EVAL] Fallback plot sauvegardé sous {plot_path}")
-              else:
-                  print("[EVAL ERREUR] y_test et y_pred manquants pour le fallback.")
-      except Exception as e:
-          print(f"[EVAL ERREUR] : {str(e)}")
-illustration_svg: <svg viewBox="0 0 600 100" xmlns="http://www.w3.org/2000/svg">  <defs>    <linearGradient id="grad_eval_cooks_distance_plot" x1="0%" y1="0%" x2="100%" y2="100%">      <stop offset="0%" stop-color="#0f172a" stop-opacity="1" />      <stop offset="100%" stop-color="#1e293b" stop-opacity="1" />    </linearGradient>    <filter id="glow_eval_cooks_distance_plot" x="-20%" y="-20%" width="140%" height="140%">      <feGaussianBlur stdDeviation="4" result="blur" />      <feComposite in="SourceGraphic" in2="blur" operator="over" />    </filter>  </defs>  <rect width="600" height="100" rx="12" fill="url(#grad_eval_cooks_distance_plot)" stroke="#f59e0b" stroke-width="2" stroke-opacity="0.3"/>  <circle cx="50" cy="50" r="30" fill="#f59e0b" opacity="0.15" filter="url(#glow_eval_cooks_distance_plot)"/>  <g transform="translate(10, 15) scale(0.7)" fill="none" stroke="#fbbf24" stroke-width="4" stroke-linecap="round" stroke-linejoin="round">    <path d="M20 70 L50 30 L80 60 L120 20" />  </g>  <path d="M 120 50 L 550 50" stroke="#f59e0b" stroke-width="1" stroke-dasharray="4 8" opacity="0.5"/>  <circle cx="200" cy="50" r="4" fill="#f59e0b"/>  <circle cx="350" cy="50" r="4" fill="#f59e0b"/>  <circle cx="500" cy="50" r="4" fill="#f59e0b"/></svg>
+illustration_mermaid: |
+    graph LR
+      Pred([Predictions]) --> Metric{Evaluation}
+      Actual([Ground Truth]) --> Metric
+      style Metric fill:#f59e0b,stroke:#d97706,stroke-width:2px,color:#fff
+
 _metadata:
   bloc: 4
   section: "1_evaluation"

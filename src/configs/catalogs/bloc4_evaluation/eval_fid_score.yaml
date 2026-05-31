@@ -33,61 +33,14 @@ code_template: |
       if y_real.shape[1] != y_gen.shape[1]:
           print(f"[EVAL] FID: dimensions incompatibles: {y_real.shape[1]} vs {y_gen.shape[1]}")
           evaluation_metrics["status"] = "error"
-          evaluation_metrics["reason"] = f"Feature dimension mismatch: {y_real.shape[1]} vs {y_gen.shape[1]}"
-      else:
-          print(f"[EVAL] Calcul FID sur {y_real.shape[0]} reels, {y_gen.shape[0]} generes, dim={y_real.shape[1]}")
+illustration_mermaid: |
+    graph LR
+      Data([Features]) --> Model((Machine Learning))
+      Model --> Pred([Predictions])
+      style Model fill:#8b5cf6,stroke:#7c3aed,stroke-width:2px,color:#fff
+      style Data fill:#f8fafc,stroke:#94a3b8,stroke-width:1px
+      style Pred fill:#f8fafc,stroke:#94a3b8,stroke-width:1px
 
-          # Compute statistics
-          mu_real = np.mean(y_real, axis=0)
-          mu_gen = np.mean(y_gen, axis=0)
-          sigma_real = np.cov(y_real, rowvar=False)
-          sigma_gen = np.cov(y_gen, rowvar=False)
-
-          # Ensure covariance matrices are 2D
-          if sigma_real.ndim == 0:
-              sigma_real = np.array([[sigma_real]])
-          if sigma_gen.ndim == 0:
-              sigma_gen = np.array([[sigma_gen]])
-
-          # Frechet distance
-          diff = mu_real - mu_gen
-          covmean, _ = sqrtm(sigma_real @ sigma_gen, disp=False)
-
-          # Numerical stability: remove imaginary components
-          if np.iscomplexobj(covmean):
-              if not np.allclose(np.diagonal(covmean).imag, 0, atol=1e-3):
-                  print("[EVAL] FID: composantes imaginaires significatives dans sqrtm, resultat approximatif.")
-              covmean = covmean.real
-
-          fid = float(
-              diff @ diff
-              + np.trace(sigma_real)
-              + np.trace(sigma_gen)
-              - 2 * np.trace(covmean)
-          )
-
-          # Ensure non-negative (numerical precision)
-          fid = max(0.0, fid)
-
-          print(f"[EVAL] FID Score: {fid:.4f}")
-          print(f"[EVAL] (FID = 0 signifie distributions identiques, plus petit = meilleur)")
-
-          evaluation_metrics["status"] = "success"
-          evaluation_metrics["fid_score"] = round(fid, 6)
-          evaluation_metrics["n_real_samples"] = int(y_real.shape[0])
-          evaluation_metrics["n_generated_samples"] = int(y_gen.shape[0])
-          evaluation_metrics["feature_dimension"] = int(y_real.shape[1])
-          evaluation_metrics["mean_distance_l2"] = float(round(np.linalg.norm(diff), 6))
-
-  except ImportError:
-      print("[EVAL] scipy requis pour le calcul FID. pip install scipy")
-      evaluation_metrics["status"] = "skipped"
-      evaluation_metrics["reason"] = "scipy not installed"
-  except Exception as e:
-      print(f"[EVAL] Erreur calcul FID: {e}")
-      evaluation_metrics["status"] = "error"
-      evaluation_metrics["error"] = str(e)
-illustration_svg: <svg viewBox="0 0 600 100" xmlns="http://www.w3.org/2000/svg">  <defs>    <linearGradient id="grad_eval_fid_score" x1="0%" y1="0%" x2="100%" y2="100%">      <stop offset="0%" stop-color="#0f172a" stop-opacity="1" />      <stop offset="100%" stop-color="#1e293b" stop-opacity="1" />    </linearGradient>    <filter id="glow_eval_fid_score" x="-20%" y="-20%" width="140%" height="140%">      <feGaussianBlur stdDeviation="4" result="blur" />      <feComposite in="SourceGraphic" in2="blur" operator="over" />    </filter>  </defs>  <rect width="600" height="100" rx="12" fill="url(#grad_eval_fid_score)" stroke="#8b5cf6" stroke-width="2" stroke-opacity="0.3"/>  <circle cx="50" cy="50" r="30" fill="#8b5cf6" opacity="0.15" filter="url(#glow_eval_fid_score)"/>  <g transform="translate(10, 15) scale(0.7)" fill="none" stroke="#a78bfa" stroke-width="4" stroke-linecap="round" stroke-linejoin="round">    <path d="M20 70 L40 30 L60 70 M30 50 L50 50 M80 30 v40 M100 30 v40" />  </g>  <path d="M 120 50 L 550 50" stroke="#8b5cf6" stroke-width="1" stroke-dasharray="4 8" opacity="0.5"/>  <circle cx="200" cy="50" r="4" fill="#8b5cf6"/>  <circle cx="350" cy="50" r="4" fill="#8b5cf6"/>  <circle cx="500" cy="50" r="4" fill="#8b5cf6"/></svg>
 _metadata:
   bloc: 4
   section: "1_evaluation"
