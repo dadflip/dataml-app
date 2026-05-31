@@ -1,0 +1,83 @@
+id: "deploy_huggingface_spaces_api"
+name: "Deploy: Hugging Face Spaces API"
+description: "Prépare les fichiers pour un déploiement Docker (FastAPI) gratuit sur Hugging Face Spaces."
+category: "Deployment"
+tags: ["deployment", "huggingface", "spaces", "docker", "api"]
+applies_to: ["Tabulaire", "Images", "Texte"]
+when_to_use: "Quand vous voulez héberger gratuitement et publiquement votre API sans gérer de serveurs Cloud."
+pros:
+  - "100% gratuit (sur CPU tiers)."
+  - "Exposition publique immédiate."
+cons:
+  - "L'environnement est public par défaut (nécessite token pour API privées)."
+hyperparameters: {}
+code_template: |
+  import os
+  import joblib
+  
+  if 'full_pipeline' in locals():
+      print("[DEPLOY] Préparation pour Hugging Face Spaces (Docker)...")
+      
+      deploy_dir = "./hf_spaces_api"
+      os.makedirs(deploy_dir, exist_ok=True)
+      
+      # Sauvegarde du modèle
+      model_path = os.path.join(deploy_dir, "model.pkl")
+      joblib.dump(full_pipeline, model_path)
+      
+      # app.py
+      app_code = """
+  from fastapi import FastAPI, Request
+  import joblib
+  import pandas as pd
+  
+  app = FastAPI(title="Hugging Face Spaces API")
+  model = joblib.load('model.pkl')
+  
+  @app.get("/")
+  def read_root():
+      return {"status": "L'API est en ligne sur HF Spaces ! Envoyez des requêtes POST sur /predict"}
+  
+  @app.post("/predict")
+  async def predict(request: Request):
+      data = await request.json()
+      df = pd.DataFrame([data])
+      prediction = model.predict(df).tolist()
+      return {"prediction": prediction}
+  """
+      with open(os.path.join(deploy_dir, "app.py"), "w") as f:
+          f.write(app_code.strip())
+          
+      # requirements.txt
+      with open(os.path.join(deploy_dir, "requirements.txt"), "w") as f:
+          f.write("fastapi\nuvicorn\npandas\nscikit-learn\njoblib\n")
+          
+      # Dockerfile spécial HF Spaces (User 1000)
+      dockerfile = """
+  FROM python:3.9-slim
+  
+  RUN useradd -m -u 1000 user
+  USER user
+  ENV PATH="/home/user/.local/bin:$PATH"
+  
+  WORKDIR /app
+  
+  COPY --chown=user requirements.txt .
+  RUN pip install --no-cache-dir -r requirements.txt
+  
+  COPY --chown=user . .
+  
+  EXPOSE 7860
+  CMD ["uvicorn", "app:app", "--host", "0.0.0.0", "--port", "7860"]
+  """
+      with open(os.path.join(deploy_dir, "Dockerfile"), "w") as f:
+          f.write(dockerfile.strip())
+          
+      print(f"[DEPLOY] Fichiers générés dans '{deploy_dir}'.")
+      print("[DEPLOY] Créez un 'Docker Space' sur Hugging Face et uploadez ces fichiers.")
+  else:
+      print("[ERREUR] 'full_pipeline' non défini.")
+
+_metadata:
+  bloc: 5
+  section: "5_deployment"

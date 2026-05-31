@@ -723,3 +723,123 @@ export function buildPipelineYaml(
 
   return yaml.dump(pipeline, { indent: 2 });
 }
+
+export function buildHtmlReport(cells: NotebookCell[], outputs: Record<string, any>): string {
+  const jsonCells = cells.map(c => {
+    return {
+      uid: c.uid,
+      name: c.name,
+      type: c.type,
+      code: applyParamOverrides(c.code, c.overrides),
+      output: outputs[c.uid] || null
+    };
+  });
+
+  const html = `<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>Rapport d'exécution</title>
+  <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/github.min.css">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/languages/python.min.js"></script>
+  <style>
+    body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; line-height: 1.6; max-width: 900px; margin: 0 auto; padding: 2rem; color: #333; }
+    h1, h2, h3 { border-bottom: 1px solid #eaecef; padding-bottom: 0.3em; }
+    .cell { margin-bottom: 2rem; padding: 1rem; border: 1px solid #e1e4e8; border-radius: 6px; }
+    .cell-header { font-size: 0.85em; color: #6a737d; margin-bottom: 0.5rem; text-transform: uppercase; letter-spacing: 0.5px; }
+    .markdown-cell { border: none; padding: 0; margin-bottom: 1rem; }
+    .code-cell { background: #f6f8fa; }
+    pre { margin: 0; padding: 1rem; overflow-x: auto; font-size: 13px; background: #f6f8fa; border-radius: 6px; }
+    .output { margin-top: 1rem; padding: 1rem; background: #fff; border-top: 1px solid #e1e4e8; }
+    .output-error { color: #d73a49; }
+    .output img { max-width: 100%; height: auto; display: block; margin: 0.5rem 0; }
+  </style>
+</head>
+<body>
+  <h1>Rapport d'exécution du Pipeline</h1>
+  <p><em>Généré automatiquement par Dataml-App</em></p>
+  <hr>
+  <div id="content"></div>
+  <script>
+    const data = \${JSON.stringify(jsonCells)};
+    
+    const content = document.getElementById('content');
+    
+    data.forEach((cell, index) => {
+      const div = document.createElement('div');
+      div.className = 'cell ' + (cell.type === 'markdown' ? 'markdown-cell' : 'code-cell');
+      
+      if (cell.type === 'markdown') {
+        div.innerHTML = marked.parse(cell.code);
+      } else {
+        const header = document.createElement('div');
+        header.className = 'cell-header';
+        header.textContent = '[' + (index + 1) + '] ' + cell.name;
+        div.appendChild(header);
+      
+        const pre = document.createElement('pre');
+        const code = document.createElement('code');
+        code.className = 'language-python';
+        code.textContent = cell.code;
+        pre.appendChild(code);
+        div.appendChild(pre);
+        
+        if (cell.output) {
+          const outDiv = document.createElement('div');
+          outDiv.className = 'output';
+          
+          if (cell.output.stdout) {
+            const outPre = document.createElement('pre');
+            outPre.textContent = cell.output.stdout;
+            outPre.style.background = '#fff';
+            outPre.style.padding = '0';
+            outDiv.appendChild(outPre);
+          }
+          if (cell.output.stderr) {
+            const errPre = document.createElement('pre');
+            errPre.className = 'output-error';
+            errPre.textContent = cell.output.stderr;
+            errPre.style.background = '#fff';
+            errPre.style.padding = '0';
+            outDiv.appendChild(errPre);
+          }
+          
+          if (cell.output.displays) {
+            cell.output.displays.forEach(d => {
+              if (d.metadata?.renderAs === 'image') {
+                const img = document.createElement('img');
+                img.src = 'data:' + d.mime + ';base64,' + d.data;
+                outDiv.appendChild(img);
+              } else if (d.metadata?.renderAs === 'html') {
+                const h = document.createElement('div');
+                h.innerHTML = d.data;
+                outDiv.appendChild(h);
+              } else {
+                const outPre = document.createElement('pre');
+                outPre.textContent = d.data;
+                outPre.style.background = '#fff';
+                outPre.style.padding = '0';
+                outDiv.appendChild(outPre);
+              }
+            });
+          }
+          
+          if (outDiv.childNodes.length > 0) {
+            div.appendChild(outDiv);
+          }
+        }
+      }
+      
+      content.appendChild(div);
+    });
+    
+    hljs.highlightAll();
+  </script>
+</body>
+</html>\`;
+
+  return html;
+}
+

@@ -1,0 +1,111 @@
+id: "deploy_fastapi_supabase"
+name: "Deploy: FastAPI + Supabase Logging"
+description: "Déploie le modèle avec FastAPI et utilise Supabase pour stocker l'historique des prédictions (MLOps tracking)."
+category: "Deployment"
+tags: ["deployment", "fastapi", "supabase", "mlops", "api"]
+applies_to: ["Tabulaire", "Images", "Texte"]
+when_to_use: "Pour exposer votre modèle via API et sauvegarder automatiquement chaque requête/prédiction dans une base de données Supabase."
+pros:
+  - "Intégration MLOps facile (stockage des logs)."
+  - "FastAPI est asynchrone et performant."
+cons:
+  - "Nécessite un projet Supabase actif."
+hyperparameters:
+  supabase_url: "L'URL de votre projet Supabase."
+  supabase_key: "Votre clé API (service_role ou anon)."
+  table_name: "Nom de la table pour les logs (ex: 'predictions_log')."
+code_template: |
+  import os
+  import joblib
+  
+  # [PARAM: SUPABASE_URL | string]
+  SUPABASE_URL = "https://xyzcompany.supabase.co"
+  # [/PARAM]
+  
+  # [PARAM: SUPABASE_KEY | string]
+  SUPABASE_KEY = "votre_cle_api"
+  # [/PARAM]
+  
+  # [PARAM: TABLE_NAME | string]
+  TABLE_NAME = "predictions_log"
+  # [/PARAM]
+  
+  if 'full_pipeline' in locals():
+      print("[DEPLOY] Préparation de l'API FastAPI avec intégration Supabase...")
+      
+      deploy_dir = "./deploy_supabase_api"
+      os.makedirs(deploy_dir, exist_ok=True)
+      
+      # Sauvegarde du modèle
+      model_path = os.path.join(deploy_dir, "model.pkl")
+      joblib.dump(full_pipeline, model_path)
+      
+      # app.py
+      app_code = f"""
+  from fastapi import FastAPI, Request
+  from pydantic import BaseModel
+  import joblib
+  import pandas as pd
+  from supabase import create_client, Client
+  import datetime
+  import uvicorn
+  
+  app = FastAPI(title="ML Model API with Supabase")
+  model = joblib.load('model.pkl')
+  
+  url: str = "{SUPABASE_URL}"
+  key: str = "{SUPABASE_KEY}"
+  supabase: Client = create_client(url, key)
+  
+  @app.post("/predict")
+  async def predict(request: Request):
+      data = await request.json()
+      df = pd.DataFrame([data])
+      
+      # Prédiction
+      prediction = model.predict(df).tolist()
+      
+      # Logging asynchrone dans Supabase
+      try:
+          log_data = {{
+              "timestamp": datetime.datetime.utcnow().isoformat(),
+              "input_data": data,
+              "prediction": prediction[0]
+          }}
+          supabase.table("{TABLE_NAME}").insert(log_data).execute()
+      except Exception as e:
+          print("Erreur de log Supabase:", e)
+          
+      return {{"prediction": prediction}}
+  
+  if __name__ == '__main__':
+      uvicorn.run(app, host='0.0.0.0', port=8000)
+  """
+      with open(os.path.join(deploy_dir, "app.py"), "w") as f:
+          f.write(app_code.strip())
+          
+      # requirements.txt
+      with open(os.path.join(deploy_dir, "requirements.txt"), "w") as f:
+          f.write("fastapi\nuvicorn\npandas\nscikit-learn\njoblib\nsupabase\n")
+          
+      # Dockerfile
+      dockerfile = f"""
+  FROM python:3.9-slim
+  WORKDIR /app
+  COPY requirements.txt .
+  RUN pip install --no-cache-dir -r requirements.txt
+  COPY . .
+  EXPOSE 8000
+  CMD ["uvicorn", "app:app", "--host", "0.0.0.0", "--port", "8000"]
+  """
+      with open(os.path.join(deploy_dir, "Dockerfile"), "w") as f:
+          f.write(dockerfile.strip())
+          
+      print(f"[DEPLOY] Fichiers générés dans '{deploy_dir}'.")
+      print("[DEPLOY] Commandes : cd deploy_supabase_api && pip install -r requirements.txt && python app.py")
+  else:
+      print("[ERREUR] 'full_pipeline' non défini.")
+
+_metadata:
+  bloc: 5
+  section: "5_deployment"

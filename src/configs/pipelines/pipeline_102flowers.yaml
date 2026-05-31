@@ -55,22 +55,22 @@ nodes:
     params:
       TEST_SIZE: 0.2
 
-  # BLOC 3 : MODELS (BRANCHE 1 - RESNET CNN)
-  - node_id: "model_resnet"
-    block_id: "model_resnet18_classifier"
+  # BLOC 3 : MODELS (BRANCHE 1 - BASIC CNN)
+  - node_id: "model_basic_cnn"
+    block_id: "model_cnn_classifier"
     depends_on: ["split_data"]
     params:
       EPOCHS: 2
       LEARNING_RATE: 0.001
       
   # BLOC 4 : EVALUATIONS (BRANCHE 1)
-  - node_id: "eval_acc_cnn"
+  - node_id: "eval_acc_basic_cnn"
     block_id: "eval_accuracy"
-    depends_on: ["model_resnet"]
+    depends_on: ["model_basic_cnn"]
     
-  - node_id: "eval_conf_cnn"
+  - node_id: "eval_conf_basic_cnn"
     block_id: "eval_confusion_matrix"
-    depends_on: ["model_resnet"]
+    depends_on: ["model_basic_cnn"]
 
   # BLOC 3 : MODELS (BRANCHE 2 - KNN PRECOMPUTED)
   - node_id: "model_knn"
@@ -84,3 +84,20 @@ nodes:
   - node_id: "eval_acc_knn"
     block_id: "eval_accuracy"
     depends_on: ["model_knn"]
+
+  # BLOC 5 : DEPLOIEMENT
+  - node_id: "deploy_flask"
+    block_id: "deploy_flask_docker"
+    depends_on: ["eval_acc_basic_cnn", "eval_acc_knn"]
+
+  # BONUS : MODELE LOURD (RESNET)
+  - node_id: "model_resnet_bonus"
+    block_id: "model_resnet18_classifier"
+    depends_on: ["split_data"]
+    params:
+      EPOCHS: 1
+      LEARNING_RATE: 0.001
+
+  - node_id: "eval_acc_resnet_bonus"
+    block_id: "eval_accuracy"
+    depends_on: ["model_resnet_bonus"]

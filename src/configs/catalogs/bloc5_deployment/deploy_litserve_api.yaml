@@ -1,0 +1,73 @@
+id: "deploy_litserve_api"
+name: "Deploy: LitServe API (Lightning AI)"
+description: "Déploie le modèle avec LitServe, un moteur open-source haute performance par Lightning AI pour servir des modèles ML."
+category: "Deployment"
+tags: ["deployment", "litserve", "api", "high-performance", "opensource"]
+applies_to: ["Tabulaire", "Images", "Texte"]
+when_to_use: "Pour une API hautement optimisée (batching dynamique, workers asynchrones, support GPU natif) sans la complexité de Triton/Ray."
+pros:
+  - "Très performant (batching automatique)."
+  - "Conçu spécifiquement pour le Machine Learning."
+cons:
+  - "Moins de flexibilité qu'un FastAPI brut pour des endpoints non-ML."
+hyperparameters:
+  max_batch_size: "Taille maximale des batchs dynamiques (ex: 8)."
+code_template: |
+  import os
+  import joblib
+  
+  # [PARAM: MAX_BATCH_SIZE | number]
+  MAX_BATCH_SIZE = 1
+  # [/PARAM]
+  
+  if 'full_pipeline' in locals():
+      print("[DEPLOY] Préparation pour LitServe (Lightning AI)...")
+      
+      deploy_dir = "./deploy_litserve"
+      os.makedirs(deploy_dir, exist_ok=True)
+      
+      model_path = os.path.join(deploy_dir, "model.pkl")
+      joblib.dump(full_pipeline, model_path)
+      
+      app_code = f"""
+  import litserve as ls
+  import joblib
+  import pandas as pd
+  
+  class ModelAPI(ls.LitAPI):
+      def setup(self, device):
+          # Chargement unique du modèle en mémoire
+          self.model = joblib.load('model.pkl')
+          
+      def decode_request(self, request):
+          # Transforme la requête JSON entrante en DataFrame
+          return pd.DataFrame([request])
+          
+      def predict(self, df):
+          # Prédiction optimisée
+          return self.model.predict(df)
+          
+      def encode_response(self, prediction):
+          # Format de retour
+          return {{"prediction": prediction.tolist()}}
+  
+  if __name__ == "__main__":
+      # Démarre le serveur avec un batching éventuel
+      api = ModelAPI()
+      server = ls.LitServer(api, max_batch_size={MAX_BATCH_SIZE})
+      server.run(port=8000)
+  """
+      with open(os.path.join(deploy_dir, "server.py"), "w") as f:
+          f.write(app_code.strip())
+          
+      with open(os.path.join(deploy_dir, "requirements.txt"), "w") as f:
+          f.write("litserve\npandas\nscikit-learn\njoblib\n")
+          
+      print(f"[DEPLOY] Serveur LitServe généré dans '{deploy_dir}'.")
+      print("[DEPLOY] Pour lancer : cd deploy_litserve && pip install -r requirements.txt && python server.py")
+  else:
+      print("[ERREUR] 'full_pipeline' non défini.")
+
+_metadata:
+  bloc: 5
+  section: "5_deployment"

@@ -1,0 +1,51 @@
+id: "model_elastic_net"
+name: "Model: ElasticNet"
+description: "Régression ElasticNet combinant les pénalités L1 et L2."
+category: "Model"
+tags: ["model", "regression", "elasticnet"]
+applies_to: ["Tabulaire"]
+when_to_use: "Quand vous voulez un modèle linéaire robuste évitant l'overfitting."
+pros:
+  - "Gère bien la multicolinéarité."
+cons:
+  - "Hypothèse de linéarité forte."
+hyperparameters:
+  alpha: "Force de régularisation globale."
+  l1_ratio: "Ratio L1 vs L2 (0 = Ridge, 1 = Lasso)."
+code_template: |
+  import pandas as pd
+  from sklearn.linear_model import ElasticNet
+  
+  # [PARAM: ALPHA | number]
+  ALPHA = 1.0
+  # [/PARAM]
+  
+  # [PARAM: L1_RATIO | number]
+  L1_RATIO = 0.5
+  # [/PARAM]
+  
+  print(f"[MODEL] Entraînement ElasticNet (Alpha={ALPHA}, L1_ratio={L1_RATIO})...")
+  
+  if 'X_train' in locals() and 'X_test' in locals() and 'y_train' in locals():
+      model = ElasticNet(alpha=float(ALPHA), l1_ratio=float(L1_RATIO), random_state=42)
+      model.fit(X_train, y_train)
+      y_pred = model.predict(X_test)
+      try:
+          y_proba = model.predict_proba(X_test)
+      except Exception:
+          y_proba = None
+      
+      feature_importances = None
+      if hasattr(model, "coef_"):
+          feature_importances = dict(zip(X_train.columns, model.coef_))
+          
+      full_pipeline = model
+      training_history = {"status": "success"}
+      task_type = "regression"
+      print("[MODEL] ElasticNet entraîné avec succès.")
+  else:
+      print("[ERREUR] Données d'entraînement introuvables.")
+
+_metadata:
+  bloc: 3
+  section: "3_models"

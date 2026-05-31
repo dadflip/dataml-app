@@ -22,6 +22,7 @@ import {
   buildNotebookJSON,
   buildPythonScript,
   buildPipelineYaml,
+  buildHtmlReport,
   downloadText,
   extractParams,
   openInColab,
@@ -357,6 +358,16 @@ export function NotebookBuilder({ cells, setCells, catalogs }: Props) {
             >
               <Download className="h-3.5 w-3.5" />
               <span className="hidden md:inline">Recette</span>
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              disabled={!cells.length}
+              onClick={() => downloadText("report.html", buildHtmlReport(cells, outputs), "text/html")}
+              title="Générer un Rapport (HTML / DOCX)"
+            >
+              <Download className="h-3.5 w-3.5" />
+              <span className="hidden md:inline">Report</span>
             </Button>
             <input
               type="file"
