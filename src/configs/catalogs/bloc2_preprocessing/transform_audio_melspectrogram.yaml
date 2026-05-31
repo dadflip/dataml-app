@@ -19,14 +19,46 @@ code_template: |
       import torchaudio.transforms as AT
   except ImportError:
       AT = None
+      print("[ERREUR] Installez torchaudio: pip install torchaudio")
 
   # [PARAM: AUDIO_COL | string]
   AUDIO_COL = "waveform"
+  # [/PARAM]
+
+  print(f"[TRANSFORM] Application de MelSpectrogram sur '{AUDIO_COL}'...")
+  if 'df' in locals() and AT is not None:
+      if 'pipeline_steps' not in locals():
+          pipeline_steps = {}
+          
+      def melspectrogram_func(X):
+          X_df = pd.DataFrame(X) if not isinstance(X, pd.DataFrame) else X.copy()
+          if AUDIO_COL in X_df.columns:
+              melspec = AT.MelSpectrogram()
+              X_df[AUDIO_COL] = X_df[AUDIO_COL].apply(
+                  lambda x: melspec(x) if isinstance(x, torch.Tensor) else x
+              )
+          return X_df
+
+      transformer = FunctionTransformer(melspectrogram_func)
+      pipeline_steps['audio_melspectrogram'] = transformer
+      df = transformer.fit_transform(df)
+      print("[TRANSFORM] MelSpectrogram appliqué avec succès.")
+  elif AT is None:
+      print("[AVERTISSEMENT] torchaudio n'est pas installé, transformation ignorée.")
+
 illustration_mermaid: |
-    graph LR
-      In([Raw Data]) -->|Process| Out([Clean Data])
-      style In fill:#eff6ff,stroke:#94a3b8,stroke-width:2px,stroke-dasharray: 5 5
-      style Out fill:#10b981,stroke:#059669,stroke-width:2px,color:#fff
+  graph TD
+    A[Raw Audio DataFrame] --> B{Is torchaudio installed?}
+    B -- Yes --> C[Initialize MelSpectrogram Transformer]
+    B -- No --> D[Print Error/Warning]
+    C --> E{Does AUDIO_COL exist?}
+    E -- Yes --> F[Apply melspec to each Tensor]
+    E -- No --> G[Skip transformation]
+    F --> H[Update DataFrame & pipeline_steps]
+    G --> H
+    H --> I[Processed Audio Data]
+    style A fill:#eff6ff,stroke:#94a3b8,stroke-width:2px
+    style I fill:#10b981,stroke:#059669,stroke-width:2px,color:#fff
 
 _metadata:
   bloc: 2

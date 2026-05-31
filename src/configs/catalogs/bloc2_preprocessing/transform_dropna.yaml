@@ -17,11 +17,42 @@ code_template: |
 
   # [PARAM: SUBSET_COLS | string]
   SUBSET_COLS = ""
+  # [/PARAM]
+
+  print("[TRANSFORM] Suppression des lignes avec NaNs...")
+  if 'df' in locals():
+      if 'pipeline_steps' not in locals():
+          pipeline_steps = {}
+          
+      subset = [c.strip() for c in SUBSET_COLS.split(",") if c.strip()] if SUBSET_COLS else None
+      if subset:
+          subset = [c for c in subset if c in df.columns]
+          if not subset:
+              subset = None  # fallback if all subset cols are invalid
+
+      def drop_na_func(X):
+          X_df = pd.DataFrame(X) if not isinstance(X, pd.DataFrame) else X
+          return X_df.dropna(subset=subset)
+
+      transformer = FunctionTransformer(drop_na_func)
+      pipeline_steps['dropna'] = transformer
+      
+      df_shape_before = df.shape
+      df = transformer.fit_transform(df)
+      print(f"[TRANSFORM] Lignes supprimées (NaN): {df_shape_before[0] - df.shape[0]}")
+
 illustration_mermaid: |
-    graph LR
-      In([Raw Data]) -->|Process| Out([Clean Data])
-      style In fill:#eff6ff,stroke:#94a3b8,stroke-width:2px,stroke-dasharray: 5 5
-      style Out fill:#10b981,stroke:#059669,stroke-width:2px,color:#fff
+  graph TD
+    A[Input DataFrame] --> B{SUBSET_COLS provided?}
+    B -- Yes --> C[Filter valid columns for subset]
+    B -- No --> D[subset = None]
+    C --> E[Initialize FunctionTransformer]
+    D --> E
+    E --> F[df.dropna with subset]
+    F --> G[Update pipeline_steps & df]
+    G --> H[Output DataFrame without NaNs]
+    style A fill:#eff6ff,stroke:#94a3b8,stroke-width:2px
+    style H fill:#10b981,stroke:#059669,stroke-width:2px,color:#fff
 
 _metadata:
   bloc: 2

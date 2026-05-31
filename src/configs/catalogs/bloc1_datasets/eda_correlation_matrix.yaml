@@ -7,19 +7,41 @@ tags:
 - correlation
 - tabular
 - seaborn
-code_template: "import pandas as pd\nimport numpy as np\nimport matplotlib.pyplot\
-  \ as plt\nimport seaborn as sns\n\n# [PARAM: CMAP | string]\nCMAP = \"coolwarm\"\
-  \n# [/PARAM]\n\nnum_df = df.select_dtypes(include=[np.number])\nif len(num_df.columns)\
-  \ < 2:\n    print(\"[EDA] Pas assez de colonnes numériques pour une corrélation.\"\
-  )\nelse:\n    corr = num_df.corr()\n    mask = np.triu(np.ones_like(corr, dtype=bool))\n\
-  \    plt.figure(figsize=(12, 10))\n    sns.heatmap(corr, mask=mask, annot=False,\
-  \ cmap=CMAP, center=0, \n                square=True, linewidths=.5, cbar_kws={\"\
-  shrink\": .5})\n    plt.title(\"Matrice de Corrélation Linéaire\")\n    plt.show()\n"
+code_template: |
+  import pandas as pd
+  import numpy as np
+  import matplotlib.pyplot as plt
+  import seaborn as sns
+
+  # [PARAM: CMAP | string]
+  CMAP = "coolwarm"
+  # [/PARAM]
+
+  num_df = df.select_dtypes(include=[np.number])
+  if len(num_df.columns) < 2:
+      print("[EDA] Pas assez de colonnes numériques pour une corrélation.")
+  else:
+      corr = num_df.corr()
+      mask = np.triu(np.ones_like(corr, dtype=bool))
+      plt.figure(figsize=(12, 10))
+      sns.heatmap(corr, mask=mask, annot=False, cmap=CMAP, center=0, 
+                  square=True, linewidths=.5, cbar_kws={"shrink": .5})
+      plt.title("Matrice de Corrélation Linéaire")
+      plt.show()
 illustration_mermaid: |
-    graph LR
-      A([Input]) --> B([Operation])
-      B --> C([Output])
-      style B fill:#64748b,stroke:#475569,stroke-width:2px,color:#fff
+    graph TD
+      A([DataFrame df]) --> B[Select numerical columns]
+      B --> C{Num cols < 2?}
+      C -- Yes --> D[/Print Error/]
+      C -- No --> E[Compute Pearson Correlation]
+      E --> F([Correlation Matrix])
+      F --> G[Generate Upper Triangle Mask]
+      G --> H{{Plot sns.heatmap with mask}}
+      H --> I([Display Correlation Matrix])
+      style A fill:#4F46E5,color:#fff
+      style C fill:#F59E0B,color:#fff
+      style E fill:#06B6D4,color:#fff
+      style H fill:#10B981,color:#fff
 
 _metadata:
   bloc: 1

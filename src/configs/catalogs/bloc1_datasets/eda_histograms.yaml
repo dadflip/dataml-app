@@ -8,20 +8,47 @@ tags:
 - histogram
 - tabular
 - seaborn
-code_template: "import pandas as pd\nimport numpy as np\nimport matplotlib.pyplot\
-  \ as plt\nimport seaborn as sns\n\n# [PARAM: NUM_BINS | number]\nNUM_BINS = 30\n\
-  # [/PARAM]\n\ncols = df.select_dtypes(include=[np.number]).columns.tolist()\nprint(f\"\
-  [EDA] === HISTOGRAMMES ({len(cols)} variables) ===\")\n\n# Limiter à 20 pour éviter\
-  \ de bloquer l'affichage\nif len(cols) > 20:\n    print(\"Trop de colonnes, affichage\
-  \ limité aux 20 premières.\")\n    cols = cols[:20]\n    \nplt.figure(figsize=(15,\
-  \ 4 * ((len(cols) + 2) // 3)))\nfor i, col in enumerate(cols):\n    plt.subplot(((len(cols)\
-  \ + 2) // 3), 3, i + 1)\n    sns.histplot(df[col].dropna(), bins=NUM_BINS, kde=True)\n\
-  \    plt.title(f\"Distribution de {col}\")\nplt.tight_layout()\nplt.show()\n"
+code_template: |
+  import pandas as pd
+  import numpy as np
+  import matplotlib.pyplot as plt
+  import seaborn as sns
+
+  # [PARAM: NUM_BINS | number]
+  NUM_BINS = 30
+  # [/PARAM]
+
+  cols = df.select_dtypes(include=[np.number]).columns.tolist()
+  print(f"[EDA] === HISTOGRAMMES ({len(cols)} variables) ===")
+
+  # Limiter à 20 pour éviter de bloquer l'affichage
+  if len(cols) > 20:
+      print("Trop de colonnes, affichage limité aux 20 premières.")
+      cols = cols[:20]
+      
+  plt.figure(figsize=(15, 4 * ((len(cols) + 2) // 3)))
+  for i, col in enumerate(cols):
+      plt.subplot(((len(cols) + 2) // 3), 3, i + 1)
+      sns.histplot(df[col].dropna(), bins=NUM_BINS, kde=True)
+      plt.title(f"Distribution de {col}")
+  plt.tight_layout()
+  plt.show()
 illustration_mermaid: |
-    graph LR
-      A([Input]) --> B([Operation])
-      B --> C([Output])
-      style B fill:#64748b,stroke:#475569,stroke-width:2px,color:#fff
+    graph TD
+      A([DataFrame df]) --> B[Select numerical columns]
+      B --> C{Columns > 20?}
+      C -- Yes --> D[Truncate to top 20]
+      C -- No --> E[Keep all numerical]
+      D --> F[Create Grid Subplots]
+      E --> F
+      F --> G{For each column}
+      G --> H[Drop NAs]
+      H --> I{{Plot sns.histplot<br>with KDE}}
+      I --> G
+      G -- Done --> J([Display Histograms])
+      style A fill:#4F46E5,color:#fff
+      style C fill:#F59E0B,color:#fff
+      style I fill:#10B981,color:#fff
 
 _metadata:
   bloc: 1

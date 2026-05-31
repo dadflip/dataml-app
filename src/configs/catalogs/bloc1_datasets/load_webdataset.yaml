@@ -4,17 +4,89 @@ description: "Charge de très gros datasets encapsulés dans des fichiers .tar d
 category: "2. Load"
 tags: ["load", "webdataset", "pytorch", "streaming"]
 code_template: |
-  import glob
+  import pandas as pd
   import os
-  import time
+  import webdataset as wds
 
   # [PARAM: URL_OR_PATH | string]
-  URL_OR_PATH = "./data/extracted/shards/{00000..00099}.tar"
+  URL_OR_PATH = "./data/extracted/shards/{00000..00001}.tar"
+  # [/PARAM]
+
+  meta = {"source": "WEBDATASET", "path": URL_OR_PATH}
+  df = pd.DataFrame()
+  target_name = "target"
+  task_type = "unknown"
+
+  try:
+      # Initialize WebDataset stream
+      dataset = wds.WebDataset(URL_OR_PATH)
+      
+      samples = []
+      # Extract up to 1000 samples for the DataFrame representation
+      max_samples = 1000
+      
+      for i, sample in enumerate(dataset):
+          if i >= max_samples:
+              break
+              
+          row = {}
+          for key, value in sample.items():
+              if key == '__key__':
+                  row['key'] = value
+              elif isinstance(value, (int, float, str, bytes)):
+                  # Store scalar values and small strings
+                  if isinstance(value, bytes) and len(value) < 1000:
+                      try:
+                          row[key] = value.decode('utf-8')
+                      except:
+                          row[key] = "<binary>"
+                  elif not isinstance(value, bytes):
+                      row[key] = value
+              else:
+                  # For complex types like tensors, arrays, or large images
+                  # Store their type/shape summary instead of full data
+                  if hasattr(value, 'shape'):
+                      row[key] = f"{type(value).__name__}{value.shape}"
+                  else:
+                      row[key] = f"<{type(value).__name__}>"
+                      
+          samples.append(row)
+          
+      df = pd.DataFrame(samples)
+      meta["num_samples_previewed"] = len(df)
+      
+      # Try to infer target and task
+      if 'cls' in df.columns or 'label' in df.columns or 'class' in df.columns:
+          target_candidates = [c for c in ['cls', 'label', 'class'] if c in df.columns]
+          target_name = target_candidates[0]
+          task_type = "classification"
+          
+  except ImportError:
+      print("webdataset library is required but not installed.")
+  except Exception as e:
+      print(f"Error loading WebDataset from {URL_OR_PATH}: {e}")
+output_variables:
+  - df
+  - target_name
+  - task_type
+  - meta
 illustration_mermaid: |
-    graph LR
-      Source[(Source)] -->|Load| Node([Extract Data])
-      style Source fill:#3b82f6,stroke:#2563eb,stroke-width:2px,color:#fff
-      style Node fill:#eff6ff,stroke:#3b82f6,stroke-width:2px
+  flowchart TD
+      A([URL_OR_PATH]) --> B{Valid URL/Path?}
+      B -- Yes --> C[wds.WebDataset]
+      B -- No --> D[Empty DataFrame]
+      C --> E[Stream samples]
+      E --> F[Extract up to 1000 records]
+      F --> G[Format scalars & shape info]
+      G --> H[Create DataFrame]
+      H --> I([df, target_name, task_type, meta])
+      D --> I
+
+      style A fill:#3b82f6,color:#fff
+      style C fill:#10b981,color:#fff
+      style F fill:#10b981,color:#fff
+      style I fill:#f59e0b,color:#fff
+
 
 _metadata:
   bloc: 1

@@ -19,11 +19,54 @@ code_template: |
 
   # [PARAM: TEXT_COL | string]
   TEXT_COL = "text"
+  # [/PARAM]
+
+  print(f"[TRANSFORM] Text Cleaning (col={TEXT_COL})...")
+  if 'df' in locals():
+      if 'pipeline_steps' not in locals(): pipeline_steps = {}
+      
+      def clean_text_func(X):
+          # X can be a DataFrame or Series
+          if isinstance(X, pd.DataFrame):
+              X = X.copy()
+              for col in X.columns:
+                  X[col] = X[col].astype(str).str.lower().apply(lambda s: re.sub(r'[^a-zA-Z0-9\s]', '', s))
+              return X
+          else:
+              return pd.Series(X).astype(str).str.lower().apply(lambda s: re.sub(r'[^a-zA-Z0-9\s]', '', s)).to_frame()
+
+      if TEXT_COL in df.columns:
+          cleaner = FunctionTransformer(clean_text_func)
+          
+          ct = ColumnTransformer(
+              [('text_clean', cleaner, [TEXT_COL])],
+              remainder='passthrough', verbose_feature_names_out=False
+          )
+          try: ct.set_output(transform="pandas")
+          except: pass
+          
+          step_name = 'text_cleaner'
+          pipeline_steps[step_name] = (step_name, ct)
+
+  if 'X_train' not in locals(): X_train = None
+  if 'X_test' not in locals(): X_test = None
+  if 'y_train' not in locals(): y_train = None
+  if 'y_test' not in locals(): y_test = None
+  if 'preprocessor' not in locals(): preprocessor = None
+  if 'feature_names_out' not in locals(): feature_names_out = None
+  if 'task_type' not in locals(): task_type = "classification"
+  if 'meta' not in locals(): meta = {}
 illustration_mermaid: |
-    graph LR
-      In([Raw Data]) -->|Process| Out([Clean Data])
-      style In fill:#eff6ff,stroke:#94a3b8,stroke-width:2px,stroke-dasharray: 5 5
-      style Out fill:#10b981,stroke:#059669,stroke-width:2px,color:#fff
+  graph TD
+    A[Raw Data] --> B{Does TEXT_COL exist?}
+    B -- Yes --> C[Initialize FunctionTransformer for Text Cleaning]
+    C --> D[Create ColumnTransformer]
+    D --> E[Add to Pipeline Steps]
+    B -- No --> F[Skip Text Cleaning]
+    E --> G[Update Data Contract Variables]
+    F --> G
+    style A fill:#eff6ff,stroke:#3b82f6,stroke-width:2px
+    style G fill:#10b981,stroke:#059669,stroke-width:2px
 
 _metadata:
   bloc: 2

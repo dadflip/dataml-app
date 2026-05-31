@@ -7,19 +7,41 @@ tags:
 - audio
 - multimedia
 - matplotlib
-code_template: "import matplotlib.pyplot as plt\n\n# On suppose un 'waveform' chargé\
-  \ par torchaudio dans le scope\nif 'waveform' in locals():\n    plt.figure(figsize=(10,\
-  \ 4))\n    if waveform.shape[0] == 1:\n        plt.plot(waveform[0].numpy())\n \
-  \       plt.title(\"Waveform - Mono\")\n    else:\n        plt.plot(waveform[0].numpy(),\
-  \ label=\"Left\")\n        plt.plot(waveform[1].numpy(), alpha=0.5, label=\"Right\"\
-  )\n        plt.title(\"Waveform - Stéréo\")\n        plt.legend()\n    plt.ylabel(\"\
-  Amplitude\")\n    plt.xlabel(\"Frames\")\n    plt.show()\nelse:\n    print(\"[EDA]\
-  \ Aucun Tensor 'waveform' trouvé dans le scope local.\")\n"
+code_template: |
+  import matplotlib.pyplot as plt
+
+  # On suppose un 'waveform' chargé par torchaudio dans le scope
+  if 'waveform' in locals():
+      plt.figure(figsize=(10, 4))
+      if waveform.shape[0] == 1:
+          plt.plot(waveform[0].numpy())
+          plt.title("Waveform - Mono")
+      else:
+          plt.plot(waveform[0].numpy(), label="Left")
+          plt.plot(waveform[1].numpy(), alpha=0.5, label="Right")
+          plt.title("Waveform - Stéréo")
+          plt.legend()
+      plt.ylabel("Amplitude")
+      plt.xlabel("Frames")
+      plt.show()
+  else:
+      print("[EDA] Aucun Tensor 'waveform' trouvé dans le scope local.")
 illustration_mermaid: |
-    graph LR
-      A([Input]) --> B([Operation])
-      B --> C([Output])
-      style B fill:#64748b,stroke:#475569,stroke-width:2px,color:#fff
+    graph TD
+      A([Tensor 'waveform']) --> B{Exists in locals?}
+      B -- Yes --> C{Mono or Stereo?}
+      C -- Mono --> D{{Plot Channel 0}}
+      D --> E[Set Title: Mono]
+      C -- Stereo --> F{{Plot Left & Right Channels}}
+      F --> G[Set Title: Stereo & Add Legend]
+      E --> H[Set Labels & Display]
+      G --> H
+      B -- No --> I[/Print Error Message/]
+      style A fill:#4F46E5,color:#fff
+      style B fill:#F59E0B,color:#fff
+      style C fill:#F59E0B,color:#fff
+      style D fill:#10B981,color:#fff
+      style F fill:#10B981,color:#fff
 
 _metadata:
   bloc: 1

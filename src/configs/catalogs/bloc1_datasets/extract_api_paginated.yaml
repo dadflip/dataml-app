@@ -7,31 +7,70 @@ tags:
 - api
 - rest
 - pagination
-code_template: "import requests\nimport json\nimport os\nimport time\n\n# [PARAM:\
-  \ BASE_URL | string]\nBASE_URL = \"https://api.example.com/v1/records\"\n# [/PARAM]\n\
-  \n# [PARAM: MAX_PAGES | string]\nMAX_PAGES = \"5\"\n# [/PARAM]\n\n# [PARAM: DEST_PATH\
-  \ | string]\nDEST_PATH = \"./data/raw/api_paginated.jsonlines\"\n# [/PARAM]\n\n\
-  print(f\"[EXTRACT] Extraction paginée depuis {BASE_URL}...\")\nos.makedirs(os.path.dirname(DEST_PATH),\
-  \ exist_ok=True)\n\ntry:\n    start_time = time.time()\n    page = 1\n    total_records\
-  \ = 0\n    \n    with open(DEST_PATH, \"w\", encoding=\"utf-8\") as f:\n       \
-  \ while page <= int(MAX_PAGES):\n            resp = requests.get(f\"{BASE_URL}?page={page}&limit=100\"\
-  , timeout=15)\n            if resp.status_code != 200:\n                break\n\
-  \                \n            data = resp.json()\n            # Suppose que l'API\
-  \ renvoie { \"data\": [...] }\n            records = data.get(\"data\", [])\n  \
-  \          if not records:\n                break\n                \n          \
-  \  for r in records:\n                f.write(json.dumps(r) + \"\\\\n\")\n     \
-  \           \n            total_records += len(records)\n            page += 1\n\
-  \            time.sleep(0.5) # Anti rate-limit\n            \n    duration = time.time()\
-  \ - start_time\n    print(f\"[EXTRACT] Succès Pagination API. {total_records} records\
-  \ extraits en {duration:.2f}s.\")\nexcept Exception as e:\n    print(f\"[ERREUR\
-  \ EXTRACT] Échec API paginée : {str(e)}\")\n    raise e\n\ndf = None\ntarget_name\
-  \ = None\ntask_type = \"unknown\"\nmeta = {\"source\": \"api_paginated\", \"path\"\
-  : DEST_PATH}\n"
+code_template: |
+  import requests
+  import json
+  import os
+  import time
+  
+  # [PARAM: BASE_URL | string]
+  BASE_URL = "https://api.example.com/v1/records"
+  # [/PARAM]
+  
+  # [PARAM: MAX_PAGES | string]
+  MAX_PAGES = "5"
+  # [/PARAM]
+  
+  # [PARAM: DEST_PATH | string]
+  DEST_PATH = "./data/raw/api_paginated.jsonlines"
+  # [/PARAM]
+  
+  print(f"[EXTRACT] Extraction paginée depuis {BASE_URL}...")
+  os.makedirs(os.path.dirname(DEST_PATH), exist_ok=True)
+  
+  try:
+      start_time = time.time()
+      page = 1
+      total_records = 0
+      
+      with open(DEST_PATH, "w", encoding="utf-8") as f:
+          while page <= int(MAX_PAGES):
+              resp = requests.get(f"{BASE_URL}?page={page}&limit=100", timeout=15)
+              if resp.status_code != 200:
+                  break
+                  
+              data = resp.json()
+              # Suppose que l'API renvoie { "data": [...] }
+              records = data.get("data", [])
+              if not records:
+                  break
+                  
+              for r in records:
+                  f.write(json.dumps(r) + "\n")
+                  
+              total_records += len(records)
+              page += 1
+              time.sleep(0.5) # Anti rate-limit
+              
+      duration = time.time() - start_time
+      print(f"[EXTRACT] Succès Pagination API. {total_records} records extraits en {duration:.2f}s.")
+  except Exception as e:
+      print(f"[ERREUR EXTRACT] Échec API paginée : {str(e)}")
+      raise e
+  
+  df = None
+  target_name = None
+  task_type = "unknown"
+  meta = {"source": "api_paginated", "path": DEST_PATH}
 illustration_mermaid: |
-    graph LR
-      Source[(Source)] -->|Load| Node([Extract Data])
-      style Source fill:#3b82f6,stroke:#2563eb,stroke-width:2px,color:#fff
-      style Node fill:#eff6ff,stroke:#3b82f6,stroke-width:2px
+    flowchart TD
+    A([FILE_PATH]) --> B[Load EXTRACT_API_PAGINATED]
+    B --> df([df])
+    
+    style A fill:#3b82f6,color:#fff
+    style B fill:#10b981,color:#fff
+    style df fill:#f59e0b,color:#fff
+
 
 _metadata:
   bloc: 1

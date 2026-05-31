@@ -20,11 +20,57 @@ code_template: |
 
   # [PARAM: STRATEGY_NUM | string]
   STRATEGY_NUM = "median"
+  # [/PARAM]
+
+  print(f"[TRANSFORM] SimpleImputer (num={STRATEGY_NUM})...")
+  if 'df' in locals():
+      if 'pipeline_steps' not in locals(): pipeline_steps = {}
+      
+      num_cols = df.select_dtypes(include=[np.number]).columns.tolist()
+      cat_cols = df.select_dtypes(exclude=[np.number, 'datetime']).columns.tolist()
+      
+      if 'target_name' in locals():
+          if target_name in num_cols: num_cols.remove(target_name)
+          if target_name in cat_cols: cat_cols.remove(target_name)
+          
+      transformers = []
+      if len(num_cols) > 0:
+          num_imputer = SimpleImputer(strategy=STRATEGY_NUM)
+          transformers.append(('num_imputer', num_imputer, num_cols))
+      if len(cat_cols) > 0:
+          cat_imputer = SimpleImputer(strategy='most_frequent')
+          transformers.append(('cat_imputer', cat_imputer, cat_cols))
+          
+      if transformers:
+          ct = ColumnTransformer(
+              transformers,
+              remainder='passthrough', verbose_feature_names_out=False
+          )
+          try: ct.set_output(transform="pandas")
+          except: pass
+          
+          step_name = 'simple_imputer'
+          pipeline_steps[step_name] = (step_name, ct)
+
+  if 'X_train' not in locals(): X_train = None
+  if 'X_test' not in locals(): X_test = None
+  if 'y_train' not in locals(): y_train = None
+  if 'y_test' not in locals(): y_test = None
+  if 'preprocessor' not in locals(): preprocessor = None
+  if 'feature_names_out' not in locals(): feature_names_out = None
+  if 'task_type' not in locals(): task_type = "classification"
+  if 'meta' not in locals(): meta = {}
 illustration_mermaid: |
-    graph LR
-      In([Raw Data]) -->|Process| Out([Clean Data])
-      style In fill:#eff6ff,stroke:#94a3b8,stroke-width:2px,stroke-dasharray: 5 5
-      style Out fill:#10b981,stroke:#059669,stroke-width:2px,color:#fff
+  graph TD
+    A[Raw Data] --> B{Are there columns?}
+    B -- Yes --> C[Initialize Numerical & Categorical Imputers]
+    C --> D[Create ColumnTransformer]
+    D --> E[Add to Pipeline Steps]
+    B -- No --> F[Skip SimpleImputer]
+    E --> G[Update Data Contract Variables]
+    F --> G
+    style A fill:#eff6ff,stroke:#3b82f6,stroke-width:2px
+    style G fill:#10b981,stroke:#059669,stroke-width:2px
 
 _metadata:
   bloc: 2

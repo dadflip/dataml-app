@@ -10,11 +10,34 @@ code_template: |
 
   # [PARAM: FILE_PATH | file]
   FILE_PATH = "./data/raw/data.jsonl"
+  # [/PARAM]
+
+  print(f"[LOAD] Lecture du fichier JSONL : {FILE_PATH}...")
+  if not os.path.exists(FILE_PATH):
+      raise FileNotFoundError(f"[ERREUR LOAD] Fichier JSONL introuvable : {FILE_PATH}")
+
+  try:
+      start_time = time.time()
+      df = pd.read_json(FILE_PATH, lines=True)
+      duration = time.time() - start_time
+      print(f"[LOAD] Succès JSONL. {df.shape[0]} lignes chargées en {duration:.2f}s.")
+  except Exception as e:
+      print(f"[ERREUR LOAD] Erreur de lecture JSONL : {str(e)}")
+      raise e
+
+  target_name = ""
+  task_type = "unknown"
+  meta = {"format": "jsonl", "shape": df.shape}
 illustration_mermaid: |
-    graph LR
-      Source[(Source)] -->|Load| Node([Extract Data])
-      style Source fill:#3b82f6,stroke:#2563eb,stroke-width:2px,color:#fff
-      style Node fill:#eff6ff,stroke:#3b82f6,stroke-width:2px
+    flowchart LR
+        A([JSONL File]) --> B{pd.read_json lines=True}
+        B --> C[(df)]
+        C --> D{{Set Variables}}
+        D --> E([target_name, task_type, meta])
+        style A fill:#f97316,stroke:#c2410c,stroke-width:2px,color:#fff
+        style B fill:#3b82f6,stroke:#2563eb,stroke-width:2px,color:#fff
+        style C fill:#10b981,stroke:#047857,stroke-width:2px,color:#fff
+        style D fill:#8b5cf6,stroke:#6d28d9,stroke-width:2px,color:#fff
 
 _metadata:
   bloc: 1

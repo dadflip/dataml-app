@@ -7,27 +7,64 @@ tags:
 - mongo
 - nosql
 - db
-code_template: "from pymongo import MongoClient\nimport json\nimport os\nfrom bson\
-  \ import json_util\nimport time\n\n# [PARAM: MONGO_URI | string]\nMONGO_URI = \"\
-  mongodb://localhost:27017/\"\n# [/PARAM]\n\n# [PARAM: DB_NAME | string]\nDB_NAME\
-  \ = \"ml_database\"\n# [/PARAM]\n\n# [PARAM: COLLECTION | string]\nCOLLECTION =\
-  \ \"logs\"\n# [/PARAM]\n\n# [PARAM: DEST_PATH | string]\nDEST_PATH = \"./data/raw/mongo_dump.jsonlines\"\
-  \n# [/PARAM]\n\nprint(f\"[EXTRACT] Export de la collection MongoDB {DB_NAME}.{COLLECTION}...\"\
-  )\nos.makedirs(os.path.dirname(DEST_PATH), exist_ok=True)\n\ntry:\n    start_time\
-  \ = time.time()\n    client = MongoClient(MONGO_URI, serverSelectionTimeoutMS=5000)\n\
-  \    db = client[DB_NAME]\n    col = db[COLLECTION]\n    \n    cursor = col.find({})\n\
-  \    count = 0\n    with open(DEST_PATH, \"w\", encoding=\"utf-8\") as f:\n    \
-  \    for doc in cursor:\n            f.write(json_util.dumps(doc) + \"\\\\n\")\n\
-  \            count += 1\n            \n    duration = time.time() - start_time\n\
-  \    print(f\"[EXTRACT] Succès MongoDB. {count} documents exportés en {duration:.2f}s.\"\
-  )\nexcept Exception as e:\n    print(f\"[ERREUR EXTRACT] Échec de la connexion MongoDB\
-  \ : {str(e)}\")\n    raise e\n\ndf = None\ntarget_name = None\ntask_type = \"unknown\"\
-  \nmeta = {\"source\": \"mongodb\", \"path\": DEST_PATH}\n"
+code_template: |
+  from pymongo import MongoClient
+  import json
+  import os
+  from bson import json_util
+  import time
+
+  # [PARAM: MONGO_URI | string]
+  MONGO_URI = "mongodb://localhost:27017/"
+  # [/PARAM]
+
+  # [PARAM: DB_NAME | string]
+  DB_NAME = "ml_database"
+  # [/PARAM]
+
+  # [PARAM: COLLECTION | string]
+  COLLECTION = "logs"
+  # [/PARAM]
+
+  # [PARAM: DEST_PATH | string]
+  DEST_PATH = "./data/raw/mongo_dump.jsonlines"
+  # [/PARAM]
+
+  print(f"[EXTRACT] Export de la collection MongoDB {DB_NAME}.{COLLECTION}...")
+  os.makedirs(os.path.dirname(DEST_PATH), exist_ok=True)
+
+  try:
+      start_time = time.time()
+      client = MongoClient(MONGO_URI, serverSelectionTimeoutMS=5000)
+      db = client[DB_NAME]
+      col = db[COLLECTION]
+      
+      cursor = col.find({})
+      count = 0
+      with open(DEST_PATH, "w", encoding="utf-8") as f:
+          for doc in cursor:
+              f.write(json_util.dumps(doc) + "\n")
+              count += 1
+              
+      duration = time.time() - start_time
+      print(f"[EXTRACT] Succès MongoDB. {count} documents exportés en {duration:.2f}s.")
+  except Exception as e:
+      print(f"[ERREUR EXTRACT] Échec de la connexion MongoDB : {str(e)}")
+      raise e
+
+  df = DEST_PATH
+  target_name = "target"
+  task_type = "unknown"
+  meta = {"source": "mongodb", "path": DEST_PATH}
 illustration_mermaid: |
-    graph LR
-      Source[(Source)] -->|Load| Node([Extract Data])
-      style Source fill:#3b82f6,stroke:#2563eb,stroke-width:2px,color:#fff
-      style Node fill:#eff6ff,stroke:#3b82f6,stroke-width:2px
+    flowchart TD
+    A([FILE_PATH]) --> B[Load EXTRACT_MONGO]
+    B --> df([df])
+    
+    style A fill:#3b82f6,color:#fff
+    style B fill:#10b981,color:#fff
+    style df fill:#f59e0b,color:#fff
+
 
 _metadata:
   bloc: 1

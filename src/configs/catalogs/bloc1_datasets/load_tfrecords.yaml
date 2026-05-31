@@ -4,17 +4,81 @@ description: "Charge un dataset stocké sous forme de fichiers .tfrecord (standa
 category: "2. Load"
 tags: ["load", "tfrecords", "tensorflow", "bigdata"]
 code_template: |
-  import glob
+  import pandas as pd
   import os
-  import time
+  import glob
+  import tensorflow as tf
 
-  # [PARAM: DIRECTORY_PATH | dir]
+  # [PARAM: DIRECTORY_PATH | directory]
   DIRECTORY_PATH = "./data/extracted/tfrecords"
+  # [/PARAM]
+
+  meta = {"source": "TFRECORDS", "path": DIRECTORY_PATH}
+  
+  df = pd.DataFrame()
+  target_name = "target"
+  task_type = "unknown"
+
+  if os.path.exists(DIRECTORY_PATH):
+      # Gather all tfrecord files in the directory
+      tfrecord_files = glob.glob(os.path.join(DIRECTORY_PATH, "*.tfrecord"))
+      meta["num_files"] = len(tfrecord_files)
+      
+      try:
+          if tfrecord_files:
+              dataset = tf.data.TFRecordDataset(tfrecord_files)
+              
+              records = []
+              # Parse a limited number of records (e.g. 1000) for DataFrame construction
+              for raw_record in dataset.take(1000):
+                  example = tf.train.Example()
+                  example.ParseFromString(raw_record.numpy())
+                  
+                  feature_dict = {}
+                  for key, feature in example.features.feature.items():
+                      if feature.HasField('int64_list'):
+                          feature_dict[key] = list(feature.int64_list.value)
+                      elif feature.HasField('float_list'):
+                          feature_dict[key] = list(feature.float_list.value)
+                      elif feature.HasField('bytes_list'):
+                          feature_dict[key] = [b.decode('utf-8', errors='ignore') for b in feature.bytes_list.value]
+                          
+                      if len(feature_dict[key]) == 1:
+                          feature_dict[key] = feature_dict[key][0]
+                  
+                  records.append(feature_dict)
+              
+              df = pd.DataFrame(records)
+              
+              if not df.empty and 'label' in df.columns:
+                  target_name = 'label'
+                  task_type = 'classification'
+      except Exception as e:
+          print(f"Error parsing TFRecords in {DIRECTORY_PATH}: {e}")
+  else:
+      print(f"Directory not found: {DIRECTORY_PATH}")
+output_variables:
+  - df
+  - target_name
+  - task_type
+  - meta
 illustration_mermaid: |
-    graph LR
-      Source[(Source)] -->|Load| Node([Extract Data])
-      style Source fill:#3b82f6,stroke:#2563eb,stroke-width:2px,color:#fff
-      style Node fill:#eff6ff,stroke:#3b82f6,stroke-width:2px
+  flowchart TD
+      A([DIRECTORY_PATH]) --> B{Path Exists?}
+      B -- Yes --> C[glob *.tfrecord]
+      B -- No --> D[Empty DataFrame]
+      C --> E{Files Found?}
+      E -- Yes --> F[tf.data.TFRecordDataset]
+      E -- No --> D
+      F --> G[Parse tf.train.Example]
+      G --> H[Create DataFrame limited to 1000]
+      H --> I([df, target_name, task_type, meta])
+      D --> I
+
+      style A fill:#3b82f6,color:#fff
+      style F fill:#10b981,color:#fff
+      style G fill:#10b981,color:#fff
+      style I fill:#f59e0b,color:#fff
 
 _metadata:
   bloc: 1

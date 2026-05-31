@@ -7,24 +7,48 @@ tags:
 - outliers
 - tabular
 - sklearn
-code_template: "import pandas as pd\nimport numpy as np\nimport matplotlib.pyplot\
-  \ as plt\nimport seaborn as sns\nfrom sklearn.ensemble import IsolationForest\n\n\
-  # [PARAM: CONTAMINATION | number]\nCONTAMINATION = 0.05\n# [/PARAM]\n\nnum_df =\
-  \ df.select_dtypes(include=[np.number]).dropna()\nif len(num_df) > 50 and len(num_df.columns)\
-  \ >= 2:\n    iso = IsolationForest(contamination=CONTAMINATION, random_state=42)\n\
-  \    preds = iso.fit_predict(num_df)\n    \n    cols = num_df.columns[:2]\n    \n\
-  \    plt.figure(figsize=(8, 6))\n    scatter = plt.scatter(num_df[cols[0]], num_df[cols[1]],\
-  \ c=preds, cmap='coolwarm', alpha=0.7)\n    plt.title(f\"Isolation Forest : Outliers\
-  \ sur {cols[0]} vs {cols[1]}\")\n    plt.xlabel(cols[0])\n    plt.ylabel(cols[1])\n\
-  \    # -1 (rouge) = outlier, 1 (bleu) = inlier\n    plt.show()\n    print(f\"[EDA]\
-  \ {sum(preds == -1)} outliers détectés sur {len(num_df)} lignes ({(sum(preds ==\
-  \ -1)/len(num_df)*100):.1f}%).\")\nelse:\n    print(\"[EDA] Dataset inadapté pour\
-  \ Isolation Forest.\")\n"
+code_template: |
+  import pandas as pd
+  import numpy as np
+  import matplotlib.pyplot as plt
+  import seaborn as sns
+  from sklearn.ensemble import IsolationForest
+
+  # [PARAM: CONTAMINATION | number]
+  CONTAMINATION = 0.05
+  # [/PARAM]
+
+  num_df = df.select_dtypes(include=[np.number]).dropna()
+  if len(num_df) > 50 and len(num_df.columns) >= 2:
+      iso = IsolationForest(contamination=CONTAMINATION, random_state=42)
+      preds = iso.fit_predict(num_df)
+      
+      cols = num_df.columns[:2]
+      
+      plt.figure(figsize=(8, 6))
+      scatter = plt.scatter(num_df[cols[0]], num_df[cols[1]], c=preds, cmap='coolwarm', alpha=0.7)
+      plt.title(f"Isolation Forest : Outliers sur {cols[0]} vs {cols[1]}")
+      plt.xlabel(cols[0])
+      plt.ylabel(cols[1])
+      # -1 (rouge) = outlier, 1 (bleu) = inlier
+      plt.show()
+      print(f"[EDA] {sum(preds == -1)} outliers détectés sur {len(num_df)} lignes ({(sum(preds == -1)/len(num_df)*100):.1f}%).")
+  else:
+      print("[EDA] Dataset inadapté pour Isolation Forest.")
 illustration_mermaid: |
-    graph LR
-      A([Input]) --> B([Operation])
-      B --> C([Output])
-      style B fill:#64748b,stroke:#475569,stroke-width:2px,color:#fff
+    flowchart TD
+        Input([DataFrame]) --> Filter[Select Numeric & Drop NaNs]
+        Filter --> Check{Rows > 50 & Cols >= 2?}
+        Check -- Yes --> IsoForest[Init IsolationForest]
+        IsoForest --> Fit[Fit & Predict Anomalies]
+        Fit --> Scatter{{Scatter Plot Col1 vs Col2}}
+        Fit --> Stats[/Print Outlier Count & %/]
+        Check -- No --> Error[/Print Warning/]
+    
+        style Input fill:#3b82f6,stroke:#2563eb,color:#fff
+        style IsoForest fill:#8b5cf6,stroke:#7c3aed,color:#fff
+        style Scatter fill:#ec4899,stroke:#db2777,color:#fff
+        style Fit fill:#10b981,stroke:#059669,color:#fff
 
 _metadata:
   bloc: 1

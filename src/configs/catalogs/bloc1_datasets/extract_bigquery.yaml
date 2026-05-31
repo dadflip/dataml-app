@@ -7,24 +7,54 @@ tags:
 - gcp
 - bigquery
 - sql
-code_template: "from google.cloud import bigquery\nimport os\nimport time\n\n# [PARAM:\
-  \ PROJECT_ID | string]\nPROJECT_ID = \"my-gcp-project\"\n# [/PARAM]\n\n# [PARAM:\
-  \ QUERY | string]\nQUERY = \"SELECT * FROM `bigquery-public-data.samples.github_timeline`\
-  \ LIMIT 1000\"\n# [/PARAM]\n\n# [PARAM: DEST_PATH | string]\nDEST_PATH = \"./data/raw/bigquery_export.csv\"\
-  \n# [/PARAM]\n\nprint(f\"[EXTRACT] Requête BigQuery sur le projet {PROJECT_ID}...\"\
-  )\nos.makedirs(os.path.dirname(DEST_PATH), exist_ok=True)\n\ntry:\n    start_time\
-  \ = time.time()\n    client = bigquery.Client(project=PROJECT_ID)\n    query_job\
-  \ = client.query(QUERY)\n    df_temp = query_job.to_dataframe()\n    \n    df_temp.to_csv(DEST_PATH,\
-  \ index=False)\n    \n    duration = time.time() - start_time\n    print(f\"[EXTRACT]\
-  \ Succès BigQuery. {df_temp.shape[0]} lignes extraites en {duration:.2f}s.\")\n\
-  except Exception as e:\n    print(f\"[ERREUR EXTRACT] Échec de la requête BigQuery\
-  \ : {str(e)}\")\n    raise e\n\ndf = None\ntarget_name = None\ntask_type = \"unknown\"\
-  \nmeta = {\"source\": \"bigquery\", \"path\": DEST_PATH}\n"
+code_template: |
+  from google.cloud import bigquery
+  import os
+  import time
+  
+  # [PARAM: PROJECT_ID | string]
+  PROJECT_ID = "my-gcp-project"
+  # [/PARAM]
+  
+  # [PARAM: QUERY | string]
+  QUERY = "SELECT * FROM `bigquery-public-data.samples.github_timeline` LIMIT 1000"
+  # [/PARAM]
+  
+  # [PARAM: DEST_PATH | string]
+  DEST_PATH = "./data/raw/bigquery_export.csv"
+  # [/PARAM]
+  
+  print(f"[EXTRACT] Requête BigQuery sur le projet {PROJECT_ID}...")
+  os.makedirs(os.path.dirname(DEST_PATH), exist_ok=True)
+  
+  try:
+      start_time = time.time()
+      client = bigquery.Client(project=PROJECT_ID)
+      query_job = client.query(QUERY)
+      df_temp = query_job.to_dataframe()
+      
+      df_temp.to_csv(DEST_PATH, index=False)
+      
+      duration = time.time() - start_time
+      print(f"[EXTRACT] Succès BigQuery. {df_temp.shape[0]} lignes extraites en {duration:.2f}s.")
+  except Exception as e:
+      print(f"[ERREUR EXTRACT] Échec de la requête BigQuery : {str(e)}")
+      raise e
+  
+  df = None
+  target_name = None
+  task_type = "unknown"
+  meta = {"source": "bigquery", "path": DEST_PATH}
 illustration_mermaid: |
-    graph LR
-      Source[(Source)] -->|Load| Node([Extract Data])
-      style Source fill:#3b82f6,stroke:#2563eb,stroke-width:2px,color:#fff
-      style Node fill:#eff6ff,stroke:#3b82f6,stroke-width:2px
+    flowchart TD
+    A([FILE_PATH]) --> B[Load EXTRACT_BIGQUERY]
+    B --> df([df])
+    
+    style A fill:#3b82f6,color:#fff
+    style B fill:#10b981,color:#fff
+    style df fill:#f59e0b,color:#fff
+
+
 
 _metadata:
   bloc: 1

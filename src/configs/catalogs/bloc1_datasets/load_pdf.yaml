@@ -4,16 +4,58 @@ description: "Extrait le texte brut d'un document PDF pour des tâches NLP."
 category: "2. Load"
 tags: ["load", "pdf", "nlp", "text"]
 code_template: |
-  import time
+  import pandas as pd
   import os
+  import pypdf
 
   # [PARAM: FILE_PATH | file]
-  FILE_PATH = "./data/raw/document.pdf"
+  FILE_PATH = "./data/raw/data.pdf"
+  # [/PARAM]
+
+  meta = {"source": "PDF", "path": FILE_PATH}
+
+  if os.path.exists(FILE_PATH):
+      try:
+          with open(FILE_PATH, 'rb') as f:
+              reader = pypdf.PdfReader(f)
+              meta["num_pages"] = len(reader.pages)
+              
+              pages_data = []
+              for i, page in enumerate(reader.pages):
+                  text = page.extract_text()
+                  if text:
+                      pages_data.append({"page_number": i + 1, "text": text.strip()})
+                      
+              df = pd.DataFrame(pages_data)
+      except Exception as e:
+          print(f"Error loading PDF file {FILE_PATH}: {e}")
+          df = pd.DataFrame()
+  else:
+      print(f"File not found: {FILE_PATH}")
+      df = pd.DataFrame()
+
+  target_name = "text"
+  task_type = "nlp"
+output_variables:
+  - df
+  - target_name
+  - task_type
+  - meta
 illustration_mermaid: |
-    graph LR
-      Source[(Source)] -->|Load| Node([Extract Data])
-      style Source fill:#3b82f6,stroke:#2563eb,stroke-width:2px,color:#fff
-      style Node fill:#eff6ff,stroke:#3b82f6,stroke-width:2px
+  flowchart TD
+      A([FILE_PATH]) --> B{File Exists?}
+      B -- Yes --> C[pypdf.PdfReader]
+      B -- No --> D[Empty DataFrame]
+      C --> E[Iterate Pages]
+      E --> F[Extract Text]
+      F --> G[Create DataFrame: page_number, text]
+      G --> H([df, target_name, task_type, meta])
+      D --> H
+
+      style A fill:#3b82f6,color:#fff
+      style C fill:#10b981,color:#fff
+      style F fill:#10b981,color:#fff
+      style H fill:#f59e0b,color:#fff
 
 _metadata:
   bloc: 1

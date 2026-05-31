@@ -7,21 +7,38 @@ tags:
 - text
 - nlp
 - sentiment
-code_template: "import pandas as pd\nimport matplotlib.pyplot as plt\nimport seaborn\
-  \ as sns\nfrom textblob import TextBlob\n\n# [PARAM: TEXT_COL | string]\nTEXT_COL\
-  \ = \"text\"\n# [/PARAM]\n\nif TEXT_COL in df.columns:\n    print(\"[EDA] Calcul\
-  \ des scores de sentiment en cours...\")\n    polarities = df[TEXT_COL].dropna().astype(str).apply(lambda\
-  \ x: TextBlob(x).sentiment.polarity)\n    \n    plt.figure(figsize=(8, 5))\n   \
-  \ sns.histplot(polarities, bins=30, kde=True, color='teal')\n    plt.title(f\"Distribution\
-  \ de Polarité des Sentiments - {TEXT_COL}\")\n    plt.xlabel(\"Polarité (-1 = Négatif,\
-  \ 1 = Positif)\")\n    plt.show()\nelse:\n    print(f\"[EDA] Colonne {TEXT_COL}\
-  \ introuvable.\")\n"
+code_template: |
+  import pandas as pd
+  import matplotlib.pyplot as plt
+  import seaborn as sns
+  from textblob import TextBlob
+  
+  # [PARAM: TEXT_COL | string]
+  TEXT_COL = "text"
+  # [/PARAM]
+  
+  if TEXT_COL in df.columns:
+      print("[EDA] Calcul des scores de sentiment en cours...")
+      polarities = df[TEXT_COL].dropna().astype(str).apply(lambda x: TextBlob(x).sentiment.polarity)
+      
+      plt.figure(figsize=(8, 5))
+      sns.histplot(polarities, bins=30, kde=True, color='teal')
+      plt.title(f"Distribution de Polarité des Sentiments - {TEXT_COL}")
+      plt.xlabel("Polarité (-1 = Négatif, 1 = Positif)")
+      plt.show()
+  else:
+      print(f"[EDA] Colonne {TEXT_COL} introuvable.")
 illustration_mermaid: |
-    graph LR
-      A([Input]) --> B([Operation])
-      B --> C([Output])
-      style B fill:#64748b,stroke:#475569,stroke-width:2px,color:#fff
-
+    graph TD
+      DF([DataFrame]) --> Check{Check TEXT_COL}
+      Check -- Valid --> Blob{{TextBlob}}
+      Blob -- "polarity" --> Scores[Extract Polarities]
+      Scores --> Plot[sns.histplot]
+      Plot --> Show[plt.show]
+      Check -- Missing --> Err[Print Error]
+      style Blob fill:#d946ef,stroke:#c026d3,stroke-width:2px,color:#fff
+      style Scores fill:#3b82f6,stroke:#2563eb,stroke-width:2px,color:#fff
+      style Plot fill:#10b981,stroke:#059669,stroke-width:2px,color:#fff
 _metadata:
   bloc: 1
   section: 3_eda

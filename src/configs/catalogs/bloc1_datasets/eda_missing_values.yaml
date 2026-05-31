@@ -8,20 +8,42 @@ tags:
 - missing
 - tabular
 - seaborn
-code_template: "import pandas as pd\nimport matplotlib.pyplot as plt\nimport seaborn\
-  \ as sns\n\nmissing = df.isnull().sum()\nmissing_pct = (missing / len(df)) * 100\n\
-  missing_df = pd.DataFrame({'Manquants': missing, 'Pourcentage': missing_pct}).sort_values('Pourcentage',\
-  \ ascending=False)\nmissing_df = missing_df[missing_df['Manquants'] > 0]\n\nprint(\"\
-  [EDA] === VALEURS MANQUANTES ===\")\nif len(missing_df) == 0:\n    print(\"Aucune\
-  \ valeur manquante détectée ! \U0001F389\")\nelse:\n    display(missing_df)\n  \
-  \  \n    # Heatmap\n    plt.figure(figsize=(10, 6))\n    sns.heatmap(df.isnull(),\
-  \ cbar=False, cmap='viridis')\n    plt.title(\"Heatmap des Valeurs Manquantes\"\
-  )\n    plt.show()\n"
+code_template: |
+  import pandas as pd
+  import matplotlib.pyplot as plt
+  import seaborn as sns
+
+  missing = df.isnull().sum()
+  missing_pct = (missing / len(df)) * 100
+  missing_df = pd.DataFrame({'Manquants': missing, 'Pourcentage': missing_pct}).sort_values('Pourcentage', ascending=False)
+  missing_df = missing_df[missing_df['Manquants'] > 0]
+
+  print("[EDA] === VALEURS MANQUANTES ===")
+  if len(missing_df) == 0:
+      print("Aucune valeur manquante détectée ! 🎉")
+  else:
+      display(missing_df)
+      
+      # Heatmap
+      plt.figure(figsize=(10, 6))
+      sns.heatmap(df.isnull(), cbar=False, cmap='viridis')
+      plt.title("Heatmap des Valeurs Manquantes")
+      plt.show()
 illustration_mermaid: |
-    graph LR
-      A([Input]) --> B([Operation])
-      B --> C([Output])
-      style B fill:#64748b,stroke:#475569,stroke-width:2px,color:#fff
+    flowchart TD
+        Input([DataFrame]) --> CalcSum[df.isnull.sum]
+        CalcSum --> CalcPct[Calculate Percentage]
+        CalcPct --> CreateDF[Create Missing Values DataFrame]
+        CreateDF --> Filter[Filter > 0 Missing]
+        Filter --> Check{Any Missing?}
+        Check -- Yes --> Display[[Display Table]]
+        Check -- Yes --> Heatmap{{Seaborn Heatmap of df.isnull}}
+        Check -- No --> Msg[/Print 'No missing values'/]
+    
+        style Input fill:#3b82f6,stroke:#2563eb,color:#fff
+        style CreateDF fill:#10b981,stroke:#059669,color:#fff
+        style Heatmap fill:#ec4899,stroke:#db2777,color:#fff
+        style Display fill:#6366f1,stroke:#4f46e5,color:#fff
 
 _metadata:
   bloc: 1

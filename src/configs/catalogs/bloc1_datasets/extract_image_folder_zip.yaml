@@ -8,25 +8,54 @@ tags:
 - image
 - vision
 - zip
-code_template: "import os\nimport time\nimport urllib.request\nimport zipfile\n\n\
-  # [PARAM: ZIP_URL | string]\nZIP_URL = \"https://example.com/dataset_images.zip\"\
-  \n# [/PARAM]\n\n# [PARAM: DEST_DIR | string]\nDEST_DIR = \"./data/raw/images_extracted\"\
-  \n# [/PARAM]\n\nprint(f\"[EXTRACT] Téléchargement et extraction du ZIP depuis {ZIP_URL}...\"\
-  )\nos.makedirs(DEST_DIR, exist_ok=True)\n\ntry:\n    start_time = time.time()\n\
-  \    zip_path = os.path.join(DEST_DIR, \"temp_dataset.zip\")\n    \n    urllib.request.urlretrieve(ZIP_URL,\
-  \ zip_path)\n    \n    with zipfile.ZipFile(zip_path, 'r') as zip_ref:\n       \
-  \ zip_ref.extractall(DEST_DIR)\n        \n    os.remove(zip_path) # Nettoyage\n\
-  \    \n    duration = time.time() - start_time\n    print(f\"[EXTRACT] ZIP téléchargé\
-  \ et extrait avec succès dans {DEST_DIR} en {duration:.2f}s.\")\n    \n    df =\
-  \ None\n    target_name = None\n    task_type = \"image_classification\"\n    meta\
-  \ = {\"source\": \"zip_url\", \"url\": ZIP_URL, \"path\": DEST_DIR}\nexcept Exception\
-  \ as e:\n    print(f\"[ERREUR EXTRACT] Échec de l'extraction ZIP : {str(e)}\")\n\
-  \    raise e\n"
+code_template: |
+  import os
+  import time
+  import urllib.request
+  import zipfile
+
+  # [PARAM: ZIP_URL | string]
+  ZIP_URL = "https://example.com/dataset_images.zip"
+  # [/PARAM]
+
+  # [PARAM: DEST_DIR | string]
+  DEST_DIR = "./data/raw/images_extracted"
+  # [/PARAM]
+
+  print(f"[EXTRACT] Téléchargement et extraction du ZIP depuis {ZIP_URL}...")
+  os.makedirs(DEST_DIR, exist_ok=True)
+
+  try:
+      start_time = time.time()
+      zip_path = os.path.join(DEST_DIR, "temp_dataset.zip")
+      
+      urllib.request.urlretrieve(ZIP_URL, zip_path)
+      
+      with zipfile.ZipFile(zip_path, 'r') as zip_ref:
+          zip_ref.extractall(DEST_DIR)
+          
+      os.remove(zip_path) # Nettoyage
+      
+      duration = time.time() - start_time
+      print(f"[EXTRACT] ZIP téléchargé et extrait avec succès dans {DEST_DIR} en {duration:.2f}s.")
+      
+      df = DEST_DIR
+      target_name = "target"
+      task_type = "image_classification"
+      meta = {"source": "zip_url", "url": ZIP_URL, "path": DEST_DIR}
+  except Exception as e:
+      print(f"[ERREUR EXTRACT] Échec de l'extraction ZIP : {str(e)}")
+      raise e
 illustration_mermaid: |
-    graph LR
-      Source[(Source)] -->|Load| Node([Extract Data])
-      style Source fill:#3b82f6,stroke:#2563eb,stroke-width:2px,color:#fff
-      style Node fill:#eff6ff,stroke:#3b82f6,stroke-width:2px
+    flowchart TD
+    A([FILE_PATH]) --> B[Load EXTRACT_IMAGE_FOLDER_ZIP]
+    B --> df([df])
+    
+    style A fill:#3b82f6,color:#fff
+    style B fill:#10b981,color:#fff
+    style df fill:#f59e0b,color:#fff
+
+
 
 _metadata:
   bloc: 1

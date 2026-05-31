@@ -7,24 +7,79 @@ tags:
 - s3
 - aws
 - cloud
-code_template: "import boto3\nfrom botocore.exceptions import NoCredentialsError,\
-  \ ClientError\nimport os\nimport time\n\n# [PARAM: BUCKET_NAME | string]\nBUCKET_NAME\
-  \ = \"my-aws-bucket\"\n# [/PARAM]\n\n# [PARAM: FILE_KEY | string]\nFILE_KEY = \"\
-  datasets/data.parquet\"\n# [/PARAM]\n\n# [PARAM: DEST_PATH | string]\nDEST_PATH\
-  \ = \"./data/raw/data.parquet\"\n# [/PARAM]\n\nprint(f\"[EXTRACT] Téléchargement\
-  \ depuis s3://{BUCKET_NAME}/{FILE_KEY}...\")\nos.makedirs(os.path.dirname(DEST_PATH),\
-  \ exist_ok=True)\n\ntry:\n    start_time = time.time()\n    s3 = boto3.client('s3')\n\
-  \    s3.download_file(BUCKET_NAME, FILE_KEY, DEST_PATH)\n    \n    duration = time.time()\
-  \ - start_time\n    print(f\"[EXTRACT] Succès AWS S3. Fichier rapatrié en {duration:.2f}s.\"\
-  )\nexcept NoCredentialsError:\n    print(\"[ERREUR EXTRACT] Credentials AWS introuvables\
-  \ (~/.aws/credentials).\")\n    raise\nexcept ClientError as e:\n    print(f\"[ERREUR\
-  \ EXTRACT] Erreur de client S3 : {e}\")\n    raise e\n\ndf = None\ntarget_name =\
-  \ None\ntask_type = \"unknown\"\nmeta = {\"source\": \"s3\", \"path\": DEST_PATH}\n"
+code_template: |
+  import boto3
+  from botocore.exceptions import NoCredentialsError, ClientError
+  import os
+  import time
+
+  # [PARAM: BUCKET_NAME | string]
+  BUCKET_NAME = "my-aws-bucket"
+  # [/PARAM]
+
+  # [PARAM: FILE_KEY | string]
+  FILE_KEY = "datasets/data.parquet"
+  # [/PARAM]
+
+  # [PARAM: DEST_PATH | string]
+  DEST_PATH = "./data/raw/data.parquet"
+  # [/PARAM]
+
+  print(f"[EXTRACT] Téléchargement depuis s3://{BUCKET_NAME}/{FILE_KEY}...")
+  os.makedirs(os.path.dirname(DEST_PATH), exist_ok=True)
+
+  try:
+      start_time = time.time()
+      s3 = boto3.client('s3')
+      s3.download_file(BUCKET_NAME, FILE_KEY, DEST_PATH)
+      
+      duration = time.time() - start_time
+      print(f"[EXTRACT] Succès AWS S3. Fichier rapatrié en {duration:.2f}s.")
+  except NoCredentialsError:
+      print("[ERREUR EXTRACT] Credentials AWS introuvables (~/.aws/credentials).")
+      raise
+  except ClientError as e:
+      print(f"[ERREUR EXTRACT] Erreur de client S3 : {e}")
+      raise e
+
+  df = DEST_PATH
+  target_name = "target"
+  task_type = "unknown"
+  meta = {"source": "s3", "path": DEST_PATH}
 illustration_mermaid: |
-    graph LR
-      Source[(Source)] -->|Load| Node([Extract Data])
-      style Source fill:#3b82f6,stroke:#2563eb,stroke-width:2px,color:#fff
-      style Node fill:#eff6ff,stroke:#3b82f6,stroke-width:2px
+    flowchart TD
+    A([FILE_PATH]) --> B[Load EXTRACT_S3]
+    B --> df([df])
+    
+    style A fill:#3b82f6,color:#fff
+    style B fill:#10b981,color:#fff
+    style df fill:#f59e0b,color:#fff
+
+
+
+        subgraph Operations [AWS S3 Extract]
+            BotoClient([boto3.client 's3'])
+            Download([s3.download_file])
+            LocalFile[(Downloaded File)]
+        end
+
+        subgraph Outputs [Contract Variables]
+            df((df = None))
+            target((target_name = None))
+            task((task_type = 'unknown'))
+            meta((meta: dict))
+        end
+
+        BUCKET & KEY & DEST --> Download
+        BotoClient --> Download
+        Download --> LocalFile
+        LocalFile -.-> meta
+
+        style Config fill:#f8fafc,stroke:#cbd5e1,stroke-width:2px
+        style BotoClient fill:#f59e0b,stroke:#b45309,stroke-width:2px,color:#fff
+        style Download fill:#3b82f6,stroke:#1d4ed8,stroke-width:2px,color:#fff
+        style LocalFile fill:#10b981,stroke:#047857,stroke-width:2px,color:#fff
+        style Outputs fill:#f1f5f9,stroke:#94a3b8,stroke-width:2px
 
 _metadata:
   bloc: 1

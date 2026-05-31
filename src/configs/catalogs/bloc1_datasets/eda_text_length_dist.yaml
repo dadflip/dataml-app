@@ -7,20 +7,34 @@ tags:
 - text
 - nlp
 - seaborn
-code_template: "import pandas as pd\nimport matplotlib.pyplot as plt\nimport seaborn\
-  \ as sns\n\n# [PARAM: TEXT_COL | string]\nTEXT_COL = \"text\"\n# [/PARAM]\n\nif\
-  \ TEXT_COL in df.columns:\n    lengths = df[TEXT_COL].apply(lambda x: len(str(x).split()))\n\
-  \    plt.figure(figsize=(10, 5))\n    sns.histplot(lengths, bins=50, kde=True)\n\
-  \    plt.title(f\"Distribution de la longueur (mots) - {TEXT_COL}\")\n    plt.xlabel(\"\
-  Nombre de mots\")\n    plt.show()\n    print(f\"[EDA] Longueur max : {lengths.max()},\
-  \ Moyenne : {lengths.mean():.1f}\")\nelse:\n    print(f\"[EDA] Colonne {TEXT_COL}\
-  \ introuvable.\")\n"
+code_template: |
+  import pandas as pd
+  import matplotlib.pyplot as plt
+  import seaborn as sns
+  
+  # [PARAM: TEXT_COL | string]
+  TEXT_COL = "text"
+  # [/PARAM]
+  
+  if TEXT_COL in df.columns:
+      lengths = df[TEXT_COL].apply(lambda x: len(str(x).split()))
+      plt.figure(figsize=(10, 5))
+      sns.histplot(lengths, bins=50, kde=True)
+      plt.title(f"Distribution de la longueur (mots) - {TEXT_COL}")
+      plt.xlabel("Nombre de mots")
+      plt.show()
+      print(f"[EDA] Longueur max : {lengths.max()}, Moyenne : {lengths.mean():.1f}")
+  else:
+      print(f"[EDA] Colonne {TEXT_COL} introuvable.")
 illustration_mermaid: |
-    graph LR
-      A([Input]) --> B([Operation])
-      B --> C([Output])
-      style B fill:#64748b,stroke:#475569,stroke-width:2px,color:#fff
-
+    graph TD
+      DF([DataFrame]) --> Check{Check TEXT_COL}
+      Check -- Valid --> Calc[Calculate word counts]
+      Calc --> Hist[sns.histplot]
+      Hist --> Show[plt.show & Print stats]
+      Check -- Missing --> Err[Print Error]
+      style Calc fill:#3b82f6,stroke:#2563eb,stroke-width:2px,color:#fff
+      style Hist fill:#8b5cf6,stroke:#7c3aed,stroke-width:2px,color:#fff
 _metadata:
   bloc: 1
   section: 3_eda

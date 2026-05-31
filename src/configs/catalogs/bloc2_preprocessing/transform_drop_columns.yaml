@@ -17,11 +17,36 @@ code_template: |
 
   # [PARAM: COLUMNS_TO_DROP | string]
   COLUMNS_TO_DROP = ""
+  # [/PARAM]
+
+  print(f"[TRANSFORM] Suppression des colonnes : {COLUMNS_TO_DROP}...")
+  if 'df' in locals() and COLUMNS_TO_DROP.strip():
+      if 'pipeline_steps' not in locals():
+          pipeline_steps = {}
+          
+      cols_to_drop = [c.strip() for c in COLUMNS_TO_DROP.split(",") if c.strip()]
+      
+      def drop_cols_func(X):
+          X_df = pd.DataFrame(X) if not isinstance(X, pd.DataFrame) else X
+          return X_df.drop(columns=cols_to_drop, errors='ignore')
+
+      transformer = FunctionTransformer(drop_cols_func)
+      pipeline_steps['drop_columns'] = transformer
+      df = transformer.fit_transform(df)
+      print(f"[TRANSFORM] Colonnes supprimées (si elles existaient).")
+
 illustration_mermaid: |
-    graph LR
-      In([Raw Data]) -->|Process| Out([Clean Data])
-      style In fill:#eff6ff,stroke:#94a3b8,stroke-width:2px,stroke-dasharray: 5 5
-      style Out fill:#10b981,stroke:#059669,stroke-width:2px,color:#fff
+  graph TD
+    A[Input DataFrame] --> B{COLUMNS_TO_DROP provided?}
+    B -- Yes --> C[Parse columns list]
+    B -- No --> D[Skip and return original]
+    C --> E[Initialize FunctionTransformer]
+    E --> F[df.drop columns with errors='ignore']
+    F --> G[Update pipeline_steps & df]
+    D --> G
+    G --> H[Output DataFrame]
+    style A fill:#eff6ff,stroke:#94a3b8,stroke-width:2px
+    style H fill:#10b981,stroke:#059669,stroke-width:2px,color:#fff
 
 _metadata:
   bloc: 2

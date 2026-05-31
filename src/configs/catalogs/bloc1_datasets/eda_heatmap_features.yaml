@@ -8,22 +8,46 @@ tags:
 - correlation
 - tabular
 - regression
-code_template: "import pandas as pd\nimport numpy as np\nimport matplotlib.pyplot\
-  \ as plt\nimport seaborn as sns\n\nif 'target_name' in locals() and target_name\
-  \ and target_name in df.columns and pd.api.types.is_numeric_dtype(df[target_name]):\n\
-  \    num_df = df.select_dtypes(include=[np.number])\n    corr = num_df.corr()\n\
-  \    \n    # [PARAM: TOP_K | number]\n    TOP_K = 10\n    # [/PARAM]\n    \n   \
-  \ k = min(TOP_K, len(corr.columns))\n    cols = corr.nlargest(k, target_name)[target_name].index\n\
-  \    cm = np.corrcoef(df[cols].dropna().values.T)\n    \n    plt.figure(figsize=(10,\
-  \ 8))\n    sns.heatmap(cm, annot=True, square=True, fmt='.2f', annot_kws={'size':\
-  \ 10}, \n                yticklabels=cols.values, xticklabels=cols.values, cmap='coolwarm')\n\
-  \    plt.title(f\"Top {k} Variables corrélées à {target_name}\")\n    plt.show()\n\
-  else:\n    print(\"[EDA] Requiert une cible (target_name) numérique.\")\n"
+code_template: |
+  import pandas as pd
+  import numpy as np
+  import matplotlib.pyplot as plt
+  import seaborn as sns
+
+  if 'target_name' in locals() and target_name and target_name in df.columns and pd.api.types.is_numeric_dtype(df[target_name]):
+      num_df = df.select_dtypes(include=[np.number])
+      corr = num_df.corr()
+      
+      # [PARAM: TOP_K | number]
+      TOP_K = 10
+      # [/PARAM]
+      
+      k = min(TOP_K, len(corr.columns))
+      cols = corr.nlargest(k, target_name)[target_name].index
+      cm = np.corrcoef(df[cols].dropna().values.T)
+      
+      plt.figure(figsize=(10, 8))
+      sns.heatmap(cm, annot=True, square=True, fmt='.2f', annot_kws={'size': 10}, 
+                  yticklabels=cols.values, xticklabels=cols.values, cmap='coolwarm')
+      plt.title(f"Top {k} Variables corrélées à {target_name}")
+      plt.show()
+  else:
+      print("[EDA] Requiert une cible (target_name) numérique.")
 illustration_mermaid: |
-    graph LR
-      A([Input]) --> B([Operation])
-      B --> C([Output])
-      style B fill:#64748b,stroke:#475569,stroke-width:2px,color:#fff
+    graph TD
+      A([DataFrame df & target_name]) --> B{Numeric Target Exists?}
+      B -- Yes --> C[Select numerical columns]
+      C --> D[Compute Correlation Matrix]
+      D --> E[Find TOP_K correlated features<br>with target]
+      E --> F[Compute sub-correlation matrix]
+      F --> G{{Plot sns.heatmap}}
+      G --> H([Display Heatmap])
+      B -- No --> I[/Print Error/]
+      style A fill:#4F46E5,color:#fff
+      style B fill:#F59E0B,color:#fff
+      style D fill:#06B6D4,color:#fff
+      style E fill:#06B6D4,color:#fff
+      style G fill:#10B981,color:#fff
 
 _metadata:
   bloc: 1

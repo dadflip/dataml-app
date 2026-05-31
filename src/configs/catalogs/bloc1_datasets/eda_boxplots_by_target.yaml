@@ -7,21 +7,48 @@ tags:
 - boxplot
 - tabular
 - classification
-code_template: "import pandas as pd\nimport numpy as np\nimport matplotlib.pyplot\
-  \ as plt\nimport seaborn as sns\n\nif 'target_name' in locals() and target_name\
-  \ and target_name in df.columns:\n    num_cols = df.select_dtypes(include=[np.number]).columns.tolist()\n\
-  \    if target_name in num_cols:\n        num_cols.remove(target_name)\n    if len(num_cols)\
-  \ > 12:\n        num_cols = num_cols[:12]\n        \n    print(f\"[EDA] === BOXPLOTS\
-  \ by {target_name} ===\")\n    plt.figure(figsize=(15, 4 * ((len(num_cols) + 2)\
-  \ // 3)))\n    for i, col in enumerate(num_cols):\n        plt.subplot(((len(num_cols)\
-  \ + 2) // 3), 3, i + 1)\n        sns.boxplot(data=df, x=target_name, y=col)\n  \
-  \      plt.title(f\"{col} by {target_name}\")\n    plt.tight_layout()\n    plt.show()\n\
-  else:\n    print(\"[EDA] Cible (target_name) introuvable ou non définie.\")\n"
+code_template: |
+  import pandas as pd
+  import numpy as np
+  import matplotlib.pyplot as plt
+  import seaborn as sns
+
+  if 'target_name' in locals() and target_name and target_name in df.columns:
+      num_cols = df.select_dtypes(include=[np.number]).columns.tolist()
+      if target_name in num_cols:
+          num_cols.remove(target_name)
+      if len(num_cols) > 12:
+          num_cols = num_cols[:12]
+          
+      print(f"[EDA] === BOXPLOTS by {target_name} ===")
+      plt.figure(figsize=(15, 4 * ((len(num_cols) + 2) // 3)))
+      for i, col in enumerate(num_cols):
+          plt.subplot(((len(num_cols) + 2) // 3), 3, i + 1)
+          sns.boxplot(data=df, x=target_name, y=col)
+          plt.title(f"{col} by {target_name}")
+      plt.tight_layout()
+      plt.show()
+  else:
+      print("[EDA] Cible (target_name) introuvable ou non définie.")
 illustration_mermaid: |
-    graph LR
-      A([Input]) --> B([Operation])
-      B --> C([Output])
-      style B fill:#64748b,stroke:#475569,stroke-width:2px,color:#fff
+    graph TD
+      A([DataFrame df & target_name]) --> B{Target valid & exists?}
+      B -- Yes --> C[Select numerical columns]
+      C --> D{Target in num_cols?}
+      D -- Yes --> E[Remove target from num_cols]
+      D -- No --> F{Columns > 12?}
+      E --> F
+      F -- Yes --> G[Truncate to top 12]
+      F -- No --> H[Keep columns]
+      G --> I[Create Subplots grid]
+      H --> I
+      I --> J{{Iterate & Plot sns.boxplot}}
+      J --> K([Display Boxplots])
+      B -- No --> L[/Print Error/]
+      style A fill:#4F46E5,color:#fff
+      style B fill:#F59E0B,color:#fff
+      style I fill:#06B6D4,color:#fff
+      style J fill:#10B981,color:#fff
 
 _metadata:
   bloc: 1

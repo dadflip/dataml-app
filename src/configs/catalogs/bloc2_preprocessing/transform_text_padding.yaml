@@ -16,14 +16,61 @@ code_template: |
   import pandas as pd
   import numpy as np
   from sklearn.preprocessing import FunctionTransformer
+  from sklearn.compose import ColumnTransformer
 
   # [PARAM: SEQ_COL | string]
   SEQ_COL = "sequences"
+  # [/PARAM]
+  # [PARAM: MAX_LEN | number]
+  MAX_LEN = 100
+  # [/PARAM]
+
+  print(f"[TRANSFORM] Text Padding (col={SEQ_COL}, max_len={MAX_LEN})...")
+  if 'df' in locals():
+      if 'pipeline_steps' not in locals(): pipeline_steps = {}
+      
+      def pad_sequences_func(X):
+          X_list = X[X.columns[0]].tolist() if isinstance(X, pd.DataFrame) else X.tolist()
+          padded = []
+          for seq in X_list:
+              if not isinstance(seq, (list, np.ndarray)):
+                  seq = []
+              if len(seq) > MAX_LEN:
+                  padded.append(seq[:MAX_LEN])
+              else:
+                  padded.append(list(seq) + [0] * (MAX_LEN - len(seq)))
+          return np.array(padded)
+
+      if SEQ_COL in df.columns:
+          padder = FunctionTransformer(pad_sequences_func)
+          
+          ct = ColumnTransformer(
+              [('padding', padder, [SEQ_COL])],
+              remainder='passthrough', verbose_feature_names_out=False
+          )
+          
+          step_name = 'text_padding'
+          pipeline_steps[step_name] = (step_name, ct)
+
+  if 'X_train' not in locals(): X_train = None
+  if 'X_test' not in locals(): X_test = None
+  if 'y_train' not in locals(): y_train = None
+  if 'y_test' not in locals(): y_test = None
+  if 'preprocessor' not in locals(): preprocessor = None
+  if 'feature_names_out' not in locals(): feature_names_out = None
+  if 'task_type' not in locals(): task_type = "classification"
+  if 'meta' not in locals(): meta = {}
 illustration_mermaid: |
-    graph LR
-      In([Raw Data]) -->|Process| Out([Clean Data])
-      style In fill:#eff6ff,stroke:#94a3b8,stroke-width:2px,stroke-dasharray: 5 5
-      style Out fill:#10b981,stroke:#059669,stroke-width:2px,color:#fff
+  graph TD
+    A[Raw Data] --> B{Does SEQ_COL exist?}
+    B -- Yes --> C[Initialize FunctionTransformer for Padding]
+    C --> D[Create ColumnTransformer]
+    D --> E[Add to Pipeline Steps]
+    B -- No --> F[Skip Padding]
+    E --> G[Update Data Contract Variables]
+    F --> G
+    style A fill:#eff6ff,stroke:#3b82f6,stroke-width:2px
+    style G fill:#10b981,stroke:#059669,stroke-width:2px
 
 _metadata:
   bloc: 2

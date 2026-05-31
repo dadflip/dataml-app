@@ -19,11 +19,42 @@ code_template: |
 
   # [PARAM: IMG_COL | string]
   IMG_COL = "image"
+  # [/PARAM]
+
+  print(f"[TRANSFORM] Conversion ToTensor & Normalization sur '{IMG_COL}'...")
+  if 'df' in locals() and IMG_COL in df.columns:
+      if 'pipeline_steps' not in locals():
+          pipeline_steps = {}
+          
+      def to_tensor_func(X):
+          X_df = pd.DataFrame(X) if not isinstance(X, pd.DataFrame) else X.copy()
+          transform_ops = T.Compose([
+              T.ToTensor(),
+              T.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
+          ])
+          X_df[IMG_COL] = X_df[IMG_COL].apply(
+              lambda x: transform_ops(x) if isinstance(x, Image.Image) else x
+          )
+          return X_df
+
+      transformer = FunctionTransformer(to_tensor_func)
+      pipeline_steps['image_to_tensor'] = transformer
+      df = transformer.fit_transform(df)
+      print(f"[TRANSFORM] Conversion ToTensor appliquée.")
+  else:
+      print(f"[AVERTISSEMENT] Colonne '{IMG_COL}' introuvable.")
+
 illustration_mermaid: |
-    graph LR
-      In([Raw Data]) -->|Process| Out([Clean Data])
-      style In fill:#eff6ff,stroke:#94a3b8,stroke-width:2px,stroke-dasharray: 5 5
-      style Out fill:#10b981,stroke:#059669,stroke-width:2px,color:#fff
+  graph TD
+    A[Image DataFrame] --> B{Does IMG_COL exist?}
+    B -- Yes --> C[Initialize ToTensor & Normalize]
+    B -- No --> D[Skip and Warn]
+    C --> E[Apply T.Compose to each PIL Image]
+    E --> F[Update pipeline_steps & df]
+    D --> F
+    F --> G[Tensor Images Ready for CNN]
+    style A fill:#eff6ff,stroke:#94a3b8,stroke-width:2px
+    style G fill:#10b981,stroke:#059669,stroke-width:2px,color:#fff
 
 _metadata:
   bloc: 2

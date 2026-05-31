@@ -7,17 +7,37 @@ tags:
 - pairplot
 - tabular
 - seaborn
-code_template: "import pandas as pd\nimport numpy as np\nimport matplotlib.pyplot\
-  \ as plt\nimport seaborn as sns\n\ncols = df.select_dtypes(include=[np.number]).columns.tolist()[:5]\n\
-  hue_col = target_name if 'target_name' in locals() and target_name in df.columns\
-  \ else None\n\nif hue_col and hue_col not in cols:\n    cols.append(hue_col)\n \
-  \   \nprint(f\"[EDA] === PAIRPLOT sur {len(cols)} variables ===\")\nsns.pairplot(df[cols].dropna(),\
-  \ hue=hue_col, corner=True)\nplt.show()\n"
+code_template: |
+  import pandas as pd
+  import numpy as np
+  import matplotlib.pyplot as plt
+  import seaborn as sns
+
+  cols = df.select_dtypes(include=[np.number]).columns.tolist()[:5]
+  hue_col = target_name if 'target_name' in locals() and target_name in df.columns else None
+
+  if hue_col and hue_col not in cols:
+      cols.append(hue_col)
+      
+  print(f"[EDA] === PAIRPLOT sur {len(cols)} variables ===")
+  sns.pairplot(df[cols].dropna(), hue=hue_col, corner=True)
+  plt.show()
 illustration_mermaid: |
-    graph LR
-      A([Input]) --> B([Operation])
-      B --> C([Output])
-      style B fill:#64748b,stroke:#475569,stroke-width:2px,color:#fff
+    flowchart TD
+        Input([DataFrame & Target Name]) --> SelectCols[Select Top 5 Numeric Cols]
+        SelectCols --> CheckTarget{Target exists?}
+        CheckTarget -- Yes --> TargetCheck{Target in Cols?}
+        TargetCheck -- No --> Append[Append Target to Cols]
+        TargetCheck -- Yes --> FilterDrop[Drop NaNs]
+        Append --> FilterDrop
+        CheckTarget -- No --> FilterDrop
+        FilterDrop --> Plot{{sns.pairplot}}
+        Plot --> Output[/Print Info & Show Plot/]
+    
+        style Input fill:#3b82f6,stroke:#2563eb,color:#fff
+        style SelectCols fill:#10b981,stroke:#059669,color:#fff
+        style Plot fill:#ec4899,stroke:#db2777,color:#fff
+        style Output fill:#f59e0b,stroke:#d97706,color:#fff
 
 _metadata:
   bloc: 1

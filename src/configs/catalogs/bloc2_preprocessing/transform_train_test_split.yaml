@@ -47,6 +47,15 @@ code_template: |
       preprocessor = None
       print("[TRANSFORM] Aucune étape de pipeline traçable n'a été ajoutée.")
 
+  # Initialize contract variables
+  if 'X_train' not in locals(): X_train = None
+  if 'X_test' not in locals(): X_test = None
+  if 'y_train' not in locals(): y_train = None
+  if 'y_test' not in locals(): y_test = None
+  if 'feature_names_out' not in locals(): feature_names_out = None
+  if 'task_type' not in locals(): task_type = "classification"
+  if 'meta' not in locals(): meta = {}
+
   # 2. Split
   if 'df' in locals() and 'target_name' in locals() and target_name:
       if target_name in df.columns:
@@ -66,10 +75,18 @@ code_template: |
   else:
       print("[ERREUR] df ou target_name manquant.")
 illustration_mermaid: |
-    graph LR
-      In([Raw Data]) -->|Process| Out([Clean Data])
-      style In fill:#eff6ff,stroke:#94a3b8,stroke-width:2px,stroke-dasharray: 5 5
-      style Out fill:#10b981,stroke:#059669,stroke-width:2px,color:#fff
+  graph TD
+    A[pipeline_steps dict] --> B{Are there steps?}
+    B -- Yes --> C[Compile Pipeline]
+    B -- No --> D[preprocessor = None]
+    C --> E[Check target in df]
+    D --> E
+    E -- Yes --> F[Define X and y]
+    F --> G[Train/Test Split]
+    G --> H[Update Data Contract Variables]
+    E -- No --> I[Error]
+    style A fill:#eff6ff,stroke:#3b82f6,stroke-width:2px
+    style H fill:#10b981,stroke:#059669,stroke-width:2px
 
 _metadata:
   bloc: 2

@@ -7,23 +7,55 @@ tags:
 - gcs
 - gcp
 - cloud
-code_template: "from google.cloud import storage\nimport os\nimport time\n\n# [PARAM:\
-  \ BUCKET_NAME | string]\nBUCKET_NAME = \"my-gcp-bucket\"\n# [/PARAM]\n\n# [PARAM:\
-  \ BLOB_NAME | string]\nBLOB_NAME = \"data.csv\"\n# [/PARAM]\n\n# [PARAM: DEST_PATH\
-  \ | string]\nDEST_PATH = \"./data/raw/gcs_data.csv\"\n# [/PARAM]\n\nprint(f\"[EXTRACT]\
-  \ Téléchargement depuis gs://{BUCKET_NAME}/{BLOB_NAME}...\")\nos.makedirs(os.path.dirname(DEST_PATH),\
-  \ exist_ok=True)\n\ntry:\n    start_time = time.time()\n    # Assurez-vous que GOOGLE_APPLICATION_CREDENTIALS\
-  \ est défini\n    client = storage.Client()\n    bucket = client.bucket(BUCKET_NAME)\n\
-  \    blob = bucket.blob(BLOB_NAME)\n    \n    blob.download_to_filename(DEST_PATH)\n\
-  \    \n    duration = time.time() - start_time\n    print(f\"[EXTRACT] Succès GCP.\
-  \ Fichier téléchargé en {duration:.2f}s.\")\nexcept Exception as e:\n    print(f\"\
-  [ERREUR EXTRACT] Échec GCS : {str(e)}\")\n    raise e\n\ndf = None\ntarget_name\
-  \ = None\ntask_type = \"unknown\"\nmeta = {\"source\": \"gcs\", \"path\": DEST_PATH}\n"
+code_template: |
+  from google.cloud import storage
+  import os
+  import time
+  
+  # [PARAM: BUCKET_NAME | string]
+  BUCKET_NAME = "my-gcp-bucket"
+  # [/PARAM]
+  
+  # [PARAM: BLOB_NAME | string]
+  BLOB_NAME = "data.csv"
+  # [/PARAM]
+  
+  # [PARAM: DEST_PATH | string]
+  DEST_PATH = "./data/raw/gcs_data.csv"
+  # [/PARAM]
+  
+  print(f"[EXTRACT] Téléchargement depuis gs://{BUCKET_NAME}/{BLOB_NAME}...")
+  os.makedirs(os.path.dirname(DEST_PATH), exist_ok=True)
+  
+  try:
+      start_time = time.time()
+      # Assurez-vous que GOOGLE_APPLICATION_CREDENTIALS est défini
+      client = storage.Client()
+      bucket = client.bucket(BUCKET_NAME)
+      blob = bucket.blob(BLOB_NAME)
+      
+      blob.download_to_filename(DEST_PATH)
+      
+      duration = time.time() - start_time
+      print(f"[EXTRACT] Succès GCP. Fichier téléchargé en {duration:.2f}s.")
+  except Exception as e:
+      print(f"[ERREUR EXTRACT] Échec GCS : {str(e)}")
+      raise e
+  
+  df = None
+  target_name = None
+  task_type = "unknown"
+  meta = {"source": "gcs", "path": DEST_PATH}
 illustration_mermaid: |
-    graph LR
-      Source[(Source)] -->|Load| Node([Extract Data])
-      style Source fill:#3b82f6,stroke:#2563eb,stroke-width:2px,color:#fff
-      style Node fill:#eff6ff,stroke:#3b82f6,stroke-width:2px
+    flowchart TD
+    A([FILE_PATH]) --> B[Load EXTRACT_GCS]
+    B --> df([df])
+    
+    style A fill:#3b82f6,color:#fff
+    style B fill:#10b981,color:#fff
+    style df fill:#f59e0b,color:#fff
+
+
 
 _metadata:
   bloc: 1

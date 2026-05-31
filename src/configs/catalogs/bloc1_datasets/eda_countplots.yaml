@@ -8,19 +8,45 @@ tags:
 - countplot
 - tabular
 - seaborn
-code_template: "import pandas as pd\nimport matplotlib.pyplot as plt\nimport seaborn\
-  \ as sns\n\n# [PARAM: TOP_N | number]\nTOP_N = 10\n# [/PARAM]\n\ncols = df.select_dtypes(exclude=['number',\
-  \ 'datetime']).columns.tolist()\nprint(f\"[EDA] === COUNTPLOTS ({len(cols)} variables)\
-  \ ===\")\n\nif len(cols) > 20:\n    cols = cols[:20]\n    \nplt.figure(figsize=(15,\
-  \ 4 * ((len(cols) + 1) // 2)))\nfor i, col in enumerate(cols):\n    plt.subplot(((len(cols)\
-  \ + 1) // 2), 2, i + 1)\n    order = df[col].value_counts().iloc[:TOP_N].index\n\
-  \    sns.countplot(data=df, y=col, order=order)\n    plt.title(f\"Fréquence de {col}\"\
-  )\nplt.tight_layout()\nplt.show()\n"
+code_template: |
+  import pandas as pd
+  import matplotlib.pyplot as plt
+  import seaborn as sns
+
+  # [PARAM: TOP_N | number]
+  TOP_N = 10
+  # [/PARAM]
+
+  cols = df.select_dtypes(exclude=['number', 'datetime']).columns.tolist()
+  print(f"[EDA] === COUNTPLOTS ({len(cols)} variables) ===")
+
+  if len(cols) > 20:
+      cols = cols[:20]
+      
+  plt.figure(figsize=(15, 4 * ((len(cols) + 1) // 2)))
+  for i, col in enumerate(cols):
+      plt.subplot(((len(cols) + 1) // 2), 2, i + 1)
+      order = df[col].value_counts().iloc[:TOP_N].index
+      sns.countplot(data=df, y=col, order=order)
+      plt.title(f"Fréquence de {col}")
+  plt.tight_layout()
+  plt.show()
 illustration_mermaid: |
-    graph LR
-      A([Input]) --> B([Operation])
-      B --> C([Output])
-      style B fill:#64748b,stroke:#475569,stroke-width:2px,color:#fff
+    graph TD
+      A([DataFrame df]) --> B[Select categorical columns<br>exclude num/datetime]
+      B --> C{Columns > 20?}
+      C -- Yes --> D[Truncate to 20 columns]
+      C -- No --> E[Keep all selected]
+      D --> F[Create Grid Subplots]
+      E --> F
+      F --> G{For each column}
+      G --> H[Compute Top_N value_counts]
+      H --> I{{Plot sns.countplot}}
+      I --> G
+      G -- Done --> J([Display All Countplots])
+      style A fill:#4F46E5,color:#fff
+      style C fill:#F59E0B,color:#fff
+      style I fill:#10B981,color:#fff
 
 _metadata:
   bloc: 1

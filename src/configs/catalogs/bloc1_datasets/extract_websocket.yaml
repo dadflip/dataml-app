@@ -7,27 +7,95 @@ tags:
 - websocket
 - stream
 - realtime
-code_template: "import asyncio\nimport websockets\nimport os\nimport time\n\n# [PARAM:\
-  \ WS_URL | string]\nWS_URL = \"wss://stream.binance.com:9443/ws/btcusdt@trade\"\n\
-  # [/PARAM]\n\n# [PARAM: DURATION_SEC | string]\nDURATION_SEC = \"5\"\n# [/PARAM]\n\
-  \n# [PARAM: DEST_PATH | string]\nDEST_PATH = \"./data/raw/websocket_stream.jsonlines\"\
-  \n# [/PARAM]\n\nprint(f\"[EXTRACT] Écoute de {WS_URL} pendant {DURATION_SEC} sec...\"\
-  )\nos.makedirs(os.path.dirname(DEST_PATH), exist_ok=True)\n\nasync def dump_stream():\n\
-  \    messages = []\n    start_time = time.time()\n    try:\n        async with websockets.connect(WS_URL)\
-  \ as websocket:\n            while (time.time() - start_time) < int(DURATION_SEC):\n\
-  \                msg = await asyncio.wait_for(websocket.recv(), timeout=2.0)\n \
-  \               messages.append(msg)\n    except asyncio.TimeoutError:\n       \
-  \ pass\n    \n    with open(DEST_PATH, \"w\", encoding=\"utf-8\") as f:\n      \
-  \  for m in messages:\n            f.write(m + \"\\\\n\")\n    return len(messages)\n\
-  \ntry:\n    count = asyncio.run(dump_stream())\n    print(f\"[EXTRACT] Succès WebSocket.\
-  \ {count} messages capturés.\")\nexcept Exception as e:\n    print(f\"[ERREUR EXTRACT]\
-  \ Échec WebSocket : {str(e)}\")\n    raise e\n\ndf = None\ntarget_name = None\n\
-  task_type = \"unknown\"\nmeta = {\"source\": \"websocket\", \"path\": DEST_PATH}\n"
+code_template: |
+  import asyncio
+  import websockets
+  import os
+  import time
+  import pandas as pd
+
+  # [PARAM: WS_URL | string]
+  WS_URL = "wss://stream.binance.com:9443/ws/btcusdt@trade"
+  # [/PARAM]
+
+  # [PARAM: DURATION_SEC | string]
+  DURATION_SEC = "5"
+  # [/PARAM]
+
+  # [PARAM: DEST_PATH | string]
+  DEST_PATH = "./data/raw/websocket_stream.jsonlines"
+  # [/PARAM]
+
+  print(f"[EXTRACT] Écoute de {WS_URL} pendant {DURATION_SEC} sec...")
+  os.makedirs(os.path.dirname(DEST_PATH), exist_ok=True)
+
+  async def dump_stream():
+      messages = []
+      start_time = time.time()
+      try:
+          async with websockets.connect(WS_URL) as websocket:
+              while (time.time() - start_time) < int(DURATION_SEC):
+                  msg = await asyncio.wait_for(websocket.recv(), timeout=2.0)
+                  messages.append(msg)
+      except asyncio.TimeoutError:
+          pass
+      
+      with open(DEST_PATH, "w", encoding="utf-8") as f:
+          for m in messages:
+              f.write(m + "\n")
+      return len(messages)
+
+  try:
+      count = asyncio.run(dump_stream())
+      print(f"[EXTRACT] Succès WebSocket. {count} messages capturés.")
+  except Exception as e:
+      print(f"[ERREUR EXTRACT] Échec WebSocket : {str(e)}")
+      raise e
+
+  df = pd.DataFrame()
+  target_name = ""
+  task_type = "unknown"
+  meta = {"source": "websocket", "path": DEST_PATH}
+
 illustration_mermaid: |
-    graph LR
-      Source[(Source)] -->|Load| Node([Extract Data])
-      style Source fill:#3b82f6,stroke:#2563eb,stroke-width:2px,color:#fff
-      style Node fill:#eff6ff,stroke:#3b82f6,stroke-width:2px
+  flowchart TD
+      subgraph Config [Parameters]
+          URL([WS_URL])
+          DUR([DURATION_SEC])
+          DEST([DEST_PATH])
+      end
+
+      subgraph Operations [WebSocket Stream]
+          Conn([websockets.connect])
+          Recv([websocket.recv])
+          Loop([Wait DURATION])
+          Save([Write JSONLines])
+          OutFile[(Local JSONL)]
+      end
+
+      subgraph Outputs [Contract Variables]
+          df((df = pd.DataFrame))
+          target((target_name = ''))
+          task((task_type = 'unknown'))
+          meta((meta: dict))
+      end
+
+      URL --> Conn
+      Conn --> Loop
+      DUR --> Loop
+      Loop --> Recv
+      Recv --> Save
+      DEST --> OutFile
+      Save --> OutFile
+      OutFile -.-> meta
+
+      style Config fill:#f8fafc,stroke:#cbd5e1,stroke-width:2px
+      style Conn fill:#3b82f6,stroke:#1d4ed8,stroke-width:2px,color:#fff
+      style Loop fill:#10b981,stroke:#047857,stroke-width:2px,color:#fff
+      style Recv fill:#f59e0b,stroke:#b45309,stroke-width:2px,color:#fff
+      style Save fill:#8b5cf6,stroke:#6d28d9,stroke-width:2px,color:#fff
+      style OutFile fill:#64748b,stroke:#475569,stroke-width:2px,color:#fff
+      style Outputs fill:#f1f5f9,stroke:#94a3b8,stroke-width:2px
 
 _metadata:
   bloc: 1

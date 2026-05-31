@@ -8,24 +8,56 @@ tags:
 - clustering
 - tabular
 - pca
-code_template: "import pandas as pd\nimport numpy as np\nimport matplotlib.pyplot\
-  \ as plt\nimport seaborn as sns\nfrom sklearn.decomposition import PCA\nfrom sklearn.cluster\
-  \ import KMeans\nfrom sklearn.preprocessing import StandardScaler\n\n# [PARAM: N_CLUSTERS\
-  \ | number]\nN_CLUSTERS = 3\n# [/PARAM]\n\nnum_df = df.select_dtypes(include=[np.number]).dropna()\n\
-  if len(num_df) > 50 and len(num_df.columns) >= 2:\n    scaler = StandardScaler()\n\
-  \    scaled = scaler.fit_transform(num_df)\n    \n    pca = PCA(n_components=2)\n\
-  \    coords = pca.fit_transform(scaled)\n    \n    kmeans = KMeans(n_clusters=N_CLUSTERS,\
-  \ random_state=42)\n    clusters = kmeans.fit_predict(scaled)\n    \n    plt.figure(figsize=(8,\
-  \ 6))\n    sns.scatterplot(x=coords[:,0], y=coords[:,1], hue=clusters, palette='Set1',\
-  \ legend='full')\n    plt.title(f\"K-Means Clustering ({N_CLUSTERS} clusters) sur\
-  \ PCA 2D\")\n    plt.xlabel(\"PCA 1\")\n    plt.ylabel(\"PCA 2\")\n    plt.show()\n\
-  else:\n    print(\"[EDA] Dataset inadapté pour le clustering (trop petit ou NaNs).\"\
-  )\n"
+code_template: |
+  import pandas as pd
+  import numpy as np
+  import matplotlib.pyplot as plt
+  import seaborn as sns
+  from sklearn.decomposition import PCA
+  from sklearn.cluster import KMeans
+  from sklearn.preprocessing import StandardScaler
+
+  # [PARAM: N_CLUSTERS | number]
+  N_CLUSTERS = 3
+  # [/PARAM]
+
+  num_df = df.select_dtypes(include=[np.number]).dropna()
+  if len(num_df) > 50 and len(num_df.columns) >= 2:
+      scaler = StandardScaler()
+      scaled = scaler.fit_transform(num_df)
+      
+      pca = PCA(n_components=2)
+      coords = pca.fit_transform(scaled)
+      
+      kmeans = KMeans(n_clusters=N_CLUSTERS, random_state=42)
+      clusters = kmeans.fit_predict(scaled)
+      
+      plt.figure(figsize=(8, 6))
+      sns.scatterplot(x=coords[:,0], y=coords[:,1], hue=clusters, palette='Set1', legend='full')
+      plt.title(f"K-Means Clustering ({N_CLUSTERS} clusters) sur PCA 2D")
+      plt.xlabel("PCA 1")
+      plt.ylabel("PCA 2")
+      plt.show()
+  else:
+      print("[EDA] Dataset inadapté pour le clustering (trop petit ou NaNs).")
 illustration_mermaid: |
-    graph LR
-      A([Input]) --> B([Operation])
-      B --> C([Output])
-      style B fill:#64748b,stroke:#475569,stroke-width:2px,color:#fff
+    flowchart TD
+        Input([Pandas DataFrame]) --> Filter[Select Numeric Columns & Drop NaNs]
+        Filter --> Check{Length > 50 & Cols >= 2?}
+        Check -- Yes --> Scale[StandardScaler]
+        Scale --> SplitFork[ ]
+        SplitFork -->|Transform| PCA[PCA n_components=2]
+        SplitFork -->|Cluster| KMeans[KMeans n_clusters]
+        PCA --> X[2D Coordinates]
+        KMeans --> Y[Cluster Labels]
+        X & Y --> Scatter{{Seaborn Scatterplot}}
+        Check -- No --> Err[/Print Warning/]
+    
+        style Input fill:#10b981,stroke:#059669,color:#fff
+        style Scale fill:#3b82f6,stroke:#2563eb,color:#fff
+        style PCA fill:#8b5cf6,stroke:#7c3aed,color:#fff
+        style KMeans fill:#8b5cf6,stroke:#7c3aed,color:#fff
+        style Scatter fill:#f59e0b,stroke:#d97706,color:#fff
 
 _metadata:
   bloc: 1

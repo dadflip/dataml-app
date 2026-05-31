@@ -8,27 +8,78 @@ tags:
 - graph
 - pytorch-geometric
 - gnn
-code_template: "import os\nimport time\ntry:\n    from torch_geometric.datasets import\
-  \ Planetoid\nexcept ImportError:\n    Planetoid = None\n    print(\"[ERREUR EXTRACT]\
-  \ 'torch_geometric' n'est pas installé. Lancez : !pip install torch_geometric\"\
-  )\n\n# [PARAM: DATASET_NAME | string]\nDATASET_NAME = \"Cora\"\n# [/PARAM]\n\n#\
-  \ [PARAM: DEST_DIR | string]\nDEST_DIR = \"./data/raw/graphs\"\n# [/PARAM]\n\nprint(f\"\
-  [EXTRACT] Téléchargement du Graphe '{DATASET_NAME}'...\")\nos.makedirs(DEST_DIR,\
-  \ exist_ok=True)\n\ntry:\n    if Planetoid is not None:\n        start_time = time.time()\n\
-  \        \n        # Planetoid télécharge automatiquement et met en cache dans le\
-  \ dossier fourni\n        dataset = Planetoid(root=DEST_DIR, name=DATASET_NAME)\n\
-  \        \n        duration = time.time() - start_time\n        print(f\"[EXTRACT]\
-  \ Succès Graphe. {dataset.num_classes} classes trouvées. Sauvegardé dans {DEST_DIR}\
-  \ en {duration:.2f}s.\")\n        \n        df = None\n        target_name = None\n\
-  \        task_type = \"node_classification\"\n        meta = {\"source\": \"pytorch_geometric\"\
-  , \"dataset_name\": DATASET_NAME, \"path\": DEST_DIR}\nexcept Exception as e:\n\
-  \    print(f\"[ERREUR EXTRACT] Échec de l'extraction du graphe : {str(e)}\")\n \
-  \   raise e\n"
+code_template: |
+  import os
+  import time
+  try:
+      from torch_geometric.datasets import Planetoid
+  except ImportError:
+      Planetoid = None
+      print("[ERREUR EXTRACT] 'torch_geometric' n'est pas installé. Lancez : !pip install torch_geometric")
+
+  # [PARAM: DATASET_NAME | string]
+  DATASET_NAME = "Cora"
+  # [/PARAM]
+
+  # [PARAM: DEST_DIR | string]
+  DEST_DIR = "./data/raw/graphs"
+  # [/PARAM]
+
+  print(f"[EXTRACT] Téléchargement du Graphe '{DATASET_NAME}'...")
+  os.makedirs(DEST_DIR, exist_ok=True)
+
+  try:
+      if Planetoid is not None:
+          start_time = time.time()
+          
+          # Planetoid télécharge automatiquement et met en cache dans le dossier fourni
+          dataset = Planetoid(root=DEST_DIR, name=DATASET_NAME)
+          
+          duration = time.time() - start_time
+          print(f"[EXTRACT] Succès Graphe. {dataset.num_classes} classes trouvées. Sauvegardé dans {DEST_DIR} en {duration:.2f}s.")
+          
+          df = DEST_DIR
+          target_name = "target"
+          task_type = "node_classification"
+          meta = {"source": "pytorch_geometric", "dataset_name": DATASET_NAME, "path": DEST_DIR}
+  except Exception as e:
+      print(f"[ERREUR EXTRACT] Échec de l'extraction du graphe : {str(e)}")
+      raise e
 illustration_mermaid: |
-    graph LR
-      Source[(Source)] -->|Load| Node([Extract Data])
-      style Source fill:#3b82f6,stroke:#2563eb,stroke-width:2px,color:#fff
-      style Node fill:#eff6ff,stroke:#3b82f6,stroke-width:2px
+    flowchart TD
+    A([FILE_PATH]) --> B[Load EXTRACT_PYTORCH_GEOMETRIC]
+    B --> df([df])
+    
+    style A fill:#3b82f6,color:#fff
+    style B fill:#10b981,color:#fff
+    style df fill:#f59e0b,color:#fff
+
+
+
+        subgraph Operations [PyTorch Geometric Extract]
+            Import{Check Planetoid}
+            PlanetoidCall([Planetoid Instantiation])
+            Dataset[(Downloaded Graph Dataset)]
+        end
+
+        subgraph Outputs [Contract Variables]
+            df((df = None))
+            target((target_name = None))
+            task((task_type = 'node_classification'))
+            meta((meta: dict))
+        end
+
+        Import -->|Success| PlanetoidCall
+        NAME --> PlanetoidCall
+        DEST --> PlanetoidCall
+        PlanetoidCall -->|Download & Cache| Dataset
+        Dataset -.-> meta
+
+        style Config fill:#f8fafc,stroke:#cbd5e1,stroke-width:2px
+        style Import fill:#ef4444,stroke:#b91c1c,stroke-width:2px,color:#fff
+        style PlanetoidCall fill:#3b82f6,stroke:#1d4ed8,stroke-width:2px,color:#fff
+        style Dataset fill:#10b981,stroke:#047857,stroke-width:2px,color:#fff
+        style Outputs fill:#f1f5f9,stroke:#94a3b8,stroke-width:2px
 
 _metadata:
   bloc: 1

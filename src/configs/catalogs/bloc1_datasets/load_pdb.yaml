@@ -4,16 +4,74 @@ description: "Charge les coordonnées atomiques 3D d'une protéine (.pdb) via Bi
 category: "2. Load"
 tags: ["load", "pdb", "protein", "3d"]
 code_template: |
-  import time
+  import pandas as pd
   import os
+  from Bio.PDB import PDBParser
+  import warnings
 
   # [PARAM: FILE_PATH | file]
-  FILE_PATH = "./data/raw/protein.pdb"
+  FILE_PATH = "./data/raw/data.pdb"
+  # [/PARAM]
+
+  meta = {"source": "PDB", "path": FILE_PATH}
+
+  if os.path.exists(FILE_PATH):
+      try:
+          # Use Biopython to parse the PDB file
+          parser = PDBParser(PERMISSIVE=1)
+          
+          # Suppress Biopython warnings for missing elements
+          with warnings.catch_warnings():
+              warnings.simplefilter('ignore')
+              structure = parser.get_structure("protein", FILE_PATH)
+
+          atoms_data = []
+          for model in structure:
+              for chain in model:
+                  for residue in chain:
+                      for atom in residue:
+                          atoms_data.append({
+                              "model": model.id,
+                              "chain": chain.id,
+                              "residue_name": residue.resname,
+                              "residue_id": residue.id[1],
+                              "atom_name": atom.name,
+                              "x": atom.coord[0],
+                              "y": atom.coord[1],
+                              "z": atom.coord[2],
+                              "bfactor": atom.bfactor,
+                              "occupancy": atom.occupancy
+                          })
+          df = pd.DataFrame(atoms_data)
+          meta["num_atoms"] = len(df)
+      except Exception as e:
+          print(f"Error loading PDB file {FILE_PATH}: {e}")
+          df = pd.DataFrame()
+  else:
+      print(f"File not found: {FILE_PATH}")
+      df = pd.DataFrame()
+
+  target_name = "bfactor"
+  task_type = "regression"
+output_variables:
+  - df
+  - target_name
+  - task_type
+  - meta
 illustration_mermaid: |
-    graph LR
-      Source[(Source)] -->|Load| Node([Extract Data])
-      style Source fill:#3b82f6,stroke:#2563eb,stroke-width:2px,color:#fff
-      style Node fill:#eff6ff,stroke:#3b82f6,stroke-width:2px
+  flowchart TD
+      A([FILE_PATH]) --> B{File Exists?}
+      B -- Yes --> C[Bio.PDB.PDBParser]
+      B -- No --> D[Empty DataFrame]
+      C --> E[Extract models, chains, residues, atoms]
+      E --> F[Create DataFrame of coords & bfactors]
+      F --> G([df, target_name, task_type, meta])
+      D --> G
+
+      style A fill:#3b82f6,color:#fff
+      style C fill:#10b981,color:#fff
+      style F fill:#10b981,color:#fff
+      style G fill:#f59e0b,color:#fff
 
 _metadata:
   bloc: 1

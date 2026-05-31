@@ -36,11 +36,32 @@ code_template: |
           except: pass
           
           step_name = 'knn_imputer'
+          pipeline_steps[step_name] = ct
+          
+          res = ct.fit_transform(df)
+          if isinstance(res, np.ndarray):
+              df = pd.DataFrame(res, columns=ct.get_feature_names_out())
+          else:
+              df = res
+              
+          print(f"[TRANSFORM] KNNImputer appliqué sur {len(num_cols)} colonnes numériques.")
+      else:
+          print("[AVERTISSEMENT] Aucune colonne numérique à imputer.")
+
 illustration_mermaid: |
-    graph LR
-      In([Raw Data]) -->|Process| Out([Clean Data])
-      style In fill:#eff6ff,stroke:#94a3b8,stroke-width:2px,stroke-dasharray: 5 5
-      style Out fill:#10b981,stroke:#059669,stroke-width:2px,color:#fff
+  graph TD
+    A[Input DataFrame] --> B[Extract Numeric Columns]
+    B --> C{Any Numeric Cols?}
+    C -- Yes --> D[Initialize KNNImputer]
+    C -- No --> E[Skip]
+    D --> F[ColumnTransformer with remainder='passthrough']
+    F --> G[Fit & Transform df]
+    G --> H[Convert Output to DataFrame]
+    H --> I[Update pipeline_steps & df]
+    E --> I
+    I --> J[Imputed DataFrame]
+    style A fill:#eff6ff,stroke:#94a3b8,stroke-width:2px
+    style J fill:#10b981,stroke:#059669,stroke-width:2px,color:#fff
 
 _metadata:
   bloc: 2

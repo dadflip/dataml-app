@@ -4,18 +4,78 @@ description: "Ouvre un flux vidéo et charge la première frame (ou X frames) av
 category: "2. Load"
 tags: ["load", "video", "cv2", "media"]
 code_template: |
+  import pandas as pd
+  import os
   import cv2
   import numpy as np
-  import time
-  import os
 
   # [PARAM: FILE_PATH | file]
-  FILE_PATH = "./data/raw/clip.mp4"
+  FILE_PATH = "./data/raw/data.mp4"
+  # [/PARAM]
+
+  meta = {"source": "VIDEO", "path": FILE_PATH}
+  df = pd.DataFrame()
+
+  if os.path.exists(FILE_PATH):
+      try:
+          cap = cv2.VideoCapture(FILE_PATH)
+          
+          meta["fps"] = cap.get(cv2.CAP_PROP_FPS)
+          meta["total_frames"] = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
+          meta["width"] = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
+          meta["height"] = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
+          
+          frames = []
+          # Extract up to 10 frames to avoid OOM
+          max_frames = 10
+          frame_count = 0
+          
+          while cap.isOpened() and frame_count < max_frames:
+              ret, frame = cap.read()
+              if not ret:
+                  break
+              
+              # Convert BGR to RGB
+              frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+              
+              # Flatten frame for DataFrame storage
+              frames.append({
+                  "frame_index": frame_count,
+                  "frame_data": frame.flatten()
+              })
+              frame_count += 1
+              
+          cap.release()
+          df = pd.DataFrame(frames)
+      except Exception as e:
+          print(f"Error loading video file {FILE_PATH}: {e}")
+  else:
+      print(f"File not found: {FILE_PATH}")
+
+  target_name = "frame_data"
+  task_type = "computer_vision"
+output_variables:
+  - df
+  - target_name
+  - task_type
+  - meta
 illustration_mermaid: |
-    graph LR
-      Source[(Source)] -->|Load| Node([Extract Data])
-      style Source fill:#3b82f6,stroke:#2563eb,stroke-width:2px,color:#fff
-      style Node fill:#eff6ff,stroke:#3b82f6,stroke-width:2px
+  flowchart TD
+      A([FILE_PATH]) --> B{File Exists?}
+      B -- Yes --> C[cv2.VideoCapture]
+      B -- No --> D[Empty DataFrame]
+      C --> E[Extract metadata: fps, dims]
+      E --> F[Read max 10 frames]
+      F --> G[Convert to RGB & Flatten]
+      G --> H[Create DataFrame]
+      H --> I([df, target_name, task_type, meta])
+      D --> I
+
+      style A fill:#3b82f6,color:#fff
+      style C fill:#10b981,color:#fff
+      style F fill:#10b981,color:#fff
+      style I fill:#f59e0b,color:#fff
+
 
 _metadata:
   bloc: 1

@@ -8,29 +8,103 @@ tags:
 - scraping
 - selenium
 - dynamic
-code_template: "from selenium import webdriver\nfrom selenium.webdriver.chrome.options\
-  \ import Options\nimport os\nimport time\n\n# [PARAM: TARGET_URL | string]\nTARGET_URL\
-  \ = \"https://example.com/dynamic\"\n# [/PARAM]\n\n# [PARAM: WAIT_SEC | string]\n\
-  WAIT_SEC = \"3\"\n# [/PARAM]\n\n# [PARAM: DEST_PATH | string]\nDEST_PATH = \"./data/raw/scraped_dynamic.html\"\
-  \n# [/PARAM]\n\nprint(f\"[EXTRACT] Lancement de Selenium en mode Headless pour {TARGET_URL}...\"\
-  )\nos.makedirs(os.path.dirname(DEST_PATH), exist_ok=True)\n\ntry:\n    start_time\
-  \ = time.time()\n    chrome_options = Options()\n    chrome_options.add_argument(\"\
-  --headless\")\n    chrome_options.add_argument(\"--no-sandbox\")\n    chrome_options.add_argument(\"\
-  --disable-dev-shm-usage\")\n    \n    driver = webdriver.Chrome(options=chrome_options)\n\
-  \    driver.get(TARGET_URL)\n    \n    print(f\"[EXTRACT] Attente de {WAIT_SEC}s\
-  \ pour le chargement du JavaScript...\")\n    time.sleep(int(WAIT_SEC))\n    \n\
-  \    html_content = driver.page_source\n    driver.quit()\n    \n    with open(DEST_PATH,\
-  \ \"w\", encoding=\"utf-8\") as f:\n        f.write(html_content)\n        \n  \
-  \  duration = time.time() - start_time\n    print(f\"[EXTRACT] Succès Selenium.\
-  \ DOM sauvegardé en {duration:.2f}s.\")\nexcept Exception as e:\n    print(f\"[ERREUR\
-  \ EXTRACT] Échec du scraping Selenium : {str(e)}\")\n    raise e\n\ndf = None\n\
-  target_name = None\ntask_type = \"unknown\"\nmeta = {\"source\": \"scraping_selenium\"\
-  , \"path\": DEST_PATH}\n"
+code_template: |
+  from selenium import webdriver
+  from selenium.webdriver.chrome.options import Options
+  import os
+  import time
+  import pandas as pd
+
+  # [PARAM: TARGET_URL | string]
+  TARGET_URL = "https://example.com/dynamic"
+  # [/PARAM]
+
+  # [PARAM: WAIT_SEC | string]
+  WAIT_SEC = "3"
+  # [/PARAM]
+
+  # [PARAM: DEST_PATH | string]
+  DEST_PATH = "./data/raw/scraped_dynamic.html"
+  # [/PARAM]
+
+  print(f"[EXTRACT] Lancement de Selenium en mode Headless pour {TARGET_URL}...")
+  os.makedirs(os.path.dirname(DEST_PATH), exist_ok=True)
+
+  try:
+      start_time = time.time()
+      chrome_options = Options()
+      chrome_options.add_argument("--headless")
+      chrome_options.add_argument("--no-sandbox")
+      chrome_options.add_argument("--disable-dev-shm-usage")
+      
+      driver = webdriver.Chrome(options=chrome_options)
+      driver.get(TARGET_URL)
+      
+      print(f"[EXTRACT] Attente de {WAIT_SEC}s pour le chargement du JavaScript...")
+      time.sleep(int(WAIT_SEC))
+      
+      html_content = driver.page_source
+      driver.quit()
+      
+      with open(DEST_PATH, "w", encoding="utf-8") as f:
+          f.write(html_content)
+          
+      duration = time.time() - start_time
+      print(f"[EXTRACT] Succès Selenium. DOM sauvegardé en {duration:.2f}s.")
+  except Exception as e:
+      print(f"[ERREUR EXTRACT] Échec du scraping Selenium : {str(e)}")
+      raise e
+
+  df = pd.DataFrame()
+  target_name = ""
+  task_type = "unknown"
+  meta = {"source": "scraping_selenium", "path": DEST_PATH}
+
 illustration_mermaid: |
-    graph LR
-      Source[(Source)] -->|Load| Node([Extract Data])
-      style Source fill:#3b82f6,stroke:#2563eb,stroke-width:2px,color:#fff
-      style Node fill:#eff6ff,stroke:#3b82f6,stroke-width:2px
+  flowchart TD
+      subgraph Config [Parameters]
+          URL([TARGET_URL])
+          WAIT([WAIT_SEC])
+          DEST([DEST_PATH])
+      end
+
+      subgraph Operations [Selenium Scraping]
+          Options([Chrome Options])
+          Driver([webdriver.Chrome])
+          Get([driver.get])
+          Sleep([time.sleep])
+          Source([driver.page_source])
+          Write([Write HTML])
+          OutFile[(Local HTML File)]
+      end
+
+      subgraph Outputs [Contract Variables]
+          df((df = pd.DataFrame))
+          target((target_name = ''))
+          task((task_type = 'unknown'))
+          meta((meta: dict))
+      end
+
+      Options --> Driver
+      URL --> Get
+      Driver --> Get
+      Get --> Sleep
+      WAIT --> Sleep
+      Sleep --> Source
+      Source --> Write
+      DEST --> OutFile
+      Write --> OutFile
+      OutFile -.-> meta
+
+      style Config fill:#f8fafc,stroke:#cbd5e1,stroke-width:2px
+      style Options fill:#64748b,stroke:#475569,stroke-width:2px,color:#fff
+      style Driver fill:#3b82f6,stroke:#1d4ed8,stroke-width:2px,color:#fff
+      style Get fill:#f59e0b,stroke:#b45309,stroke-width:2px,color:#fff
+      style Sleep fill:#10b981,stroke:#047857,stroke-width:2px,color:#fff
+      style Source fill:#8b5cf6,stroke:#6d28d9,stroke-width:2px,color:#fff
+      style Write fill:#ec4899,stroke:#be185d,stroke-width:2px,color:#fff
+      style OutFile fill:#14b8a6,stroke:#0f766e,stroke-width:2px,color:#fff
+      style Outputs fill:#f1f5f9,stroke:#94a3b8,stroke-width:2px
 
 _metadata:
   bloc: 1

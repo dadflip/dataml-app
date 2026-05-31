@@ -7,23 +7,76 @@ tags:
 - onedrive
 - microsoft
 - cloud
-code_template: "import urllib.request\nimport os\nimport time\n\n# [PARAM: DIRECT_LINK\
-  \ | string]\nDIRECT_LINK = \"https://onedrive.live.com/download?cid=XXX&resid=XXX&authkey=XXX\"\
-  \n# [/PARAM]\n\n# [PARAM: DEST_PATH | string]\nDEST_PATH = \"./data/raw/onedrive_data.zip\"\
-  \n# [/PARAM]\n\nprint(f\"[EXTRACT] Téléchargement depuis OneDrive...\")\nos.makedirs(os.path.dirname(DEST_PATH),\
-  \ exist_ok=True)\n\ntry:\n    start_time = time.time()\n    req = urllib.request.Request(DIRECT_LINK,\
-  \ headers={'User-Agent': 'Mozilla/5.0'})\n    with urllib.request.urlopen(req) as\
-  \ response, open(DEST_PATH, 'wb') as out_file:\n        out_file.write(response.read())\n\
-  \        \n    duration = time.time() - start_time\n    print(f\"[EXTRACT] Succès\
-  \ OneDrive. Fichier téléchargé en {duration:.2f}s.\")\nexcept Exception as e:\n\
-  \    print(f\"[ERREUR EXTRACT] Echec du lien OneDrive : {str(e)}\")\n    raise e\n\
-  \ndf = None\ntarget_name = None\ntask_type = \"unknown\"\nmeta = {\"source\": \"\
-  onedrive\", \"path\": DEST_PATH}\n"
+code_template: |
+  import urllib.request
+  import os
+  import time
+
+  # [PARAM: DIRECT_LINK | string]
+  DIRECT_LINK = "https://onedrive.live.com/download?cid=XXX&resid=XXX&authkey=XXX"
+  # [/PARAM]
+
+  # [PARAM: DEST_PATH | string]
+  DEST_PATH = "./data/raw/onedrive_data.zip"
+  # [/PARAM]
+
+  print(f"[EXTRACT] Téléchargement depuis OneDrive...")
+  os.makedirs(os.path.dirname(DEST_PATH), exist_ok=True)
+
+  try:
+      start_time = time.time()
+      req = urllib.request.Request(DIRECT_LINK, headers={'User-Agent': 'Mozilla/5.0'})
+      with urllib.request.urlopen(req) as response, open(DEST_PATH, 'wb') as out_file:
+          out_file.write(response.read())
+          
+      duration = time.time() - start_time
+      print(f"[EXTRACT] Succès OneDrive. Fichier téléchargé en {duration:.2f}s.")
+  except Exception as e:
+      print(f"[ERREUR EXTRACT] Echec du lien OneDrive : {str(e)}")
+      raise e
+
+  df = DEST_PATH
+  target_name = "target"
+  task_type = "unknown"
+  meta = {"source": "onedrive", "path": DEST_PATH}
 illustration_mermaid: |
-    graph LR
-      Source[(Source)] -->|Load| Node([Extract Data])
-      style Source fill:#3b82f6,stroke:#2563eb,stroke-width:2px,color:#fff
-      style Node fill:#eff6ff,stroke:#3b82f6,stroke-width:2px
+    flowchart TD
+    A([FILE_PATH]) --> B[Load EXTRACT_ONEDRIVE]
+    B --> df([df])
+    
+    style A fill:#3b82f6,color:#fff
+    style B fill:#10b981,color:#fff
+    style df fill:#f59e0b,color:#fff
+
+
+
+        subgraph Operations [OneDrive Extract]
+            Req([urllib.request.Request])
+            UrlOpen([urllib.request.urlopen])
+            Write([Write to Local File])
+            OutFile[(Zip File)]
+        end
+
+        subgraph Outputs [Contract Variables]
+            df((df = None))
+            target((target_name = None))
+            task((task_type = 'unknown'))
+            meta((meta: dict))
+        end
+
+        LINK --> Req
+        Req --> UrlOpen
+        UrlOpen -->|response.read| Write
+        DEST --> OutFile
+        Write --> OutFile
+        OutFile -.-> meta
+
+        style Config fill:#f8fafc,stroke:#cbd5e1,stroke-width:2px
+        style Req fill:#3b82f6,stroke:#1d4ed8,stroke-width:2px,color:#fff
+        style UrlOpen fill:#10b981,stroke:#047857,stroke-width:2px,color:#fff
+        style Write fill:#f59e0b,stroke:#b45309,stroke-width:2px,color:#fff
+        style OutFile fill:#8b5cf6,stroke:#6d28d9,stroke-width:2px,color:#fff
+        style Outputs fill:#f1f5f9,stroke:#94a3b8,stroke-width:2px
 
 _metadata:
   bloc: 1

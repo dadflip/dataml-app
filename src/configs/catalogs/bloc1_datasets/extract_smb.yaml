@@ -7,21 +7,66 @@ tags:
 - smb
 - windows
 - network
-code_template: "import shutil\nimport os\nimport time\n\n# [PARAM: SMB_UNC_PATH |\
-  \ string]\nSMB_UNC_PATH = r\"\\\\\\\\SERVER\\\\Share\\\\data.csv\"\n# [/PARAM]\n\
-  \n# [PARAM: DEST_PATH | string]\nDEST_PATH = \"./data/raw/smb_data.csv\"\n# [/PARAM]\n\
-  \nprint(f\"[EXTRACT] Copie depuis le partage SMB : {SMB_UNC_PATH}...\")\nos.makedirs(os.path.dirname(DEST_PATH),\
-  \ exist_ok=True)\n\ntry:\n    start_time = time.time()\n    shutil.copy2(SMB_UNC_PATH,\
-  \ DEST_PATH)\n    \n    duration = time.time() - start_time\n    print(f\"[EXTRACT]\
-  \ Succès SMB. Fichier copié en {duration:.2f}s.\")\nexcept Exception as e:\n   \
-  \ print(f\"[ERREUR EXTRACT] Erreur de réseau Windows (Permissions SMB) : {str(e)}\"\
-  )\n    raise e\n\ndf = None\ntarget_name = None\ntask_type = \"unknown\"\nmeta =\
-  \ {\"source\": \"smb\", \"path\": DEST_PATH}\n"
+code_template: |
+  import shutil
+  import os
+  import time
+  import pandas as pd
+
+  # [PARAM: SMB_UNC_PATH | string]
+  SMB_UNC_PATH = r"\\SERVER\Share\data.csv"
+  # [/PARAM]
+
+  # [PARAM: DEST_PATH | string]
+  DEST_PATH = "./data/raw/smb_data.csv"
+  # [/PARAM]
+
+  print(f"[EXTRACT] Copie depuis le partage SMB : {SMB_UNC_PATH}...")
+  os.makedirs(os.path.dirname(DEST_PATH), exist_ok=True)
+
+  try:
+      start_time = time.time()
+      shutil.copy2(SMB_UNC_PATH, DEST_PATH)
+      
+      duration = time.time() - start_time
+      print(f"[EXTRACT] Succès SMB. Fichier copié en {duration:.2f}s.")
+  except Exception as e:
+      print(f"[ERREUR EXTRACT] Erreur de réseau Windows (Permissions SMB) : {str(e)}")
+      raise e
+
+  df = pd.DataFrame()
+  target_name = ""
+  task_type = "unknown"
+  meta = {"source": "smb", "path": DEST_PATH}
+
 illustration_mermaid: |
-    graph LR
-      Source[(Source)] -->|Load| Node([Extract Data])
-      style Source fill:#3b82f6,stroke:#2563eb,stroke-width:2px,color:#fff
-      style Node fill:#eff6ff,stroke:#3b82f6,stroke-width:2px
+  flowchart TD
+      subgraph Config [Parameters]
+          SMB([SMB_UNC_PATH])
+          DEST([DEST_PATH])
+      end
+
+      subgraph Operations [SMB Extract]
+          Copy([shutil.copy2])
+          LocalFile[(Local File)]
+      end
+
+      subgraph Outputs [Contract Variables]
+          df((df = pd.DataFrame))
+          target((target_name = ''))
+          task((task_type = 'unknown'))
+          meta((meta: dict))
+      end
+
+      SMB --> Copy
+      DEST --> Copy
+      Copy --> LocalFile
+      LocalFile -.-> meta
+
+      style Config fill:#f8fafc,stroke:#cbd5e1,stroke-width:2px
+      style Copy fill:#3b82f6,stroke:#1d4ed8,stroke-width:2px,color:#fff
+      style LocalFile fill:#10b981,stroke:#047857,stroke-width:2px,color:#fff
+      style Outputs fill:#f1f5f9,stroke:#94a3b8,stroke-width:2px
 
 _metadata:
   bloc: 1

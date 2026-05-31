@@ -4,16 +4,57 @@ description: "Charge un fichier de données météorologiques ou climatiques au 
 category: "2. Load"
 tags: ["load", "netcdf", "weather", "science"]
 code_template: |
-  import time
+  import pandas as pd
   import os
+  import xarray as xr
 
   # [PARAM: FILE_PATH | file]
-  FILE_PATH = "./data/raw/climate.nc"
+  FILE_PATH = "./data/raw/data.netcdf"
+  # [/PARAM]
+
+  meta = {"source": "NETCDF", "path": FILE_PATH}
+
+  if os.path.exists(FILE_PATH):
+      try:
+          # Load the NetCDF file
+          ds = xr.open_dataset(FILE_PATH)
+          # Convert to Pandas DataFrame and flatten
+          df = ds.to_dataframe().reset_index()
+          meta["dimensions"] = list(ds.dims)
+          meta["variables"] = list(ds.data_vars)
+      except Exception as e:
+          print(f"Error loading NetCDF file {FILE_PATH}: {e}")
+          df = pd.DataFrame()
+  else:
+      print(f"File not found: {FILE_PATH}")
+      df = pd.DataFrame()
+
+  if not df.empty and len(df.columns) > 0:
+      target_name = df.columns[-1]
+  else:
+      target_name = "target"
+
+  task_type = "regression"
+output_variables:
+  - df
+  - target_name
+  - task_type
+  - meta
 illustration_mermaid: |
-    graph LR
-      Source[(Source)] -->|Load| Node([Extract Data])
-      style Source fill:#3b82f6,stroke:#2563eb,stroke-width:2px,color:#fff
-      style Node fill:#eff6ff,stroke:#3b82f6,stroke-width:2px
+  flowchart TD
+      A([FILE_PATH]) --> B{File Exists?}
+      B -- Yes --> C[xr.open_dataset]
+      B -- No --> D[Empty DataFrame]
+      C --> E[Convert to DataFrame]
+      E --> F[Extract Meta: dims & vars]
+      F --> G[Determine Target]
+      D --> G
+      G --> H([df, target_name, task_type, meta])
+
+      style A fill:#3b82f6,color:#fff
+      style C fill:#10b981,color:#fff
+      style E fill:#10b981,color:#fff
+      style H fill:#f59e0b,color:#fff
 
 _metadata:
   bloc: 1

@@ -6,26 +6,60 @@ tags:
 - extract
 - graphql
 - api
-code_template: "import requests\nimport json\nimport os\nimport time\n\n# [PARAM:\
-  \ ENDPOINT | string]\nENDPOINT = \"https://api.github.com/graphql\"\n# [/PARAM]\n\
-  \n# [PARAM: QUERY | string]\nQUERY = '{\"query\": \"query { viewer { login } }\"\
-  }'\n# [/PARAM]\n\n# [PARAM: TOKEN | string]\nTOKEN = \"YOUR_BEARER_TOKEN\"\n# [/PARAM]\n\
-  \n# [PARAM: DEST_PATH | string]\nDEST_PATH = \"./data/raw/graphql_resp.json\"\n\
-  # [/PARAM]\n\nprint(f\"[EXTRACT] Exécution de la requête GraphQL vers {ENDPOINT}...\"\
-  )\nos.makedirs(os.path.dirname(DEST_PATH), exist_ok=True)\n\ntry:\n    start_time\
-  \ = time.time()\n    headers = {\"Authorization\": f\"Bearer {TOKEN}\", \"Content-Type\"\
-  : \"application/json\"}\n    \n    response = requests.post(ENDPOINT, headers=headers,\
-  \ data=QUERY)\n    response.raise_for_status()\n    \n    with open(DEST_PATH, \"\
-  w\", encoding=\"utf-8\") as f:\n        json.dump(response.json(), f, indent=2)\n\
-  \        \n    duration = time.time() - start_time\n    print(f\"[EXTRACT] Succès\
-  \ GraphQL. Fichier dumpé en {duration:.2f}s.\")\nexcept Exception as e:\n    print(f\"\
-  [ERREUR EXTRACT] Erreur GraphQL : {str(e)}\")\n    raise e\n\ndf = None\ntarget_name\
-  \ = None\ntask_type = \"unknown\"\nmeta = {\"source\": \"graphql\", \"path\": DEST_PATH}\n"
+code_template: |
+  import requests
+  import json
+  import os
+  import time
+
+  # [PARAM: ENDPOINT | string]
+  ENDPOINT = "https://api.github.com/graphql"
+  # [/PARAM]
+
+  # [PARAM: QUERY | string]
+  QUERY = '{"query": "query { viewer { login } }"}'
+  # [/PARAM]
+
+  # [PARAM: TOKEN | string]
+  TOKEN = "YOUR_BEARER_TOKEN"
+  # [/PARAM]
+
+  # [PARAM: DEST_PATH | string]
+  DEST_PATH = "./data/raw/graphql_resp.json"
+  # [/PARAM]
+
+  print(f"[EXTRACT] Exécution de la requête GraphQL vers {ENDPOINT}...")
+  os.makedirs(os.path.dirname(DEST_PATH), exist_ok=True)
+
+  try:
+      start_time = time.time()
+      headers = {"Authorization": f"Bearer {TOKEN}", "Content-Type": "application/json"}
+      
+      response = requests.post(ENDPOINT, headers=headers, data=QUERY)
+      response.raise_for_status()
+      
+      with open(DEST_PATH, "w", encoding="utf-8") as f:
+          json.dump(response.json(), f, indent=2)
+          
+      duration = time.time() - start_time
+      print(f"[EXTRACT] Succès GraphQL. Fichier dumpé en {duration:.2f}s.")
+  except Exception as e:
+      print(f"[ERREUR EXTRACT] Erreur GraphQL : {str(e)}")
+      raise e
+
+  df = DEST_PATH
+  target_name = "target"
+  task_type = "unknown"
+  meta = {"source": "graphql", "path": DEST_PATH}
 illustration_mermaid: |
-    graph LR
-      Source[(Source)] -->|Load| Node([Extract Data])
-      style Source fill:#3b82f6,stroke:#2563eb,stroke-width:2px,color:#fff
-      style Node fill:#eff6ff,stroke:#3b82f6,stroke-width:2px
+    flowchart TD
+    A([FILE_PATH]) --> B[Load EXTRACT_GRAPHQL]
+    B --> df([df])
+    
+    style A fill:#3b82f6,color:#fff
+    style B fill:#10b981,color:#fff
+    style df fill:#f59e0b,color:#fff
+
 
 _metadata:
   bloc: 1

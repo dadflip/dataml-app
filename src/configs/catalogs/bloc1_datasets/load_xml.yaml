@@ -10,11 +10,31 @@ code_template: |
 
   # [PARAM: FILE_PATH | file]
   FILE_PATH = "./data/raw/data.xml"
+  # [/PARAM]
+
+  df = pd.read_xml(FILE_PATH) if os.path.exists(FILE_PATH) else pd.DataFrame()
+  target_name = "target"
+  task_type = "unknown"
+  meta = {"source": "XML", "path": FILE_PATH}
+output_variables:
+  - df
+  - target_name
+  - task_type
+  - meta
 illustration_mermaid: |
-    graph LR
-      Source[(Source)] -->|Load| Node([Extract Data])
-      style Source fill:#3b82f6,stroke:#2563eb,stroke-width:2px,color:#fff
-      style Node fill:#eff6ff,stroke:#3b82f6,stroke-width:2px
+    flowchart LR
+        XML[("XML File\n(.xml)")] -->|FILE_PATH| Load(["Load\nXML"])
+        Load --> df(["df (None)"])
+        Load --> target_name(["target_name (None)"])
+        Load --> task_type(["task_type ('unknown')"])
+        Load --> meta(["meta (dict)"])
+
+        style XML fill:#3b82f6,stroke:#2563eb,stroke-width:2px,color:#fff
+        style Load fill:#eff6ff,stroke:#3b82f6,stroke-width:2px
+        style df fill:#f3f4f6,stroke:#9ca3af,stroke-width:1px
+        style target_name fill:#f3f4f6,stroke:#9ca3af,stroke-width:1px
+        style task_type fill:#f3f4f6,stroke:#9ca3af,stroke-width:1px
+        style meta fill:#f3f4f6,stroke:#9ca3af,stroke-width:1px
 
 _metadata:
   bloc: 1

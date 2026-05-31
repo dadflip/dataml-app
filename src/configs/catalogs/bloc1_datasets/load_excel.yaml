@@ -8,26 +8,64 @@ tags:
 - excel
 - spreadsheet
 - pandas
-code_template: "import pandas as pd\nimport time\nimport os\n\n# [PARAM: FILE_PATH\
-  \ | file]\nFILE_PATH = \"./data/raw/data.xlsx\"\n# [/PARAM]\n\n# [PARAM: SHEET_NAME\
-  \ | string]\nSHEET_NAME = \"Sheet1\"\n# [/PARAM]\n\n# [PARAM: TARGET_COL | string]\n\
-  TARGET_COL = \"target\"\n# [/PARAM]\n\nprint(f\"[LOAD] Lecture de la feuille '{SHEET_NAME}'\
-  \ depuis {FILE_PATH}...\")\nif not os.path.exists(FILE_PATH):\n    raise FileNotFoundError(f\"\
-  [ERREUR LOAD] Fichier Excel introuvable : {FILE_PATH}\")\n\ntry:\n    start_time\
-  \ = time.time()\n    # openpyxl ou xlrd doit être installé selon l'extension\n \
-  \   df = pd.read_excel(FILE_PATH, sheet_name=SHEET_NAME)\n    \n    duration = time.time()\
-  \ - start_time\n    print(f\"[LOAD] Succès Excel. {df.shape[0]} lignes chargées\
-  \ en {duration:.2f}s.\")\nexcept ImportError:\n    print(\"[ERREUR LOAD] Modules\
-  \ manquants. Essayez : pip install openpyxl xlrd\")\n    raise\nexcept Exception\
-  \ as e:\n    print(f\"[ERREUR LOAD] Erreur de lecture Excel : {str(e)}\")\n    raise\
-  \ e\n\ntarget_name = TARGET_COL if TARGET_COL and TARGET_COL in df.columns else\
-  \ None\ntask_type = \"unknown\"\nmeta = {\"format\": \"excel\", \"sheet\": SHEET_NAME,\
-  \ \"shape\": df.shape}\n"
+code_template: |
+  import pandas as pd
+  import time
+  import os
+
+  # [PARAM: FILE_PATH | file]
+  FILE_PATH = "./data/raw/data.xlsx"
+  # [/PARAM]
+
+  # [PARAM: SHEET_NAME | string]
+  SHEET_NAME = "Sheet1"
+  # [/PARAM]
+
+  # [PARAM: TARGET_COL | string]
+  TARGET_COL = "target"
+  # [/PARAM]
+
+  print(f"[LOAD] Lecture de la feuille '{SHEET_NAME}' depuis {FILE_PATH}...")
+  if not os.path.exists(FILE_PATH):
+      raise FileNotFoundError(f"[ERREUR LOAD] Fichier Excel introuvable : {FILE_PATH}")
+
+  try:
+      start_time = time.time()
+      # openpyxl ou xlrd doit être installé selon l'extension
+      df = pd.read_excel(FILE_PATH, sheet_name=SHEET_NAME)
+      
+      duration = time.time() - start_time
+      print(f"[LOAD] Succès Excel. {df.shape[0]} lignes chargées en {duration:.2f}s.")
+  except ImportError:
+      print("[ERREUR LOAD] Modules manquants. Essayez : pip install openpyxl xlrd")
+      raise
+  except Exception as e:
+      print(f"[ERREUR LOAD] Erreur de lecture Excel : {str(e)}")
+      raise e
+
+  target_name = TARGET_COL if TARGET_COL and TARGET_COL in df.columns else ""
+  task_type = "unknown"
+  meta = {"format": "excel", "sheet": SHEET_NAME, "shape": df.shape}
 illustration_mermaid: |
-    graph LR
-      Source[(Source)] -->|Load| Node([Extract Data])
-      style Source fill:#3b82f6,stroke:#2563eb,stroke-width:2px,color:#fff
-      style Node fill:#eff6ff,stroke:#3b82f6,stroke-width:2px
+    flowchart LR
+        A[/"📄 File Path (.xlsx/.xls)"/] --> B{"pd.read_excel()"}
+        C[/"📑 SHEET_NAME"/] --> B
+        B --> D(["📊 df"])
+        E[/"🎯 TARGET_COL"/] --> F{"Check TARGET_COL"}
+        D --> F
+        F --> G(["🎯 target_name"])
+        F --> H(["⚙️ task_type = 'unknown'"])
+        F --> I(["ℹ️ meta (format, sheet, shape)"])
+
+        style A fill:#fbbf24,stroke:#d97706,stroke-width:2px
+        style C fill:#fbbf24,stroke:#d97706,stroke-width:2px
+        style E fill:#fbbf24,stroke:#d97706,stroke-width:2px
+        style B fill:#3b82f6,stroke:#2563eb,stroke-width:2px,color:#fff
+        style F fill:#3b82f6,stroke:#2563eb,stroke-width:2px,color:#fff
+        style D fill:#10b981,stroke:#059669,stroke-width:2px,color:#fff
+        style G fill:#8b5cf6,stroke:#7c3aed,stroke-width:2px,color:#fff
+        style H fill:#8b5cf6,stroke:#7c3aed,stroke-width:2px,color:#fff
+        style I fill:#8b5cf6,stroke:#7c3aed,stroke-width:2px,color:#fff
 
 _metadata:
   bloc: 1

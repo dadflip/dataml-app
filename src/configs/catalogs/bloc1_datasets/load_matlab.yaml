@@ -1,20 +1,43 @@
-id: "load_matlab"
-name: "Load: Fichier MATLAB (.mat)"
-description: "Charge les matrices et variables sauvegardées dans un fichier MATLAB."
-category: "2. Load"
+id: load_matlab
+name: 'Load: Fichier MATLAB (.mat)'
+description: 'Charge les matrices et variables sauvegardées dans un fichier MATLAB.'
+category: 2. Load
 tags: ["load", "matlab", "scipy", "matrix"]
 code_template: |
+  import pandas as pd
   import scipy.io
   import time
   import os
 
   # [PARAM: FILE_PATH | file]
   FILE_PATH = "./data/raw/data.mat"
+  # [/PARAM]
+
+  print(f"[LOAD] Lecture du fichier MATLAB : {FILE_PATH}...")
+  if not os.path.exists(FILE_PATH):
+      raise FileNotFoundError(f"[ERREUR LOAD] Fichier MATLAB introuvable : {FILE_PATH}")
+
+  try:
+      start_time = time.time()
+      mat_data = scipy.io.loadmat(FILE_PATH)
+      duration = time.time() - start_time
+      print(f"[LOAD] Succès MATLAB. Variables chargées en {duration:.2f}s.")
+  except Exception as e:
+      print(f"[ERREUR LOAD] Erreur de lecture MATLAB : {str(e)}")
+      raise e
+
+  df = pd.DataFrame()
+  target_name = ""
+  task_type = "unknown"
+  meta = {"format": "matlab", "variables": [k for k in mat_data.keys() if not k.startswith('__')]}
 illustration_mermaid: |
-    graph LR
-      Source[(Source)] -->|Load| Node([Extract Data])
-      style Source fill:#3b82f6,stroke:#2563eb,stroke-width:2px,color:#fff
-      style Node fill:#eff6ff,stroke:#3b82f6,stroke-width:2px
+  flowchart LR
+      A([FILE_PATH]) --> B[Load MATLAB]
+      B --> df([df])
+      
+      style A fill:#3b82f6,color:#fff
+      style B fill:#10b981,color:#fff
+      style df fill:#f59e0b,color:#fff
 
 _metadata:
   bloc: 1

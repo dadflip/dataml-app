@@ -6,24 +6,41 @@ tags:
 - eda
 - timeseries
 - statsmodels
-code_template: "import pandas as pd\nimport matplotlib.pyplot as plt\nfrom statsmodels.tsa.seasonal\
-  \ import seasonal_decompose\n\n# [PARAM: TIME_COL | string]\nTIME_COL = \"date\"\
-  \n# [/PARAM]\n\n# [PARAM: PERIOD | number]\nPERIOD = 12\n# [/PARAM]\n\nif TIME_COL\
-  \ in df.columns and 'target_name' in locals() and target_name:\n    temp_df = df.copy()\n\
-  \    temp_df[TIME_COL] = pd.to_datetime(temp_df[TIME_COL], errors='coerce')\n  \
-  \  temp_df = temp_df.dropna(subset=[TIME_COL, target_name]).sort_values(TIME_COL).set_index(TIME_COL)\n\
-  \    \n    print(f\"[EDA] Décomposition (période={PERIOD}) de {target_name}\")\n\
-  \    result = seasonal_decompose(temp_df[target_name], model='additive', period=PERIOD)\n\
-  \    result.plot()\n    plt.gcf().set_size_inches(12, 8)\n    plt.show()\nelse:\n\
-  \    print(\"[EDA] Colonnes temporelles manquantes.\")\n"
+code_template: |
+  import pandas as pd
+  import matplotlib.pyplot as plt
+  from statsmodels.tsa.seasonal import seasonal_decompose
+  
+  # [PARAM: TIME_COL | string]
+  TIME_COL = "date"
+  # [/PARAM]
+  
+  # [PARAM: PERIOD | number]
+  PERIOD = 12
+  # [/PARAM]
+  
+  if TIME_COL in df.columns and 'target_name' in locals() and target_name:
+      temp_df = df.copy()
+      temp_df[TIME_COL] = pd.to_datetime(temp_df[TIME_COL], errors='coerce')
+      temp_df = temp_df.dropna(subset=[TIME_COL, target_name]).sort_values(TIME_COL).set_index(TIME_COL)
+      
+      print(f"[EDA] Décomposition (période={PERIOD}) de {target_name}")
+      result = seasonal_decompose(temp_df[target_name], model='additive', period=PERIOD)
+      result.plot()
+      plt.gcf().set_size_inches(12, 8)
+      plt.show()
+  else:
+      print("[EDA] Colonnes temporelles manquantes.")
 illustration_mermaid: |
-    graph LR
-      Data([Features]) --> Model((Machine Learning))
-      Model --> Pred([Predictions])
-      style Model fill:#8b5cf6,stroke:#7c3aed,stroke-width:2px,color:#fff
-      style Data fill:#f8fafc,stroke:#94a3b8,stroke-width:1px
-      style Pred fill:#f8fafc,stroke:#94a3b8,stroke-width:1px
-
+    graph TD
+      DF([DataFrame]) --> Check{Check TIME_COL}
+      Check -- Valid --> Format[To DateTime & Sort]
+      Format --> Decomp{{seasonal_decompose}}
+      Decomp -- "period=PERIOD" --> Plot[Plot Decomposition]
+      Check -- Missing --> Err[Print Error]
+      style Decomp fill:#d946ef,stroke:#c026d3,stroke-width:2px,color:#fff
+      style Format fill:#3b82f6,stroke:#2563eb,stroke-width:2px,color:#fff
+      style Plot fill:#10b981,stroke:#059669,stroke-width:2px,color:#fff
 _metadata:
   bloc: 1
   section: 3_eda

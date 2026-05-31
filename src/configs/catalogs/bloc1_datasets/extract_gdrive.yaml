@@ -6,24 +6,53 @@ tags:
 - extract
 - gdrive
 - google
-code_template: "import os\nimport time\nimport subprocess\n\n# [PARAM: FILE_ID | string]\n\
-  FILE_ID = \"1A2B3C4D5E6F7G8H9I\"\n# [/PARAM]\n\n# [PARAM: DEST_PATH | string]\n\
-  DEST_PATH = \"./data/raw/gdrive_data.csv\"\n# [/PARAM]\n\nprint(f\"[EXTRACT] Téléchargement\
-  \ depuis Google Drive (ID: {FILE_ID})...\")\nos.makedirs(os.path.dirname(DEST_PATH),\
-  \ exist_ok=True)\n\ntry:\n    start_time = time.time()\n    # gdown est très robuste\
-  \ pour les gros fichiers Drive\n    result = subprocess.run(\n        [\"gdown\"\
-  , f\"https://drive.google.com/uc?id={FILE_ID}\", \"-O\", DEST_PATH],\n        capture_output=True,\
-  \ text=True\n    )\n    \n    if result.returncode != 0:\n        raise RuntimeError(result.stderr)\n\
-  \        \n    duration = time.time() - start_time\n    print(f\"[EXTRACT] Succès\
-  \ GDrive. Fichier rapatrié en {duration:.2f}s.\")\nexcept Exception as e:\n    print(f\"\
-  [ERREUR EXTRACT] Erreur gdown (Lien privé ou module non installé) : {str(e)}\")\n\
-  \    raise e\n\ndf = None\ntarget_name = None\ntask_type = \"unknown\"\nmeta = {\"\
-  source\": \"gdrive\", \"path\": DEST_PATH}\n"
+code_template: |
+  import os
+  import time
+  import subprocess
+
+  # [PARAM: FILE_ID | string]
+  FILE_ID = "1A2B3C4D5E6F7G8H9I"
+  # [/PARAM]
+
+  # [PARAM: DEST_PATH | string]
+  DEST_PATH = "./data/raw/gdrive_data.csv"
+  # [/PARAM]
+
+  print(f"[EXTRACT] Téléchargement depuis Google Drive (ID: {FILE_ID})...")
+  os.makedirs(os.path.dirname(DEST_PATH), exist_ok=True)
+
+  try:
+      start_time = time.time()
+      # gdown est très robuste pour les gros fichiers Drive
+      result = subprocess.run(
+          ["gdown", f"https://drive.google.com/uc?id={FILE_ID}", "-O", DEST_PATH],
+          capture_output=True, text=True
+      )
+      
+      if result.returncode != 0:
+          raise RuntimeError(result.stderr)
+          
+      duration = time.time() - start_time
+      print(f"[EXTRACT] Succès GDrive. Fichier rapatrié en {duration:.2f}s.")
+  except Exception as e:
+      print(f"[ERREUR EXTRACT] Erreur gdown (Lien privé ou module non installé) : {str(e)}")
+      raise e
+
+  df = DEST_PATH
+  target_name = "target"
+  task_type = "unknown"
+  meta = {"source": "gdrive", "path": DEST_PATH}
 illustration_mermaid: |
-    graph LR
-      Source[(Source)] -->|Load| Node([Extract Data])
-      style Source fill:#3b82f6,stroke:#2563eb,stroke-width:2px,color:#fff
-      style Node fill:#eff6ff,stroke:#3b82f6,stroke-width:2px
+    flowchart TD
+    A([FILE_PATH]) --> B[Load EXTRACT_GDRIVE]
+    B --> df([df])
+    
+    style A fill:#3b82f6,color:#fff
+    style B fill:#10b981,color:#fff
+    style df fill:#f59e0b,color:#fff
+
+
 
 _metadata:
   bloc: 1

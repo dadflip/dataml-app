@@ -37,11 +37,25 @@ code_template: |
       transformer = FunctionTransformer(drop_outliers_func)
       
       step_name = 'drop_outliers'
+      pipeline_steps[step_name] = transformer
+      
+      df_shape_before = df.shape
+      df = transformer.fit_transform(df)
+      print(f"[TRANSFORM] Lignes supprimées: {df_shape_before[0] - df.shape[0]}")
+
 illustration_mermaid: |
-    graph LR
-      In([Raw Data]) -->|Process| Out([Clean Data])
-      style In fill:#eff6ff,stroke:#94a3b8,stroke-width:2px,stroke-dasharray: 5 5
-      style Out fill:#10b981,stroke:#059669,stroke-width:2px,color:#fff
+  graph TD
+    A[Input DataFrame] --> B[Extract Numeric Columns]
+    B --> C{Are there numeric columns?}
+    C -- Yes --> D[Calculate Z-Scores using scipy.stats]
+    C -- No --> E[Return Original DataFrame]
+    D --> F[Create mask: Z < Threshold]
+    F --> G[Filter DataFrame rows]
+    G --> H[Update pipeline_steps & df]
+    E --> H
+    H --> I[Filtered DataFrame]
+    style A fill:#eff6ff,stroke:#94a3b8,stroke-width:2px
+    style I fill:#10b981,stroke:#059669,stroke-width:2px,color:#fff
 
 _metadata:
   bloc: 2

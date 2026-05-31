@@ -7,27 +7,95 @@ tags:
 - scraping
 - playwright
 - spa
-code_template: "import asyncio\nfrom playwright.async_api import async_playwright\n\
-  import os\nimport time\n\n# [PARAM: TARGET_URL | string]\nTARGET_URL = \"https://example.com/spa\"\
-  \n# [/PARAM]\n\n# [PARAM: DEST_PATH | string]\nDEST_PATH = \"./data/raw/scraped_spa.html\"\
-  \n# [/PARAM]\n\nprint(f\"[EXTRACT] Lancement de Playwright pour {TARGET_URL}...\"\
-  )\nos.makedirs(os.path.dirname(DEST_PATH), exist_ok=True)\n\nasync def run_playwright():\n\
-  \    async with async_playwright() as p:\n        browser = await p.chromium.launch(headless=True)\n\
-  \        page = await browser.new_page()\n        # Attend que le reseau soit inactif\
-  \ (fin des fetch() de la SPA)\n        await page.goto(TARGET_URL, wait_until='networkidle')\n\
-  \        html = await page.content()\n        await browser.close()\n        return\
-  \ html\n\ntry:\n    start_time = time.time()\n    html_content = asyncio.run(run_playwright())\n\
-  \    \n    with open(DEST_PATH, \"w\", encoding=\"utf-8\") as f:\n        f.write(html_content)\n\
-  \        \n    duration = time.time() - start_time\n    print(f\"[EXTRACT] Succès\
-  \ Playwright. DOM SPA sauvegardé en {duration:.2f}s.\")\nexcept Exception as e:\n\
-  \    print(f\"[ERREUR EXTRACT] Échec du scraping Playwright : {str(e)}\")\n    raise\
-  \ e\n\ndf = None\ntarget_name = None\ntask_type = \"unknown\"\nmeta = {\"source\"\
-  : \"scraping_playwright\", \"path\": DEST_PATH}\n"
+code_template: |
+  import asyncio
+  from playwright.async_api import async_playwright
+  import os
+  import time
+  import pandas as pd
+
+  # [PARAM: TARGET_URL | string]
+  TARGET_URL = "https://example.com/spa"
+  # [/PARAM]
+
+  # [PARAM: DEST_PATH | string]
+  DEST_PATH = "./data/raw/scraped_spa.html"
+  # [/PARAM]
+
+  print(f"[EXTRACT] Lancement de Playwright pour {TARGET_URL}...")
+  os.makedirs(os.path.dirname(DEST_PATH), exist_ok=True)
+
+  async def run_playwright():
+      async with async_playwright() as p:
+          browser = await p.chromium.launch(headless=True)
+          page = await browser.new_page()
+          # Attend que le reseau soit inactif (fin des fetch() de la SPA)
+          await page.goto(TARGET_URL, wait_until='networkidle')
+          html = await page.content()
+          await browser.close()
+          return html
+
+  try:
+      start_time = time.time()
+      html_content = asyncio.run(run_playwright())
+      
+      with open(DEST_PATH, "w", encoding="utf-8") as f:
+          f.write(html_content)
+          
+      duration = time.time() - start_time
+      print(f"[EXTRACT] Succès Playwright. DOM SPA sauvegardé en {duration:.2f}s.")
+  except Exception as e:
+      print(f"[ERREUR EXTRACT] Échec du scraping Playwright : {str(e)}")
+      raise e
+
+  df = pd.DataFrame()
+  target_name = ""
+  task_type = "unknown"
+  meta = {"source": "scraping_playwright", "path": DEST_PATH}
+
 illustration_mermaid: |
-    graph LR
-      Source[(Source)] -->|Load| Node([Extract Data])
-      style Source fill:#3b82f6,stroke:#2563eb,stroke-width:2px,color:#fff
-      style Node fill:#eff6ff,stroke:#3b82f6,stroke-width:2px
+  flowchart TD
+      subgraph Config [Parameters]
+          URL([TARGET_URL])
+          DEST([DEST_PATH])
+      end
+
+      subgraph Operations [Playwright SPA Scraping]
+          AsyncPW([async_playwright])
+          Browser([chromium.launch])
+          Page([browser.new_page])
+          Goto([page.goto networkidle])
+          Content([page.content])
+          Write([Write HTML])
+          OutFile[(SPA HTML File)]
+      end
+
+      subgraph Outputs [Contract Variables]
+          df((df = pd.DataFrame))
+          target((target_name = ''))
+          task((task_type = 'unknown'))
+          meta((meta: dict))
+      end
+
+      AsyncPW --> Browser
+      Browser --> Page
+      URL --> Goto
+      Page --> Goto
+      Goto --> Content
+      Content --> Write
+      DEST --> OutFile
+      Write --> OutFile
+      OutFile -.-> meta
+
+      style Config fill:#f8fafc,stroke:#cbd5e1,stroke-width:2px
+      style AsyncPW fill:#3b82f6,stroke:#1d4ed8,stroke-width:2px,color:#fff
+      style Browser fill:#f59e0b,stroke:#b45309,stroke-width:2px,color:#fff
+      style Page fill:#10b981,stroke:#047857,stroke-width:2px,color:#fff
+      style Goto fill:#8b5cf6,stroke:#6d28d9,stroke-width:2px,color:#fff
+      style Content fill:#ec4899,stroke:#be185d,stroke-width:2px,color:#fff
+      style Write fill:#14b8a6,stroke:#0f766e,stroke-width:2px,color:#fff
+      style OutFile fill:#64748b,stroke:#475569,stroke-width:2px,color:#fff
+      style Outputs fill:#f1f5f9,stroke:#94a3b8,stroke-width:2px
 
 _metadata:
   bloc: 1

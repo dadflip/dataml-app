@@ -9,33 +9,100 @@ tags:
 - dot
 - graphviz
 - networkx
-code_template: "import pandas as pd\nimport numpy as np\nimport time\ntry:\n    import\
-  \ networkx as nx\n    from networkx.drawing.nx_pydot import read_dot\nexcept ImportError:\n\
-  \    nx = None\n    print(\"[ERREUR LOAD] 'networkx' ou 'pydot' n'est pas installé.\"\
-  )\n\n# [PARAM: FILE_PATH | file]\nFILE_PATH = \"./data/raw/graph.dot\"\n# [/PARAM]\n\
-  \n# [PARAM: TARGET_ATTR | string]\nTARGET_ATTR = \"\"\n# [/PARAM]\n\nprint(f\"[LOAD]\
-  \ Chargement du graphe DOT depuis {FILE_PATH}...\")\n\ntry:\n    if nx is not None:\n\
-  \        start_time = time.time()\n        G = read_dot(FILE_PATH)\n        \n \
-  \       node_data = []\n        for node_id, attrs in G.nodes(data=True):\n    \
-  \        row = {\"node_id\": node_id}\n            row.update(attrs)\n         \
-  \   node_data.append(row)\n        df = pd.DataFrame(node_data)\n        \n    \
-  \    node_list = list(G.nodes())\n        node2idx = {n: i for i, n in enumerate(node_list)}\n\
-  \        src = [node2idx[u] for u, v in G.edges()]\n        dst = [node2idx[v] for\
-  \ u, v in G.edges()]\n        edge_index = np.array([src, dst], dtype=np.int64)\n\
-  \        \n        duration = time.time() - start_time\n        print(f\"[LOAD]\
-  \ Succès DOT. {G.number_of_nodes()} noeuds, {G.number_of_edges()} arêtes en {duration:.2f}s.\"\
-  )\n        \n        target_name = TARGET_ATTR if TARGET_ATTR and TARGET_ATTR in\
-  \ df.columns else None\n        task_type = \"node_classification\" if target_name\
-  \ else \"graph_unsupervised\"\n        meta = {\"format\": \"dot\", \"shape\": df.shape,\
-  \ \"edge_index\": edge_index, \"node_list\": node_list}\n    else:\n        df =\
-  \ None\n        target_name = None\n        task_type = \"unknown\"\n        meta\
-  \ = {}\nexcept Exception as e:\n    print(f\"[ERREUR LOAD] Échec du chargement DOT\
-  \ : {str(e)}\")\n    raise e\n"
+code_template: |
+  import pandas as pd
+  import numpy as np
+  import time
+  try:
+      import networkx as nx
+      from networkx.drawing.nx_pydot import read_dot
+  except ImportError:
+      nx = None
+      print("[ERREUR LOAD] 'networkx' ou 'pydot' n'est pas installé.")
+
+  # [PARAM: FILE_PATH | file]
+  FILE_PATH = "./data/raw/graph.dot"
+  # [/PARAM]
+
+  # [PARAM: TARGET_ATTR | string]
+  TARGET_ATTR = ""
+  # [/PARAM]
+
+  print(f"[LOAD] Chargement du graphe DOT depuis {FILE_PATH}...")
+
+  try:
+      if nx is not None:
+          start_time = time.time()
+          G = read_dot(FILE_PATH)
+          
+          node_data = []
+          for node_id, attrs in G.nodes(data=True):
+              row = {"node_id": node_id}
+              row.update(attrs)
+              node_data.append(row)
+          df = pd.DataFrame(node_data)
+          
+          node_list = list(G.nodes())
+          node2idx = {n: i for i, n in enumerate(node_list)}
+          src = [node2idx[u] for u, v in G.edges()]
+          dst = [node2idx[v] for u, v in G.edges()]
+          edge_index = np.array([src, dst], dtype=np.int64)
+          
+          duration = time.time() - start_time
+          print(f"[LOAD] Succès DOT. {G.number_of_nodes()} noeuds, {G.number_of_edges()} arêtes en {duration:.2f}s.")
+          
+          target_name = TARGET_ATTR if TARGET_ATTR and TARGET_ATTR in df.columns else ""
+          task_type = "node_classification" if target_name else "graph_unsupervised"
+          meta = {"format": "dot", "shape": df.shape, "edge_index": edge_index, "node_list": node_list}
+      else:
+          df = pd.DataFrame()
+          target_name = ""
+          task_type = "unknown"
+          meta = {}
+          raise ImportError("Missing dependencies")
+  except Exception as e:
+      print(f"[ERREUR LOAD] Échec du chargement DOT : {str(e)}")
+      raise e
+
 illustration_mermaid: |
-    graph LR
-      Source[(Source)] -->|Load| Node([Extract Data])
-      style Source fill:#3b82f6,stroke:#2563eb,stroke-width:2px,color:#fff
-      style Node fill:#eff6ff,stroke:#3b82f6,stroke-width:2px
+  flowchart TD
+      subgraph Config [Parameters]
+          FILE([FILE_PATH])
+          TAR([TARGET_ATTR])
+      end
+
+      subgraph Operations [DOT Graph Load]
+          Pydot([nx.read_dot])
+          ExtractNodes([Extract Node Features])
+          ExtractEdges([Extract Edges])
+          ToDF([pd.DataFrame])
+          EdgeIdx([Create edge_index])
+      end
+
+      subgraph Outputs [Contract Variables]
+          df((df))
+          target((target_name))
+          task((task_type = 'node_classification/graph_unsupervised'))
+          meta((meta: dict))
+      end
+
+      FILE --> Pydot
+      Pydot --> ExtractNodes
+      Pydot --> ExtractEdges
+      ExtractNodes --> ToDF
+      ToDF --> df
+      ExtractEdges --> EdgeIdx
+      EdgeIdx -.-> meta
+      TAR -.-> target
+      target -.-> task
+
+      style Config fill:#f8fafc,stroke:#cbd5e1,stroke-width:2px
+      style Pydot fill:#64748b,stroke:#475569,stroke-width:2px,color:#fff
+      style ExtractNodes fill:#3b82f6,stroke:#1d4ed8,stroke-width:2px,color:#fff
+      style ExtractEdges fill:#3b82f6,stroke:#1d4ed8,stroke-width:2px,color:#fff
+      style ToDF fill:#10b981,stroke:#047857,stroke-width:2px,color:#fff
+      style EdgeIdx fill:#f59e0b,stroke:#b45309,stroke-width:2px,color:#fff
+      style Outputs fill:#f1f5f9,stroke:#94a3b8,stroke-width:2px
 
 _metadata:
   bloc: 1

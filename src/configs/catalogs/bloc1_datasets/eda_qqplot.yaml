@@ -7,17 +7,35 @@ tags:
 - qqplot
 - tabular
 - scipy
-code_template: "import numpy as np\nimport matplotlib.pyplot as plt\nimport scipy.stats\
-  \ as stats\n\nnum_cols = df.select_dtypes(include=[np.number]).columns.tolist()[:4]\n\
-  print(\"[EDA] === QQ-PLOTS (Test de normalité) ===\")\n\nplt.figure(figsize=(12,\
-  \ 10))\nfor i, col in enumerate(num_cols):\n    plt.subplot(2, 2, i + 1)\n    stats.probplot(df[col].dropna(),\
-  \ dist=\"norm\", plot=plt)\n    plt.title(f\"QQ-Plot : {col}\")\nplt.tight_layout()\n\
-  plt.show()\n"
+code_template: |
+  import numpy as np
+  import matplotlib.pyplot as plt
+  import scipy.stats as stats
+
+  num_cols = df.select_dtypes(include=[np.number]).columns.tolist()[:4]
+  print("[EDA] === QQ-PLOTS (Test de normalité) ===")
+
+  plt.figure(figsize=(12, 10))
+  for i, col in enumerate(num_cols):
+      plt.subplot(2, 2, i + 1)
+      stats.probplot(df[col].dropna(), dist="norm", plot=plt)
+      plt.title(f"QQ-Plot : {col}")
+  plt.tight_layout()
+  plt.show()
 illustration_mermaid: |
-    graph LR
-      A([Input]) --> B([Operation])
-      B --> C([Output])
-      style B fill:#64748b,stroke:#475569,stroke-width:2px,color:#fff
+    flowchart TD
+        Input([DataFrame]) --> SelectCols[Select Top 4 Numeric Cols]
+        SelectCols --> Loop[Loop through columns]
+        Loop --> DropNA[Drop NaNs for Col]
+        DropNA --> ProbPlot[scipy.stats.probplot vs normal dist]
+        ProbPlot --> Subplot{{Add to Subplot 2x2}}
+        Subplot --> Loop
+        Subplot --> Output[/Show Tight Layout Plot/]
+    
+        style Input fill:#3b82f6,stroke:#2563eb,color:#fff
+        style SelectCols fill:#10b981,stroke:#059669,color:#fff
+        style ProbPlot fill:#8b5cf6,stroke:#7c3aed,color:#fff
+        style Subplot fill:#ec4899,stroke:#db2777,color:#fff
 
 _metadata:
   bloc: 1

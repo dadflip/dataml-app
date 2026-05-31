@@ -7,24 +7,54 @@ tags:
 - huggingface
 - hub
 - nlp
-code_template: "import time\n\n# [PARAM: DATASET_NAME | string]\nDATASET_NAME = \"\
-  imdb\"\n# [/PARAM]\n\n# [PARAM: SPLIT | string]\nSPLIT = \"train\"\n# [/PARAM]\n\
-  \nprint(f\"[LOAD] Chargement du dataset HuggingFace '{DATASET_NAME}' (split: {SPLIT})...\"\
-  )\n\ntry:\n    start_time = time.time()\n    from datasets import load_dataset\n\
-  \    \n    dataset = load_dataset(DATASET_NAME, split=SPLIT)\n    # Conversion directe\
-  \ en DataFrame Pandas\n    df = dataset.to_pandas()\n    \n    duration = time.time()\
-  \ - start_time\n    print(f\"[LOAD] Succès HuggingFace. {df.shape[0]} lignes chargées\
-  \ en {duration:.2f}s.\")\nexcept ImportError:\n    print(\"[ERREUR LOAD] Le module\
-  \ 'datasets' est requis (pip install datasets).\")\n    raise\nexcept Exception\
-  \ as e:\n    print(f\"[ERREUR LOAD] Erreur HuggingFace : {str(e)}\")\n    raise\
-  \ e\n\ntarget_name = \"label\" if \"label\" in df.columns else None\ntask_type =\
-  \ \"nlp_classification\" if target_name else \"unknown\"\nmeta = {\"format\": \"\
-  huggingface\", \"dataset\": DATASET_NAME, \"shape\": df.shape}\n"
+code_template: |
+  import time
+
+  # [PARAM: DATASET_NAME | string]
+  DATASET_NAME = "imdb"
+  # [/PARAM]
+
+  # [PARAM: SPLIT | string]
+  SPLIT = "train"
+  # [/PARAM]
+
+  print(f"[LOAD] Chargement du dataset HuggingFace '{DATASET_NAME}' (split: {SPLIT})...")
+
+  try:
+      start_time = time.time()
+      from datasets import load_dataset
+      
+      dataset = load_dataset(DATASET_NAME, split=SPLIT)
+      # Conversion directe en DataFrame Pandas
+      df = dataset.to_pandas()
+      
+      duration = time.time() - start_time
+      print(f"[LOAD] Succès HuggingFace. {df.shape[0]} lignes chargées en {duration:.2f}s.")
+  except ImportError:
+      print("[ERREUR LOAD] Le module 'datasets' est requis (pip install datasets).")
+      raise
+  except Exception as e:
+      print(f"[ERREUR LOAD] Erreur HuggingFace : {str(e)}")
+      raise e
+
+  target_name = "label" if "label" in df.columns else ""
+  task_type = "nlp_classification" if target_name else "unknown"
+  meta = {"format": "huggingface", "dataset": DATASET_NAME, "shape": df.shape}
 illustration_mermaid: |
-    graph LR
-      Source[(Source)] -->|Load| Node([Extract Data])
-      style Source fill:#3b82f6,stroke:#2563eb,stroke-width:2px,color:#fff
-      style Node fill:#eff6ff,stroke:#3b82f6,stroke-width:2px
+  flowchart TD
+      A([HuggingFace Hub]) -->|Dataset Name & Split| B{load_dataset}
+      B --> C[Dataset]
+      C -->|to_pandas| D[(df)]
+      D --> E{Check label column}
+      E -- Exists --> F[target_name = label]
+      E -- Missing --> G[target_name = '']
+      F --> H{{Set task_type & meta}}
+      G --> H
+      
+      style A fill:#f97316,stroke:#c2410c,stroke-width:2px,color:#fff
+      style B fill:#3b82f6,stroke:#2563eb,stroke-width:2px,color:#fff
+      style D fill:#10b981,stroke:#047857,stroke-width:2px,color:#fff
+      style H fill:#8b5cf6,stroke:#6d28d9,stroke-width:2px,color:#fff
 
 _metadata:
   bloc: 1

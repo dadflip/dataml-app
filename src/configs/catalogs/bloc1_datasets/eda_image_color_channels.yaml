@@ -7,18 +7,60 @@ tags:
 - images
 - multimedia
 - rgb
-code_template: "import matplotlib.pyplot as plt\nimport torch\nimport torchvision.transforms\
-  \ as T\n\nif 'dataset' in locals() and len(dataset) > 0:\n    sample = dataset[0][0]\n\
-  \    img = sample if isinstance(sample, torch.Tensor) else T.ToTensor()(sample)\n\
-  \        \n    if img.shape[0] == 3:\n        fig, axes = plt.subplots(1, 4, figsize=(16,\
-  \ 4))\n        \n        axes[0].imshow(img.permute(1,2,0).numpy())\n        axes[0].set_title(\"\
-  Originale\")\n        axes[0].axis('off')\n        \n        cmaps = ['Reds', 'Greens',\
-  \ 'Blues']\n        titles = ['Canal Rouge', 'Canal Vert', 'Canal Bleu']\n     \
-  \   \n        for i in range(3):\n            axes[i+1].imshow(img[i].numpy(), cmap=cmaps[i])\n\
-  \            axes[i+1].set_title(titles[i])\n            axes[i+1].axis('off')\n\
-  \            \n        plt.tight_layout()\n        plt.show()\n    else:\n     \
-  \   print(\"[EDA] L'image n'est pas RGB (3 canaux).\")\nelse:\n    print(\"[EDA]\
-  \ Dataset non trouvé ou vide.\")\n"
+code_template: |
+  import matplotlib.pyplot as plt
+  import torch
+  import torchvision.transforms as T
+
+  if 'dataset' in locals() and len(dataset) > 0:
+      sample = dataset[0][0]
+      img = sample if isinstance(sample, torch.Tensor) else T.ToTensor()(sample)
+          
+      if img.shape[0] == 3:
+          fig, axes = plt.subplots(1, 4, figsize=(16, 4))
+          
+          axes[0].imshow(img.permute(1,2,0).numpy())
+          axes[0].set_title("Originale")
+          axes[0].axis('off')
+          
+          cmaps = ['Reds', 'Greens', 'Blues']
+          titles = ['Canal Rouge', 'Canal Vert', 'Canal Bleu']
+          
+          for i in range(3):
+              axes[i+1].imshow(img[i].numpy(), cmap=cmaps[i])
+              axes[i+1].set_title(titles[i])
+              axes[i+1].axis('off')
+              
+          plt.tight_layout()
+          plt.show()
+      else:
+          print("[EDA] L'image n'est pas RGB (3 canaux).")
+  else:
+      print("[EDA] Dataset non trouvé ou vide.")
+illustration_mermaid: |
+    graph TD
+      A([Dataset]) --> B{Dataset valid & not empty?}
+      B -- Yes --> C[Get first sample]
+      C --> D{Is Tensor?}
+      D -- No --> E[Convert to Tensor]
+      D -- Yes --> F[Image Tensor]
+      E --> F
+      F --> G{Channels == 3?}
+      G -- Yes --> H{{Plot Original Image}}
+      H --> I{{Plot Red Channel}}
+      I --> J{{Plot Green Channel}}
+      J --> K{{Plot Blue Channel}}
+      K --> L([Display Plot Grid])
+      G -- No --> M[/Print Error: Not RGB/]
+      B -- No --> N[/Print Error: No Dataset/]
+      style A fill:#4F46E5,color:#fff
+      style B fill:#F59E0B,color:#fff
+      style G fill:#F59E0B,color:#fff
+      style H fill:#10B981,color:#fff
+      style I fill:#EF4444,color:#fff
+      style J fill:#22C55E,color:#fff
+      style K fill:#3B82F6,color:#fff
+
 _metadata:
   bloc: 1
   section: 3_eda

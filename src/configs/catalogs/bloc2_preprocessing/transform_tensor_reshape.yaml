@@ -27,6 +27,8 @@ code_template: |
       def reshape_3d(X):
           X_arr = np.array(X)
           n_samples = X_arr.shape[0]
+          if len(X_arr.shape) == 1:
+              X_arr = X_arr.reshape(-1, 1)
           n_cols = X_arr.shape[1]
           t_steps = int(TIME_STEPS)
           
@@ -42,11 +44,28 @@ code_template: |
       transformer = FunctionTransformer(reshape_3d)
       
       step_name = 'tensor_reshape'
+      pipeline_steps[step_name] = (step_name, transformer)
+
+  if 'X_train' not in locals(): X_train = None
+  if 'X_test' not in locals(): X_test = None
+  if 'y_train' not in locals(): y_train = None
+  if 'y_test' not in locals(): y_test = None
+  if 'preprocessor' not in locals(): preprocessor = None
+  if 'feature_names_out' not in locals(): feature_names_out = None
+  if 'task_type' not in locals(): task_type = "classification"
+  if 'meta' not in locals(): meta = {}
 illustration_mermaid: |
-    graph LR
-      In([Raw Data]) -->|Process| Out([Clean Data])
-      style In fill:#eff6ff,stroke:#94a3b8,stroke-width:2px,stroke-dasharray: 5 5
-      style Out fill:#10b981,stroke:#059669,stroke-width:2px,color:#fff
+  graph TD
+    A[2D DataFrame] --> B[Convert to NumPy Array]
+    B --> C{Cols divisible by Time_steps?}
+    C -- Yes --> D[Reshape to 3D Tensor]
+    C -- No --> E[Raise ValueError]
+    D --> F[FunctionTransformer]
+    F --> G[Add to Pipeline Steps]
+    G --> H[Update Data Contract Variables]
+    E --> H
+    style A fill:#eff6ff,stroke:#3b82f6,stroke-width:2px
+    style H fill:#10b981,stroke:#059669,stroke-width:2px
 
 _metadata:
   bloc: 2

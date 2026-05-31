@@ -8,27 +8,80 @@ tags:
 - directory
 - csv
 - concat
-code_template: "import os\nimport glob\nimport pandas as pd\nimport time\n\n# [PARAM:\
-  \ DIRECTORY_PATH | dir]\nDIRECTORY_PATH = \"./data/extracted/csv_parts\"\n# [/PARAM]\n\
-  \n# [PARAM: SEP | string]\nSEP = \",\"\n# [/PARAM]\n\nprint(f\"[LOAD] Concaténation\
-  \ des CSV dans {DIRECTORY_PATH}...\")\nif not os.path.exists(DIRECTORY_PATH):\n\
-  \    raise FileNotFoundError(f\"[ERREUR LOAD] Le dossier n'existe pas : {DIRECTORY_PATH}\"\
-  )\n\ntry:\n    start_time = time.time()\n    \n    csv_files = glob.glob(os.path.join(DIRECTORY_PATH,\
-  \ \"*.csv\"))\n    if not csv_files:\n        raise ValueError(f\"Aucun fichier\
-  \ CSV trouvé dans {DIRECTORY_PATH}\")\n        \n    dfs = []\n    for file in csv_files:\n\
-  \        dfs.append(pd.read_csv(file, sep=SEP, low_memory=False))\n        \n  \
-  \  # Concaténation verticale\n    df = pd.concat(dfs, ignore_index=True)\n    \n\
-  \    duration = time.time() - start_time\n    print(f\"[LOAD] Succès. {len(csv_files)}\
-  \ fichiers fusionnés ({df.shape[0]} lignes) en {duration:.2f}s.\")\nexcept Exception\
-  \ as e:\n    print(f\"[ERREUR LOAD] Erreur lors de la fusion des CSV : {str(e)}\"\
-  )\n    raise e\n\ntarget_name = None\ntask_type = \"unknown\"\nmeta = {\"format\"\
-  : \"directory_csv\", \"files_merged\": len(csv_files), \"shape\": df.shape}\n"
-illustration_mermaid: |
-    graph LR
-      Source[(Source)] -->|Load| Node([Extract Data])
-      style Source fill:#3b82f6,stroke:#2563eb,stroke-width:2px,color:#fff
-      style Node fill:#eff6ff,stroke:#3b82f6,stroke-width:2px
+code_template: |
+  import os
+  import glob
+  import pandas as pd
+  import time
 
+  # [PARAM: DIRECTORY_PATH | dir]
+  DIRECTORY_PATH = "./data/extracted/csv_parts"
+  # [/PARAM]
+
+  # [PARAM: SEP | string]
+  SEP = ","
+  # [/PARAM]
+
+  print(f"[LOAD] Concaténation des CSV dans {DIRECTORY_PATH}...")
+  if not os.path.exists(DIRECTORY_PATH):
+      raise FileNotFoundError(f"[ERREUR LOAD] Le dossier n'existe pas : {DIRECTORY_PATH}")
+
+  try:
+      start_time = time.time()
+      
+      csv_files = glob.glob(os.path.join(DIRECTORY_PATH, "*.csv"))
+      if not csv_files:
+          raise ValueError(f"Aucun fichier CSV trouvé dans {DIRECTORY_PATH}")
+          
+      dfs = []
+      for file in csv_files:
+          dfs.append(pd.read_csv(file, sep=SEP, low_memory=False))
+          
+      # Concaténation verticale
+      df = pd.concat(dfs, ignore_index=True)
+      
+      duration = time.time() - start_time
+      print(f"[LOAD] Succès. {len(csv_files)} fichiers fusionnés ({df.shape[0]} lignes) en {duration:.2f}s.")
+  except Exception as e:
+      print(f"[ERREUR LOAD] Erreur lors de la fusion des CSV : {str(e)}")
+      raise e
+
+  target_name = ""
+  task_type = "unknown"
+  meta = {"format": "directory_csv", "files_merged": len(csv_files), "shape": df.shape}
+
+illustration_mermaid: |
+  flowchart TD
+      subgraph Config [Parameters]
+          DIR([DIRECTORY_PATH])
+          SP([SEP])
+      end
+
+      subgraph Operations [CSV Directory Load]
+          Glob([glob *.csv])
+          Read([pd.read_csv loop])
+          Concat([pd.concat])
+      end
+
+      subgraph Outputs [Contract Variables]
+          df((df))
+          target((target_name = ''))
+          task((task_type = 'unknown'))
+          meta((meta: dict))
+      end
+
+      DIR --> Glob
+      Glob --> Read
+      SP --> Read
+      Read --> Concat
+      Concat --> df
+      df -.-> meta
+
+      style Config fill:#f8fafc,stroke:#cbd5e1,stroke-width:2px
+      style Glob fill:#64748b,stroke:#475569,stroke-width:2px,color:#fff
+      style Read fill:#3b82f6,stroke:#1d4ed8,stroke-width:2px,color:#fff
+      style Concat fill:#10b981,stroke:#047857,stroke-width:2px,color:#fff
+      style Outputs fill:#f1f5f9,stroke:#94a3b8,stroke-width:2px
 _metadata:
   bloc: 1
   section: 2_load

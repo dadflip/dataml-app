@@ -40,10 +40,16 @@ code_template: |
   else:
       print("[ERREUR] 'df' introuvable.")
 illustration_mermaid: |
-    graph LR
-      In([Raw Data]) -->|Process| Out([Clean Data])
-      style In fill:#eff6ff,stroke:#94a3b8,stroke-width:2px,stroke-dasharray: 5 5
-      style Out fill:#10b981,stroke:#059669,stroke-width:2px,color:#fff
+  graph TD
+    A[Initial DataFrame] --> B{MAKE_COPY == True?}
+    B -- Yes --> C[Deep Copy df.copy]
+    B -- No --> D[Use Original df]
+    C --> E[Initialize pipeline_steps = dict]
+    D --> E
+    E --> F[Initialize preprocessor = None]
+    F --> G[Pipeline Ready]
+    style A fill:#eff6ff,stroke:#94a3b8,stroke-width:2px
+    style G fill:#10b981,stroke:#059669,stroke-width:2px,color:#fff
 
 _metadata:
   bloc: 2

@@ -7,25 +7,50 @@ tags:
 - text
 - nlp
 - ngrams
-code_template: "import pandas as pd\nimport matplotlib.pyplot as plt\nimport seaborn\
-  \ as sns\nfrom sklearn.feature_extraction.text import CountVectorizer\n\n# [PARAM:\
-  \ TEXT_COL | string]\nTEXT_COL = \"text\"\n# [/PARAM]\n\n# [PARAM: N_GRAM | number]\n\
-  N_GRAM = 2\n# [/PARAM]\n\nif TEXT_COL in df.columns:\n    corpus = df[TEXT_COL].dropna()\n\
-  \    vec = CountVectorizer(ngram_range=(N_GRAM, N_GRAM), stop_words='english').fit(corpus)\n\
-  \    bag_of_words = vec.transform(corpus)\n    sum_words = bag_of_words.sum(axis=0)\
-  \ \n    \n    words_freq = [(word, sum_words[0, idx]) for word, idx in vec.vocabulary_.items()]\n\
-  \    words_freq = sorted(words_freq, key=lambda x: x[1], reverse=True)[:20]\n  \
-  \  \n    df_freq = pd.DataFrame(words_freq, columns=['N-gram', 'Fréquence'])\n \
-  \   \n    plt.figure(figsize=(10, 8))\n    sns.barplot(x='Fréquence', y='N-gram',\
-  \ data=df_freq, palette='viridis')\n    plt.title(f\"Top 20 {N_GRAM}-grams dans\
-  \ {TEXT_COL}\")\n    plt.show()\nelse:\n    print(f\"[EDA] Colonne {TEXT_COL} introuvable.\"\
-  )\n"
+code_template: |
+  import pandas as pd
+  import matplotlib.pyplot as plt
+  import seaborn as sns
+  from sklearn.feature_extraction.text import CountVectorizer
+  
+  # [PARAM: TEXT_COL | string]
+  TEXT_COL = "text"
+  # [/PARAM]
+  
+  # [PARAM: N_GRAM | number]
+  N_GRAM = 2
+  # [/PARAM]
+  
+  if TEXT_COL in df.columns:
+      corpus = df[TEXT_COL].dropna()
+      vec = CountVectorizer(ngram_range=(N_GRAM, N_GRAM), stop_words='english').fit(corpus)
+      bag_of_words = vec.transform(corpus)
+      sum_words = bag_of_words.sum(axis=0) 
+      
+      words_freq = [(word, sum_words[0, idx]) for word, idx in vec.vocabulary_.items()]
+      words_freq = sorted(words_freq, key=lambda x: x[1], reverse=True)[:20]
+      
+      df_freq = pd.DataFrame(words_freq, columns=['N-gram', 'Fréquence'])
+      
+      plt.figure(figsize=(10, 8))
+      sns.barplot(x='Fréquence', y='N-gram', data=df_freq, palette='viridis')
+      plt.title(f"Top 20 {N_GRAM}-grams dans {TEXT_COL}")
+      plt.show()
+  else:
+      print(f"[EDA] Colonne {TEXT_COL} introuvable.")
 illustration_mermaid: |
-    graph LR
-      A([Input]) --> B([Operation])
-      B --> C([Output])
-      style B fill:#64748b,stroke:#475569,stroke-width:2px,color:#fff
-
+    graph TD
+      DF([DataFrame]) --> Check{Check TEXT_COL}
+      Check -- Valid --> Corpus[Extract corpus]
+      Corpus --> Vec{{CountVectorizer}}
+      Vec -- "ngram_range" --> BoW[Bag of Words]
+      BoW --> Freq[Calculate Frequencies]
+      Freq --> SortTop20[Sort Top 20]
+      SortTop20 --> Plot[sns.barplot]
+      Check -- Missing --> Err[Print Error]
+      style Vec fill:#d946ef,stroke:#c026d3,stroke-width:2px,color:#fff
+      style Freq fill:#3b82f6,stroke:#2563eb,stroke-width:2px,color:#fff
+      style Plot fill:#10b981,stroke:#059669,stroke-width:2px,color:#fff
 _metadata:
   bloc: 1
   section: 3_eda

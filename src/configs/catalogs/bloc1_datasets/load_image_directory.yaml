@@ -1,37 +1,69 @@
 id: load_image_directory
 name: 'Load: Image Directory (Paths)'
-description: Scanne un dossier d'images organisé en sous-dossiers (classes) et construit
-  un DataFrame avec les chemins et les cibles.
+description: Scanne un dossier d'images organisé en sous-dossiers (classes) et construit un DataFrame avec les chemins et les cibles.
 category: 2. Load
 tags:
 - load
 - image
 - vision
 - cnn
-code_template: "import pandas as pd\nimport os\nimport glob\nimport time\n\n# [PARAM:\
-  \ DIRECTORY_PATH | string]\nDIRECTORY_PATH = \"./data/raw/images_extracted\"\n#\
-  \ [/PARAM]\n\nprint(f\"[LOAD] Analyse du dossier image : {DIRECTORY_PATH}...\")\n\
-  \ntry:\n    start_time = time.time()\n    paths = []\n    labels = []\n    \n  \
-  \  if os.path.exists(DIRECTORY_PATH) and os.path.isdir(DIRECTORY_PATH):\n      \
-  \  classes = [d for d in os.listdir(DIRECTORY_PATH) if os.path.isdir(os.path.join(DIRECTORY_PATH,\
-  \ d))]\n        \n        for cls in classes:\n            cls_path = os.path.join(DIRECTORY_PATH,\
-  \ cls)\n            for ext in ('*.jpg', '*.jpeg', '*.png'):\n                for\
-  \ img_file in glob.glob(os.path.join(cls_path, ext)):\n                    paths.append(img_file)\n\
-  \                    labels.append(cls)\n                    \n        df = pd.DataFrame({'image_path':\
-  \ paths, 'target_class': labels})\n        \n        duration = time.time() - start_time\n\
-  \        print(f\"[LOAD] Succès. {len(paths)} images listées dans {len(classes)}\
-  \ classes en {duration:.2f}s.\")\n        \n        target_name = \"target_class\"\
-  \n        task_type = \"image_classification\"\n        meta = {\"format\": \"image_directory\"\
-  , \"shape\": df.shape, \"classes\": classes}\n    else:\n        print(f\"[ERREUR\
-  \ LOAD] Le dossier {DIRECTORY_PATH} est introuvable.\")\n        df = None\n   \
-  \     target_name = None\n        task_type = \"unknown\"\n        meta = {}\nexcept\
-  \ Exception as e:\n    print(f\"[ERREUR LOAD] Échec de l'analyse du dossier : {str(e)}\"\
-  )\n    raise e\n"
+code_template: |
+  import pandas as pd
+  import os
+  import glob
+  import time
+
+  # [PARAM: DIRECTORY_PATH | string]
+  DIRECTORY_PATH = "./data/raw/images_extracted"
+  # [/PARAM]
+
+  print(f"[LOAD] Analyse du dossier image : {DIRECTORY_PATH}...")
+
+  df = pd.DataFrame()
+  target_name = ""
+  task_type = "unknown"
+  meta = {}
+
+  try:
+      start_time = time.time()
+      paths = []
+      labels = []
+      
+      if os.path.exists(DIRECTORY_PATH) and os.path.isdir(DIRECTORY_PATH):
+          classes = [d for d in os.listdir(DIRECTORY_PATH) if os.path.isdir(os.path.join(DIRECTORY_PATH, d))]
+          
+          for cls in classes:
+              cls_path = os.path.join(DIRECTORY_PATH, cls)
+              for ext in ('*.jpg', '*.jpeg', '*.png'):
+                  for img_file in glob.glob(os.path.join(cls_path, ext)):
+                      paths.append(img_file)
+                      labels.append(cls)
+                      
+          df = pd.DataFrame({'image_path': paths, 'target_class': labels})
+          
+          duration = time.time() - start_time
+          print(f"[LOAD] Succès. {len(paths)} images listées dans {len(classes)} classes en {duration:.2f}s.")
+          
+          target_name = "target_class"
+          task_type = "image_classification"
+          meta = {"format": "image_directory", "shape": df.shape, "classes": classes}
+      else:
+          print(f"[ERREUR LOAD] Le dossier {DIRECTORY_PATH} est introuvable.")
+  except Exception as e:
+      print(f"[ERREUR LOAD] Échec de l'analyse du dossier : {str(e)}")
+      raise e
 illustration_mermaid: |
-    graph LR
-      Source[(Source)] -->|Load| Node([Extract Data])
-      style Source fill:#3b82f6,stroke:#2563eb,stroke-width:2px,color:#fff
-      style Node fill:#eff6ff,stroke:#3b82f6,stroke-width:2px
+  flowchart TD
+      A([DIR_PATH]) --> B{Directory exists?}
+      B -- Yes --> C[glob.glob]
+      C --> D[pd.DataFrame]
+      D --> df([df])
+      B -- No --> E[Empty DataFrame]
+      E --> df
+      
+      style A fill:#3b82f6,color:#fff
+      style C fill:#10b981,color:#fff
+      style df fill:#f59e0b,color:#fff
 
 _metadata:
   bloc: 1

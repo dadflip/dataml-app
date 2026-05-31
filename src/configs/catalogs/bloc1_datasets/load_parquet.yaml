@@ -10,11 +10,29 @@ code_template: |
 
   # [PARAM: FILE_PATH | file]
   FILE_PATH = "./data/raw/data.parquet"
+  # [/PARAM]
+
+  df = pd.read_parquet(FILE_PATH) if os.path.exists(FILE_PATH) else pd.DataFrame()
+  target_name = "target"
+  task_type = "unknown"
+  meta = {"source": "parquet", "path": FILE_PATH}
+output_variables:
+  - df
+  - target_name
+  - task_type
+  - meta
 illustration_mermaid: |
-    graph LR
-      Source[(Source)] -->|Load| Node([Extract Data])
-      style Source fill:#3b82f6,stroke:#2563eb,stroke-width:2px,color:#fff
-      style Node fill:#eff6ff,stroke:#3b82f6,stroke-width:2px
+    flowchart LR
+      A[fa:fa-table FILE_PATH<br/>data.parquet] -->|pandas read_parquet| B(fa:fa-cogs Load Parquet)
+      B --> C[(df<br/>Data Table)]
+      B --> D{{meta<br/>path}}
+      B --> E([target_name, task_type])
+      
+      style A fill:#3b82f6,stroke:#2563eb,stroke-width:2px,color:#fff
+      style B fill:#10b981,stroke:#059669,stroke-width:2px,color:#fff
+      style C fill:#eff6ff,stroke:#3b82f6,stroke-width:2px
+      style D fill:#fef3c7,stroke:#d97706,stroke-width:2px
+      style E fill:#f3f4f6,stroke:#6b7280,stroke-width:2px
 
 _metadata:
   bloc: 1

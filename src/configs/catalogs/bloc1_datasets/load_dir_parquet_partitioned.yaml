@@ -8,25 +8,54 @@ tags:
 - directory
 - parquet
 - bigdata
-code_template: "import pandas as pd\nimport time\nimport os\n\n# [PARAM: DIRECTORY_PATH\
-  \ | dir]\nDIRECTORY_PATH = \"./data/extracted/parquet_db\"\n# [/PARAM]\n\nprint(f\"\
-  [LOAD] Chargement du dataset Parquet partitionné depuis {DIRECTORY_PATH}...\")\n\
-  if not os.path.exists(DIRECTORY_PATH):\n    raise FileNotFoundError(f\"[ERREUR LOAD]\
-  \ Le dossier n'existe pas : {DIRECTORY_PATH}\")\n\ntry:\n    start_time = time.time()\n\
-  \    \n    # pandas (via pyarrow ou fastparquet) gère nativement le directory de\
-  \ partitions\n    df = pd.read_parquet(DIRECTORY_PATH, engine='auto')\n    \n  \
-  \  duration = time.time() - start_time\n    print(f\"[LOAD] Succès Parquet Partitionné.\
-  \ {df.shape[0]} lignes chargées en {duration:.2f}s.\")\nexcept ImportError:\n  \
-  \  print(\"[ERREUR LOAD] Le module 'pyarrow' ou 'fastparquet' est requis.\")\n \
-  \   raise\nexcept Exception as e:\n    print(f\"[ERREUR LOAD] Erreur lors de la\
-  \ lecture des partitions Parquet : {str(e)}\")\n    raise e\n\ntarget_name = None\n\
-  task_type = \"unknown\"\nmeta = {\"format\": \"parquet_partitioned\", \"shape\"\
-  : df.shape}\n"
+code_template: |
+  import pandas as pd
+  import time
+  import os
+
+  # [PARAM: DIRECTORY_PATH | dir]
+  DIRECTORY_PATH = "./data/extracted/parquet_db"
+  # [/PARAM]
+
+  print(f"[LOAD] Chargement du dataset Parquet partitionné depuis {DIRECTORY_PATH}...")
+  if not os.path.exists(DIRECTORY_PATH):
+      raise FileNotFoundError(f"[ERREUR LOAD] Le dossier n'existe pas : {DIRECTORY_PATH}")
+
+  try:
+      start_time = time.time()
+      
+      # pandas (via pyarrow ou fastparquet) gère nativement le directory de partitions
+      df = pd.read_parquet(DIRECTORY_PATH, engine='auto')
+      
+      duration = time.time() - start_time
+      print(f"[LOAD] Succès Parquet Partitionné. {df.shape[0]} lignes chargées en {duration:.2f}s.")
+  except ImportError:
+      print("[ERREUR LOAD] Le module 'pyarrow' ou 'fastparquet' est requis.")
+      raise
+  except Exception as e:
+      print(f"[ERREUR LOAD] Erreur lors de la lecture des partitions Parquet : {str(e)}")
+      raise e
+
+  target_name = ""
+  task_type = "unknown"
+  meta = {"format": "parquet_partitioned", "shape": df.shape}
+
 illustration_mermaid: |
-    graph LR
-      Source[(Source)] -->|Load| Node([Extract Data])
-      style Source fill:#3b82f6,stroke:#2563eb,stroke-width:2px,color:#fff
-      style Node fill:#eff6ff,stroke:#3b82f6,stroke-width:2px
+  flowchart LR
+      A[/"📂 Directory Path (Parquet)"/] --> B{"pd.read_parquet()"}
+      C[/"⚙️ Engine (auto)"/] -.-> B
+      B --> D(["📊 df (Parquet Data)"])
+      D --> E(["🎯 target_name = ''"])
+      D --> F(["⚙️ task_type = 'unknown'"])
+      D --> G(["ℹ️ meta (format, shape)"])
+
+      style A fill:#fbbf24,stroke:#d97706,stroke-width:2px
+      style C fill:#fcd34d,stroke:#d97706,stroke-width:1px,stroke-dasharray: 5 5
+      style B fill:#3b82f6,stroke:#2563eb,stroke-width:2px,color:#fff
+      style D fill:#10b981,stroke:#059669,stroke-width:2px,color:#fff
+      style E fill:#8b5cf6,stroke:#7c3aed,stroke-width:2px,color:#fff
+      style F fill:#8b5cf6,stroke:#7c3aed,stroke-width:2px,color:#fff
+      style G fill:#8b5cf6,stroke:#7c3aed,stroke-width:2px,color:#fff
 
 _metadata:
   bloc: 1

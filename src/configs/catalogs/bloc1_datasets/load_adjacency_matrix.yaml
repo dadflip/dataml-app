@@ -10,33 +10,96 @@ tags:
 - matrix
 - csv
 - networkx
-code_template: "import pandas as pd\nimport numpy as np\nimport time\ntry:\n    import\
-  \ networkx as nx\nexcept ImportError:\n    nx = None\n    print(\"[ERREUR LOAD]\
-  \ 'networkx' n'est pas installé.\")\n\n# [PARAM: FILE_PATH | file]\nFILE_PATH =\
-  \ \"./data/raw/adjacency_matrix.csv\"\n# [/PARAM]\n\n# [PARAM: NODE_FEATURES_PATH\
-  \ | string]\nNODE_FEATURES_PATH = \"\"\n# [/PARAM]\n\nprint(f\"[LOAD] Chargement\
-  \ de la matrice d'adjacence depuis {FILE_PATH}...\")\n\ntry:\n    if nx is not None:\n\
-  \        start_time = time.time()\n        \n        adj_df = pd.read_csv(FILE_PATH,\
-  \ index_col=0)\n        adj_matrix = adj_df.values\n        \n        G = nx.from_numpy_array(adj_matrix)\n\
-  \        \n        if NODE_FEATURES_PATH and NODE_FEATURES_PATH.strip():\n     \
-  \       df = pd.read_csv(NODE_FEATURES_PATH)\n        else:\n            df = pd.DataFrame({\"\
-  node_id\": list(range(G.number_of_nodes()))})\n        \n        node_list = list(G.nodes())\n\
-  \        node2idx = {n: i for i, n in enumerate(node_list)}\n        src = [node2idx[u]\
-  \ for u, v in G.edges()]\n        dst = [node2idx[v] for u, v in G.edges()]\n  \
-  \      edge_index = np.array([src, dst], dtype=np.int64)\n        \n        duration\
-  \ = time.time() - start_time\n        print(f\"[LOAD] Succès Adjacence. {G.number_of_nodes()}\
-  \ noeuds, {G.number_of_edges()} arêtes en {duration:.2f}s.\")\n        \n      \
-  \  target_name = None\n        task_type = \"graph_unsupervised\"\n        meta\
-  \ = {\"format\": \"adjacency_matrix\", \"shape\": df.shape, \"edge_index\": edge_index,\
-  \ \"node_list\": node_list}\n    else:\n        df = None\n        target_name =\
-  \ None\n        task_type = \"unknown\"\n        meta = {}\nexcept Exception as\
-  \ e:\n    print(f\"[ERREUR LOAD] Échec du chargement de la matrice d'adjacence :\
-  \ {str(e)}\")\n    raise e\n"
+code_template: |
+  import pandas as pd
+  import numpy as np
+  import time
+  try:
+      import networkx as nx
+  except ImportError:
+      nx = None
+      print("[ERREUR LOAD] 'networkx' n'est pas installé.")
+
+  # [PARAM: FILE_PATH | file]
+  FILE_PATH = "./data/raw/adjacency_matrix.csv"
+  # [/PARAM]
+
+  # [PARAM: NODE_FEATURES_PATH | string]
+  NODE_FEATURES_PATH = ""
+  # [/PARAM]
+
+  print(f"[LOAD] Chargement de la matrice d'adjacence depuis {FILE_PATH}...")
+
+  try:
+      if nx is not None:
+          start_time = time.time()
+          
+          adj_df = pd.read_csv(FILE_PATH, index_col=0)
+          adj_matrix = adj_df.values
+          
+          G = nx.from_numpy_array(adj_matrix)
+          
+          if NODE_FEATURES_PATH and NODE_FEATURES_PATH.strip():
+              df = pd.read_csv(NODE_FEATURES_PATH)
+          else:
+              df = pd.DataFrame({"node_id": list(range(G.number_of_nodes()))})
+          
+          node_list = list(G.nodes())
+          node2idx = {n: i for i, n in enumerate(node_list)}
+          src = [node2idx[u] for u, v in G.edges()]
+          dst = [node2idx[v] for u, v in G.edges()]
+          edge_index = np.array([src, dst], dtype=np.int64)
+          
+          duration = time.time() - start_time
+          print(f"[LOAD] Succès Adjacence. {G.number_of_nodes()} noeuds, {G.number_of_edges()} arêtes en {duration:.2f}s.")
+          
+          target_name = ""
+          task_type = "graph_unsupervised"
+          meta = {"format": "adjacency_matrix", "shape": df.shape, "edge_index": edge_index, "node_list": node_list}
+      else:
+          df = pd.DataFrame()
+          target_name = ""
+          task_type = "unknown"
+          meta = {}
+  except Exception as e:
+      print(f"[ERREUR LOAD] Échec du chargement de la matrice d'adjacence : {str(e)}")
+      raise e
+
 illustration_mermaid: |
-    graph LR
-      Source[(Source)] -->|Load| Node([Extract Data])
-      style Source fill:#3b82f6,stroke:#2563eb,stroke-width:2px,color:#fff
-      style Node fill:#eff6ff,stroke:#3b82f6,stroke-width:2px
+  flowchart TD
+      subgraph Config [Parameters]
+          FILE([FILE_PATH])
+          FEAT([NODE_FEATURES_PATH])
+      end
+
+      subgraph Operations [Adjacency Matrix Load]
+          Read([pd.read_csv adj_matrix])
+          NetX([nx.from_numpy_array])
+          FeatLoad([Load Node Features or Create])
+          Edges([Extract edge_index])
+      end
+
+      subgraph Outputs [Contract Variables]
+          df((df))
+          target((target_name = ''))
+          task((task_type = 'graph_unsupervised'))
+          meta((meta: dict))
+      end
+
+      FILE --> Read
+      Read --> NetX
+      NetX --> Edges
+      FEAT --> FeatLoad
+      NetX --> FeatLoad
+      FeatLoad --> df
+      Edges -.-> meta
+
+      style Config fill:#f8fafc,stroke:#cbd5e1,stroke-width:2px
+      style Read fill:#3b82f6,stroke:#1d4ed8,stroke-width:2px,color:#fff
+      style NetX fill:#10b981,stroke:#047857,stroke-width:2px,color:#fff
+      style FeatLoad fill:#f59e0b,stroke:#b45309,stroke-width:2px,color:#fff
+      style Edges fill:#8b5cf6,stroke:#6d28d9,stroke-width:2px,color:#fff
+      style Outputs fill:#f1f5f9,stroke:#94a3b8,stroke-width:2px
 
 _metadata:
   bloc: 1

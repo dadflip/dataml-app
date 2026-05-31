@@ -7,24 +7,57 @@ tags:
 - feather
 - arrow
 - pandas
-code_template: "import pandas as pd\nimport time\nimport os\n\n# [PARAM: FILE_PATH\
-  \ | file]\nFILE_PATH = \"./data/raw/data.feather\"\n# [/PARAM]\n\n# [PARAM: TARGET_COL\
-  \ | string]\nTARGET_COL = \"target\"\n# [/PARAM]\n\nprint(f\"[LOAD] Chargement du\
-  \ fichier Feather depuis {FILE_PATH}...\")\nif not os.path.exists(FILE_PATH):\n\
-  \    raise FileNotFoundError(f\"[ERREUR LOAD] Fichier Feather introuvable : {FILE_PATH}\"\
-  )\n\ntry:\n    start_time = time.time()\n    df = pd.read_feather(FILE_PATH)\n \
-  \   \n    duration = time.time() - start_time\n    print(f\"[LOAD] Succès Feather.\
-  \ L'accès direct en mémoire a pris {duration:.2f}s pour {df.shape[0]} lignes.\"\
-  )\nexcept ImportError:\n    print(\"[ERREUR LOAD] Le module 'pyarrow' est requis\
-  \ pour lire les fichiers Feather.\")\n    raise\nexcept Exception as e:\n    print(f\"\
-  [ERREUR LOAD] Impossible de lire le fichier Feather : {str(e)}\")\n    raise e\n\
-  \ntarget_name = TARGET_COL if TARGET_COL and TARGET_COL in df.columns else None\n\
-  task_type = \"unknown\"\nmeta = {\"format\": \"feather\", \"shape\": df.shape}\n"
+code_template: |
+  import pandas as pd
+  import time
+  import os
+
+  # [PARAM: FILE_PATH | file]
+  FILE_PATH = "./data/raw/data.feather"
+  # [/PARAM]
+
+  # [PARAM: TARGET_COL | string]
+  TARGET_COL = "target"
+  # [/PARAM]
+
+  print(f"[LOAD] Chargement du fichier Feather depuis {FILE_PATH}...")
+  if not os.path.exists(FILE_PATH):
+      raise FileNotFoundError(f"[ERREUR LOAD] Fichier Feather introuvable : {FILE_PATH}")
+
+  try:
+      start_time = time.time()
+      df = pd.read_feather(FILE_PATH)
+      
+      duration = time.time() - start_time
+      print(f"[LOAD] Succès Feather. L'accès direct en mémoire a pris {duration:.2f}s pour {df.shape[0]} lignes.")
+  except ImportError:
+      print("[ERREUR LOAD] Le module 'pyarrow' est requis pour lire les fichiers Feather.")
+      raise
+  except Exception as e:
+      print(f"[ERREUR LOAD] Impossible de lire le fichier Feather : {str(e)}")
+      raise e
+
+  target_name = TARGET_COL if TARGET_COL and TARGET_COL in df.columns else ""
+  task_type = "unknown"
+  meta = {"format": "feather", "shape": df.shape}
 illustration_mermaid: |
-    graph LR
-      Source[(Source)] -->|Load| Node([Extract Data])
-      style Source fill:#3b82f6,stroke:#2563eb,stroke-width:2px,color:#fff
-      style Node fill:#eff6ff,stroke:#3b82f6,stroke-width:2px
+    flowchart LR
+        A[/"📄 File Path (.feather)"/] --> B{"pd.read_feather()"}
+        B --> C(["📊 df"])
+        D[/"🎯 TARGET_COL"/] --> E{"Check TARGET_COL"}
+        C --> E
+        E --> F(["🎯 target_name"])
+        E --> G(["⚙️ task_type = 'unknown'"])
+        E --> H(["ℹ️ meta (format, shape)"])
+
+        style A fill:#fbbf24,stroke:#d97706,stroke-width:2px
+        style D fill:#fbbf24,stroke:#d97706,stroke-width:2px
+        style B fill:#3b82f6,stroke:#2563eb,stroke-width:2px,color:#fff
+        style E fill:#3b82f6,stroke:#2563eb,stroke-width:2px,color:#fff
+        style C fill:#10b981,stroke:#059669,stroke-width:2px,color:#fff
+        style F fill:#8b5cf6,stroke:#7c3aed,stroke-width:2px,color:#fff
+        style G fill:#8b5cf6,stroke:#7c3aed,stroke-width:2px,color:#fff
+        style H fill:#8b5cf6,stroke:#7c3aed,stroke-width:2px,color:#fff
 
 _metadata:
   bloc: 1

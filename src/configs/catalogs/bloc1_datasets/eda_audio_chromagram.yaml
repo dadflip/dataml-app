@@ -6,18 +6,40 @@ tags:
 - eda
 - audio
 - multimedia
-code_template: "import matplotlib.pyplot as plt\nimport numpy as np\n\nif 'waveform'\
-  \ in locals():\n    signal = waveform[0].numpy()\n    # Calcul de l'énergie locale\
-  \ au carré (fenêtres glissantes très basique)\n    window = 100\n    energy = np.convolve(signal**2,\
-  \ np.ones(window)/window, mode='same')\n    \n    plt.figure(figsize=(10, 4))\n\
-  \    plt.plot(energy, color='orange')\n    plt.title(\"Énergie temporelle du signal\
-  \ audio\")\n    plt.xlabel(\"Frames\")\n    plt.ylabel(\"Énergie\")\n    plt.show()\n\
-  else:\n    print(\"[EDA] Tensor 'waveform' introuvable.\")\n"
+code_template: |
+  import matplotlib.pyplot as plt
+  import numpy as np
+
+  if 'waveform' in locals():
+      signal = waveform[0].numpy()
+      # Calcul de l'énergie locale au carré (fenêtres glissantes très basique)
+      window = 100
+      energy = np.convolve(signal**2, np.ones(window)/window, mode='same')
+      
+      plt.figure(figsize=(10, 4))
+      plt.plot(energy, color='orange')
+      plt.title("Énergie temporelle du signal audio")
+      plt.xlabel("Frames")
+      plt.ylabel("Énergie")
+      plt.show()
+  else:
+      print("[EDA] Tensor 'waveform' introuvable.")
 illustration_mermaid: |
-    graph LR
-      A([Input]) --> B([Operation])
-      B --> C([Output])
-      style B fill:#64748b,stroke:#475569,stroke-width:2px,color:#fff
+    graph TD
+      A([Tensor 'waveform']) --> B{Exists in locals?}
+      B -- Yes --> C([Extract Channel 0])
+      C --> D[/Convert to numpy array/]
+      D --> E[Square signal]
+      E --> F[Convolve with sliding window<br>size=100]
+      F --> G([Energy Array])
+      G --> H{{Plot Energy vs Frames}}
+      H --> I([Display Plot])
+      B -- No --> J[/Print Error Message/]
+      style A fill:#4F46E5,color:#fff
+      style B fill:#F59E0B,color:#fff
+      style E fill:#06B6D4,color:#fff
+      style F fill:#06B6D4,color:#fff
+      style H fill:#10B981,color:#fff
 
 _metadata:
   bloc: 1

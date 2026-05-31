@@ -8,32 +8,33 @@ tags:
 - summary
 - tabular
 - pandas
-code_template: 'import pandas as pd
+code_template: |
+  import pandas as pd
 
   # [PARAM: HEAD_N | number]
-
   HEAD_N = 5
-
   # [/PARAM]
 
   print("[EDA] === INFORMATIONS GÉNÉRALES ===")
-
   df.info()
 
   print("\n[EDA] === STATISTIQUES DESCRIPTIVES ===")
-
-  display(df.describe(include=''all''))
+  display(df.describe(include='all'))
 
   print("\n[EDA] === APERÇU (HEAD) ===")
-
   display(df.head(HEAD_N))
-
-  '
 illustration_mermaid: |
-    graph LR
-      A([Input]) --> B([Operation])
-      B --> C([Output])
-      style B fill:#64748b,stroke:#475569,stroke-width:2px,color:#fff
+    graph TD
+      A([DataFrame df]) --> B{{Print df.info}}
+      A --> C{{Display df.describe}}
+      A --> D{{Display df.head}}
+      B --> E([General Info])
+      C --> F([Descriptive Statistics])
+      D --> G([First HEAD_N rows])
+      style A fill:#4F46E5,color:#fff
+      style B fill:#10B981,color:#fff
+      style C fill:#10B981,color:#fff
+      style D fill:#10B981,color:#fff
 
 _metadata:
   bloc: 1

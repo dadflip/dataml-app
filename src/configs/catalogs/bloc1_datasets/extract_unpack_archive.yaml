@@ -7,26 +7,82 @@ tags:
 - unzip
 - tar
 - archive
-code_template: "import os\nimport tarfile\nimport zipfile\nimport time\n\n# [PARAM:\
-  \ ARCHIVE_PATH | file]\nARCHIVE_PATH = \"./data/raw/dataset.zip\"\n# [/PARAM]\n\n\
-  # [PARAM: EXTRACT_DIR | dir]\nEXTRACT_DIR = \"./data/extracted\"\n# [/PARAM]\n\n\
-  print(f\"[EXTRACT] Décompression de {ARCHIVE_PATH} vers {EXTRACT_DIR}...\")\nos.makedirs(EXTRACT_DIR,\
-  \ exist_ok=True)\n\ntry:\n    start_time = time.time()\n    if ARCHIVE_PATH.endswith(\"\
-  .zip\"):\n        with zipfile.ZipFile(ARCHIVE_PATH, 'r') as zip_ref:\n        \
-  \    zip_ref.extractall(EXTRACT_DIR)\n    elif ARCHIVE_PATH.endswith((\".tar\",\
-  \ \".tar.gz\", \".tgz\")):\n        with tarfile.open(ARCHIVE_PATH, \"r:*\") as\
-  \ tar_ref:\n            tar_ref.extractall(path=EXTRACT_DIR)\n    else:\n      \
-  \  raise ValueError(\"Format d'archive non supporté (.zip, .tar, .tgz uniquement)\"\
-  )\n        \n    duration = time.time() - start_time\n    print(f\"[EXTRACT] Succès.\
-  \ Contenu extrait en {duration:.2f}s.\")\nexcept Exception as e:\n    print(f\"\
-  [ERREUR EXTRACT] Impossible de décompresser l'archive : {str(e)}\")\n    raise e\n\
-  \ndf = None\ntarget_name = None\ntask_type = \"unknown\"\nmeta = {\"source\": \"\
-  archive_extract\", \"path\": EXTRACT_DIR}\n"
+code_template: |
+  import os
+  import tarfile
+  import zipfile
+  import time
+  import pandas as pd
+
+  # [PARAM: ARCHIVE_PATH | file]
+  ARCHIVE_PATH = "./data/raw/dataset.zip"
+  # [/PARAM]
+
+  # [PARAM: EXTRACT_DIR | dir]
+  EXTRACT_DIR = "./data/extracted"
+  # [/PARAM]
+
+  print(f"[EXTRACT] Décompression de {ARCHIVE_PATH} vers {EXTRACT_DIR}...")
+  os.makedirs(EXTRACT_DIR, exist_ok=True)
+
+  try:
+      start_time = time.time()
+      if ARCHIVE_PATH.endswith(".zip"):
+          with zipfile.ZipFile(ARCHIVE_PATH, 'r') as zip_ref:
+              zip_ref.extractall(EXTRACT_DIR)
+      elif ARCHIVE_PATH.endswith((".tar", ".tar.gz", ".tgz")):
+          with tarfile.open(ARCHIVE_PATH, "r:*") as tar_ref:
+              tar_ref.extractall(path=EXTRACT_DIR)
+      else:
+          raise ValueError("Format d'archive non supporté (.zip, .tar, .tgz uniquement)")
+          
+      duration = time.time() - start_time
+      print(f"[EXTRACT] Succès. Contenu extrait en {duration:.2f}s.")
+  except Exception as e:
+      print(f"[ERREUR EXTRACT] Impossible de décompresser l'archive : {str(e)}")
+      raise e
+
+  df = pd.DataFrame()
+  target_name = ""
+  task_type = "unknown"
+  meta = {"source": "archive_extract", "path": EXTRACT_DIR}
+
 illustration_mermaid: |
-    graph LR
-      Source[(Source)] -->|Load| Node([Extract Data])
-      style Source fill:#3b82f6,stroke:#2563eb,stroke-width:2px,color:#fff
-      style Node fill:#eff6ff,stroke:#3b82f6,stroke-width:2px
+  flowchart TD
+      subgraph Config [Parameters]
+          ARCH([ARCHIVE_PATH])
+          DEST([EXTRACT_DIR])
+      end
+
+      subgraph Operations [Archive Extraction]
+          Check([Check Format])
+          Zip([zipfile.extractall])
+          Tar([tarfile.extractall])
+          OutDir[(Extracted Files)]
+      end
+
+      subgraph Outputs [Contract Variables]
+          df((df = pd.DataFrame))
+          target((target_name = ''))
+          task((task_type = 'unknown'))
+          meta((meta: dict))
+      end
+
+      ARCH --> Check
+      Check -- ".zip" --> Zip
+      Check -- ".tar/.tgz" --> Tar
+      DEST --> Zip
+      DEST --> Tar
+      Zip --> OutDir
+      Tar --> OutDir
+      OutDir -.-> meta
+
+      style Config fill:#f8fafc,stroke:#cbd5e1,stroke-width:2px
+      style Check fill:#64748b,stroke:#475569,stroke-width:2px,color:#fff
+      style Zip fill:#3b82f6,stroke:#1d4ed8,stroke-width:2px,color:#fff
+      style Tar fill:#f59e0b,stroke:#b45309,stroke-width:2px,color:#fff
+      style OutDir fill:#10b981,stroke:#047857,stroke-width:2px,color:#fff
+      style Outputs fill:#f1f5f9,stroke:#94a3b8,stroke-width:2px
 
 _metadata:
   bloc: 1

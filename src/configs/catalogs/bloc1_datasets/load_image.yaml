@@ -7,25 +7,53 @@ tags:
 - image
 - cv2
 - media
-code_template: "import cv2\nimport numpy as np\nimport time\nimport os\n\n# [PARAM:\
-  \ FILE_PATH | file]\nFILE_PATH = \"./data/raw/photo.jpg\"\n# [/PARAM]\n\nprint(f\"\
-  [LOAD] Lecture de l'image : {FILE_PATH}...\")\nif not os.path.exists(FILE_PATH):\n\
-  \    raise FileNotFoundError(f\"[ERREUR LOAD] Fichier Image introuvable : {FILE_PATH}\"\
-  )\n\ntry:\n    start_time = time.time()\n    \n    # Lecture OpenCV (BGB par défaut)\n\
-  \    img_bgr = cv2.imread(FILE_PATH)\n    if img_bgr is None:\n        raise ValueError(\"\
-  Le fichier n'est pas une image valide ou est corrompu.\")\n        \n    # Conversion\
-  \ BGR -> RGB pour compatibilité ML/DL\n    img_rgb = cv2.cvtColor(img_bgr, cv2.COLOR_BGR2RGB)\n\
-  \    \n    duration = time.time() - start_time\n    print(f\"[LOAD] Succès. Image\
-  \ {img_rgb.shape} chargée en {duration:.2f}s.\")\nexcept ImportError:\n    print(\"\
-  [ERREUR LOAD] Le module 'opencv-python' (cv2) est requis.\")\n    raise\nexcept\
-  \ Exception as e:\n    print(f\"[ERREUR LOAD] Impossible de charger l'image : {str(e)}\"\
-  )\n    raise e\n\ndf = None\ntarget_name = None\ntask_type = \"computer_vision\"\
-  \nmeta = {\"format\": \"image\", \"shape\": img_rgb.shape}\n"
+code_template: |
+  import cv2
+  import numpy as np
+  import time
+  import os
+  import pandas as pd
+
+  # [PARAM: FILE_PATH | file]
+  FILE_PATH = "./data/raw/photo.jpg"
+  # [/PARAM]
+
+  print(f"[LOAD] Lecture de l'image : {FILE_PATH}...")
+  if not os.path.exists(FILE_PATH):
+      raise FileNotFoundError(f"[ERREUR LOAD] Fichier Image introuvable : {FILE_PATH}")
+
+  try:
+      start_time = time.time()
+      
+      # Lecture OpenCV (BGB par défaut)
+      img_bgr = cv2.imread(FILE_PATH)
+      if img_bgr is None:
+          raise ValueError("Le fichier n'est pas une image valide ou est corrompu.")
+          
+      # Conversion BGR -> RGB pour compatibilité ML/DL
+      img_rgb = cv2.cvtColor(img_bgr, cv2.COLOR_BGR2RGB)
+      
+      duration = time.time() - start_time
+      print(f"[LOAD] Succès. Image {img_rgb.shape} chargée en {duration:.2f}s.")
+  except ImportError:
+      print("[ERREUR LOAD] Le module 'opencv-python' (cv2) est requis.")
+      raise
+  except Exception as e:
+      print(f"[ERREUR LOAD] Impossible de charger l'image : {str(e)}")
+      raise e
+
+  df = pd.DataFrame([{"path": FILE_PATH, "image_shape": img_rgb.shape}])
+  target_name = ""
+  task_type = "computer_vision"
+  meta = {"format": "image", "shape": img_rgb.shape}
 illustration_mermaid: |
-    graph LR
-      Source[(Source)] -->|Load| Node([Extract Data])
-      style Source fill:#3b82f6,stroke:#2563eb,stroke-width:2px,color:#fff
-      style Node fill:#eff6ff,stroke:#3b82f6,stroke-width:2px
+  flowchart TD
+      A([FILE_PATH]) --> B[Load IMAGE]
+      B --> df([df])
+      
+      style A fill:#3b82f6,color:#fff
+      style B fill:#10b981,color:#fff
+      style df fill:#f59e0b,color:#fff
 
 _metadata:
   bloc: 1

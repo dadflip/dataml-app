@@ -7,20 +7,46 @@ tags:
 - audio
 - multimedia
 - spectrogram
-code_template: "import matplotlib.pyplot as plt\n\n# [PARAM: SAMPLE_RATE | number]\n\
-  SAMPLE_RATE = 16000\n# [/PARAM]\n\nif 'waveform' in locals():\n    # Convertir stereo\
-  \ en mono pour la visualisation\n    if waveform.shape[0] > 1:\n        signal =\
-  \ waveform.mean(dim=0).numpy()\n    else:\n        signal = waveform[0].numpy()\n\
-  \        \n    plt.figure(figsize=(12, 5))\n    plt.specgram(signal, Fs=SAMPLE_RATE,\
-  \ cmap='magma')\n    plt.title(\"Spectrogramme du signal audio\")\n    plt.ylabel(\"\
-  Fréquence (Hz)\")\n    plt.xlabel(\"Temps (s)\")\n    plt.colorbar(format='%+2.0f\
-  \ dB')\n    plt.show()\nelse:\n    print(\"[EDA] Tensor 'waveform' introuvable.\"\
-  )\n"
+code_template: |
+  import matplotlib.pyplot as plt
+
+  # [PARAM: SAMPLE_RATE | number]
+  SAMPLE_RATE = 16000
+  # [/PARAM]
+
+  if 'waveform' in locals():
+      # Convertir stereo en mono pour la visualisation
+      if waveform.shape[0] > 1:
+          signal = waveform.mean(dim=0).numpy()
+      else:
+          signal = waveform[0].numpy()
+          
+      plt.figure(figsize=(12, 5))
+      plt.specgram(signal, Fs=SAMPLE_RATE, cmap='magma')
+      plt.title("Spectrogramme du signal audio")
+      plt.ylabel("Fréquence (Hz)")
+      plt.xlabel("Temps (s)")
+      plt.colorbar(format='%+2.0f dB')
+      plt.show()
+  else:
+      print("[EDA] Tensor 'waveform' introuvable.")
 illustration_mermaid: |
-    graph LR
-      A([Input]) --> B([Operation])
-      B --> C([Output])
-      style B fill:#64748b,stroke:#475569,stroke-width:2px,color:#fff
+    graph TD
+      A([Tensor 'waveform']) --> B{Exists in locals?}
+      B -- Yes --> C{Channels > 1?}
+      C -- Yes --> D[Mean across channels<br>stereo to mono]
+      C -- No --> E[Extract Channel 0]
+      D --> F[/Convert to numpy/]
+      E --> F
+      F --> G([Mono Signal])
+      G --> H{{Plot specgram<br>Fs=SAMPLE_RATE, cmap='magma'}}
+      H --> I[Add Title, Labels, Colorbar]
+      I --> J([Display Spectrogram])
+      B -- No --> K[/Print Error Message/]
+      style A fill:#4F46E5,color:#fff
+      style B fill:#F59E0B,color:#fff
+      style C fill:#F59E0B,color:#fff
+      style H fill:#10B981,color:#fff
 
 _metadata:
   bloc: 1

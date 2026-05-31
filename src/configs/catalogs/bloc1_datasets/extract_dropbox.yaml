@@ -6,23 +6,54 @@ tags:
 - extract
 - dropbox
 - api
-code_template: "import dropbox\nimport os\nimport time\n\n# [PARAM: ACCESS_TOKEN |\
-  \ string]\nACCESS_TOKEN = \"votre_token_dropbox\"\n# [/PARAM]\n\n# [PARAM: DBX_PATH\
-  \ | string]\nDBX_PATH = \"/MonDossier/data.csv\"\n# [/PARAM]\n\n# [PARAM: DEST_PATH\
-  \ | string]\nDEST_PATH = \"./data/raw/dropbox_data.csv\"\n# [/PARAM]\n\nprint(f\"\
-  [EXTRACT] Connexion à l'API Dropbox...\")\nos.makedirs(os.path.dirname(DEST_PATH),\
-  \ exist_ok=True)\n\ntry:\n    start_time = time.time()\n    dbx = dropbox.Dropbox(ACCESS_TOKEN)\n\
-  \    metadata, res = dbx.files_download(DBX_PATH)\n    \n    with open(DEST_PATH,\
-  \ 'wb') as f:\n        f.write(res.content)\n        \n    duration = time.time()\
-  \ - start_time\n    print(f\"[EXTRACT] Succès Dropbox. Fichier téléchargé en {duration:.2f}s.\"\
-  )\nexcept Exception as e:\n    print(f\"[ERREUR EXTRACT] Erreur d'API Dropbox :\
-  \ {str(e)}\")\n    raise e\n\ndf = None\ntarget_name = None\ntask_type = \"unknown\"\
-  \nmeta = {\"source\": \"dropbox\", \"path\": DEST_PATH}\n"
+code_template: |
+  import dropbox
+  import os
+  import time
+  
+  # [PARAM: ACCESS_TOKEN | string]
+  ACCESS_TOKEN = "votre_token_dropbox"
+  # [/PARAM]
+  
+  # [PARAM: DBX_PATH | string]
+  DBX_PATH = "/MonDossier/data.csv"
+  # [/PARAM]
+  
+  # [PARAM: DEST_PATH | string]
+  DEST_PATH = "./data/raw/dropbox_data.csv"
+  # [/PARAM]
+  
+  print(f"[EXTRACT] Connexion à l'API Dropbox...")
+  os.makedirs(os.path.dirname(DEST_PATH), exist_ok=True)
+  
+  try:
+      start_time = time.time()
+      dbx = dropbox.Dropbox(ACCESS_TOKEN)
+      metadata, res = dbx.files_download(DBX_PATH)
+      
+      with open(DEST_PATH, 'wb') as f:
+          f.write(res.content)
+          
+      duration = time.time() - start_time
+      print(f"[EXTRACT] Succès Dropbox. Fichier téléchargé en {duration:.2f}s.")
+  except Exception as e:
+      print(f"[ERREUR EXTRACT] Erreur d'API Dropbox : {str(e)}")
+      raise e
+  
+  df = None
+  target_name = None
+  task_type = "unknown"
+  meta = {"source": "dropbox", "path": DEST_PATH}
 illustration_mermaid: |
-    graph LR
-      Source[(Source)] -->|Load| Node([Extract Data])
-      style Source fill:#3b82f6,stroke:#2563eb,stroke-width:2px,color:#fff
-      style Node fill:#eff6ff,stroke:#3b82f6,stroke-width:2px
+    flowchart TD
+    A([FILE_PATH]) --> B[Load EXTRACT_DROPBOX]
+    B --> df([df])
+    
+    style A fill:#3b82f6,color:#fff
+    style B fill:#10b981,color:#fff
+    style df fill:#f59e0b,color:#fff
+
+
 
 _metadata:
   bloc: 1

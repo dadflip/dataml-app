@@ -7,26 +7,77 @@ tags:
 - audio
 - wav
 - librosa
-code_template: "import time\nimport os\n\n# [PARAM: FILE_PATH | file]\nFILE_PATH =\
-  \ \"./data/raw/sound.wav\"\n# [/PARAM]\n\n# [PARAM: SAMPLE_RATE | string]\nSAMPLE_RATE\
-  \ = \"22050\"\n# [/PARAM]\n\nprint(f\"[LOAD] Lecture du fichier audio : {FILE_PATH}...\"\
-  )\nif not os.path.exists(FILE_PATH):\n    raise FileNotFoundError(f\"[ERREUR LOAD]\
-  \ Fichier Audio introuvable : {FILE_PATH}\")\n\ntry:\n    start_time = time.time()\n\
-  \    import librosa\n    \n    # Le parametre sr=None conserve le taux d'échantillonnage\
-  \ d'origine\n    sr_target = int(SAMPLE_RATE) if SAMPLE_RATE.isdigit() else None\n\
-  \    y, sr = librosa.load(FILE_PATH, sr=sr_target)\n    \n    duration = time.time()\
-  \ - start_time\n    print(f\"[LOAD] Succès Audio. {len(y)} échantillons lus à {sr}\
-  \ Hz en {duration:.2f}s.\")\nexcept ImportError:\n    print(\"[ERREUR LOAD] Le module\
-  \ 'librosa' est requis.\")\n    raise\nexcept Exception as e:\n    print(f\"[ERREUR\
-  \ LOAD] Impossible de parser le fichier audio : {str(e)}\")\n    raise e\n\ndf =\
-  \ None\ntarget_name = None\ntask_type = \"audio_processing\"\nmeta = {\"format\"\
-  : \"audio\", \"sample_rate\": sr, \"length\": len(y)}\n"
-illustration_mermaid: |
-    graph LR
-      Source[(Source)] -->|Load| Node([Extract Data])
-      style Source fill:#3b82f6,stroke:#2563eb,stroke-width:2px,color:#fff
-      style Node fill:#eff6ff,stroke:#3b82f6,stroke-width:2px
+code_template: |
+  import time
+  import os
+  import pandas as pd
 
+  # [PARAM: FILE_PATH | file]
+  FILE_PATH = "./data/raw/sound.wav"
+  # [/PARAM]
+
+  # [PARAM: SAMPLE_RATE | string]
+  SAMPLE_RATE = "22050"
+  # [/PARAM]
+
+  print(f"[LOAD] Lecture du fichier audio : {FILE_PATH}...")
+  if not os.path.exists(FILE_PATH):
+      raise FileNotFoundError(f"[ERREUR LOAD] Fichier Audio introuvable : {FILE_PATH}")
+
+  try:
+      start_time = time.time()
+      import librosa
+      
+      # Le parametre sr=None conserve le taux d'échantillonnage d'origine
+      sr_target = int(SAMPLE_RATE) if SAMPLE_RATE.isdigit() else None
+      y, sr = librosa.load(FILE_PATH, sr=sr_target)
+      
+      duration = time.time() - start_time
+      print(f"[LOAD] Succès Audio. {len(y)} échantillons lus à {sr} Hz en {duration:.2f}s.")
+  except ImportError:
+      print("[ERREUR LOAD] Le module 'librosa' est requis.")
+      raise
+  except Exception as e:
+      print(f"[ERREUR LOAD] Impossible de parser le fichier audio : {str(e)}")
+      raise e
+
+  df = pd.DataFrame({"audio_data": y})
+  target_name = ""
+  task_type = "audio_processing"
+  meta = {"format": "audio", "sample_rate": sr, "length": len(y)}
+
+illustration_mermaid: |
+  flowchart TD
+      subgraph Config [Parameters]
+          FILE([FILE_PATH])
+          SR([SAMPLE_RATE])
+      end
+
+      subgraph Operations [Audio Load]
+          Check([os.path.exists])
+          Librosa([librosa.load])
+          ToDF([Create DataFrame])
+      end
+
+      subgraph Outputs [Contract Variables]
+          df((df))
+          target((target_name = ''))
+          task((task_type = 'audio_processing'))
+          meta((meta: dict))
+      end
+
+      FILE --> Check
+      Check --> Librosa
+      SR --> Librosa
+      Librosa --> ToDF
+      ToDF --> df
+      Librosa -.-> meta
+
+      style Config fill:#f8fafc,stroke:#cbd5e1,stroke-width:2px
+      style Check fill:#64748b,stroke:#475569,stroke-width:2px,color:#fff
+      style Librosa fill:#3b82f6,stroke:#1d4ed8,stroke-width:2px,color:#fff
+      style ToDF fill:#10b981,stroke:#047857,stroke-width:2px,color:#fff
+      style Outputs fill:#f1f5f9,stroke:#94a3b8,stroke-width:2px
 _metadata:
   bloc: 1
   section: 2_load

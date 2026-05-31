@@ -6,24 +6,50 @@ tags:
 - extract
 - http
 - download
-code_template: "import urllib.request\nimport os\nimport time\n\n# [PARAM: FILE_URL\
-  \ | string]\nFILE_URL = \"https://example.com/data.csv\"\n# [/PARAM]\n\n# [PARAM:\
-  \ DEST_PATH | string]\nDEST_PATH = \"./data/raw/data.csv\"\n# [/PARAM]\n\nprint(f\"\
-  [EXTRACT] Téléchargement depuis {FILE_URL} vers {DEST_PATH}...\")\nos.makedirs(os.path.dirname(DEST_PATH),\
-  \ exist_ok=True)\n\ntry:\n    start_time = time.time()\n    # On simule un navigateur\
-  \ pour éviter certains blocages\n    req = urllib.request.Request(FILE_URL, headers={'User-Agent':\
-  \ 'Mozilla/5.0'})\n    with urllib.request.urlopen(req) as response, open(DEST_PATH,\
-  \ 'wb') as out_file:\n        out_file.write(response.read())\n        \n    duration\
-  \ = time.time() - start_time\n    size_mb = os.path.getsize(DEST_PATH) / (1024 *\
-  \ 1024)\n    print(f\"[EXTRACT] Succès. Fichier ({size_mb:.2f} MB) téléchargé en\
-  \ {duration:.2f}s.\")\nexcept Exception as e:\n    print(f\"[ERREUR EXTRACT] Échec\
-  \ du téléchargement : {str(e)}\")\n    raise e\n\ndf = None\ntarget_name = None\n\
-  task_type = \"unknown\"\nmeta = {\"source\": \"http\", \"path\": DEST_PATH}\n"
+code_template: |
+  import urllib.request
+  import os
+  import time
+
+  # [PARAM: FILE_URL | string]
+  FILE_URL = "https://example.com/data.csv"
+  # [/PARAM]
+
+  # [PARAM: DEST_PATH | string]
+  DEST_PATH = "./data/raw/data.csv"
+  # [/PARAM]
+
+  print(f"[EXTRACT] Téléchargement depuis {FILE_URL} vers {DEST_PATH}...")
+  os.makedirs(os.path.dirname(DEST_PATH), exist_ok=True)
+
+  try:
+      start_time = time.time()
+      # On simule un navigateur pour éviter certains blocages
+      req = urllib.request.Request(FILE_URL, headers={'User-Agent': 'Mozilla/5.0'})
+      with urllib.request.urlopen(req) as response, open(DEST_PATH, 'wb') as out_file:
+          out_file.write(response.read())
+          
+      duration = time.time() - start_time
+      size_mb = os.path.getsize(DEST_PATH) / (1024 * 1024)
+      print(f"[EXTRACT] Succès. Fichier ({size_mb:.2f} MB) téléchargé en {duration:.2f}s.")
+  except Exception as e:
+      print(f"[ERREUR EXTRACT] Échec du téléchargement : {str(e)}")
+      raise e
+
+  df = DEST_PATH
+  target_name = "target"
+  task_type = "unknown"
+  meta = {"source": "http", "path": DEST_PATH}
 illustration_mermaid: |
-    graph LR
-      Source[(Source)] -->|Load| Node([Extract Data])
-      style Source fill:#3b82f6,stroke:#2563eb,stroke-width:2px,color:#fff
-      style Node fill:#eff6ff,stroke:#3b82f6,stroke-width:2px
+    flowchart TD
+    A([FILE_PATH]) --> B[Load EXTRACT_HTTP]
+    B --> df([df])
+    
+    style A fill:#3b82f6,color:#fff
+    style B fill:#10b981,color:#fff
+    style df fill:#f59e0b,color:#fff
+
+
 
 _metadata:
   bloc: 1

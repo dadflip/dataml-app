@@ -7,26 +7,67 @@ tags:
 - extract
 - mqtt
 - iot
-code_template: "import paho.mqtt.client as mqtt\nimport os\nimport time\n\n# [PARAM:\
-  \ BROKER | string]\nBROKER = \"test.mosquitto.org\"\n# [/PARAM]\n\n# [PARAM: TOPIC\
-  \ | string]\nTOPIC = \"temperature/sensor1\"\n# [/PARAM]\n\n# [PARAM: DURATION_SEC\
-  \ | string]\nDURATION_SEC = \"3\"\n# [/PARAM]\n\n# [PARAM: DEST_PATH | string]\n\
-  DEST_PATH = \"./data/raw/mqtt_dump.txt\"\n# [/PARAM]\n\nprint(f\"[EXTRACT] Abonnement\
-  \ MQTT à {BROKER} sur {TOPIC}...\")\nos.makedirs(os.path.dirname(DEST_PATH), exist_ok=True)\n\
-  \nmessages = []\ndef on_message(client, userdata, msg):\n    messages.append(msg.payload.decode('utf-8'))\n\
-  \ntry:\n    client = mqtt.Client()\n    client.on_message = on_message\n    client.connect(BROKER)\n\
-  \    client.subscribe(TOPIC)\n    \n    client.loop_start()\n    time.sleep(int(DURATION_SEC))\n\
-  \    client.loop_stop()\n    \n    with open(DEST_PATH, \"w\", encoding=\"utf-8\"\
-  ) as f:\n        for m in messages:\n            f.write(m + \"\\\\n\")\n      \
-  \      \n    print(f\"[EXTRACT] Succès MQTT. {len(messages)} trames captées.\")\n\
-  except Exception as e:\n    print(f\"[ERREUR EXTRACT] Échec MQTT : {str(e)}\")\n\
-  \    raise e\n\ndf = None\ntarget_name = None\ntask_type = \"unknown\"\nmeta = {\"\
-  source\": \"mqtt\", \"path\": DEST_PATH}\n"
+code_template: |
+  import paho.mqtt.client as mqtt
+  import os
+  import time
+
+  # [PARAM: BROKER | string]
+  BROKER = "test.mosquitto.org"
+  # [/PARAM]
+
+  # [PARAM: TOPIC | string]
+  TOPIC = "temperature/sensor1"
+  # [/PARAM]
+
+  # [PARAM: DURATION_SEC | string]
+  DURATION_SEC = "3"
+  # [/PARAM]
+
+  # [PARAM: DEST_PATH | string]
+  DEST_PATH = "./data/raw/mqtt_dump.txt"
+  # [/PARAM]
+
+  print(f"[EXTRACT] Abonnement MQTT à {BROKER} sur {TOPIC}...")
+  os.makedirs(os.path.dirname(DEST_PATH), exist_ok=True)
+
+  messages = []
+  def on_message(client, userdata, msg):
+      messages.append(msg.payload.decode('utf-8'))
+
+  try:
+      client = mqtt.Client()
+      client.on_message = on_message
+      client.connect(BROKER)
+      client.subscribe(TOPIC)
+      
+      client.loop_start()
+      time.sleep(int(DURATION_SEC))
+      client.loop_stop()
+      
+      with open(DEST_PATH, "w", encoding="utf-8") as f:
+          for m in messages:
+              f.write(m + "\n")
+              
+      print(f"[EXTRACT] Succès MQTT. {len(messages)} trames captées.")
+  except Exception as e:
+      print(f"[ERREUR EXTRACT] Échec MQTT : {str(e)}")
+      raise e
+
+  df = DEST_PATH
+  target_name = "target"
+  task_type = "unknown"
+  meta = {"source": "mqtt", "path": DEST_PATH}
 illustration_mermaid: |
-    graph LR
-      Source[(Source)] -->|Load| Node([Extract Data])
-      style Source fill:#3b82f6,stroke:#2563eb,stroke-width:2px,color:#fff
-      style Node fill:#eff6ff,stroke:#3b82f6,stroke-width:2px
+    flowchart TD
+    A([FILE_PATH]) --> B[Load EXTRACT_MQTT]
+    B --> df([df])
+    
+    style A fill:#3b82f6,color:#fff
+    style B fill:#10b981,color:#fff
+    style df fill:#f59e0b,color:#fff
+
+
 
 _metadata:
   bloc: 1

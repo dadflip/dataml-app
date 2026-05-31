@@ -6,24 +6,51 @@ tags:
 - extract
 - kaggle
 - api
-code_template: "import os\nimport time\n\n# [PARAM: DATASET_ID | string]\nDATASET_ID\
-  \ = \"paultimothymooney/chest-xray-pneumonia\"\n# [/PARAM]\n\n# [PARAM: DEST_DIR\
-  \ | dir]\nDEST_DIR = \"./data/raw/kaggle\"\n# [/PARAM]\n\nprint(f\"[EXTRACT] Appel\
-  \ à l'API Kaggle pour le dataset {DATASET_ID}...\")\nos.makedirs(DEST_DIR, exist_ok=True)\n\
-  \ntry:\n    # L'import vérifie la présence du fichier ~/.kaggle/kaggle.json\n  \
-  \  import kaggle\n    start_time = time.time()\n    \n    # Télécharge et dézippe\
-  \ à la volée\n    kaggle.api.dataset_download_files(DATASET_ID, path=DEST_DIR, unzip=True)\n\
-  \    \n    duration = time.time() - start_time\n    print(f\"[EXTRACT] Succès Kaggle.\
-  \ Données prêtes dans {DEST_DIR} en {duration:.2f}s.\")\nexcept ImportError:\n \
-  \   print(\"[ERREUR EXTRACT] Le module 'kaggle' n'est pas installé.\")\n    raise\n\
-  except Exception as e:\n    print(f\"[ERREUR EXTRACT] Impossible de télécharger\
-  \ via Kaggle : {str(e)}\")\n    raise e\n\ndf = None\ntarget_name = None\ntask_type\
-  \ = \"unknown\"\nmeta = {\"source\": \"kaggle\", \"path\": DEST_DIR}\n"
+code_template: |
+  import os
+  import time
+
+  # [PARAM: DATASET_ID | string]
+  DATASET_ID = "paultimothymooney/chest-xray-pneumonia"
+  # [/PARAM]
+
+  # [PARAM: DEST_DIR | dir]
+  DEST_DIR = "./data/raw/kaggle"
+  # [/PARAM]
+
+  print(f"[EXTRACT] Appel à l'API Kaggle pour le dataset {DATASET_ID}...")
+  os.makedirs(DEST_DIR, exist_ok=True)
+
+  try:
+      # L'import vérifie la présence du fichier ~/.kaggle/kaggle.json
+      import kaggle
+      start_time = time.time()
+      
+      # Télécharge et dézippe à la volée
+      kaggle.api.dataset_download_files(DATASET_ID, path=DEST_DIR, unzip=True)
+      
+      duration = time.time() - start_time
+      print(f"[EXTRACT] Succès Kaggle. Données prêtes dans {DEST_DIR} en {duration:.2f}s.")
+  except ImportError:
+      print("[ERREUR EXTRACT] Le module 'kaggle' n'est pas installé.")
+      raise
+  except Exception as e:
+      print(f"[ERREUR EXTRACT] Impossible de télécharger via Kaggle : {str(e)}")
+      raise e
+
+  df = DEST_DIR
+  target_name = "target"
+  task_type = "unknown"
+  meta = {"source": "kaggle", "path": DEST_DIR}
 illustration_mermaid: |
-    graph LR
-      Source[(Source)] -->|Load| Node([Extract Data])
-      style Source fill:#3b82f6,stroke:#2563eb,stroke-width:2px,color:#fff
-      style Node fill:#eff6ff,stroke:#3b82f6,stroke-width:2px
+    flowchart TD
+    A([FILE_PATH]) --> B[Load EXTRACT_KAGGLE]
+    B --> df([df])
+    
+    style A fill:#3b82f6,color:#fff
+    style B fill:#10b981,color:#fff
+    style df fill:#f59e0b,color:#fff
+
 
 _metadata:
   bloc: 1

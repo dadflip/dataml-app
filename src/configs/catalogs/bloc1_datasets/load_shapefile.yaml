@@ -4,16 +4,30 @@ description: "Charge un fichier SIG Shapefile (.shp) dans un GeoDataFrame."
 category: "2. Load"
 tags: ["load", "shapefile", "spatial", "gis"]
 code_template: |
-  import time
+  import pandas as pd
   import os
 
   # [PARAM: FILE_PATH | file]
   FILE_PATH = "./data/raw/data.shp"
+  # [/PARAM]
+
+  df = pd.DataFrame() # Needs geopandas implementation
+  target_name = "target"
+  task_type = "unknown"
+  meta = {"source": "SHAPEFILE", "path": FILE_PATH}
+output_variables:
+  - df
+  - target_name
+  - task_type
+  - meta
 illustration_mermaid: |
-    graph LR
-      Source[(Source)] -->|Load| Node([Extract Data])
-      style Source fill:#3b82f6,stroke:#2563eb,stroke-width:2px,color:#fff
-      style Node fill:#eff6ff,stroke:#3b82f6,stroke-width:2px
+    flowchart LR
+    A([FILE_PATH]) --> B[Load SHAPEFILE]
+    B --> df([df])
+    
+    style A fill:#3b82f6,color:#fff
+    style B fill:#10b981,color:#fff
+    style df fill:#f59e0b,color:#fff
 
 _metadata:
   bloc: 1

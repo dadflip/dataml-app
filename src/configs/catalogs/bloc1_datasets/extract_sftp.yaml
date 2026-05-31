@@ -6,25 +6,97 @@ tags:
 - extract
 - sftp
 - ssh
-code_template: "import paramiko\nimport os\nimport time\n\n# [PARAM: HOST | string]\n\
-  HOST = \"sftp.example.com\"\n# [/PARAM]\n\n# [PARAM: USER | string]\nUSER = \"username\"\
-  \n# [/PARAM]\n\n# [PARAM: PWD | string]\nPWD = \"password\"\n# [/PARAM]\n\n# [PARAM:\
-  \ REMOTE_PATH | string]\nREMOTE_PATH = \"/secure/data.csv\"\n# [/PARAM]\n\n# [PARAM:\
-  \ DEST_PATH | string]\nDEST_PATH = \"./data/raw/sftp_data.csv\"\n# [/PARAM]\n\n\
-  print(f\"[EXTRACT] Connexion SFTP à {HOST}...\")\nos.makedirs(os.path.dirname(DEST_PATH),\
-  \ exist_ok=True)\n\ntry:\n    start_time = time.time()\n    ssh = paramiko.SSHClient()\n\
-  \    ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())\n    ssh.connect(HOST,\
-  \ username=USER, password=PWD)\n    \n    sftp = ssh.open_sftp()\n    sftp.get(REMOTE_PATH,\
-  \ DEST_PATH)\n    sftp.close()\n    ssh.close()\n    \n    duration = time.time()\
-  \ - start_time\n    print(f\"[EXTRACT] Succès SFTP en {duration:.2f}s.\")\nexcept\
-  \ Exception as e:\n    print(f\"[ERREUR EXTRACT] Échec SFTP : {str(e)}\")\n    raise\
-  \ e\n\ndf = None\ntarget_name = None\ntask_type = \"unknown\"\nmeta = {\"source\"\
-  : \"sftp\", \"path\": DEST_PATH}\n"
+code_template: |
+  import paramiko
+  import os
+  import time
+  import pandas as pd
+
+  # [PARAM: HOST | string]
+  HOST = "sftp.example.com"
+  # [/PARAM]
+
+  # [PARAM: USER | string]
+  USER = "username"
+  # [/PARAM]
+
+  # [PARAM: PWD | string]
+  PWD = "password"
+  # [/PARAM]
+
+  # [PARAM: REMOTE_PATH | string]
+  REMOTE_PATH = "/secure/data.csv"
+  # [/PARAM]
+
+  # [PARAM: DEST_PATH | string]
+  DEST_PATH = "./data/raw/sftp_data.csv"
+  # [/PARAM]
+
+  print(f"[EXTRACT] Connexion SFTP à {HOST}...")
+  os.makedirs(os.path.dirname(DEST_PATH), exist_ok=True)
+
+  try:
+      start_time = time.time()
+      ssh = paramiko.SSHClient()
+      ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
+      ssh.connect(HOST, username=USER, password=PWD)
+      
+      sftp = ssh.open_sftp()
+      sftp.get(REMOTE_PATH, DEST_PATH)
+      sftp.close()
+      ssh.close()
+      
+      duration = time.time() - start_time
+      print(f"[EXTRACT] Succès SFTP en {duration:.2f}s.")
+  except Exception as e:
+      print(f"[ERREUR EXTRACT] Échec SFTP : {str(e)}")
+      raise e
+
+  df = pd.DataFrame()
+  target_name = ""
+  task_type = "unknown"
+  meta = {"source": "sftp", "path": DEST_PATH}
+
 illustration_mermaid: |
-    graph LR
-      Source[(Source)] -->|Load| Node([Extract Data])
-      style Source fill:#3b82f6,stroke:#2563eb,stroke-width:2px,color:#fff
-      style Node fill:#eff6ff,stroke:#3b82f6,stroke-width:2px
+  flowchart TD
+      subgraph Config [Parameters]
+          HOST([HOST])
+          CRED([USER / PWD])
+          REMOTE([REMOTE_PATH])
+          DEST([DEST_PATH])
+      end
+
+      subgraph Operations [SFTP Extract]
+          SSH([paramiko.SSHClient])
+          Conn([ssh.connect])
+          SFTP([ssh.open_sftp])
+          Get([sftp.get])
+          LocalFile[(Local File)]
+      end
+
+      subgraph Outputs [Contract Variables]
+          df((df = pd.DataFrame))
+          target((target_name = ''))
+          task((task_type = 'unknown'))
+          meta((meta: dict))
+      end
+
+      HOST & CRED --> Conn
+      SSH --> Conn
+      Conn --> SFTP
+      SFTP --> Get
+      REMOTE --> Get
+      DEST --> Get
+      Get --> LocalFile
+      LocalFile -.-> meta
+
+      style Config fill:#f8fafc,stroke:#cbd5e1,stroke-width:2px
+      style SSH fill:#64748b,stroke:#475569,stroke-width:2px,color:#fff
+      style Conn fill:#3b82f6,stroke:#1d4ed8,stroke-width:2px,color:#fff
+      style SFTP fill:#10b981,stroke:#047857,stroke-width:2px,color:#fff
+      style Get fill:#f59e0b,stroke:#b45309,stroke-width:2px,color:#fff
+      style LocalFile fill:#8b5cf6,stroke:#6d28d9,stroke-width:2px,color:#fff
+      style Outputs fill:#f1f5f9,stroke:#94a3b8,stroke-width:2px
 
 _metadata:
   bloc: 1

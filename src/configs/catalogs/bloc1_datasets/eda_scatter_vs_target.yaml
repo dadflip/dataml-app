@@ -7,22 +7,47 @@ tags:
 - scatter
 - tabular
 - regression
-code_template: "import pandas as pd\nimport numpy as np\nimport matplotlib.pyplot\
-  \ as plt\nimport seaborn as sns\n\nif 'target_name' in locals() and target_name\
-  \ and target_name in df.columns:\n    num_cols = df.select_dtypes(include=[np.number]).columns.tolist()\n\
-  \    if target_name in num_cols:\n        num_cols.remove(target_name)\n    if len(num_cols)\
-  \ > 12:\n        num_cols = num_cols[:12]\n        \n    print(f\"[EDA] === SCATTER\
-  \ PLOTS vs {target_name} ===\")\n    plt.figure(figsize=(15, 4 * ((len(num_cols)\
-  \ + 2) // 3)))\n    for i, col in enumerate(num_cols):\n        plt.subplot(((len(num_cols)\
-  \ + 2) // 3), 3, i + 1)\n        sns.scatterplot(data=df, x=col, y=target_name,\
-  \ alpha=0.5)\n        plt.title(f\"{target_name} vs {col}\")\n    plt.tight_layout()\n\
-  \    plt.show()\nelse:\n    print(\"[EDA] Cible (target_name) introuvable ou non\
-  \ définie.\")\n"
+code_template: |
+  import pandas as pd
+  import numpy as np
+  import matplotlib.pyplot as plt
+  import seaborn as sns
+  
+  if 'target_name' in locals() and target_name and target_name in df.columns:
+      num_cols = df.select_dtypes(include=[np.number]).columns.tolist()
+      if target_name in num_cols:
+          num_cols.remove(target_name)
+      if len(num_cols) > 12:
+          num_cols = num_cols[:12]
+          
+      print(f"[EDA] === SCATTER PLOTS vs {target_name} ===")
+      plt.figure(figsize=(15, 4 * ((len(num_cols) + 2) // 3)))
+      for i, col in enumerate(num_cols):
+          plt.subplot(((len(num_cols) + 2) // 3), 3, i + 1)
+          sns.scatterplot(data=df, x=col, y=target_name, alpha=0.5)
+          plt.title(f"{target_name} vs {col}")
+      plt.tight_layout()
+      plt.show()
+  else:
+      print("[EDA] Cible (target_name) introuvable ou non définie.")
 illustration_mermaid: |
-    graph LR
-      A([Input]) --> B([Operation])
-      B --> C([Output])
-      style B fill:#64748b,stroke:#475569,stroke-width:2px,color:#fff
+    flowchart TD
+        Input([DataFrame & target_name]) --> CheckTarget{Target Valid?}
+        CheckTarget -- Yes --> SelectCols[Select Numeric Cols]
+        SelectCols --> RemoveTarget[Remove Target from Features]
+        RemoveTarget --> CheckLimit{Cols > 12?}
+        CheckLimit -- Yes --> Truncate[Keep Top 12]
+        CheckLimit -- No --> PlotGrid
+        Truncate --> PlotGrid[Setup Subplot Grid]
+        PlotGrid --> Loop[Loop Features]
+        Loop --> Scatter{{sns.scatterplot\nCol vs Target}}
+        Scatter --> Loop
+        Scatter --> Show[/Show Plot/]
+        CheckTarget -- No --> Err[/Print 'Target not found'/]
+    
+        style Input fill:#3b82f6,stroke:#2563eb,color:#fff
+        style SelectCols fill:#10b981,stroke:#059669,color:#fff
+        style Scatter fill:#ec4899,stroke:#db2777,color:#fff
 
 _metadata:
   bloc: 1

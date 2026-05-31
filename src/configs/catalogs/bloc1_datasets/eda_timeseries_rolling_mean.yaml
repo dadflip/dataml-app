@@ -7,23 +7,47 @@ tags:
 - timeseries
 - rolling
 - pandas
-code_template: "import pandas as pd\nimport matplotlib.pyplot as plt\n\n# [PARAM:\
-  \ TIME_COL | string]\nTIME_COL = \"date\"\n# [/PARAM]\n\n# [PARAM: WINDOW | number]\n\
-  WINDOW = 12\n# [/PARAM]\n\nif TIME_COL in df.columns and 'target_name' in locals()\
-  \ and target_name:\n    temp_df = df.dropna(subset=[TIME_COL, target_name]).sort_values(TIME_COL).set_index(TIME_COL)\n\
-  \    ts = temp_df[target_name]\n    \n    roll_mean = ts.rolling(window=WINDOW).mean()\n\
-  \    roll_std = ts.rolling(window=WINDOW).std()\n    \n    plt.figure(figsize=(14,\
-  \ 6))\n    plt.plot(ts, color='blue', label='Original', alpha=0.5)\n    plt.plot(roll_mean,\
-  \ color='red', label=f'Rolling Mean ({WINDOW})')\n    plt.plot(roll_std, color='black',\
-  \ label=f'Rolling Std ({WINDOW})')\n    plt.legend(loc='best')\n    plt.title(f\"\
-  Moyenne et Écart-type Glissants de {target_name}\")\n    plt.show()\nelse:\n   \
-  \ print(\"[EDA] Colonnes temporelles manquantes.\")\n"
+code_template: |
+  import pandas as pd
+  import matplotlib.pyplot as plt
+  
+  # [PARAM: TIME_COL | string]
+  TIME_COL = "date"
+  # [/PARAM]
+  
+  # [PARAM: WINDOW | number]
+  WINDOW = 12
+  # [/PARAM]
+  
+  if TIME_COL in df.columns and 'target_name' in locals() and target_name:
+      temp_df = df.dropna(subset=[TIME_COL, target_name]).sort_values(TIME_COL).set_index(TIME_COL)
+      ts = temp_df[target_name]
+      
+      roll_mean = ts.rolling(window=WINDOW).mean()
+      roll_std = ts.rolling(window=WINDOW).std()
+      
+      plt.figure(figsize=(14, 6))
+      plt.plot(ts, color='blue', label='Original', alpha=0.5)
+      plt.plot(roll_mean, color='red', label=f'Rolling Mean ({WINDOW})')
+      plt.plot(roll_std, color='black', label=f'Rolling Std ({WINDOW})')
+      plt.legend(loc='best')
+      plt.title(f"Moyenne et Écart-type Glissants de {target_name}")
+      plt.show()
+  else:
+      print("[EDA] Colonnes temporelles manquantes.")
 illustration_mermaid: |
-    graph LR
-      A([Input]) --> B([Operation])
-      B --> C([Output])
-      style B fill:#64748b,stroke:#475569,stroke-width:2px,color:#fff
-
+    graph TD
+      DF([DataFrame]) --> Check{Check TIME_COL & target_name}
+      Check -- Valid --> SortDrop[DropNA & Sort]
+      SortDrop --> RMean{{rolling.mean}}
+      SortDrop --> RStd{{rolling.std}}
+      RMean --> Plot[plt.plot]
+      RStd --> Plot
+      Plot --> Show[plt.show]
+      Check -- Missing --> Err[Print Error]
+      style RMean fill:#d946ef,stroke:#c026d3,stroke-width:2px,color:#fff
+      style RStd fill:#d946ef,stroke:#c026d3,stroke-width:2px,color:#fff
+      style Plot fill:#10b981,stroke:#059669,stroke-width:2px,color:#fff
 _metadata:
   bloc: 1
   section: 3_eda

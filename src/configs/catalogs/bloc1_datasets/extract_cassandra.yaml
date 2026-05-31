@@ -7,28 +7,65 @@ tags:
 - cassandra
 - cql
 - nosql
-code_template: "from cassandra.cluster import Cluster\nimport pandas as pd\nimport\
-  \ os\nimport time\n\n# [PARAM: HOST | string]\nHOST = \"127.0.0.1\"\n# [/PARAM]\n\
-  \n# [PARAM: KEYSPACE | string]\nKEYSPACE = \"my_keyspace\"\n# [/PARAM]\n\n# [PARAM:\
-  \ CQL_QUERY | string]\nCQL_QUERY = \"SELECT * FROM my_table LIMIT 1000\"\n# [/PARAM]\n\
-  \n# [PARAM: DEST_PATH | string]\nDEST_PATH = \"./data/raw/cassandra_export.csv\"\
-  \n# [/PARAM]\n\nprint(f\"[EXTRACT] Connexion au cluster Cassandra ({HOST})...\"\
-  )\nos.makedirs(os.path.dirname(DEST_PATH), exist_ok=True)\n\ntry:\n    start_time\
-  \ = time.time()\n    cluster = Cluster([HOST])\n    session = cluster.connect(KEYSPACE)\n\
-  \    \n    # Récupération sous forme de dictionnaire dict_factory pour pandas\n\
-  \    from cassandra.query import dict_factory\n    session.row_factory = dict_factory\n\
-  \    \n    rows = session.execute(CQL_QUERY)\n    df_temp = pd.DataFrame(list(rows))\n\
-  \    \n    df_temp.to_csv(DEST_PATH, index=False)\n    cluster.shutdown()\n    \n\
-  \    duration = time.time() - start_time\n    print(f\"[EXTRACT] Succès Cassandra.\
-  \ {df_temp.shape[0]} lignes exportées en {duration:.2f}s.\")\nexcept Exception as\
-  \ e:\n    print(f\"[ERREUR EXTRACT] Échec Cassandra : {str(e)}\")\n    raise e\n\
-  \ndf = None\ntarget_name = None\ntask_type = \"unknown\"\nmeta = {\"source\": \"\
-  cassandra\", \"path\": DEST_PATH}\n"
+code_template: |
+  from cassandra.cluster import Cluster
+  import pandas as pd
+  import os
+  import time
+  
+  # [PARAM: HOST | string]
+  HOST = "127.0.0.1"
+  # [/PARAM]
+  
+  # [PARAM: KEYSPACE | string]
+  KEYSPACE = "my_keyspace"
+  # [/PARAM]
+  
+  # [PARAM: CQL_QUERY | string]
+  CQL_QUERY = "SELECT * FROM my_table LIMIT 1000"
+  # [/PARAM]
+  
+  # [PARAM: DEST_PATH | string]
+  DEST_PATH = "./data/raw/cassandra_export.csv"
+  # [/PARAM]
+  
+  print(f"[EXTRACT] Connexion au cluster Cassandra ({HOST})...")
+  os.makedirs(os.path.dirname(DEST_PATH), exist_ok=True)
+  
+  try:
+      start_time = time.time()
+      cluster = Cluster([HOST])
+      session = cluster.connect(KEYSPACE)
+      
+      # Récupération sous forme de dictionnaire dict_factory pour pandas
+      from cassandra.query import dict_factory
+      session.row_factory = dict_factory
+      
+      rows = session.execute(CQL_QUERY)
+      df_temp = pd.DataFrame(list(rows))
+      
+      df_temp.to_csv(DEST_PATH, index=False)
+      cluster.shutdown()
+      
+      duration = time.time() - start_time
+      print(f"[EXTRACT] Succès Cassandra. {df_temp.shape[0]} lignes exportées en {duration:.2f}s.")
+  except Exception as e:
+      print(f"[ERREUR EXTRACT] Échec Cassandra : {str(e)}")
+      raise e
+  
+  df = None
+  target_name = None
+  task_type = "unknown"
+  meta = {"source": "cassandra", "path": DEST_PATH}
 illustration_mermaid: |
-    graph LR
-      Source[(Source)] -->|Load| Node([Extract Data])
-      style Source fill:#3b82f6,stroke:#2563eb,stroke-width:2px,color:#fff
-      style Node fill:#eff6ff,stroke:#3b82f6,stroke-width:2px
+    flowchart TD
+    A([FILE_PATH]) --> B[Load EXTRACT_CASSANDRA]
+    B --> df([df])
+    
+    style A fill:#3b82f6,color:#fff
+    style B fill:#10b981,color:#fff
+    style df fill:#f59e0b,color:#fff
+
 
 _metadata:
   bloc: 1

@@ -19,11 +19,50 @@ code_template: |
 
   # [PARAM: N_COMPONENTS | string]
   N_COMPONENTS = "0.95"
+  # [/PARAM]
+
+  print("[TRANSFORM] PCA...")
+  if 'df' in locals():
+      if 'pipeline_steps' not in locals(): pipeline_steps = {}
+      
+      num_cols = df.select_dtypes(include=[np.number]).columns.tolist()
+      if 'target_name' in locals() and target_name in num_cols:
+          num_cols.remove(target_name)
+          
+      if len(num_cols) > 0:
+          n_comp = float(N_COMPONENTS) if "." in str(N_COMPONENTS) else int(N_COMPONENTS)
+          pca = PCA(n_components=n_comp)
+          
+          ct = ColumnTransformer(
+              [('pca', pca, num_cols)],
+              remainder='passthrough', verbose_feature_names_out=False
+          )
+          try: ct.set_output(transform="pandas")
+          except: pass
+          
+          step_name = 'pca'
+          pipeline_steps[step_name] = (step_name, ct)
+          
+  if 'X_train' not in locals(): X_train = None
+  if 'X_test' not in locals(): X_test = None
+  if 'y_train' not in locals(): y_train = None
+  if 'y_test' not in locals(): y_test = None
+  if 'preprocessor' not in locals(): preprocessor = None
+  if 'feature_names_out' not in locals(): feature_names_out = None
+  if 'task_type' not in locals(): task_type = "classification"
+  if 'meta' not in locals(): meta = {}
 illustration_mermaid: |
-    graph LR
-      In([Raw Data]) -->|Process| Out([Clean Data])
-      style In fill:#eff6ff,stroke:#94a3b8,stroke-width:2px,stroke-dasharray: 5 5
-      style Out fill:#10b981,stroke:#059669,stroke-width:2px,color:#fff
+  graph TD
+    A[Raw Data] --> B{Are there numeric columns?}
+    B -- Yes --> C[Parse N_COMPONENTS]
+    C --> D[Initialize PCA]
+    D --> E[Create ColumnTransformer]
+    E --> F[Add to Pipeline Steps]
+    B -- No --> G[Skip PCA]
+    F --> H[Update Data Contract Variables]
+    G --> H
+    style A fill:#eff6ff,stroke:#3b82f6,stroke-width:2px
+    style H fill:#10b981,stroke:#059669,stroke-width:2px
 
 _metadata:
   bloc: 2

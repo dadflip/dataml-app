@@ -15,11 +15,29 @@ code_template: |
 
   # [PARAM: FILE_PATH | file]
   FILE_PATH = "./data/raw/graph.net"
+  # [/PARAM]
+
+  df = pd.DataFrame()
+  target_name = "target"
+  task_type = "unknown"
+  meta = {"source": "pajek", "path": FILE_PATH, "edge_index": []}
+output_variables:
+  - df
+  - target_name
+  - task_type
+  - meta
 illustration_mermaid: |
-    graph LR
-      Source[(Source)] -->|Load| Node([Extract Data])
-      style Source fill:#3b82f6,stroke:#2563eb,stroke-width:2px,color:#fff
-      style Node fill:#eff6ff,stroke:#3b82f6,stroke-width:2px
+    flowchart LR
+      A[fa:fa-project-diagram FILE_PATH<br/>graph.net] -->|networkx| B(fa:fa-cogs Read Pajek Graph)
+      B --> C[(df<br/>Node Attributes)]
+      B --> D{{meta<br/>edge_index}}
+      B --> E([target_name, task_type])
+      
+      style A fill:#3b82f6,stroke:#2563eb,stroke-width:2px,color:#fff
+      style B fill:#10b981,stroke:#059669,stroke-width:2px,color:#fff
+      style C fill:#eff6ff,stroke:#3b82f6,stroke-width:2px
+      style D fill:#fef3c7,stroke:#d97706,stroke-width:2px
+      style E fill:#f3f4f6,stroke:#6b7280,stroke-width:2px
 
 _metadata:
   bloc: 1

@@ -4,16 +4,70 @@ description: "Charge un dataset canonique d'imagerie (CIFAR, MNIST, ImageNet) vi
 category: "2. Load"
 tags: ["load", "torchvision", "pytorch", "images"]
 code_template: |
-  import time
+  import pandas as pd
   import os
+  import torchvision.datasets as datasets
 
   # [PARAM: DATASET_NAME | string]
   DATASET_NAME = "CIFAR10"
+  # [/PARAM]
+
+  meta = {"source": "TORCHVISION", "dataset": DATASET_NAME}
+
+  df = pd.DataFrame()
+  target_name = "target"
+  task_type = "classification"
+
+  try:
+      # Dynamically get dataset class
+      dataset_class = getattr(datasets, DATASET_NAME)
+      
+      # Initialize dataset (download=True)
+      dataset = dataset_class(root='./data/torchvision', train=True, download=True)
+      
+      meta["num_samples"] = len(dataset)
+      meta["classes"] = getattr(dataset, "classes", [])
+      
+      # Extract targets
+      if hasattr(dataset, 'targets'):
+          targets = dataset.targets
+      else:
+          # Fallback: iterate up to 1000 items if targets attribute is missing
+          targets = [dataset[i][1] for i in range(min(1000, len(dataset)))]
+          
+      # Ensure targets are scalar values
+      targets = [int(t) if hasattr(t, 'item') else t for t in targets]
+          
+      df = pd.DataFrame({
+          "sample_index": range(len(targets)), 
+          "target": targets
+      })
+      
+  except AttributeError:
+      print(f"Dataset {DATASET_NAME} not found in torchvision.datasets")
+  except Exception as e:
+      print(f"Error loading Torchvision dataset {DATASET_NAME}: {e}")
+output_variables:
+  - df
+  - target_name
+  - task_type
+  - meta
 illustration_mermaid: |
-    graph LR
-      Source[(Source)] -->|Load| Node([Extract Data])
-      style Source fill:#3b82f6,stroke:#2563eb,stroke-width:2px,color:#fff
-      style Node fill:#eff6ff,stroke:#3b82f6,stroke-width:2px
+  flowchart TD
+      A([DATASET_NAME]) --> B{Valid Dataset?}
+      B -- Yes --> C[Download/Load torchvision dataset]
+      B -- No --> D[Empty DataFrame]
+      C --> E[Extract classes & num_samples]
+      E --> F[Extract targets]
+      F --> G[Create DataFrame: sample_index, target]
+      G --> H([df, target_name, task_type, meta])
+      D --> H
+
+      style A fill:#3b82f6,color:#fff
+      style C fill:#10b981,color:#fff
+      style G fill:#10b981,color:#fff
+      style H fill:#f59e0b,color:#fff
+
 
 _metadata:
   bloc: 1

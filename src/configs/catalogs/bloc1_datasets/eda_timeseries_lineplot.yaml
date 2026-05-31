@@ -7,20 +7,34 @@ tags:
 - timeseries
 - tabular
 - lineplot
-code_template: "import pandas as pd\nimport matplotlib.pyplot as plt\nimport seaborn\
-  \ as sns\n\n# [PARAM: TIME_COL | string]\nTIME_COL = \"date\"\n# [/PARAM]\n\nif\
-  \ TIME_COL in df.columns and 'target_name' in locals() and target_name:\n    time_series\
-  \ = pd.to_datetime(df[TIME_COL], errors='coerce')\n    plt.figure(figsize=(15, 5))\n\
-  \    sns.lineplot(x=time_series, y=df[target_name])\n    plt.title(f\"Évolution\
-  \ de {target_name} au cours du temps ({TIME_COL})\")\n    plt.xticks(rotation=45)\n\
-  \    plt.tight_layout()\n    plt.show()\nelse:\n    print(\"[EDA] TIME_COL ou target_name\
-  \ introuvable.\")\n"
+code_template: |
+  import pandas as pd
+  import matplotlib.pyplot as plt
+  import seaborn as sns
+  
+  # [PARAM: TIME_COL | string]
+  TIME_COL = "date"
+  # [/PARAM]
+  
+  if TIME_COL in df.columns and 'target_name' in locals() and target_name:
+      time_series = pd.to_datetime(df[TIME_COL], errors='coerce')
+      plt.figure(figsize=(15, 5))
+      sns.lineplot(x=time_series, y=df[target_name])
+      plt.title(f"Évolution de {target_name} au cours du temps ({TIME_COL})")
+      plt.xticks(rotation=45)
+      plt.tight_layout()
+      plt.show()
+  else:
+      print("[EDA] TIME_COL ou target_name introuvable.")
 illustration_mermaid: |
-    graph LR
-      A([Input]) --> B([Operation])
-      B --> C([Output])
-      style B fill:#64748b,stroke:#475569,stroke-width:2px,color:#fff
-
+    graph TD
+      DF([DataFrame]) --> Check{Check TIME_COL & target_name}
+      Check -- Valid --> ToDate[pd.to_datetime]
+      ToDate --> Plot[sns.lineplot]
+      Plot --> Show[plt.show]
+      Check -- Missing --> Err[Print Error]
+      style ToDate fill:#3b82f6,stroke:#2563eb,stroke-width:2px,color:#fff
+      style Plot fill:#8b5cf6,stroke:#7c3aed,stroke-width:2px,color:#fff
 _metadata:
   bloc: 1
   section: 3_eda

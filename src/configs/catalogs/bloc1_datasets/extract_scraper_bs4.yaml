@@ -7,26 +7,88 @@ tags:
 - scraping
 - html
 - bs4
-code_template: "import requests\nfrom bs4 import BeautifulSoup\nimport os\nimport\
-  \ time\n\n# [PARAM: TARGET_URL | string]\nTARGET_URL = \"https://example.com\"\n\
-  # [/PARAM]\n\n# [PARAM: DEST_PATH | string]\nDEST_PATH = \"./data/raw/scraped_page.html\"\
-  \n# [/PARAM]\n\nprint(f\"[EXTRACT] Web Scraping de la page {TARGET_URL}...\")\n\
-  os.makedirs(os.path.dirname(DEST_PATH), exist_ok=True)\n\ntry:\n    start_time =\
-  \ time.time()\n    headers = {'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64;\
-  \ x64)'}\n    response = requests.get(TARGET_URL, headers=headers, timeout=15)\n\
-  \    response.raise_for_status()\n    \n    soup = BeautifulSoup(response.content,\
-  \ 'html.parser')\n    # On sauvegarde le HTML formatté (prettify)\n    with open(DEST_PATH,\
-  \ \"w\", encoding=\"utf-8\") as f:\n        f.write(soup.prettify())\n        \n\
-  \    duration = time.time() - start_time\n    print(f\"[EXTRACT] Succès Scraping.\
-  \ Page sauvegardée en {duration:.2f}s.\")\nexcept requests.exceptions.RequestException\
-  \ as e:\n    print(f\"[ERREUR EXTRACT] Échec du téléchargement de la page : {str(e)}\"\
-  )\n    raise e\n\ndf = None\ntarget_name = None\ntask_type = \"unknown\"\nmeta =\
-  \ {\"source\": \"scraping_bs4\", \"path\": DEST_PATH}\n"
+code_template: |
+  import requests
+  from bs4 import BeautifulSoup
+  import os
+  import time
+
+  # [PARAM: TARGET_URL | string]
+  TARGET_URL = "https://example.com"
+  # [/PARAM]
+
+  # [PARAM: DEST_PATH | string]
+  DEST_PATH = "./data/raw/scraped_page.html"
+  # [/PARAM]
+
+  print(f"[EXTRACT] Web Scraping de la page {TARGET_URL}...")
+  os.makedirs(os.path.dirname(DEST_PATH), exist_ok=True)
+
+  try:
+      start_time = time.time()
+      headers = {'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)'}
+      response = requests.get(TARGET_URL, headers=headers, timeout=15)
+      response.raise_for_status()
+      
+      soup = BeautifulSoup(response.content, 'html.parser')
+      # On sauvegarde le HTML formatté (prettify)
+      with open(DEST_PATH, "w", encoding="utf-8") as f:
+          f.write(soup.prettify())
+          
+      duration = time.time() - start_time
+      print(f"[EXTRACT] Succès Scraping. Page sauvegardée en {duration:.2f}s.")
+  except requests.exceptions.RequestException as e:
+      print(f"[ERREUR EXTRACT] Échec du téléchargement de la page : {str(e)}")
+      raise e
+
+  df = DEST_PATH
+  target_name = "target"
+  task_type = "unknown"
+  meta = {"source": "scraping_bs4", "path": DEST_PATH}
 illustration_mermaid: |
-    graph LR
-      Source[(Source)] -->|Load| Node([Extract Data])
-      style Source fill:#3b82f6,stroke:#2563eb,stroke-width:2px,color:#fff
-      style Node fill:#eff6ff,stroke:#3b82f6,stroke-width:2px
+    flowchart TD
+    A([FILE_PATH]) --> B[Load EXTRACT_SCRAPER_BS4]
+    B --> df([df])
+    
+    style A fill:#3b82f6,color:#fff
+    style B fill:#10b981,color:#fff
+    style df fill:#f59e0b,color:#fff
+
+
+
+        subgraph Operations [BeautifulSoup Scraping]
+            Req([requests.get])
+            Check([raise_for_status])
+            Soup([BeautifulSoup parsing])
+            Prettify([soup.prettify])
+            Write([Write to Local File])
+            OutFile[(HTML File)]
+        end
+
+        subgraph Outputs [Contract Variables]
+            df((df = None))
+            target((target_name = None))
+            task((task_type = 'unknown'))
+            meta((meta: dict))
+        end
+
+        URL --> Req
+        Req --> Check
+        Check -->|response.content| Soup
+        Soup --> Prettify
+        Prettify --> Write
+        DEST --> OutFile
+        Write --> OutFile
+        OutFile -.-> meta
+
+        style Config fill:#f8fafc,stroke:#cbd5e1,stroke-width:2px
+        style Req fill:#3b82f6,stroke:#1d4ed8,stroke-width:2px,color:#fff
+        style Check fill:#f59e0b,stroke:#b45309,stroke-width:2px,color:#fff
+        style Soup fill:#10b981,stroke:#047857,stroke-width:2px,color:#fff
+        style Prettify fill:#8b5cf6,stroke:#6d28d9,stroke-width:2px,color:#fff
+        style Write fill:#ec4899,stroke:#be185d,stroke-width:2px,color:#fff
+        style OutFile fill:#14b8a6,stroke:#0f766e,stroke-width:2px,color:#fff
+        style Outputs fill:#f1f5f9,stroke:#94a3b8,stroke-width:2px
 
 _metadata:
   bloc: 1

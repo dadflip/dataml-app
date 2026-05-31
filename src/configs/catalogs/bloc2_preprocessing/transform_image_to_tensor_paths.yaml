@@ -21,14 +21,64 @@ code_template: |
       from PIL import Image
   except ImportError:
       T = None
+      print("[ERREUR] torchvision ou PIL non installé.")
       
   # [PARAM: IMG_PATH_COL | string]
   IMG_PATH_COL = "image_path"
+  # [/PARAM]
+  # [PARAM: RESIZE | number]
+  RESIZE = 224
+  # [/PARAM]
+
+  print(f"[TRANSFORM] Chargement depuis '{IMG_PATH_COL}' vers tenseurs (resize: {RESIZE})...")
+  if 'df' in locals() and IMG_PATH_COL in df.columns and T is not None:
+      if 'pipeline_steps' not in locals():
+          pipeline_steps = {}
+          
+      def paths_to_tensor_func(X):
+          X_df = pd.DataFrame(X) if not isinstance(X, pd.DataFrame) else X.copy()
+          
+          transform_ops = T.Compose([
+              T.Resize((RESIZE, RESIZE)),
+              T.ToTensor(),
+              T.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
+          ])
+          
+          def load_and_transform(path):
+              try:
+                  img = Image.open(path).convert('RGB')
+                  return transform_ops(img)
+              except Exception as e:
+                  return None
+                  
+          X_df['tensor_image'] = X_df[IMG_PATH_COL].apply(load_and_transform)
+          X_df = X_df.dropna(subset=['tensor_image']).reset_index(drop=True)
+          return X_df
+
+      transformer = FunctionTransformer(paths_to_tensor_func)
+      pipeline_steps['image_paths_to_tensor'] = transformer
+      df = transformer.fit_transform(df)
+      print(f"[TRANSFORM] Images chargées et transformées dans 'tensor_image'.")
+  elif T is None:
+      pass
+  else:
+      print(f"[AVERTISSEMENT] Colonne '{IMG_PATH_COL}' introuvable.")
+
 illustration_mermaid: |
-    graph LR
-      In([Raw Data]) -->|Process| Out([Clean Data])
-      style In fill:#eff6ff,stroke:#94a3b8,stroke-width:2px,stroke-dasharray: 5 5
-      style Out fill:#10b981,stroke:#059669,stroke-width:2px,color:#fff
+  graph TD
+    A[Paths DataFrame] --> B{Dependencies installed?}
+    B -- Yes --> C{Does IMG_PATH_COL exist?}
+    B -- No --> D[Error / Skip]
+    C -- Yes --> E[Initialize Resize, ToTensor, Normalize]
+    C -- No --> F[Warn / Skip]
+    E --> G[Load Image from Path & Apply transforms]
+    G --> H[Drop rows where load failed]
+    H --> I[Update pipeline_steps & df]
+    D --> I
+    F --> I
+    I --> J[Tensor Image Column Added]
+    style A fill:#eff6ff,stroke:#94a3b8,stroke-width:2px
+    style J fill:#10b981,stroke:#059669,stroke-width:2px,color:#fff
 
 _metadata:
   bloc: 2

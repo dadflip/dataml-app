@@ -9,13 +9,33 @@ code_template: |
   import glob
   import time
 
-  # [PARAM: TEXT_DIR | string]
+  # [PARAM: TEXT_DIR | directory]
   TEXT_DIR = "./data/raw/text_corpus"
+  # [/PARAM]
+
+  df = pd.DataFrame()
+  target_name = "target"
+  task_type = "unknown"
+  meta = {"source": "Text Corpus", "path": TEXT_DIR}
+output_variables:
+  - df
+  - target_name
+  - task_type
+  - meta
 illustration_mermaid: |
-    graph LR
-      Source[(Source)] -->|Load| Node([Extract Data])
-      style Source fill:#3b82f6,stroke:#2563eb,stroke-width:2px,color:#fff
-      style Node fill:#eff6ff,stroke:#3b82f6,stroke-width:2px
+    flowchart LR
+        Dir[("Text Files\nDir")] -->|TEXT_DIR| Load(["Load\nText Corpus"])
+        Load --> df(["df (None)"])
+        Load --> target_name(["target_name (None)"])
+        Load --> task_type(["task_type ('unknown')"])
+        Load --> meta(["meta (dict)"])
+
+        style Dir fill:#3b82f6,stroke:#2563eb,stroke-width:2px,color:#fff
+        style Load fill:#eff6ff,stroke:#3b82f6,stroke-width:2px
+        style df fill:#f3f4f6,stroke:#9ca3af,stroke-width:1px
+        style target_name fill:#f3f4f6,stroke:#9ca3af,stroke-width:1px
+        style task_type fill:#f3f4f6,stroke:#9ca3af,stroke-width:1px
+        style meta fill:#f3f4f6,stroke:#9ca3af,stroke-width:1px
 
 _metadata:
   bloc: 1

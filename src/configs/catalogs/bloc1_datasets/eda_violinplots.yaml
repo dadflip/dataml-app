@@ -7,22 +7,42 @@ tags:
 - violin
 - tabular
 - seaborn
-code_template: "import pandas as pd\nimport numpy as np\nimport matplotlib.pyplot\
-  \ as plt\nimport seaborn as sns\n\nif 'target_name' in locals() and target_name\
-  \ and target_name in df.columns:\n    num_cols = df.select_dtypes(include=[np.number]).columns.tolist()\n\
-  \    if target_name in num_cols:\n        num_cols.remove(target_name)\n    if len(num_cols)\
-  \ > 8:\n        num_cols = num_cols[:8]\n        \n    print(f\"[EDA] === VIOLIN\
-  \ PLOTS by {target_name} ===\")\n    plt.figure(figsize=(15, 5 * ((len(num_cols)\
-  \ + 1) // 2)))\n    for i, col in enumerate(num_cols):\n        plt.subplot(((len(num_cols)\
-  \ + 1) // 2), 2, i + 1)\n        sns.violinplot(data=df, x=target_name, y=col)\n\
-  \        plt.title(f\"{col} by {target_name}\")\n    plt.tight_layout()\n    plt.show()\n\
-  else:\n    print(\"[EDA] Cible introuvable.\")\n"
+code_template: |
+  import pandas as pd
+  import numpy as np
+  import matplotlib.pyplot as plt
+  import seaborn as sns
+  
+  if 'target_name' in locals() and target_name and target_name in df.columns:
+      num_cols = df.select_dtypes(include=[np.number]).columns.tolist()
+      if target_name in num_cols:
+          num_cols.remove(target_name)
+      if len(num_cols) > 8:
+          num_cols = num_cols[:8]
+          
+      print(f"[EDA] === VIOLIN PLOTS by {target_name} ===")
+      plt.figure(figsize=(15, 5 * ((len(num_cols) + 1) // 2)))
+      for i, col in enumerate(num_cols):
+          plt.subplot(((len(num_cols) + 1) // 2), 2, i + 1)
+          sns.violinplot(data=df, x=target_name, y=col)
+          plt.title(f"{col} by {target_name}")
+      plt.tight_layout()
+      plt.show()
+  else:
+      print("[EDA] Cible introuvable.")
 illustration_mermaid: |
-    graph LR
-      A([Input]) --> B([Operation])
-      B --> C([Output])
-      style B fill:#64748b,stroke:#475569,stroke-width:2px,color:#fff
-
+    graph TD
+      DF([DataFrame]) --> Check{Check target_name}
+      Check -- Valid --> NumCols[Select Numeric Columns]
+      NumCols --> Filter{Remove target & Limit to 8}
+      Filter --> Loop[For each column]
+      Loop --> Subplot[plt.subplot]
+      Subplot --> Violin[sns.violinplot]
+      Violin --> Show[plt.show]
+      Check -- Missing --> Err[Print Error]
+      style NumCols fill:#3b82f6,stroke:#2563eb,stroke-width:2px,color:#fff
+      style Violin fill:#8b5cf6,stroke:#7c3aed,stroke-width:2px,color:#fff
+      style Loop fill:#f59e0b,stroke:#d97706,stroke-width:2px,color:#fff
 _metadata:
   bloc: 1
   section: 3_eda

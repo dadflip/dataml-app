@@ -4,17 +4,56 @@ description: "Charge un volume 3D/4D d'imagerie par résonance magnétique (IRM)
 category: "2. Load"
 tags: ["load", "nifti", "medical", "3d"]
 code_template: |
-  import nibabel as nib
-  import time
+  import pandas as pd
+  import numpy as np
   import os
+  import nibabel as nib
 
   # [PARAM: FILE_PATH | file]
-  FILE_PATH = "./data/raw/brain.nii.gz"
+  FILE_PATH = "./data/raw/data.nii"
+  # [/PARAM]
+
+  meta = {"source": "NIFTI", "path": FILE_PATH}
+
+  if os.path.exists(FILE_PATH):
+      try:
+          # Load the NIfTI image
+          img = nib.load(FILE_PATH)
+          data = img.get_fdata()
+          meta["shape"] = data.shape
+          meta["affine"] = img.affine.tolist()
+          
+          # Flatten the volume into a DataFrame
+          # Caution: Large NIfTI files might require large memory
+          df = pd.DataFrame({"voxel_value": data.flatten()})
+      except Exception as e:
+          print(f"Error loading NIfTI file {FILE_PATH}: {e}")
+          df = pd.DataFrame()
+  else:
+      print(f"File not found: {FILE_PATH}")
+      df = pd.DataFrame()
+
+  target_name = "voxel_value"
+  task_type = "segmentation"
+output_variables:
+  - df
+  - target_name
+  - task_type
+  - meta
 illustration_mermaid: |
-    graph LR
-      Source[(Source)] -->|Load| Node([Extract Data])
-      style Source fill:#3b82f6,stroke:#2563eb,stroke-width:2px,color:#fff
-      style Node fill:#eff6ff,stroke:#3b82f6,stroke-width:2px
+  flowchart TD
+      A([FILE_PATH]) --> B{File Exists?}
+      B -- Yes --> C[nibabel.load]
+      B -- No --> D[Empty DataFrame]
+      C --> E[Extract get_fdata & affine]
+      E --> F[Flatten array to DataFrame]
+      F --> G([df, target_name, task_type, meta])
+      D --> G
+
+      style A fill:#3b82f6,color:#fff
+      style C fill:#10b981,color:#fff
+      style F fill:#10b981,color:#fff
+      style G fill:#f59e0b,color:#fff
 
 _metadata:
   bloc: 1

@@ -7,25 +7,71 @@ tags:
 - avro
 - bigdata
 - pandas
-code_template: "import pandas as pd\nimport time\nimport os\n\n# [PARAM: FILE_PATH\
-  \ | file]\nFILE_PATH = \"./data/raw/data.avro\"\n# [/PARAM]\n\n# [PARAM: TARGET_COL\
-  \ | string]\nTARGET_COL = \"target\"\n# [/PARAM]\n\nprint(f\"[LOAD] Chargement du\
-  \ fichier Avro depuis {FILE_PATH}...\")\nif not os.path.exists(FILE_PATH):\n   \
-  \ raise FileNotFoundError(f\"[ERREUR LOAD] Fichier Avro introuvable : {FILE_PATH}\"\
-  )\n\ntry:\n    start_time = time.time()\n    # pandavro est la méthode la plus simple\
-  \ pour lier Avro et Pandas\n    import pandavro as pdx\n    df = pdx.read_avro(FILE_PATH)\n\
-  \    \n    duration = time.time() - start_time\n    print(f\"[LOAD] Succès Avro.\
-  \ {df.shape[0]} lignes chargées en {duration:.2f}s.\")\nexcept ImportError:\n  \
-  \  print(\"[ERREUR LOAD] Le module 'pandavro' est requis (pip install pandavro).\"\
-  )\n    raise\nexcept Exception as e:\n    print(f\"[ERREUR LOAD] Impossible de lire\
-  \ le fichier Avro : {str(e)}\")\n    raise e\n\ntarget_name = TARGET_COL if TARGET_COL\
-  \ and TARGET_COL in df.columns else None\ntask_type = \"unknown\"\nmeta = {\"format\"\
-  : \"avro\", \"shape\": df.shape}\n"
+code_template: |
+  import pandas as pd
+  import time
+  import os
+
+  # [PARAM: FILE_PATH | file]
+  FILE_PATH = "./data/raw/data.avro"
+  # [/PARAM]
+
+  # [PARAM: TARGET_COL | string]
+  TARGET_COL = "target"
+  # [/PARAM]
+
+  print(f"[LOAD] Chargement du fichier Avro depuis {FILE_PATH}...")
+  if not os.path.exists(FILE_PATH):
+      raise FileNotFoundError(f"[ERREUR LOAD] Fichier Avro introuvable : {FILE_PATH}")
+
+  try:
+      start_time = time.time()
+      # pandavro est la méthode la plus simple pour lier Avro et Pandas
+      import pandavro as pdx
+      df = pdx.read_avro(FILE_PATH)
+      
+      duration = time.time() - start_time
+      print(f"[LOAD] Succès Avro. {df.shape[0]} lignes chargées en {duration:.2f}s.")
+  except ImportError:
+      print("[ERREUR LOAD] Le module 'pandavro' est requis (pip install pandavro).")
+      raise
+  except Exception as e:
+      print(f"[ERREUR LOAD] Impossible de lire le fichier Avro : {str(e)}")
+      raise e
+
+  target_name = TARGET_COL if TARGET_COL and TARGET_COL in df.columns else ""
+  task_type = "unknown"
+  meta = {"format": "avro", "shape": df.shape}
+
 illustration_mermaid: |
-    graph LR
-      Source[(Source)] -->|Load| Node([Extract Data])
-      style Source fill:#3b82f6,stroke:#2563eb,stroke-width:2px,color:#fff
-      style Node fill:#eff6ff,stroke:#3b82f6,stroke-width:2px
+  flowchart TD
+      subgraph Config [Parameters]
+          FILE([FILE_PATH])
+          TAR([TARGET_COL])
+      end
+
+      subgraph Operations [Avro Load]
+          Check([os.path.exists])
+          Pdx([pandavro.read_avro])
+      end
+
+      subgraph Outputs [Contract Variables]
+          df((df))
+          target((target_name))
+          task((task_type = 'unknown'))
+          meta((meta: dict))
+      end
+
+      FILE --> Check
+      Check --> Pdx
+      Pdx --> df
+      TAR -.-> target
+      df -.-> meta
+
+      style Config fill:#f8fafc,stroke:#cbd5e1,stroke-width:2px
+      style Check fill:#64748b,stroke:#475569,stroke-width:2px,color:#fff
+      style Pdx fill:#3b82f6,stroke:#1d4ed8,stroke-width:2px,color:#fff
+      style Outputs fill:#f1f5f9,stroke:#94a3b8,stroke-width:2px
 
 _metadata:
   bloc: 1

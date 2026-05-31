@@ -7,26 +7,59 @@ tags:
 - kafka
 - stream
 - bigdata
-code_template: "from kafka import KafkaConsumer\nimport os\n\n# [PARAM: BROKER | string]\n\
-  BROKER = \"localhost:9092\"\n# [/PARAM]\n\n# [PARAM: TOPIC | string]\nTOPIC = \"\
-  my_data_topic\"\n# [/PARAM]\n\n# [PARAM: MAX_MESSAGES | string]\nMAX_MESSAGES =\
-  \ \"100\"\n# [/PARAM]\n\n# [PARAM: DEST_PATH | string]\nDEST_PATH = \"./data/raw/kafka_dump.jsonlines\"\
-  \n# [/PARAM]\n\nprint(f\"[EXTRACT] Consommation Kafka de {TOPIC} (Broker: {BROKER})...\"\
-  )\nos.makedirs(os.path.dirname(DEST_PATH), exist_ok=True)\n\ntry:\n    consumer\
-  \ = KafkaConsumer(TOPIC, bootstrap_servers=BROKER, auto_offset_reset='earliest',\
-  \ consumer_timeout_ms=5000)\n    \n    count = 0\n    with open(DEST_PATH, \"w\"\
-  , encoding=\"utf-8\") as f:\n        for message in consumer:\n            val =\
-  \ message.value.decode('utf-8')\n            f.write(val + \"\\\\n\")\n        \
-  \    count += 1\n            if count >= int(MAX_MESSAGES):\n                break\n\
-  \                \n    print(f\"[EXTRACT] Succès Kafka. {count} messages dumpés.\"\
-  )\nexcept Exception as e:\n    print(f\"[ERREUR EXTRACT] Échec de la connexion Kafka\
-  \ : {str(e)}\")\n    raise e\n\ndf = None\ntarget_name = None\ntask_type = \"unknown\"\
-  \nmeta = {\"source\": \"kafka\", \"path\": DEST_PATH}\n"
+code_template: |
+  from kafka import KafkaConsumer
+  import os
+
+  # [PARAM: BROKER | string]
+  BROKER = "localhost:9092"
+  # [/PARAM]
+
+  # [PARAM: TOPIC | string]
+  TOPIC = "my_data_topic"
+  # [/PARAM]
+
+  # [PARAM: MAX_MESSAGES | string]
+  MAX_MESSAGES = "100"
+  # [/PARAM]
+
+  # [PARAM: DEST_PATH | string]
+  DEST_PATH = "./data/raw/kafka_dump.jsonlines"
+  # [/PARAM]
+
+  print(f"[EXTRACT] Consommation Kafka de {TOPIC} (Broker: {BROKER})...")
+  os.makedirs(os.path.dirname(DEST_PATH), exist_ok=True)
+
+  try:
+      consumer = KafkaConsumer(TOPIC, bootstrap_servers=BROKER, auto_offset_reset='earliest', consumer_timeout_ms=5000)
+      
+      count = 0
+      with open(DEST_PATH, "w", encoding="utf-8") as f:
+          for message in consumer:
+              val = message.value.decode('utf-8')
+              f.write(val + "\n")
+              count += 1
+              if count >= int(MAX_MESSAGES):
+                  break
+                  
+      print(f"[EXTRACT] Succès Kafka. {count} messages dumpés.")
+  except Exception as e:
+      print(f"[ERREUR EXTRACT] Échec de la connexion Kafka : {str(e)}")
+      raise e
+
+  df = DEST_PATH
+  target_name = "target"
+  task_type = "unknown"
+  meta = {"source": "kafka", "path": DEST_PATH}
 illustration_mermaid: |
-    graph LR
-      Source[(Source)] -->|Load| Node([Extract Data])
-      style Source fill:#3b82f6,stroke:#2563eb,stroke-width:2px,color:#fff
-      style Node fill:#eff6ff,stroke:#3b82f6,stroke-width:2px
+    flowchart TD
+    A([FILE_PATH]) --> B[Load EXTRACT_KAFKA]
+    B --> df([df])
+    
+    style A fill:#3b82f6,color:#fff
+    style B fill:#10b981,color:#fff
+    style df fill:#f59e0b,color:#fff
+
 
 _metadata:
   bloc: 1

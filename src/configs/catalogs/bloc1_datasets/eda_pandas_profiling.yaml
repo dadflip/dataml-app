@@ -8,33 +8,32 @@ tags:
 - profiling
 - tabular
 - ydata
-code_template: 'import pandas as pd
+code_template: |
+  import pandas as pd
 
   # Note: ydata_profiling doit être installé
-
   from ydata_profiling import ProfileReport
 
   # [PARAM: MINIMAL_MODE | boolean]
-
   MINIMAL_MODE = True
-
   # [/PARAM]
 
   print("[EDA] Génération du rapport de profiling... Cela peut prendre un moment.")
-
-  profile = ProfileReport(df, title="Pandas Profiling Report", minimal=MINIMAL_MODE,
-  explorative=True)
+  profile = ProfileReport(df, title="Pandas Profiling Report", minimal=MINIMAL_MODE, explorative=True)
 
   # Affichage dans un notebook
-
   profile.to_notebook_iframe()
-
-  '
 illustration_mermaid: |
-    graph LR
-      A([Input]) --> B([Operation])
-      B --> C([Output])
-      style B fill:#64748b,stroke:#475569,stroke-width:2px,color:#fff
+    flowchart TD
+        Input([DataFrame]) --> Setup[Init ProfileReport]
+        Setup --> Config[Set minimal mode & explorative]
+        Config --> Generate[Generate HTML Report]
+        Generate --> Output{{Display as Notebook IFrame}}
+    
+        style Input fill:#3b82f6,stroke:#2563eb,color:#fff
+        style Setup fill:#8b5cf6,stroke:#7c3aed,color:#fff
+        style Generate fill:#10b981,stroke:#059669,color:#fff
+        style Output fill:#ec4899,stroke:#db2777,color:#fff
 
 _metadata:
   bloc: 1

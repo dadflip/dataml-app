@@ -7,24 +7,49 @@ tags:
 - fastq
 - bioinformatics
 - dna
-code_template: "import time\nimport os\n\n# [PARAM: FILE_PATH | file]\nFILE_PATH =\
-  \ \"./data/raw/reads.fastq\"\n# [/PARAM]\n\nprint(f\"[LOAD] Parsing FASTQ : {FILE_PATH}...\"\
-  )\nif not os.path.exists(FILE_PATH):\n    raise FileNotFoundError(f\"[ERREUR LOAD]\
-  \ Fichier FASTQ introuvable : {FILE_PATH}\")\n\ntry:\n    start_time = time.time()\n\
-  \    from Bio import SeqIO\n    \n    # Lecture sous forme de générateur pour éviter\
-  \ l'OOM sur les très gros fichiers\n    # Ici on charge en mémoire pour l'exemple\n\
-  \    records = list(SeqIO.parse(FILE_PATH, \"fastq\"))\n    count = len(records)\n\
-  \    \n    duration = time.time() - start_time\n    print(f\"[LOAD] Succès FASTQ.\
-  \ {count} reads chargés en {duration:.2f}s.\")\nexcept ImportError:\n    print(\"\
-  [ERREUR LOAD] Le module 'biopython' est requis.\")\n    raise\nexcept Exception\
-  \ as e:\n    print(f\"[ERREUR LOAD] Erreur de parsing FASTQ : {str(e)}\")\n    raise\
-  \ e\n\ndf = None\ntarget_name = None\ntask_type = \"nlp_sequence\"\nmeta = {\"format\"\
-  : \"fastq\", \"num_reads\": count}\n"
+code_template: |
+  import time
+  import os
+  import pandas as pd
+
+  # [PARAM: FILE_PATH | file]
+  FILE_PATH = "./data/raw/reads.fastq"
+  # [/PARAM]
+
+  print(f"[LOAD] Parsing FASTQ : {FILE_PATH}...")
+  if not os.path.exists(FILE_PATH):
+      raise FileNotFoundError(f"[ERREUR LOAD] Fichier FASTQ introuvable : {FILE_PATH}")
+
+  try:
+      start_time = time.time()
+      from Bio import SeqIO
+      
+      # Lecture sous forme de générateur pour éviter l'OOM sur les très gros fichiers
+      # Ici on charge en mémoire pour l'exemple
+      records = list(SeqIO.parse(FILE_PATH, "fastq"))
+      count = len(records)
+      
+      duration = time.time() - start_time
+      print(f"[LOAD] Succès FASTQ. {count} reads chargés en {duration:.2f}s.")
+  except ImportError:
+      print("[ERREUR LOAD] Le module 'biopython' est requis.")
+      raise
+  except Exception as e:
+      print(f"[ERREUR LOAD] Erreur de parsing FASTQ : {str(e)}")
+      raise e
+
+  df = pd.DataFrame([{"id": r.id, "sequence": str(r.seq)} for r in records])
+  target_name = ""
+  task_type = "nlp_sequence"
+  meta = {"format": "fastq", "num_reads": count}
 illustration_mermaid: |
-    graph LR
-      Source[(Source)] -->|Load| Node([Extract Data])
-      style Source fill:#3b82f6,stroke:#2563eb,stroke-width:2px,color:#fff
-      style Node fill:#eff6ff,stroke:#3b82f6,stroke-width:2px
+  flowchart TD
+      A([FILE_PATH]) --> B[Load FASTQ]
+      B --> df([df])
+      
+      style A fill:#3b82f6,color:#fff
+      style B fill:#10b981,color:#fff
+      style df fill:#f59e0b,color:#fff
 
 _metadata:
   bloc: 1

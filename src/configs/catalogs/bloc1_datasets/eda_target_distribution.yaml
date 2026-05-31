@@ -7,26 +7,40 @@ tags:
 - target
 - tabular
 - seaborn
-code_template: "import pandas as pd\nimport numpy as np\nimport matplotlib.pyplot\
-  \ as plt\nimport seaborn as sns\n\n# target_name provient du bloc LOAD précédent\n\
-  if 'target_name' in locals() and target_name and target_name in df.columns:\n  \
-  \  plt.figure(figsize=(8, 5))\n    if pd.api.types.is_numeric_dtype(df[target_name])\
-  \ and df[target_name].nunique() > 20:\n        print(f\"[EDA] Target '{target_name}'\
-  \ détectée comme CONTINUE (Régression).\")\n        sns.histplot(df[target_name].dropna(),\
-  \ kde=True, color='purple')\n        plt.title(f\"Distribution Continue de la cible\
-  \ : {target_name}\")\n    else:\n        print(f\"[EDA] Target '{target_name}' détectée\
-  \ comme CATÉGORIELLE (Classification).\")\n        val_counts = df[target_name].value_counts(normalize=True)\
-  \ * 100\n        print(\"Répartition (%) :\\n\", val_counts)\n        sns.countplot(data=df,\
-  \ x=target_name, order=df[target_name].value_counts().index, palette='viridis')\n\
-  \        plt.title(f\"Distribution Catégorielle de la cible : {target_name}\")\n\
-  \    plt.show()\nelse:\n    print(\"[EDA] AVERTISSEMENT : target_name n'est pas\
-  \ définie ou introuvable dans df.\")\n"
+code_template: |
+  import pandas as pd
+  import numpy as np
+  import matplotlib.pyplot as plt
+  import seaborn as sns
+  
+  # target_name provient du bloc LOAD précédent
+  if 'target_name' in locals() and target_name and target_name in df.columns:
+      plt.figure(figsize=(8, 5))
+      if pd.api.types.is_numeric_dtype(df[target_name]) and df[target_name].nunique() > 20:
+          print(f"[EDA] Target '{target_name}' détectée comme CONTINUE (Régression).")
+          sns.histplot(df[target_name].dropna(), kde=True, color='purple')
+          plt.title(f"Distribution Continue de la cible : {target_name}")
+      else:
+          print(f"[EDA] Target '{target_name}' détectée comme CATÉGORIELLE (Classification).")
+          val_counts = df[target_name].value_counts(normalize=True) * 100
+          print("Répartition (%) :\n", val_counts)
+          sns.countplot(data=df, x=target_name, order=df[target_name].value_counts().index, palette='viridis')
+          plt.title(f"Distribution Catégorielle de la cible : {target_name}")
+      plt.show()
+  else:
+      print("[EDA] AVERTISSEMENT : target_name n'est pas définie ou introuvable dans df.")
 illustration_mermaid: |
-    graph LR
-      A([Input]) --> B([Operation])
-      B --> C([Output])
-      style B fill:#64748b,stroke:#475569,stroke-width:2px,color:#fff
-
+    graph TD
+      DF([DataFrame]) --> Check{Check target_name}
+      Check -- Valid --> CheckNum{Numeric & >20 uniques?}
+      CheckNum -- Yes --> RegPlot[sns.histplot]
+      CheckNum -- No --> ClfPlot[sns.countplot]
+      RegPlot --> Show[plt.show]
+      ClfPlot --> Show
+      Check -- Missing --> Warn[Print Warning]
+      style RegPlot fill:#8b5cf6,stroke:#7c3aed,stroke-width:2px,color:#fff
+      style ClfPlot fill:#ec4899,stroke:#db2777,stroke-width:2px,color:#fff
+      style CheckNum fill:#f59e0b,stroke:#d97706,stroke-width:2px,color:#fff
 _metadata:
   bloc: 1
   section: 3_eda

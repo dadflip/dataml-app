@@ -19,11 +19,39 @@ code_template: |
 
   # [PARAM: IMG_COL | string]
   IMG_COL = "image"
+  # [/PARAM]
+
+  print(f"[TRANSFORM] Conversion en Grayscale sur '{IMG_COL}'...")
+  if 'df' in locals() and IMG_COL in df.columns:
+      if 'pipeline_steps' not in locals():
+          pipeline_steps = {}
+          
+      def grayscale_func(X):
+          X_df = pd.DataFrame(X) if not isinstance(X, pd.DataFrame) else X.copy()
+          gray = T.Grayscale(num_output_channels=1)
+          X_df[IMG_COL] = X_df[IMG_COL].apply(
+              lambda x: gray(x) if isinstance(x, Image.Image) else x
+          )
+          return X_df
+
+      transformer = FunctionTransformer(grayscale_func)
+      pipeline_steps['image_grayscale'] = transformer
+      df = transformer.fit_transform(df)
+      print(f"[TRANSFORM] Image Grayscale appliqué.")
+  else:
+      print(f"[AVERTISSEMENT] Colonne '{IMG_COL}' introuvable.")
+
 illustration_mermaid: |
-    graph LR
-      In([Raw Data]) -->|Process| Out([Clean Data])
-      style In fill:#eff6ff,stroke:#94a3b8,stroke-width:2px,stroke-dasharray: 5 5
-      style Out fill:#10b981,stroke:#059669,stroke-width:2px,color:#fff
+  graph TD
+    A[Image DataFrame] --> B{Does IMG_COL exist?}
+    B -- Yes --> C[Initialize T.Grayscale]
+    B -- No --> D[Skip and Warn]
+    C --> E[Apply grayscale to each PIL Image]
+    E --> F[Update pipeline_steps & df]
+    D --> F
+    F --> G[Grayscale Images]
+    style A fill:#eff6ff,stroke:#94a3b8,stroke-width:2px
+    style G fill:#10b981,stroke:#059669,stroke-width:2px,color:#fff
 
 _metadata:
   bloc: 2

@@ -6,25 +6,58 @@ tags:
 - extract
 - azure
 - blob
-code_template: "from azure.storage.blob import BlobServiceClient\nimport os\nimport\
-  \ time\n\n# [PARAM: CONN_STR | string]\nCONN_STR = \"DefaultEndpointsProtocol=https;AccountName=...;AccountKey=...;EndpointSuffix=core.windows.net\"\
-  \n# [/PARAM]\n\n# [PARAM: CONTAINER_NAME | string]\nCONTAINER_NAME = \"my-container\"\
-  \n# [/PARAM]\n\n# [PARAM: BLOB_NAME | string]\nBLOB_NAME = \"data.csv\"\n# [/PARAM]\n\
-  \n# [PARAM: DEST_PATH | string]\nDEST_PATH = \"./data/raw/azure_data.csv\"\n# [/PARAM]\n\
-  \nprint(f\"[EXTRACT] Connexion à Azure Blob Storage ({CONTAINER_NAME})...\")\nos.makedirs(os.path.dirname(DEST_PATH),\
-  \ exist_ok=True)\n\ntry:\n    start_time = time.time()\n    blob_service_client\
-  \ = BlobServiceClient.from_connection_string(CONN_STR)\n    blob_client = blob_service_client.get_blob_client(container=CONTAINER_NAME,\
-  \ blob=BLOB_NAME)\n    \n    with open(DEST_PATH, \"wb\") as download_file:\n  \
-  \      download_file.write(blob_client.download_blob().readall())\n        \n  \
-  \  duration = time.time() - start_time\n    print(f\"[EXTRACT] Succès Azure. Fichier\
-  \ téléchargé en {duration:.2f}s.\")\nexcept Exception as e:\n    print(f\"[ERREUR\
-  \ EXTRACT] Erreur Azure Storage : {str(e)}\")\n    raise e\n\ndf = None\ntarget_name\
-  \ = None\ntask_type = \"unknown\"\nmeta = {\"source\": \"azure\", \"path\": DEST_PATH}\n"
+code_template: |
+  from azure.storage.blob import BlobServiceClient
+  import os
+  import time
+  
+  # [PARAM: CONN_STR | string]
+  CONN_STR = "DefaultEndpointsProtocol=https;AccountName=...;AccountKey=...;EndpointSuffix=core.windows.net"
+  # [/PARAM]
+  
+  # [PARAM: CONTAINER_NAME | string]
+  CONTAINER_NAME = "my-container"
+  # [/PARAM]
+  
+  # [PARAM: BLOB_NAME | string]
+  BLOB_NAME = "data.csv"
+  # [/PARAM]
+  
+  # [PARAM: DEST_PATH | string]
+  DEST_PATH = "./data/raw/azure_data.csv"
+  # [/PARAM]
+  
+  print(f"[EXTRACT] Connexion à Azure Blob Storage ({CONTAINER_NAME})...")
+  os.makedirs(os.path.dirname(DEST_PATH), exist_ok=True)
+  
+  try:
+      start_time = time.time()
+      blob_service_client = BlobServiceClient.from_connection_string(CONN_STR)
+      blob_client = blob_service_client.get_blob_client(container=CONTAINER_NAME, blob=BLOB_NAME)
+      
+      with open(DEST_PATH, "wb") as download_file:
+          download_file.write(blob_client.download_blob().readall())
+          
+      duration = time.time() - start_time
+      print(f"[EXTRACT] Succès Azure. Fichier téléchargé en {duration:.2f}s.")
+  except Exception as e:
+      print(f"[ERREUR EXTRACT] Erreur Azure Storage : {str(e)}")
+      raise e
+  
+  df = None
+  target_name = None
+  task_type = "unknown"
+  meta = {"source": "azure", "path": DEST_PATH}
 illustration_mermaid: |
-    graph LR
-      Source[(Source)] -->|Load| Node([Extract Data])
-      style Source fill:#3b82f6,stroke:#2563eb,stroke-width:2px,color:#fff
-      style Node fill:#eff6ff,stroke:#3b82f6,stroke-width:2px
+    flowchart TD
+    A([FILE_PATH]) --> B[Load EXTRACT_AZURE]
+    B --> df([df])
+    
+    style A fill:#3b82f6,color:#fff
+    style B fill:#10b981,color:#fff
+    style df fill:#f59e0b,color:#fff
+
+
 
 _metadata:
   bloc: 1

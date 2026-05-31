@@ -30,11 +30,22 @@ code_template: |
           transformer = FunctionTransformer(identity_transform)
           
           step_name = 'graph_edge_index_injector'
+          pipeline_steps[step_name] = transformer
+          print("[TRANSFORM] Edge index injecté globalement.")
+      else:
+          print("[AVERTISSEMENT] 'edge_index' introuvable dans 'meta'.")
+
 illustration_mermaid: |
-    graph LR
-      In([Raw Data]) -->|Process| Out([Clean Data])
-      style In fill:#eff6ff,stroke:#94a3b8,stroke-width:2px,stroke-dasharray: 5 5
-      style Out fill:#10b981,stroke:#059669,stroke-width:2px,color:#fff
+  graph TD
+    A[Input meta dictionary] --> B{Does meta contain 'edge_index'?}
+    B -- Yes --> C[Set global global_edge_index]
+    B -- No --> D[Warn and skip]
+    C --> E[Create Identity FunctionTransformer]
+    E --> F[Update pipeline_steps]
+    D --> F
+    F --> G[Graph Data Ready for GNN]
+    style A fill:#eff6ff,stroke:#94a3b8,stroke-width:2px
+    style G fill:#10b981,stroke:#059669,stroke-width:2px,color:#fff
 
 _metadata:
   bloc: 2

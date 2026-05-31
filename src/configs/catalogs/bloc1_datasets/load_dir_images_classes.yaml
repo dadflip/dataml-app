@@ -8,31 +8,84 @@ tags:
 - directory
 - images
 - classification
-code_template: "import os\nimport glob\nimport pandas as pd\nimport time\n\n# [PARAM:\
-  \ ROOT_DIRECTORY | dir]\nROOT_DIRECTORY = \"./data/extracted/dataset\"\n# [/PARAM]\n\
-  \nprint(f\"[LOAD] Parcours de la hiérarchie de classes dans {ROOT_DIRECTORY}...\"\
-  )\nif not os.path.exists(ROOT_DIRECTORY):\n    raise FileNotFoundError(f\"[ERREUR\
-  \ LOAD] Le dossier racine n'existe pas : {ROOT_DIRECTORY}\")\n\ntry:\n    start_time\
-  \ = time.time()\n    \n    data = []\n    classes = [d for d in os.listdir(ROOT_DIRECTORY)\
-  \ if os.path.isdir(os.path.join(ROOT_DIRECTORY, d))]\n    \n    for class_name in\
-  \ classes:\n        class_dir = os.path.join(ROOT_DIRECTORY, class_name)\n     \
-  \   # Récupère tous les fichiers classiques (png, jpg, jpeg)\n        files = glob.glob(os.path.join(class_dir,\
-  \ \"*.*\"))\n        valid_files = [f for f in files if f.lower().endswith(('.png',\
-  \ '.jpg', '.jpeg'))]\n        \n        for filepath in valid_files:\n         \
-  \   data.append({\n                \"class_name\": class_name,\n               \
-  \ \"absolute_path\": os.path.abspath(filepath)\n            })\n            \n \
-  \   df = pd.DataFrame(data)\n    \n    duration = time.time() - start_time\n   \
-  \ print(f\"[LOAD] Succès. {len(df)} images réparties dans {len(classes)} classes\
-  \ indexées en {duration:.2f}s.\")\nexcept Exception as e:\n    print(f\"[ERREUR\
-  \ LOAD] Erreur lors du parcours du dataset : {str(e)}\")\n    raise e\n\ntarget_name\
-  \ = \"class_name\"\ntask_type = \"computer_vision_classification\"\nmeta = {\"format\"\
-  : \"directory_classes\", \"classes_found\": len(classes), \"images_found\": len(df)}\n"
-illustration_mermaid: |
-    graph LR
-      Source[(Source)] -->|Load| Node([Extract Data])
-      style Source fill:#3b82f6,stroke:#2563eb,stroke-width:2px,color:#fff
-      style Node fill:#eff6ff,stroke:#3b82f6,stroke-width:2px
+code_template: |
+  import os
+  import glob
+  import pandas as pd
+  import time
 
+  # [PARAM: ROOT_DIRECTORY | dir]
+  ROOT_DIRECTORY = "./data/extracted/dataset"
+  # [/PARAM]
+
+  print(f"[LOAD] Parcours de la hiérarchie de classes dans {ROOT_DIRECTORY}...")
+  if not os.path.exists(ROOT_DIRECTORY):
+      raise FileNotFoundError(f"[ERREUR LOAD] Le dossier racine n'existe pas : {ROOT_DIRECTORY}")
+
+  try:
+      start_time = time.time()
+      
+      data = []
+      classes = [d for d in os.listdir(ROOT_DIRECTORY) if os.path.isdir(os.path.join(ROOT_DIRECTORY, d))]
+      
+      for class_name in classes:
+          class_dir = os.path.join(ROOT_DIRECTORY, class_name)
+          # Récupère tous les fichiers classiques (png, jpg, jpeg)
+          files = glob.glob(os.path.join(class_dir, "*.*"))
+          valid_files = [f for f in files if f.lower().endswith(('.png', '.jpg', '.jpeg'))]
+          
+          for filepath in valid_files:
+              data.append({
+                  "class_name": class_name,
+                  "absolute_path": os.path.abspath(filepath)
+              })
+              
+      df = pd.DataFrame(data)
+      
+      duration = time.time() - start_time
+      print(f"[LOAD] Succès. {len(df)} images réparties dans {len(classes)} classes indexées en {duration:.2f}s.")
+  except Exception as e:
+      print(f"[ERREUR LOAD] Erreur lors du parcours du dataset : {str(e)}")
+      raise e
+
+  target_name = "class_name"
+  task_type = "computer_vision_classification"
+  meta = {"format": "directory_classes", "classes_found": len(classes), "images_found": len(df)}
+
+illustration_mermaid: |
+  flowchart TD
+      subgraph Config [Parameters]
+          DIR([ROOT_DIRECTORY])
+      end
+
+      subgraph Operations [Image Dir Scan]
+          ListDir([os.listdir])
+          ClassDir([Find Class Folders])
+          Glob([Glob valid images])
+          Append([Append to list])
+          ToDF([pd.DataFrame])
+      end
+
+      subgraph Outputs [Contract Variables]
+          df((df))
+          target((target_name = 'class_name'))
+          task((task_type = 'computer_vision_classification'))
+          meta((meta: dict))
+      end
+
+      DIR --> ListDir
+      ListDir --> ClassDir
+      ClassDir --> Glob
+      Glob --> Append
+      Append --> ToDF
+      ToDF --> df
+      df -.-> meta
+
+      style Config fill:#f8fafc,stroke:#cbd5e1,stroke-width:2px
+      style ListDir fill:#64748b,stroke:#475569,stroke-width:2px,color:#fff
+      style Glob fill:#3b82f6,stroke:#1d4ed8,stroke-width:2px,color:#fff
+      style ToDF fill:#10b981,stroke:#047857,stroke-width:2px,color:#fff
+      style Outputs fill:#f1f5f9,stroke:#94a3b8,stroke-width:2px
 _metadata:
   bloc: 1
   section: 2_load

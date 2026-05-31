@@ -9,29 +9,61 @@ tags:
 - nlp
 - vision
 - audio
-code_template: "import os\nimport time\ntry:\n    from datasets import load_dataset\n\
-  except ImportError:\n    load_dataset = None\n    print(\"[ERREUR EXTRACT] La librairie\
-  \ 'datasets' n'est pas installée. Lancez : !pip install datasets\")\n\n# [PARAM:\
-  \ HF_DATASET_ID | string]\nHF_DATASET_ID = \"imdb\"\n# [/PARAM]\n\n# [PARAM: SPLIT\
-  \ | string]\nSPLIT = \"train\"\n# [/PARAM]\n\n# [PARAM: DEST_DIR | string]\nDEST_DIR\
-  \ = \"./data/raw/huggingface_cache\"\n# [/PARAM]\n\nprint(f\"[EXTRACT] Téléchargement\
-  \ du dataset HF '{HF_DATASET_ID}' (split={SPLIT})...\")\nos.makedirs(DEST_DIR, exist_ok=True)\n\
-  \ntry:\n    if load_dataset is not None:\n        start_time = time.time()\n   \
-  \     \n        # Télécharge et met en cache localement\n        dataset = load_dataset(HF_DATASET_ID,\
-  \ split=SPLIT, cache_dir=DEST_DIR)\n        \n        # Sauvegarde sur disque au\
-  \ format flèche (Arrow) ou CSV pour être repris par le Load\n        save_path =\
-  \ os.path.join(DEST_DIR, f\"{HF_DATASET_ID.replace('/', '_')}_{SPLIT}\")\n     \
-  \   dataset.save_to_disk(save_path)\n        \n        duration = time.time() -\
-  \ start_time\n        print(f\"[EXTRACT] Succès. Dataset sauvegardé dans {save_path}\
-  \ en {duration:.2f}s.\")\n        \n        df = None\n        target_name = None\n\
-  \        task_type = \"unknown\"\n        meta = {\"source\": \"huggingface\", \"\
-  dataset_id\": HF_DATASET_ID, \"path\": save_path}\nexcept Exception as e:\n    print(f\"\
-  [ERREUR EXTRACT] Échec de l'extraction HuggingFace : {str(e)}\")\n    raise e\n"
+code_template: |
+  import os
+  import time
+  try:
+      from datasets import load_dataset
+  except ImportError:
+      load_dataset = None
+      print("[ERREUR EXTRACT] La librairie 'datasets' n'est pas installée. Lancez : !pip install datasets")
+
+  # [PARAM: HF_DATASET_ID | string]
+  HF_DATASET_ID = "imdb"
+  # [/PARAM]
+
+  # [PARAM: SPLIT | string]
+  SPLIT = "train"
+  # [/PARAM]
+
+  # [PARAM: DEST_DIR | string]
+  DEST_DIR = "./data/raw/huggingface_cache"
+  # [/PARAM]
+
+  print(f"[EXTRACT] Téléchargement du dataset HF '{HF_DATASET_ID}' (split={SPLIT})...")
+  os.makedirs(DEST_DIR, exist_ok=True)
+
+  try:
+      if load_dataset is not None:
+          start_time = time.time()
+          
+          # Télécharge et met en cache localement
+          dataset = load_dataset(HF_DATASET_ID, split=SPLIT, cache_dir=DEST_DIR)
+          
+          # Sauvegarde sur disque au format flèche (Arrow) ou CSV pour être repris par le Load
+          save_path = os.path.join(DEST_DIR, f"{HF_DATASET_ID.replace('/', '_')}_{SPLIT}")
+          dataset.save_to_disk(save_path)
+          
+          duration = time.time() - start_time
+          print(f"[EXTRACT] Succès. Dataset sauvegardé dans {save_path} en {duration:.2f}s.")
+          
+          df = save_path
+          target_name = "label"
+          task_type = "unknown"
+          meta = {"source": "huggingface", "dataset_id": HF_DATASET_ID, "path": save_path}
+  except Exception as e:
+      print(f"[ERREUR EXTRACT] Échec de l'extraction HuggingFace : {str(e)}")
+      raise e
 illustration_mermaid: |
-    graph LR
-      Source[(Source)] -->|Load| Node([Extract Data])
-      style Source fill:#3b82f6,stroke:#2563eb,stroke-width:2px,color:#fff
-      style Node fill:#eff6ff,stroke:#3b82f6,stroke-width:2px
+    flowchart TD
+    A([FILE_PATH]) --> B[Load EXTRACT_HUGGINGFACE_DATASET]
+    B --> df([df])
+    
+    style A fill:#3b82f6,color:#fff
+    style B fill:#10b981,color:#fff
+    style df fill:#f59e0b,color:#fff
+
+
 
 _metadata:
   bloc: 1

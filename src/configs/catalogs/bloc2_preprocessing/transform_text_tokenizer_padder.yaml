@@ -16,7 +16,9 @@ hyperparameters:
 code_template: |
   import pandas as pd
   import numpy as np
-  from sklearn.preprocessing import FunctionTransformer
+  from sklearn.base import BaseEstimator, TransformerMixin
+  from sklearn.compose import ColumnTransformer
+
   try:
       from keras.preprocessing.text import Tokenizer
       from keras.preprocessing.sequence import pad_sequences
@@ -25,11 +27,67 @@ code_template: |
 
   # [PARAM: TEXT_COL | string]
   TEXT_COL = "text_content"
+  # [/PARAM]
+  # [PARAM: MAX_WORDS | number]
+  MAX_WORDS = 10000
+  # [/PARAM]
+  # [PARAM: MAX_LEN | number]
+  MAX_LEN = 100
+  # [/PARAM]
+
+  class TokenizerPadder(BaseEstimator, TransformerMixin):
+      def __init__(self, max_words=10000, max_len=100):
+          self.max_words = max_words
+          self.max_len = max_len
+          self.tokenizer = Tokenizer(num_words=self.max_words) if Tokenizer else None
+
+      def fit(self, X, y=None):
+          if self.tokenizer:
+              texts = X[X.columns[0]].astype(str).tolist() if isinstance(X, pd.DataFrame) else pd.Series(X).astype(str).tolist()
+              self.tokenizer.fit_on_texts(texts)
+          return self
+
+      def transform(self, X):
+          if not self.tokenizer:
+              raise ImportError("Keras is required for TokenizerPadder.")
+          texts = X[X.columns[0]].astype(str).tolist() if isinstance(X, pd.DataFrame) else pd.Series(X).astype(str).tolist()
+          seqs = self.tokenizer.texts_to_sequences(texts)
+          padded = pad_sequences(seqs, maxlen=self.max_len, padding='post', truncating='post')
+          return padded
+
+  print(f"[TRANSFORM] Tokenizer & Padder (col={TEXT_COL}, max_words={MAX_WORDS}, max_len={MAX_LEN})...")
+  if 'df' in locals() and Tokenizer:
+      if 'pipeline_steps' not in locals(): pipeline_steps = {}
+      
+      if TEXT_COL in df.columns:
+          tp = TokenizerPadder(max_words=int(MAX_WORDS), max_len=int(MAX_LEN))
+          ct = ColumnTransformer(
+              [('tok_pad', tp, [TEXT_COL])],
+              remainder='passthrough', verbose_feature_names_out=False
+          )
+          
+          step_name = 'tokenizer_padder'
+          pipeline_steps[step_name] = (step_name, ct)
+
+  if 'X_train' not in locals(): X_train = None
+  if 'X_test' not in locals(): X_test = None
+  if 'y_train' not in locals(): y_train = None
+  if 'y_test' not in locals(): y_test = None
+  if 'preprocessor' not in locals(): preprocessor = None
+  if 'feature_names_out' not in locals(): feature_names_out = None
+  if 'task_type' not in locals(): task_type = "classification"
+  if 'meta' not in locals(): meta = {}
 illustration_mermaid: |
-    graph LR
-      In([Raw Data]) -->|Process| Out([Clean Data])
-      style In fill:#eff6ff,stroke:#94a3b8,stroke-width:2px,stroke-dasharray: 5 5
-      style Out fill:#10b981,stroke:#059669,stroke-width:2px,color:#fff
+  graph TD
+    A[Raw Data] --> B{Does TEXT_COL exist & Keras installed?}
+    B -- Yes --> C[Initialize Custom TokenizerPadder]
+    C --> D[Create ColumnTransformer]
+    D --> E[Add to Pipeline Steps]
+    B -- No --> F[Skip TokenizerPadder]
+    E --> G[Update Data Contract Variables]
+    F --> G
+    style A fill:#eff6ff,stroke:#3b82f6,stroke-width:2px
+    style G fill:#10b981,stroke:#059669,stroke-width:2px
 
 _metadata:
   bloc: 2

@@ -8,28 +8,85 @@ tags:
 - dicom
 - medical
 - image
-code_template: "import pydicom\nimport numpy as np\nimport time\nimport os\n\n# [PARAM:\
-  \ FILE_PATH | file]\nFILE_PATH = \"./data/raw/scan.dcm\"\n# [/PARAM]\n\nprint(f\"\
-  [LOAD] Lecture du fichier DICOM : {FILE_PATH}...\")\nif not os.path.exists(FILE_PATH):\n\
-  \    raise FileNotFoundError(f\"[ERREUR LOAD] Fichier DICOM introuvable : {FILE_PATH}\"\
-  )\n\ntry:\n    start_time = time.time()\n    dcm = pydicom.dcmread(FILE_PATH)\n\
-  \    \n    # Extraction des pixels en matrice NumPy\n    pixel_data = dcm.pixel_array\n\
-  \    \n    # Récupération de métadonnées médicales basiques\n    patient_name =\
-  \ str(dcm.PatientName) if 'PatientName' in dcm else \"Inconnu\"\n    modality =\
-  \ str(dcm.Modality) if 'Modality' in dcm else \"Inconnue\"\n    \n    duration =\
-  \ time.time() - start_time\n    print(f\"[LOAD] Succès DICOM. Patient: {patient_name},\
-  \ Modalité: {modality}.\")\n    print(f\"[LOAD] Matrice {pixel_data.shape} extraite\
-  \ en {duration:.2f}s.\")\nexcept ImportError:\n    print(\"[ERREUR LOAD] Le module\
-  \ 'pydicom' est requis pour les images DICOM.\")\n    raise\nexcept Exception as\
-  \ e:\n    print(f\"[ERREUR LOAD] Impossible de parser le DICOM : {str(e)}\")\n \
-  \   raise e\n\ndf = None\ntarget_name = None\ntask_type = \"computer_vision\"\n\
-  meta = {\n    \"format\": \"dicom\",\n    \"shape\": pixel_data.shape,\n    \"patient\"\
-  : patient_name,\n    \"modality\": modality\n}\n"
+code_template: |
+  import pydicom
+  import numpy as np
+  import time
+  import os
+  import pandas as pd
+
+  # [PARAM: FILE_PATH | file]
+  FILE_PATH = "./data/raw/scan.dcm"
+  # [/PARAM]
+
+  print(f"[LOAD] Lecture du fichier DICOM : {FILE_PATH}...")
+  if not os.path.exists(FILE_PATH):
+      raise FileNotFoundError(f"[ERREUR LOAD] Fichier DICOM introuvable : {FILE_PATH}")
+
+  try:
+      start_time = time.time()
+      dcm = pydicom.dcmread(FILE_PATH)
+      
+      # Extraction des pixels en matrice NumPy
+      pixel_data = dcm.pixel_array
+      
+      # Récupération de métadonnées médicales basiques
+      patient_name = str(dcm.PatientName) if 'PatientName' in dcm else "Inconnu"
+      modality = str(dcm.Modality) if 'Modality' in dcm else "Inconnue"
+      
+      duration = time.time() - start_time
+      print(f"[LOAD] Succès DICOM. Patient: {patient_name}, Modalité: {modality}.")
+      print(f"[LOAD] Matrice {pixel_data.shape} extraite en {duration:.2f}s.")
+  except ImportError:
+      print("[ERREUR LOAD] Le module 'pydicom' est requis pour les images DICOM.")
+      raise
+  except Exception as e:
+      print(f"[ERREUR LOAD] Impossible de parser le DICOM : {str(e)}")
+      raise e
+
+  df = pd.DataFrame()
+  target_name = ""
+  task_type = "computer_vision"
+  meta = {
+      "format": "dicom",
+      "shape": pixel_data.shape,
+      "patient": patient_name,
+      "modality": modality
+  }
+
 illustration_mermaid: |
-    graph LR
-      Source[(Source)] -->|Load| Node([Extract Data])
-      style Source fill:#3b82f6,stroke:#2563eb,stroke-width:2px,color:#fff
-      style Node fill:#eff6ff,stroke:#3b82f6,stroke-width:2px
+  flowchart TD
+      subgraph Config [Parameters]
+          FILE([FILE_PATH])
+      end
+
+      subgraph Operations [DICOM Load]
+          Check([os.path.exists])
+          Pydicom([pydicom.dcmread])
+          Pix([dcm.pixel_array])
+          MetaExtract([Extract Patient/Modality])
+      end
+
+      subgraph Outputs [Contract Variables]
+          df((df = pd.DataFrame))
+          target((target_name = ''))
+          task((task_type = 'computer_vision'))
+          meta((meta: dict))
+      end
+
+      FILE --> Check
+      Check --> Pydicom
+      Pydicom --> Pix
+      Pydicom --> MetaExtract
+      Pix -.-> meta
+      MetaExtract -.-> meta
+
+      style Config fill:#f8fafc,stroke:#cbd5e1,stroke-width:2px
+      style Check fill:#64748b,stroke:#475569,stroke-width:2px,color:#fff
+      style Pydicom fill:#3b82f6,stroke:#1d4ed8,stroke-width:2px,color:#fff
+      style Pix fill:#10b981,stroke:#047857,stroke-width:2px,color:#fff
+      style MetaExtract fill:#f59e0b,stroke:#b45309,stroke-width:2px,color:#fff
+      style Outputs fill:#f1f5f9,stroke:#94a3b8,stroke-width:2px
 
 _metadata:
   bloc: 1

@@ -19,11 +19,54 @@ code_template: |
 
   # [PARAM: COLUMNS | string]
   COLUMNS = ""
+  # [/PARAM]
+
+  print(f"[TRANSFORM] Log Transform (log1p) sur: {COLUMNS}...")
+  if 'df' in locals() and COLUMNS.strip():
+      if 'pipeline_steps' not in locals():
+          pipeline_steps = {}
+          
+      cols_to_log = [c.strip() for c in COLUMNS.split(",") if c.strip() in df.columns]
+      
+      if cols_to_log:
+          log_transformer = FunctionTransformer(np.log1p, validate=False)
+          
+          ct = ColumnTransformer(
+              [('log1p', log_transformer, cols_to_log)],
+              remainder='passthrough', verbose_feature_names_out=False
+          )
+          try: ct.set_output(transform="pandas")
+          except: pass
+          
+          pipeline_steps['log_transform'] = ct
+          
+          res = ct.fit_transform(df)
+          if isinstance(res, np.ndarray):
+              df = pd.DataFrame(res, columns=ct.get_feature_names_out())
+          else:
+              df = res
+              
+          print(f"[TRANSFORM] Log Transform appliqué sur {len(cols_to_log)} colonnes.")
+      else:
+          print("[AVERTISSEMENT] Aucune des colonnes spécifiées n'existe dans df.")
+
 illustration_mermaid: |
-    graph LR
-      In([Raw Data]) -->|Process| Out([Clean Data])
-      style In fill:#eff6ff,stroke:#94a3b8,stroke-width:2px,stroke-dasharray: 5 5
-      style Out fill:#10b981,stroke:#059669,stroke-width:2px,color:#fff
+  graph TD
+    A[Input DataFrame] --> B{COLUMNS provided?}
+    B -- Yes --> C[Parse columns list]
+    B -- No --> D[Skip and return original]
+    C --> E{Do columns exist in df?}
+    E -- Yes --> F[Initialize log1p FunctionTransformer]
+    E -- No --> G[Skip and Warn]
+    F --> H[ColumnTransformer remainder='passthrough']
+    H --> I[Fit & Transform Data]
+    I --> J[Convert to DataFrame]
+    J --> K[Update pipeline_steps & df]
+    D --> K
+    G --> K
+    K --> L[Log-Transformed Data]
+    style A fill:#eff6ff,stroke:#94a3b8,stroke-width:2px
+    style L fill:#10b981,stroke:#059669,stroke-width:2px,color:#fff
 
 _metadata:
   bloc: 2

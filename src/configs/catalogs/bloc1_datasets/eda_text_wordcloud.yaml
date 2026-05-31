@@ -7,21 +7,41 @@ tags:
 - text
 - nlp
 - wordcloud
-code_template: "import pandas as pd\nimport matplotlib.pyplot as plt\nfrom wordcloud\
-  \ import WordCloud\n\n# [PARAM: TEXT_COL | string]\nTEXT_COL = \"text\"\n# [/PARAM]\n\
-  \nif TEXT_COL in df.columns:\n    text_data = \" \".join([str(t) for t in df[TEXT_COL]\
-  \ if isinstance(t, str)])\n    if text_data.strip():\n        wordcloud = WordCloud(width=800,\
-  \ height=400, background_color='white').generate(text_data)\n        plt.figure(figsize=(12,\
-  \ 6))\n        plt.imshow(wordcloud, interpolation='bilinear')\n        plt.axis('off')\n\
-  \        plt.title(\"Nuage de mots\")\n        plt.show()\n    else:\n        print(\"\
-  [EDA] Texte vide.\")\nelse:\n    print(f\"[EDA] Colonne {TEXT_COL} introuvable.\"\
-  )\n"
+code_template: |
+  import pandas as pd
+  import matplotlib.pyplot as plt
+  from wordcloud import WordCloud
+  
+  # [PARAM: TEXT_COL | string]
+  TEXT_COL = "text"
+  # [/PARAM]
+  
+  if TEXT_COL in df.columns:
+      text_data = " ".join([str(t) for t in df[TEXT_COL] if isinstance(t, str)])
+      if text_data.strip():
+          wordcloud = WordCloud(width=800, height=400, background_color='white').generate(text_data)
+          plt.figure(figsize=(12, 6))
+          plt.imshow(wordcloud, interpolation='bilinear')
+          plt.axis('off')
+          plt.title("Nuage de mots")
+          plt.show()
+      else:
+          print("[EDA] Texte vide.")
+  else:
+      print(f"[EDA] Colonne {TEXT_COL} introuvable.")
 illustration_mermaid: |
-    graph LR
-      A([Input]) --> B([Operation])
-      B --> C([Output])
-      style B fill:#64748b,stroke:#475569,stroke-width:2px,color:#fff
-
+    graph TD
+      DF([DataFrame]) --> Check{Check TEXT_COL}
+      Check -- Valid --> Join[Join all text strings]
+      Join --> CheckEmpty{Text not empty?}
+      CheckEmpty -- Yes --> WC{{WordCloud}}
+      WC -- "generate" --> Plot[imshow]
+      Plot --> Show[plt.show]
+      CheckEmpty -- No --> Warn[Print Warning]
+      Check -- Missing --> Err[Print Error]
+      style WC fill:#d946ef,stroke:#c026d3,stroke-width:2px,color:#fff
+      style Join fill:#3b82f6,stroke:#2563eb,stroke-width:2px,color:#fff
+      style Plot fill:#10b981,stroke:#059669,stroke-width:2px,color:#fff
 _metadata:
   bloc: 1
   section: 3_eda

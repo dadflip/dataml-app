@@ -7,18 +7,32 @@ tags:
 - piechart
 - tabular
 - matplotlib
-code_template: "import matplotlib.pyplot as plt\n\nif 'target_name' in locals() and\
-  \ target_name and target_name in df.columns:\n    counts = df[target_name].value_counts()\n\
-  \    if len(counts) <= 10:\n        plt.figure(figsize=(8, 8))\n        plt.pie(counts,\
-  \ labels=counts.index, autopct='%1.1f%%', startangle=140)\n        plt.title(f\"\
-  Proportions de {target_name}\")\n        plt.show()\n    else:\n        print(\"\
-  [EDA] Trop de catégories pour un camembert lisible.\")\nelse:\n    print(\"[EDA]\
-  \ Cible introuvable.\")\n"
+code_template: |
+  import matplotlib.pyplot as plt
+
+  if 'target_name' in locals() and target_name and target_name in df.columns:
+      counts = df[target_name].value_counts()
+      if len(counts) <= 10:
+          plt.figure(figsize=(8, 8))
+          plt.pie(counts, labels=counts.index, autopct='%1.1f%%', startangle=140)
+          plt.title(f"Proportions de {target_name}")
+          plt.show()
+      else:
+          print("[EDA] Trop de catégories pour un camembert lisible.")
+  else:
+      print("[EDA] Cible introuvable.")
 illustration_mermaid: |
-    graph LR
-      A([Input]) --> B([Operation])
-      B --> C([Output])
-      style B fill:#64748b,stroke:#475569,stroke-width:2px,color:#fff
+    flowchart TD
+        Input([DataFrame & target_name]) --> CheckTarget{Target Valid?}
+        CheckTarget -- Yes --> Count[df.value_counts]
+        Count --> CheckClasses{Classes <= 10?}
+        CheckClasses -- Yes --> Pie{{Plot Pie Chart}}
+        CheckClasses -- No --> Err2[/Print 'Too many categories'/]
+        CheckTarget -- No --> Err1[/Print 'Target not found'/]
+    
+        style Input fill:#3b82f6,stroke:#2563eb,color:#fff
+        style Count fill:#10b981,stroke:#059669,color:#fff
+        style Pie fill:#ec4899,stroke:#db2777,color:#fff
 
 _metadata:
   bloc: 1

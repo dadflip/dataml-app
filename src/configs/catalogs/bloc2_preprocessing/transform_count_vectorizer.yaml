@@ -19,11 +19,56 @@ code_template: |
 
   # [PARAM: TEXT_COL | string]
   TEXT_COL = "text"
+  # [/PARAM]
+  # [PARAM: MAX_FEATURES | number]
+  MAX_FEATURES = 1000
+  # [/PARAM]
+
+  print(f"[TRANSFORM] Application de CountVectorizer sur '{TEXT_COL}'...")
+  if 'df' in locals():
+      if 'pipeline_steps' not in locals():
+          pipeline_steps = {}
+          
+      if TEXT_COL in df.columns:
+          vec = CountVectorizer(max_features=MAX_FEATURES)
+          transformer = ColumnTransformer(
+              transformers=[('count_vec', vec, TEXT_COL)],
+              remainder='passthrough'
+          )
+          
+          # Fit and transform
+          transformed_data = transformer.fit_transform(df)
+          
+          # Handle sparse matrices correctly
+          import scipy.sparse
+          if scipy.sparse.issparse(transformed_data):
+              transformed_data = transformed_data.toarray()
+              
+          feature_names = transformer.get_feature_names_out()
+          df = pd.DataFrame(transformed_data, columns=feature_names)
+          
+          pipeline_steps['count_vectorizer'] = transformer
+          print(f"[TRANSFORM] CountVectorizer appliqué. Nouvelles features créées.")
+      else:
+          print(f"[AVERTISSEMENT] La colonne '{TEXT_COL}' n'existe pas dans df.")
+
 illustration_mermaid: |
-    graph LR
-      In([Raw Data]) -->|Process| Out([Clean Data])
-      style In fill:#eff6ff,stroke:#94a3b8,stroke-width:2px,stroke-dasharray: 5 5
-      style Out fill:#10b981,stroke:#059669,stroke-width:2px,color:#fff
+  graph TD
+    A[Text Data] --> B{Does TEXT_COL exist?}
+    B -- Yes --> C[Initialize CountVectorizer]
+    B -- No --> D[Skip and Warn]
+    C --> E[ColumnTransformer with remainder='passthrough']
+    E --> F[Fit & Transform Data]
+    F --> G{Is result sparse?}
+    G -- Yes --> H[Convert to Dense Array]
+    G -- No --> I[Keep Array]
+    H --> J[Create new DataFrame with Feature Names]
+    I --> J
+    J --> K[Update pipeline_steps & df]
+    D --> K
+    K --> L[Vectorized Data]
+    style A fill:#eff6ff,stroke:#94a3b8,stroke-width:2px
+    style L fill:#10b981,stroke:#059669,stroke-width:2px,color:#fff
 
 _metadata:
   bloc: 2

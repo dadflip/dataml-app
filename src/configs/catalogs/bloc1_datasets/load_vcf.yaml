@@ -4,16 +4,68 @@ description: "Parse un fichier Variant Call Format (.vcf) contenant des mutation
 category: "2. Load"
 tags: ["load", "vcf", "genetics", "variants"]
 code_template: |
-  import time
+  import pandas as pd
   import os
+  import gzip
 
   # [PARAM: FILE_PATH | file]
-  FILE_PATH = "./data/raw/variants.vcf"
+  FILE_PATH = "./data/raw/data.vcf"
+  # [/PARAM]
+
+  meta = {"source": "VCF", "path": FILE_PATH}
+  df = pd.DataFrame()
+
+  if os.path.exists(FILE_PATH):
+      try:
+          open_func = gzip.open if FILE_PATH.endswith('.gz') else open
+          
+          skip_rows = 0
+          with open_func(FILE_PATH, 'rt') as f:
+              for line in f:
+                  if line.startswith('##'):
+                      skip_rows += 1
+                  else:
+                      break
+                      
+          df = pd.read_csv(
+              FILE_PATH, 
+              sep='\t', 
+              skiprows=skip_rows, 
+              compression='gzip' if FILE_PATH.endswith('.gz') else 'infer'
+          )
+          
+          if not df.empty and '#CHROM' in df.columns:
+              df = df.rename(columns={'#CHROM': 'CHROM'})
+              meta["num_variants"] = len(df)
+              meta["chromosomes"] = df['CHROM'].unique().tolist()
+      except Exception as e:
+          print(f"Error loading VCF file {FILE_PATH}: {e}")
+  else:
+      print(f"File not found: {FILE_PATH}")
+
+  target_name = "QUAL" if not df.empty and "QUAL" in df.columns else "target"
+  task_type = "classification"
+output_variables:
+  - df
+  - target_name
+  - task_type
+  - meta
 illustration_mermaid: |
-    graph LR
-      Source[(Source)] -->|Load| Node([Extract Data])
-      style Source fill:#3b82f6,stroke:#2563eb,stroke-width:2px,color:#fff
-      style Node fill:#eff6ff,stroke:#3b82f6,stroke-width:2px
+  flowchart TD
+      A([FILE_PATH]) --> B{File Exists?}
+      B -- Yes --> C[Determine skip_rows for ## metadata]
+      B -- No --> D[Empty DataFrame]
+      C --> E[pd.read_csv skipping metadata]
+      E --> F[Rename #CHROM to CHROM]
+      F --> G[Extract chromosomes list]
+      G --> H([df, target_name, task_type, meta])
+      D --> H
+
+      style A fill:#3b82f6,color:#fff
+      style C fill:#10b981,color:#fff
+      style E fill:#10b981,color:#fff
+      style H fill:#f59e0b,color:#fff
+
 
 _metadata:
   bloc: 1

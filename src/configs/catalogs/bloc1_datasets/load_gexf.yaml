@@ -1,7 +1,6 @@
 id: load_gexf
 name: 'Load: Fichier GEXF (Gephi)'
-description: Charge un graphe au format GEXF (Graph Exchange XML Format) via NetworkX.
-  Exporte les attributs des noeuds dans df et l'edge_index dans meta.
+description: Charge un graphe au format GEXF (Graph Exchange XML Format) via NetworkX. Exporte les attributs des noeuds dans df et l'edge_index dans meta.
 category: 2. Load
 tags:
 - load
@@ -9,35 +8,68 @@ tags:
 - gexf
 - gephi
 - networkx
-code_template: "import pandas as pd\nimport numpy as np\nimport time\ntry:\n    import\
-  \ networkx as nx\nexcept ImportError:\n    nx = None\n    print(\"[ERREUR LOAD]\
-  \ 'networkx' n'est pas installé. Lancez : !pip install networkx\")\n\n# [PARAM:\
-  \ FILE_PATH | file]\nFILE_PATH = \"./data/raw/graph.gexf\"\n# [/PARAM]\n\n# [PARAM:\
-  \ TARGET_ATTR | string]\nTARGET_ATTR = \"\"\n# [/PARAM]\n\nprint(f\"[LOAD] Chargement\
-  \ du graphe GEXF depuis {FILE_PATH}...\")\n\ntry:\n    if nx is not None:\n    \
-  \    start_time = time.time()\n        G = nx.read_gexf(FILE_PATH)\n        \n \
-  \       # Extraction des attributs de noeuds en DataFrame\n        node_data = []\n\
-  \        for node_id, attrs in G.nodes(data=True):\n            row = {\"node_id\"\
-  : node_id}\n            row.update(attrs)\n            node_data.append(row)\n \
-  \       df = pd.DataFrame(node_data)\n        \n        # Construction de l'edge_index\
-  \ (format COO : 2 x N_edges)\n        node_list = list(G.nodes())\n        node2idx\
-  \ = {n: i for i, n in enumerate(node_list)}\n        src = [node2idx[u] for u, v\
-  \ in G.edges()]\n        dst = [node2idx[v] for u, v in G.edges()]\n        edge_index\
-  \ = np.array([src, dst], dtype=np.int64)\n        \n        duration = time.time()\
-  \ - start_time\n        print(f\"[LOAD] Succès GEXF. {G.number_of_nodes()} noeuds,\
-  \ {G.number_of_edges()} arêtes en {duration:.2f}s.\")\n        \n        target_name\
-  \ = TARGET_ATTR if TARGET_ATTR and TARGET_ATTR in df.columns else None\n       \
-  \ task_type = \"node_classification\" if target_name else \"graph_unsupervised\"\
-  \n        meta = {\"format\": \"gexf\", \"shape\": df.shape, \"edge_index\": edge_index,\
-  \ \"node_list\": node_list}\n    else:\n        df = None\n        target_name =\
-  \ None\n        task_type = \"unknown\"\n        meta = {}\nexcept Exception as\
-  \ e:\n    print(f\"[ERREUR LOAD] Échec du chargement GEXF : {str(e)}\")\n    raise\
-  \ e\n"
+code_template: |
+  import pandas as pd
+  import numpy as np
+  import time
+  try:
+      import networkx as nx
+  except ImportError:
+      nx = None
+      print("[ERREUR LOAD] 'networkx' n'est pas installé. Lancez : !pip install networkx")
+
+  # [PARAM: FILE_PATH | file]
+  FILE_PATH = "./data/raw/graph.gexf"
+  # [/PARAM]
+
+  # [PARAM: TARGET_ATTR | string]
+  TARGET_ATTR = ""
+  # [/PARAM]
+
+  print(f"[LOAD] Chargement du graphe GEXF depuis {FILE_PATH}...")
+
+  df = pd.DataFrame()
+  target_name = ""
+  task_type = "unknown"
+  meta = {}
+
+  try:
+      if nx is not None:
+          start_time = time.time()
+          G = nx.read_gexf(FILE_PATH)
+          
+          # Extraction des attributs de noeuds en DataFrame
+          node_data = []
+          for node_id, attrs in G.nodes(data=True):
+              row = {"node_id": node_id}
+              row.update(attrs)
+              node_data.append(row)
+          df = pd.DataFrame(node_data)
+          
+          # Construction de l'edge_index (format COO : 2 x N_edges)
+          node_list = list(G.nodes())
+          node2idx = {n: i for i, n in enumerate(node_list)}
+          src = [node2idx[u] for u, v in G.edges()]
+          dst = [node2idx[v] for u, v in G.edges()]
+          edge_index = np.array([src, dst], dtype=np.int64)
+          
+          duration = time.time() - start_time
+          print(f"[LOAD] Succès GEXF. {G.number_of_nodes()} noeuds, {G.number_of_edges()} arêtes en {duration:.2f}s.")
+          
+          target_name = TARGET_ATTR if TARGET_ATTR and TARGET_ATTR in df.columns else ""
+          task_type = "node_classification" if target_name else "graph_unsupervised"
+          meta = {"format": "gexf", "shape": df.shape, "edge_index": edge_index, "node_list": node_list}
+  except Exception as e:
+      print(f"[ERREUR LOAD] Échec du chargement GEXF : {str(e)}")
+      raise e
 illustration_mermaid: |
-    graph LR
-      Source[(Source)] -->|Load| Node([Extract Data])
-      style Source fill:#3b82f6,stroke:#2563eb,stroke-width:2px,color:#fff
-      style Node fill:#eff6ff,stroke:#3b82f6,stroke-width:2px
+  flowchart TD
+      A([FILE_PATH]) --> B[Load GEXF]
+      B --> df([df])
+      
+      style A fill:#3b82f6,color:#fff
+      style B fill:#10b981,color:#fff
+      style df fill:#f59e0b,color:#fff
 
 _metadata:
   bloc: 1

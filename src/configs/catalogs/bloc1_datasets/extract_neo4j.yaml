@@ -7,28 +7,101 @@ tags:
 - neo4j
 - graph
 - cypher
-code_template: "from neo4j import GraphDatabase\nimport pandas as pd\nimport os\n\
-  import time\n\n# [PARAM: URI | string]\nURI = \"bolt://localhost:7687\"\n# [/PARAM]\n\
-  \n# [PARAM: USER | string]\nUSER = \"neo4j\"\n# [/PARAM]\n\n# [PARAM: PASSWORD |\
-  \ string]\nPASSWORD = \"password\"\n# [/PARAM]\n\n# [PARAM: CYPHER_QUERY | string]\n\
-  CYPHER_QUERY = \"MATCH (n:Person) RETURN n.name AS name, n.age AS age LIMIT 100\"\
-  \n# [/PARAM]\n\n# [PARAM: DEST_PATH | string]\nDEST_PATH = \"./data/raw/neo4j_export.csv\"\
-  \n# [/PARAM]\n\nprint(f\"[EXTRACT] Exécution de la requête Cypher sur Neo4j ({URI})...\"\
-  )\nos.makedirs(os.path.dirname(DEST_PATH), exist_ok=True)\n\ntry:\n    start_time\
-  \ = time.time()\n    driver = GraphDatabase.driver(URI, auth=(USER, PASSWORD))\n\
-  \    \n    with driver.session() as session:\n        result = session.run(CYPHER_QUERY)\n\
-  \        data = [record.data() for record in result]\n        \n    driver.close()\n\
-  \    \n    df_temp = pd.DataFrame(data)\n    df_temp.to_csv(DEST_PATH, index=False)\n\
-  \    \n    duration = time.time() - start_time\n    print(f\"[EXTRACT] Succès Neo4j.\
-  \ {len(data)} noeuds/relations exportés en {duration:.2f}s.\")\nexcept Exception\
-  \ as e:\n    print(f\"[ERREUR EXTRACT] Échec Neo4j : {str(e)}\")\n    raise e\n\n\
-  df = None\ntarget_name = None\ntask_type = \"unknown\"\nmeta = {\"source\": \"neo4j\"\
-  , \"path\": DEST_PATH}\n"
+code_template: |
+  from neo4j import GraphDatabase
+  import pandas as pd
+  import os
+  import time
+
+  # [PARAM: URI | string]
+  URI = "bolt://localhost:7687"
+  # [/PARAM]
+
+  # [PARAM: USER | string]
+  USER = "neo4j"
+  # [/PARAM]
+
+  # [PARAM: PASSWORD | string]
+  PASSWORD = "password"
+  # [/PARAM]
+
+  # [PARAM: CYPHER_QUERY | string]
+  CYPHER_QUERY = "MATCH (n:Person) RETURN n.name AS name, n.age AS age LIMIT 100"
+  # [/PARAM]
+
+  # [PARAM: DEST_PATH | string]
+  DEST_PATH = "./data/raw/neo4j_export.csv"
+  # [/PARAM]
+
+  print(f"[EXTRACT] Exécution de la requête Cypher sur Neo4j ({URI})...")
+  os.makedirs(os.path.dirname(DEST_PATH), exist_ok=True)
+
+  try:
+      start_time = time.time()
+      driver = GraphDatabase.driver(URI, auth=(USER, PASSWORD))
+      
+      with driver.session() as session:
+          result = session.run(CYPHER_QUERY)
+          data = [record.data() for record in result]
+          
+      driver.close()
+      
+      df_temp = pd.DataFrame(data)
+      df_temp.to_csv(DEST_PATH, index=False)
+      
+      duration = time.time() - start_time
+      print(f"[EXTRACT] Succès Neo4j. {len(data)} noeuds/relations exportés en {duration:.2f}s.")
+  except Exception as e:
+      print(f"[ERREUR EXTRACT] Échec Neo4j : {str(e)}")
+      raise e
+
+  df = DEST_PATH
+  target_name = "target"
+  task_type = "unknown"
+  meta = {"source": "neo4j", "path": DEST_PATH}
 illustration_mermaid: |
-    graph LR
-      Source[(Source)] -->|Load| Node([Extract Data])
-      style Source fill:#3b82f6,stroke:#2563eb,stroke-width:2px,color:#fff
-      style Node fill:#eff6ff,stroke:#3b82f6,stroke-width:2px
+    flowchart TD
+    A([FILE_PATH]) --> B[Load EXTRACT_NEO4J]
+    B --> df([df])
+    
+    style A fill:#3b82f6,color:#fff
+    style B fill:#10b981,color:#fff
+    style df fill:#f59e0b,color:#fff
+
+
+        subgraph Operations [Extraction Process]
+            DB[(Neo4j GraphDatabase)]
+            Driver([driver.session])
+            QueryRun([session.run])
+            RecordList[[data: List of dicts]]
+            DF[df_temp: Pandas DataFrame]
+            Save([to_csv])
+        end
+
+        subgraph Outputs [Contract Variables]
+            df((df = None))
+            target((target_name = None))
+            task((task_type = 'unknown'))
+            meta((meta: dict))
+        end
+
+        URI & CRED --> DB
+        DB --> Driver
+        QUERY --> QueryRun
+        Driver --> QueryRun
+        QueryRun -->|record.data| RecordList
+        RecordList --> DF
+        DF --> Save
+        DEST --> Save
+        Save -.-> meta
+
+        style Config fill:#f8fafc,stroke:#cbd5e1,stroke-width:2px
+        style DB fill:#3b82f6,stroke:#1d4ed8,stroke-width:2px,color:#fff
+        style Driver fill:#10b981,stroke:#047857,stroke-width:2px,color:#fff
+        style QueryRun fill:#f59e0b,stroke:#b45309,stroke-width:2px,color:#fff
+        style DF fill:#8b5cf6,stroke:#6d28d9,stroke-width:2px,color:#fff
+        style Save fill:#ec4899,stroke:#be185d,stroke-width:2px,color:#fff
+        style Outputs fill:#f1f5f9,stroke:#94a3b8,stroke-width:2px
 
 _metadata:
   bloc: 1

@@ -30,11 +30,27 @@ code_template: |
           fe = ce.CountEncoder(cols=cat_cols, normalize=True)
           
           step_name = 'freq_encoding'
+          pipeline_steps[step_name] = fe
+          df = fe.fit_transform(df)
+          print(f"[TRANSFORM] Encodage fréquentiel appliqué sur {len(cat_cols)} colonnes.")
+      else:
+          print("[AVERTISSEMENT] Aucune colonne catégorielle trouvée pour l'encodage.")
+
 illustration_mermaid: |
-    graph LR
-      In([Raw Data]) -->|Process| Out([Clean Data])
-      style In fill:#eff6ff,stroke:#94a3b8,stroke-width:2px,stroke-dasharray: 5 5
-      style Out fill:#10b981,stroke:#059669,stroke-width:2px,color:#fff
+  graph TD
+    A[Input DataFrame] --> B{ce installed?}
+    B -- Yes --> C[Identify categorical cols]
+    B -- No --> D[Error / Skip]
+    C --> E{Any cat_cols?}
+    E -- Yes --> F[Initialize ce.CountEncoder]
+    E -- No --> G[Skip and Warn]
+    F --> H[Fit & Transform df]
+    H --> I[Update pipeline_steps]
+    I --> J[Frequency Encoded DataFrame]
+    D --> J
+    G --> J
+    style A fill:#eff6ff,stroke:#94a3b8,stroke-width:2px
+    style J fill:#10b981,stroke:#059669,stroke-width:2px,color:#fff
 
 _metadata:
   bloc: 2
