@@ -1,0 +1,299 @@
+id: "model_ds50_multiseed"
+name: "DS50 Multi-Seed Models (GNN, MLP, RF, XGB, LR)"
+description: "Définit les réseaux de neurones (GCN, GraphSAGE, MLP) et entraîne 6 modèles sur plusieurs seeds."
+category: "Custom"
+tags: ["model", "multiseed", "gnn", "pytorch", "xgboost"]
+applies_to: ["Graphes"]
+when_to_use: "Après le preprocessing DS50."
+pros:
+  - "Très complet, compare de multiples modèles sur plusieurs seeds."
+cons:
+  - "L'exécution peut prendre plusieurs minutes, surtout sur CPU."
+hyperparameters:
+  SEEDS: "Liste des seeds (ex: [42, 43, 44, 45, 46])"
+input_variables:
+  required: ["dataset", "X_nodes", "adj_norm", "node_to_idx", "all_candidate_pairs", "positive_set", "build_heuristic_features", "build_pair_features", "dataframe_to_link_tensors", "nodes", "DEVICE"]
+output_variables:
+  all_seed_results: "Liste des dictionnaires de résultats (métriques)"
+  all_recommendations: "Liste des DataFrames de prédictions sur les candidats"
+  SEEDS: "Liste des seeds utilisées"
+code_template: |
+  import json, random
+  import numpy as np
+  import pandas as pd
+  import torch
+  import torch.nn as nn
+  import torch.nn.functional as F
+  from sklearn.model_selection import train_test_split, StratifiedKFold, cross_val_score
+  from sklearn.metrics import roc_auc_score, average_precision_score, accuracy_score, f1_score, classification_report
+  from sklearn.linear_model import LogisticRegression
+  from sklearn.ensemble import RandomForestClassifier
+  from xgboost import XGBClassifier
+
+  # [PARAM: SEEDS | expr]
+  SEEDS = [42, 43, 44, 45, 46]
+  # [/PARAM]
+
+  # 7. Modèles PyTorch
+  class GCNLayer(nn.Module):
+      def __init__(self, in_dim, out_dim):
+          super().__init__()
+          self.linear = nn.Linear(in_dim, out_dim)
+      def forward(self, x, adj_norm):
+          return F.relu(self.linear(torch.matmul(adj_norm, x)))
+
+  class GCNEncoder(nn.Module):
+      def __init__(self, in_dim, hidden_dim=32, embedding_dim=16, dropout=0.5):
+          super().__init__()
+          self.layer1  = GCNLayer(in_dim, hidden_dim)
+          self.layer2  = GCNLayer(hidden_dim, embedding_dim)
+          self.dropout = nn.Dropout(dropout)
+      def forward(self, x, adj_norm):
+          return self.layer2(self.dropout(self.layer1(x, adj_norm)), adj_norm)
+
+  class GCNLinkPredictionModel(nn.Module):
+      def __init__(self, in_dim, hidden_dim=32, embedding_dim=16):
+          super().__init__()
+          self.encoder = GCNEncoder(in_dim, hidden_dim, embedding_dim)
+          self.decoder = LinkDecoder(embedding_dim, heuristic_dim=10)
+      def forward(self, x, adj_norm, src_idx, dst_idx, heuristics):
+          z = self.encoder(x, adj_norm)
+          return self.decoder(z[src_idx], z[dst_idx], heuristics)
+
+  class GraphSAGELayer(nn.Module):
+      def __init__(self, in_dim, out_dim):
+          super().__init__()
+          self.self_linear  = nn.Linear(in_dim, out_dim)
+          self.neigh_linear = nn.Linear(in_dim, out_dim)
+      def forward(self, x, adj_norm):
+          return F.relu(self.self_linear(x) + self.neigh_linear(torch.matmul(adj_norm, x)))
+
+  class GraphSAGEEncoder(nn.Module):
+      def __init__(self, in_dim, hidden_dim=32, embedding_dim=16, dropout=0.5):
+          super().__init__()
+          self.layer1  = GraphSAGELayer(in_dim, hidden_dim)
+          self.layer2  = GraphSAGELayer(hidden_dim, embedding_dim)
+          self.dropout = nn.Dropout(dropout)
+      def forward(self, x, adj_norm):
+          return self.layer2(self.dropout(self.layer1(x, adj_norm)), adj_norm)
+
+  class GraphSAGELinkPredictionModel(nn.Module):
+      def __init__(self, in_dim, hidden_dim=32, embedding_dim=16):
+          super().__init__()
+          self.encoder = GraphSAGEEncoder(in_dim, hidden_dim, embedding_dim)
+          self.decoder = LinkDecoder(embedding_dim, heuristic_dim=10)
+      def forward(self, x, adj_norm, src_idx, dst_idx, heuristics):
+          z = self.encoder(x, adj_norm)
+          return self.decoder(z[src_idx], z[dst_idx], heuristics)
+
+  class LinkDecoder(nn.Module):
+      def __init__(self, embedding_dim=32, heuristic_dim=10, hidden_dim=64):
+          super().__init__()
+          self.mlp = nn.Sequential(
+              nn.Linear(embedding_dim * 4 + heuristic_dim, hidden_dim),
+              nn.ReLU(), nn.Dropout(0.25),
+              nn.Linear(hidden_dim, 1),
+          )
+      def forward(self, z_src, z_dst, heuristics):
+          pair = torch.cat([z_src, z_dst, torch.abs(z_src-z_dst), z_src*z_dst, heuristics], dim=1)
+          return self.mlp(pair).squeeze(-1)
+
+  class PairMLP(nn.Module):
+      def __init__(self, input_dim, hidden_dim=128):
+          super().__init__()
+          self.network = nn.Sequential(
+              nn.Linear(input_dim, hidden_dim), nn.ReLU(), nn.Dropout(0.25),
+              nn.Linear(hidden_dim, hidden_dim // 2), nn.ReLU(), nn.Dropout(0.25),
+              nn.Linear(hidden_dim // 2, 1),
+          )
+      def forward(self, x):
+          return self.network(x).squeeze(-1)
+
+  def set_seed(seed):
+      random.seed(seed); np.random.seed(seed); torch.manual_seed(seed)
+      if torch.cuda.is_available(): torch.cuda.manual_seed_all(seed)
+
+  def evaluate_predictions(model_name, y_true, y_prob, threshold=0.5, verbose=False):
+      y_pred = (y_prob >= threshold).astype(int)
+      metrics = {
+          "model":             model_name,
+          "roc_auc":           float(roc_auc_score(y_true, y_prob)),
+          "average_precision": float(average_precision_score(y_true, y_prob)),
+          "accuracy":          float(accuracy_score(y_true, y_pred)),
+          "f1":                float(f1_score(y_true, y_pred)),
+      }
+      return metrics
+
+  def train_gnn(model, model_name,
+                train_src, train_dst, train_y_t,
+                val_src, val_dst, val_y,
+                test_src, test_dst,
+                H_train, H_val, H_test,
+                epochs=250, patience=30, lr=0.005):
+      optimizer = torch.optim.Adam(model.parameters(), lr=lr, weight_decay=1e-3)
+      criterion = nn.BCEWithLogitsLoss()
+      best_val_auc, best_state, counter = -1, None, 0
+
+      for epoch in range(1, epochs + 1):
+          model.train(); optimizer.zero_grad()
+          loss = criterion(model(X_nodes, adj_norm, train_src, train_dst, H_train), train_y_t)
+          loss.backward(); optimizer.step()
+
+          model.eval()
+          with torch.no_grad():
+              vp = torch.sigmoid(model(X_nodes, adj_norm, val_src, val_dst, H_val)).cpu().numpy()
+          val_auc = roc_auc_score(val_y, vp)
+
+          if val_auc > best_val_auc:
+              best_val_auc = val_auc
+              best_state   = {k: v.clone() for k, v in model.state_dict().items()}
+              counter = 0
+          else:
+              counter += 1
+
+          if counter >= patience:
+              break
+
+      model.load_state_dict(best_state); model.eval()
+      with torch.no_grad():
+          test_probs = torch.sigmoid(model(X_nodes, adj_norm, test_src, test_dst, H_test)).cpu().numpy()
+      return test_probs
+
+  def predict_candidates(model_name, models_dict, candidate_df, H_cand):
+      model = models_dict[model_name]
+      if model_name in ("Logistic Regression", "Random Forest", "XGBoost"):
+          X_cand = build_pair_features(candidate_df)
+          return model.predict_proba(X_cand)[:, 1]
+      elif model_name == "MLP Link Predictor":
+          X_cand   = build_pair_features(candidate_df)
+          X_cand_t = torch.tensor(X_cand, dtype=torch.float32).to(DEVICE)
+          model.eval()
+          with torch.no_grad():
+              return torch.sigmoid(model(X_cand_t)).cpu().numpy()
+      else:
+          cand_src = torch.tensor([node_to_idx[n] for n in candidate_df["source"]], dtype=torch.long, device=DEVICE)
+          cand_dst = torch.tensor([node_to_idx[n] for n in candidate_df["target"]], dtype=torch.long, device=DEVICE)
+          model.eval()
+          with torch.no_grad():
+              return torch.sigmoid(model(X_nodes, adj_norm, cand_src, cand_dst, H_cand)).cpu().numpy()
+
+  def run_one_seed(SEED):
+      print(f"\\n{'='*55}\\n  SEED = {SEED}\\n{'='*55}")
+      set_seed(SEED)
+
+      train_df, temp_df = train_test_split(dataset, test_size=0.30, random_state=SEED)
+      val_df,   test_df = train_test_split(temp_df,  test_size=0.50, random_state=SEED)
+
+      y_train, y_val, y_test = train_df["label"].values, val_df["label"].values, test_df["label"].values
+
+      print("  Building pair features…")
+      X_train_pair = build_pair_features(train_df)
+      X_val_pair   = build_pair_features(val_df)
+      X_test_pair  = build_pair_features(test_df)
+
+      H_train = torch.tensor(build_heuristic_features(train_df), dtype=torch.float32, device=DEVICE)
+      H_val   = torch.tensor(build_heuristic_features(val_df),   dtype=torch.float32, device=DEVICE)
+      H_test  = torch.tensor(build_heuristic_features(test_df),  dtype=torch.float32, device=DEVICE)
+
+      train_src, train_dst, train_y_t = dataframe_to_link_tensors(train_df)
+      val_src,   val_dst,   _         = dataframe_to_link_tensors(val_df)
+      test_src,  test_dst,  _         = dataframe_to_link_tensors(test_df)
+
+      X_train_t = torch.tensor(X_train_pair, dtype=torch.float32).to(DEVICE)
+      X_val_t   = torch.tensor(X_val_pair,   dtype=torch.float32).to(DEVICE)
+      X_test_t  = torch.tensor(X_test_pair,  dtype=torch.float32).to(DEVICE)
+      y_train_t = torch.tensor(y_train,      dtype=torch.float32).to(DEVICE)
+
+      seed_results = []
+      models_dict  = {}
+
+      print("  Training Logistic Regression…")
+      lr_model = LogisticRegression(max_iter=1000, class_weight="balanced", random_state=SEED)
+      lr_model.fit(X_train_pair, y_train)
+      lr_probs = lr_model.predict_proba(X_test_pair)[:, 1]
+      m = evaluate_predictions("Logistic Regression", y_test, lr_probs)
+      m["seed"] = SEED; seed_results.append(m); models_dict["Logistic Regression"] = lr_model
+
+      print("  Training Random Forest…")
+      rf = RandomForestClassifier(n_estimators=100, max_depth=8, min_samples_split=4, class_weight="balanced", random_state=SEED)
+      rf.fit(X_train_pair, y_train)
+      rf_probs = rf.predict_proba(X_test_pair)[:, 1]
+      m = evaluate_predictions("Random Forest", y_test, rf_probs)
+      m["seed"] = SEED; seed_results.append(m); models_dict["Random Forest"] = rf
+
+      print("  Training MLP…")
+      mlp = PairMLP(input_dim=X_train_pair.shape[1]).to(DEVICE)
+      opt = torch.optim.Adam(mlp.parameters(), lr=0.001, weight_decay=1e-4)
+      crit = nn.BCEWithLogitsLoss()
+      best_auc, best_state, pat_counter = -1, None, 0
+      for epoch in range(1, 151):
+          mlp.train(); opt.zero_grad()
+          loss = crit(mlp(X_train_t), y_train_t)
+          loss.backward(); opt.step()
+          mlp.eval()
+          with torch.no_grad(): vp = torch.sigmoid(mlp(X_val_t)).cpu().numpy()
+          va = roc_auc_score(y_val, vp)
+          if va > best_auc: best_auc, best_state, pat_counter = va, {k: v.clone() for k,v in mlp.state_dict().items()}, 0
+          else: pat_counter += 1
+          if pat_counter >= 30: break
+      mlp.load_state_dict(best_state); mlp.eval()
+      with torch.no_grad(): mlp_probs = torch.sigmoid(mlp(X_test_t)).cpu().numpy()
+      m = evaluate_predictions("MLP Link Predictor", y_test, mlp_probs)
+      m["seed"] = SEED; seed_results.append(m); models_dict["MLP Link Predictor"] = mlp
+
+      print("  Training XGBoost…")
+      xgb_model = XGBClassifier(n_estimators=100, max_depth=4, learning_rate=0.05,
+                                scale_pos_weight=len(y_train[y_train==0]) / max(len(y_train[y_train==1]), 1),
+                                random_state=SEED, eval_metric="auc", verbosity=0)
+      xgb_model.fit(X_train_pair, y_train, eval_set=[(X_val_pair, y_val)], verbose=False)
+      xgb_probs = xgb_model.predict_proba(X_test_pair)[:, 1]
+      m = evaluate_predictions("XGBoost", y_test, xgb_probs)
+      m["seed"] = SEED; seed_results.append(m); models_dict["XGBoost"] = xgb_model
+
+      print("  Training GCN…")
+      gcn = GCNLinkPredictionModel(in_dim=X_nodes.shape[1]).to(DEVICE)
+      gcn_probs = train_gnn(gcn, "GCN", train_src, train_dst, train_y_t, val_src, val_dst, y_val, test_src, test_dst, H_train, H_val, H_test, epochs=150)
+      m = evaluate_predictions("GCN Link Prediction", y_test, gcn_probs)
+      m["seed"] = SEED; seed_results.append(m); models_dict["GCN Link Prediction"] = gcn
+
+      print("  Training GraphSAGE…")
+      sage = GraphSAGELinkPredictionModel(in_dim=X_nodes.shape[1]).to(DEVICE)
+      sage_probs = train_gnn(sage, "GraphSAGE", train_src, train_dst, train_y_t, val_src, val_dst, y_val, test_src, test_dst, H_train, H_val, H_test, epochs=150)
+      m = evaluate_predictions("GraphSAGE Link Prediction", y_test, sage_probs)
+      m["seed"] = SEED; seed_results.append(m); models_dict["GraphSAGE Link Prediction"] = sage
+
+      best_model_name = max(seed_results, key=lambda x: x["roc_auc"])["model"]
+      print(f"  Best model (seed={SEED}): {best_model_name}")
+
+      candidate_df = pd.DataFrame(all_candidate_pairs, columns=["source","target"])
+      H_cand = torch.tensor(build_heuristic_features(candidate_df), dtype=torch.float32, device=DEVICE)
+      candidate_df["probability"]    = predict_candidates(best_model_name, models_dict, candidate_df, H_cand)
+      candidate_df["known_positive"] = candidate_df.apply(lambda r: (r["source"],r["target"]) in positive_set, axis=1)
+      candidate_df["source_type"]    = candidate_df["source"].map(dict(zip(nodes["label"], nodes["primary_type"])))
+      candidate_df["target_type"]    = candidate_df["target"].map(dict(zip(nodes["label"], nodes["primary_type"])))
+      candidate_df["seed"]           = SEED
+      candidate_df["best_model"]     = best_model_name
+      
+      # On stocke aussi le meilleur modèle dans l'environnement global (pour le bloc API)
+      global best_pipeline_model
+      best_pipeline_model = models_dict[best_model_name]
+
+      return seed_results, candidate_df.sort_values("probability", ascending=False)
+
+  # Lancement boucle multi-seeds
+  all_seed_results   = []
+  all_recommendations = []
+
+  for seed_val in SEEDS:
+      seed_results, candidate_df = run_one_seed(seed_val)
+      all_seed_results.extend(seed_results)
+      all_recommendations.append(candidate_df)
+
+  print("\n[MODELS] Toutes les seeds terminées ✓")
+  
+  # Export the best model to standard variable names for the API block
+  if 'best_pipeline_model' in globals():
+      model = best_pipeline_model
+_metadata:
+  bloc: 3
+  section: "5_custom"

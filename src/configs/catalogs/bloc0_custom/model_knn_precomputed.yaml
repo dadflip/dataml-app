@@ -29,25 +29,32 @@ code_template: |
   
   if 'X_train' in locals() and 'X_test' in locals() and 'y_train' in locals():
       # Vérification de la disponibilité des distances
-      if 'OXFORD_DISTANCES' not in globals() or DISTANCE_KEY not in globals()['OXFORD_DISTANCES']:
-          print(f"[ERREUR] Matrice '{DISTANCE_KEY}' non trouvée dans OXFORD_DISTANCES. Exécutez le bloc Load 102Flowers d'abord.")
+      if 'OXFORD_DISTANCES' not in globals():
+          print("[ERREUR] OXFORD_DISTANCES introuvable. Exécutez le bloc Load 102Flowers d'abord.")
       else:
-          full_dist_mat = globals()['OXFORD_DISTANCES'][DISTANCE_KEY]
+          keys = [k.strip() for k in DISTANCE_KEY.split(',')]
+          missing = [k for k in keys if k not in globals()['OXFORD_DISTANCES']]
+          if missing:
+              print(f"[ERREUR] Matrices {missing} non trouvées dans OXFORD_DISTANCES.")
+          else:
+              mats = [globals()['OXFORD_DISTANCES'][k] for k in keys]
+              full_dist_mat = np.mean(mats, axis=0)
+              print(f"[MODEL] Matrices fusionnées (moyenne) : {keys}")
           
-          # Les index de X_train et X_test correspondent aux index d'origine de la base de données 102flowers
-          # Pour le KNN precomputed de Scikit-Learn:
-          # X_train doit être la matrice des distances entre les échantillons de train: shape (N_train, N_train)
-          # X_test doit être la matrice des distances entre test et train: shape (N_test, N_train)
-          
-          train_idx = X_train.index.to_numpy()
-          test_idx = X_test.index.to_numpy()
-          
-          # On extrait les sous-matrices
-          # Lignes : train, Colonnes : train
-          X_train_precomputed = full_dist_mat[train_idx][:, train_idx]
-          
-          # Lignes : test, Colonnes : train
-          X_test_precomputed = full_dist_mat[test_idx][:, train_idx]
+              # Les index de X_train et X_test correspondent aux index d'origine de la base de données 102flowers
+              # Pour le KNN precomputed de Scikit-Learn:
+              # X_train doit être la matrice des distances entre les échantillons de train: shape (N_train, N_train)
+              # X_test doit être la matrice des distances entre test et train: shape (N_test, N_train)
+              
+              train_idx = X_train.index.to_numpy()
+              test_idx = X_test.index.to_numpy()
+              
+              # On extrait les sous-matrices
+              # Lignes : train, Colonnes : train
+              X_train_precomputed = full_dist_mat[train_idx][:, train_idx]
+              
+              # Lignes : test, Colonnes : train
+              X_test_precomputed = full_dist_mat[test_idx][:, train_idx]
           
           model = KNeighborsClassifier(n_neighbors=int(N_NEIGHBORS), metric='precomputed')
           

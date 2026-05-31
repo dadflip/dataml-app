@@ -1,0 +1,165 @@
+id: "eval_ds50_viz"
+name: "Visualisation DS50 (6 Figures + Export)"
+description: "Agrégation des résultats multi-seeds, tracés des graphiques matplotlib et sauvegarde CSV."
+category: "Custom"
+tags: ["evaluation", "viz", "matplotlib", "aggregation"]
+applies_to: ["Graphes"]
+when_to_use: "Après avoir fait tourner le multi-seed models block."
+pros:
+  - "Visualise finement les résultats (boxplot, heatmap, etc.)."
+cons:
+  - "Très spécifique aux noms de métriques du pipeline d'origine."
+hyperparameters:
+  OUTPUT_DIR: "Dossier de sortie (ex: 'outputs_task2_multimodel')"
+  TOP_K: "Nombre de recommandations (ex: 5)"
+input_variables:
+  required: ["all_seed_results", "all_recommendations", "SEEDS"]
+output_variables:
+  full_results_df: "Résultats complets (DataFrame)"
+  summary_df: "Résumé par modèle"
+  agg_reco_df: "Recommandations agrégées"
+code_template: |
+  import os, json
+  import pandas as pd
+  import numpy as np
+  import matplotlib
+  import matplotlib.pyplot as plt
+
+  # [PARAM: OUTPUT_DIR | string]
+  OUTPUT_DIR = "outputs_task2_multimodel"
+  # [/PARAM]
+
+  # [PARAM: TOP_K | int]
+  TOP_K = 5
+  # [/PARAM]
+
+  os.makedirs(OUTPUT_DIR, exist_ok=True)
+
+  # 10. Agrégation des résultats
+  full_results_df = pd.DataFrame(all_seed_results)
+
+  summary_df = (
+      full_results_df
+      .groupby("model")[["roc_auc","average_precision","accuracy","f1"]]
+      .agg(["mean","std"])
+      .round(4)
+  )
+  summary_df.columns = ["_".join(c) for c in summary_df.columns]
+  summary_df = summary_df.sort_values("roc_auc_mean", ascending=False).reset_index()
+
+  print(f"Résultats agrégés sur {len(SEEDS)} seeds :")
+  display(summary_df)
+
+  all_reco_df = pd.concat(all_recommendations, ignore_index=True)
+  agg_reco_df = (
+      all_reco_df
+      .groupby(["source","target"], as_index=False)
+      .agg(
+          probability_mean=("probability","mean"),
+          probability_std= ("probability","std"),
+          known_positive=  ("known_positive","first"),
+          source_type=     ("source_type","first"),
+          target_type=     ("target_type","first"),
+      )
+      .sort_values("probability_mean", ascending=False)
+      .reset_index(drop=True)
+  )
+
+  topk_recommendations = (
+      agg_reco_df
+      .groupby("source", group_keys=False)
+      .head(int(TOP_K))
+      .reset_index(drop=True)
+  )
+
+  # 11. Visuel
+  matplotlib.rcParams.update({
+      "figure.facecolor":  "white",
+      "axes.facecolor":    "white",
+      "axes.grid":         True,
+      "grid.color":        "#E8E8E8",
+      "grid.linewidth":    0.6,
+      "axes.spines.top":   False,
+      "axes.spines.right": False,
+      "font.family":       "sans-serif",
+      "font.size":         11,
+  })
+
+  MODEL_COLORS = {
+      "Logistic Regression":      "#5B8DEF",
+      "Random Forest":            "#F4A44A",
+      "MLP Link Predictor":       "#A07BE5",
+      "GCN Link Prediction":      "#3EC97C",
+      "GraphSAGE Link Prediction":"#EF6B5B",
+      "XGBoost":                  "#2EC4B6"
+  }
+  METRICS = ["roc_auc", "average_precision", "accuracy", "f1"]
+  METRIC_LABELS = {"roc_auc": "ROC-AUC", "average_precision": "Avg Precision",
+                   "accuracy": "Accuracy", "f1": "F1-Score"}
+
+  models = [m for m in MODEL_COLORS.keys() if m in full_results_df["model"].values]
+
+  # Figure 1 — Comparaison ROC-AUC par seed
+  fig, ax = plt.subplots(figsize=(10, 4.5))
+  for model in models:
+      sub = full_results_df[full_results_df["model"] == model].sort_values("seed")
+      ax.plot(sub["seed"], sub["roc_auc"],
+              marker="o", linewidth=2, markersize=6,
+              color=MODEL_COLORS.get(model, "#000"), label=model)
+  ax.set_xlabel("Seed"); ax.set_ylabel("ROC-AUC")
+  ax.set_title("ROC-AUC par seed et par modèle", fontweight="bold")
+  ax.set_xticks(SEEDS)
+  ax.legend(loc="lower right", fontsize=9, framealpha=0.7)
+  plt.tight_layout(); plt.savefig(f"{OUTPUT_DIR}/fig1_roc_auc_per_seed.png", dpi=150)
+  plt.show()
+
+  # Figure 2 — Boxplots ROC-AUC
+  fig, ax = plt.subplots(figsize=(10, 4.5))
+  data_boxes = [full_results_df[full_results_df["model"] == m]["roc_auc"].values for m in models]
+  bp = ax.boxplot(data_boxes, patch_artist=True, widths=0.5,
+                  medianprops=dict(color="white", linewidth=2))
+  for patch, model in zip(bp["boxes"], models):
+      patch.set_facecolor(MODEL_COLORS.get(model, "#000")); patch.set_alpha(0.8)
+  for element in ["whiskers","caps","fliers"]:
+      for item, model in zip(bp[element], [m for m in models for _ in range(2 if element != "fliers" else 1)]):
+          item.set_color(MODEL_COLORS.get(model, "#000")); item.set_linewidth(1.2)
+  ax.set_xticks(range(1, len(models)+1))
+  ax.set_xticklabels([m.replace(" Link Prediction","").replace(" Link Predictor","")
+                      for m in models], rotation=15, ha="right")
+  ax.set_ylabel("ROC-AUC"); ax.set_ylim(0, 1.05)
+  ax.set_title("Distribution ROC-AUC sur toutes les seeds", fontweight="bold")
+  plt.tight_layout(); plt.savefig(f"{OUTPUT_DIR}/fig2_boxplot_roc_auc.png", dpi=150)
+  plt.show()
+
+  # Figure 3 — Heatmap
+  fig, axes = plt.subplots(1, 2, figsize=(13, 3.5))
+  agg = full_results_df.groupby("model")[METRICS].agg(["mean","std"]).round(4)
+  
+  for ax, stat, title, cmap in zip(
+          axes, ["mean","std"],
+          ["Moyenne des métriques", "Écart-type des métriques"],
+          ["YlGnBu","Oranges"]):
+      mat = pd.DataFrame({m: agg[m][stat] for m in METRICS if m in agg.columns.levels[0]}, index=models)
+      mat.index = [i.replace(" Link Prediction","").replace(" Link Predictor","") for i in mat.index]
+      im = ax.imshow(mat.values, aspect="auto", cmap=cmap, vmin=mat.values.min(), vmax=mat.values.max())
+      ax.set_xticks(range(len(METRICS)))
+      ax.set_xticklabels([METRIC_LABELS[m] for m in METRICS], rotation=30, ha="right")
+      ax.set_yticks(range(len(mat))); ax.set_yticklabels(mat.index)
+      for i in range(len(mat)):
+          for j in range(len(METRICS)):
+              ax.text(j, i, f"{mat.values[i,j]:.3f}", ha="center", va="center",
+                      fontsize=9, color="white" if mat.values[i,j] > mat.values.max()*0.65 else "black")
+      ax.set_title(title, fontweight="bold")
+      plt.colorbar(im, ax=ax, shrink=0.8)
+  plt.tight_layout(); plt.savefig(f"{OUTPUT_DIR}/fig3_heatmap_metrics.png", dpi=150)
+  plt.show()
+
+  # 12. Sauvegarde
+  full_results_df.to_csv(f"{OUTPUT_DIR}/all_seeds_results.csv", index=False)
+  summary_df.to_csv(f"{OUTPUT_DIR}/model_comparison_summary.csv", index=False)
+  agg_reco_df.to_csv(f"{OUTPUT_DIR}/best_model_all_predictions.csv", index=False)
+  topk_recommendations.to_csv(f"{OUTPUT_DIR}/best_model_topk_recommendations.csv", index=False)
+  print(f"[EVALUATION] Visualisations et fichiers exportés dans {OUTPUT_DIR}/")
+_metadata:
+  bloc: 4
+  section: "5_custom"

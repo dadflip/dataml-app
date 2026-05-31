@@ -36,8 +36,17 @@ code_template: |
   if 'X_train' in locals() and 'y_train' in locals() and 'X_test' in locals() and torch is not None:
       # On suppose que le bloc 2 a transformé les images en tenseurs plats ou (N, C, H, W)
       # Pour simplifier, on force un reshape (N, 1, 28, 28) si c'est du 1D (ex: MNIST flatten)
-      X_tr_np = np.array(X_train)
-      X_te_np = np.array(X_test)
+      if isinstance(X_train, pd.DataFrame):
+          col = X_train.columns[0]
+          if isinstance(X_train[col].iloc[0], np.ndarray):
+              X_tr_np = np.stack(X_train[col].values)
+              X_te_np = np.stack(X_test[col].values)
+          else:
+              X_tr_np = X_train.values
+              X_te_np = X_test.values
+      else:
+          X_tr_np = np.array(X_train)
+          X_te_np = np.array(X_test)
       
       if len(X_tr_np.shape) == 2:
           # tentative de reshape carré (ex: 784 -> 28x28)

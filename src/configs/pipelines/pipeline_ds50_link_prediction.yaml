@@ -1,0 +1,40 @@
+id: "pipeline_ds50_link_prediction"
+name: "Recette : DS50 Multi-Seed Link Prediction"
+description: "Pipeline complète reproduisant le code DS50. Extraction des heuristiques de graphe, entraînement GNN/MLP/XGBoost sur plusieurs seeds, visualisation et déploiement FastAPI connecté à Supabase."
+category: "Custom"
+nodes:
+  # BLOC 1 : DATASETS
+  - node_id: "load_ds50"
+    block_id: "dataset_ds50_graph"
+    params:
+      NODES_PATH: "nodesNew.csv"
+      EDGES_PATH: "edgesNew.csv"
+      TARGET_RELATION: "containsGameElement"
+
+  # BLOC 2 : PREPROCESSING
+  - node_id: "prep_ds50"
+    block_id: "preprocess_ds50_link_prediction"
+    depends_on: ["load_ds50"]
+    params:
+      MASTER_SEED: 42
+      NEGATIVE_RATIO: 2
+
+  # BLOC 3 : MODELS
+  - node_id: "models_ds50"
+    block_id: "model_ds50_multiseed"
+    depends_on: ["prep_ds50"]
+    params:
+      SEEDS: "[42, 43, 44]"
+
+  # BLOC 4 : EVALUATION & VIZ
+  - node_id: "eval_ds50"
+    block_id: "eval_ds50_viz"
+    depends_on: ["models_ds50"]
+    params:
+      OUTPUT_DIR: "outputs_task2_multimodel"
+      TOP_K: 5
+
+  # BLOC 5 : DEPLOIEMENT
+  - node_id: "deploy_api"
+    block_id: "deploy_fastapi_supabase"
+    depends_on: ["eval_ds50"]
