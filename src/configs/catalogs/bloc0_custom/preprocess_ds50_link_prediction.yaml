@@ -188,5 +188,5 @@ code_template: |
 
   print("[PREPROCESSING] Preprocessing terminé avec succès.")
 _metadata:
-  bloc: 2
-  section: "5_custom"
+  bloc: -1
+  section: "0_custom_project"

@@ -161,5 +161,5 @@ code_template: |
   topk_recommendations.to_csv(f"{OUTPUT_DIR}/best_model_topk_recommendations.csv", index=False)
   print(f"[EVALUATION] Visualisations et fichiers exportés dans {OUTPUT_DIR}/")
 _metadata:
-  bloc: 4
-  section: "5_custom"
+  bloc: -1
+  section: "0_custom_project"

@@ -1,0 +1,137 @@
+integrations:
+  - id: "google_drive"
+    name: "Google Drive (Colab)"
+    description: "Monte votre Google Drive dans l'environnement Colab pour un accès persistant aux fichiers."
+    icon: "HardDrive"
+    fields: []
+    code_template: |
+      try:
+          from google.colab import drive
+          drive.mount('/content/drive')
+          print("[INTEGRATION] Google Drive monté avec succès sous /content/drive")
+      except ImportError:
+          print("[INTEGRATION] L'environnement n'est pas Google Colab. Montage Drive ignoré.")
+
+  - id: "hugging_face"
+    name: "Hugging Face"
+    description: "Authentification au Hub pour télécharger ou publier des modèles/datasets."
+    icon: "Boxes"
+    docs_url: "https://huggingface.co/settings/tokens"
+    fields:
+      - id: "hf_token"
+        label: "Hugging Face Access Token"
+        type: "password"
+        placeholder: "hf_xxxxxxxxxxxxxxxxxxxxxxxxxxx"
+        hint: "Utilisez un token avec le droit 'write' si vous prévoyez de publier des modèles."
+    code_template: |
+      import os
+      try:
+          from huggingface_hub import login
+          hf_token = {{ hf_token | repr }}
+          if hf_token:
+              os.environ["HF_TOKEN"] = hf_token
+              login(token=hf_token)
+              print("[INTEGRATION] Connecté à Hugging Face Hub.")
+          else:
+              print("[AVERTISSEMENT] Token Hugging Face manquant, l'authentification a été ignorée.")
+      except ImportError:
+          print("[ERREUR] huggingface_hub n'est pas installé. (pip install huggingface_hub)")
+
+  - id: "kaggle"
+    name: "Kaggle API"
+    description: "Configure les credentials Kaggle pour télécharger directement des datasets."
+    icon: "Database"
+    docs_url: "https://www.kaggle.com/docs/api"
+    fields:
+      - id: "kaggle_username"
+        label: "Kaggle Username"
+        type: "text"
+        placeholder: "votre_pseudo"
+      - id: "kaggle_key"
+        label: "Kaggle API Key"
+        type: "password"
+        placeholder: "xxxxxxxxxxxxxxxxxxxxxxxx"
+    code_template: |
+      import os
+      import json
+      
+      k_user = {{ kaggle_username | repr }}
+      k_key = {{ kaggle_key | repr }}
+      
+      if k_user and k_key:
+          os.environ["KAGGLE_USERNAME"] = k_user
+          os.environ["KAGGLE_KEY"] = k_key
+          
+          # Création du fichier kaggle.json standard
+          kaggle_dir = os.path.expanduser('~/.kaggle')
+          os.makedirs(kaggle_dir, exist_ok=True)
+          with open(os.path.join(kaggle_dir, 'kaggle.json'), 'w') as f:
+              json.dump({"username": k_user, "key": k_key}, f)
+          os.chmod(os.path.join(kaggle_dir, 'kaggle.json'), 0o600)
+          
+          print("[INTEGRATION] Credentials Kaggle configurés avec succès.")
+      else:
+          print("[AVERTISSEMENT] Credentials Kaggle incomplets.")
+
+  - id: "wandb"
+    name: "Weights & Biases (W&B)"
+    description: "Initialise le tracking de vos expérimentations (métriques, logs) avec wandb."
+    icon: "LineChart"
+    docs_url: "https://docs.wandb.ai/quickstart"
+    fields:
+      - id: "wandb_api_key"
+        label: "W&B API Key"
+        type: "password"
+        placeholder: "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+      - id: "wandb_project"
+        label: "Nom du Projet"
+        type: "text"
+        placeholder: "my-awesome-ml-project"
+        default: "dataml-project"
+    code_template: |
+      import os
+      try:
+          import wandb
+          w_key = {{ wandb_api_key | repr }}
+          w_proj = {{ wandb_project | repr }}
+          if w_key:
+              os.environ["WANDB_API_KEY"] = w_key
+              wandb.login(key=w_key)
+              wandb.init(project=w_proj if w_proj else "dataml-project")
+              print(f"[INTEGRATION] W&B initialisé sur le projet '{w_proj}'.")
+          else:
+              print("[AVERTISSEMENT] W&B API Key manquante.")
+      except ImportError:
+          print("[ERREUR] wandb n'est pas installé. (pip install wandb)")
+
+  - id: "supabase"
+    name: "Supabase"
+    description: "Connexion directe à votre base de données Supabase depuis le notebook."
+    icon: "Cloud"
+    docs_url: "https://supabase.com/docs/reference/python/initializing"
+    fields:
+      - id: "supabase_url"
+        label: "Supabase Project URL"
+        type: "text"
+        placeholder: "https://xyzcompany.supabase.co"
+      - id: "supabase_key"
+        label: "Supabase API Key (anon/service_role)"
+        type: "password"
+        placeholder: "eyJhbGciOiJIUzI1NiIsInR5..."
+    code_template: |
+      import os
+      try:
+          from supabase import create_client, Client
+          sb_url = {{ supabase_url | repr }}
+          sb_key = {{ supabase_key | repr }}
+          
+          if sb_url and sb_key:
+              os.environ["SUPABASE_URL"] = sb_url
+              os.environ["SUPABASE_KEY"] = sb_key
+              # Client disponible globalement
+              supabase_client: Client = create_client(sb_url, sb_key)
+              print("[INTEGRATION] Client Supabase initialisé (variable 'supabase_client').")
+          else:
+              print("[AVERTISSEMENT] Informations Supabase incomplètes.")
+      except ImportError:
+          print("[ERREUR] supabase n'est pas installé. (pip install supabase)")

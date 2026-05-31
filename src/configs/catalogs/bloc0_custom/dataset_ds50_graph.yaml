@@ -73,5 +73,5 @@ code_template: |
   print(f"G_full  — nodes: {G_full.number_of_nodes()} | edges: {G_full.number_of_edges()}")
   print(f"G_mp    — nodes: {G_mp.number_of_nodes()}   | edges: {G_mp.number_of_edges()}")
 _metadata:
-  bloc: 1
-  section: "3_import_custom"
+  bloc: -1
+  section: "0_custom_project"
