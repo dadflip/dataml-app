@@ -1,0 +1,22 @@
+# Contrat du Bloc 5 : Déploiement & Exportation
+# Définit les entrées requises et les sorties attendues pour les scripts de déploiement.
+
+name: "Deployment Contract"
+description: "Définit les règles d'entrées/sorties pour l'exportation et le déploiement des modèles."
+
+inputs:
+  full_pipeline: "L'objet pipeline Scikit-learn (ou autre objet métier) prêt à être sauvegardé."
+  task_type: "Le type de tâche (classification, régression, etc.) pour aider la génération d'API si nécessaire."
+  evaluation_metrics: "Optionnel. Les métriques du bloc 4, utiles si on veut les logger (ex: MLflow)."
+
+outputs:
+  deployment_artifacts:
+    type: "dict"
+    description: "Un dictionnaire contenant les chemins vers les fichiers générés."
+    example:
+      model_path: "outputs/deployment/model.pkl"
+
+requirements:
+  - "Le code doit être encapsulé dans un bloc try/except robuste."
+  - "Le dictionnaire `deployment_artifacts` doit être initialisé au début."
+  - "Les fichiers doivent être écrits dans le dossier `outputs/deployment/`."

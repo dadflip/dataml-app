@@ -1,0 +1,40 @@
+id: "extract_onedrive"
+name: "Extract: Microsoft OneDrive"
+description: "Télécharge un fichier partagé publiquement depuis OneDrive."
+category: "1. Extract"
+tags: ["extract", "onedrive", "microsoft", "cloud"]
+code_template: |
+  import urllib.request
+  import os
+  import time
+
+  # [PARAM: DIRECT_LINK | string]
+  DIRECT_LINK = "https://onedrive.live.com/download?cid=XXX&resid=XXX&authkey=XXX"
+  # [/PARAM]
+  
+  # [PARAM: DEST_PATH | string]
+  DEST_PATH = "./data/raw/onedrive_data.zip"
+  # [/PARAM]
+
+  print(f"[EXTRACT] Téléchargement depuis OneDrive...")
+  os.makedirs(os.path.dirname(DEST_PATH), exist_ok=True)
+
+  try:
+      start_time = time.time()
+      req = urllib.request.Request(DIRECT_LINK, headers={'User-Agent': 'Mozilla/5.0'})
+      with urllib.request.urlopen(req) as response, open(DEST_PATH, 'wb') as out_file:
+          out_file.write(response.read())
+          
+      duration = time.time() - start_time
+      print(f"[EXTRACT] Succès OneDrive. Fichier téléchargé en {duration:.2f}s.")
+  except Exception as e:
+      print(f"[ERREUR EXTRACT] Echec du lien OneDrive : {str(e)}")
+      raise e
+
+  df = None
+  target_name = None
+  task_type = "unknown"
+  meta = {"source": "onedrive", "path": DEST_PATH}
+_metadata:
+  bloc: 1
+  section: "1_extract"

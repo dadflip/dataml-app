@@ -1,0 +1,41 @@
+id: "eval_quantile_loss"
+name: "Eval Metric: Quantile Loss (Pinball Loss)"
+description: "Évalue la qualité d'une prévision probabiliste (Quantile Regression) en pénalisant de manière asymétrique les surestimations et sous-estimations."
+category: "Time Series Metrics"
+tags: ["eval", "metric", "regression", "quantiles", "pinball"]
+applies_to: ["Regression", "Forecasting"]
+when_to_use: "Quand vous prédisez des intervalles (ex: 'On est sûr à 90% qu'il y aura au moins X ventes')."
+pros:
+  - "Métrique reine pour la prévision probabiliste."
+cons:
+  - "Nécessite que le modèle puisse prédire un quantile cible (et non pas la moyenne)."
+code_template: |
+  import numpy as np
+
+  evaluation_metrics = {}
+
+  if task_type in ["regression", "forecasting"] and 'y_test' in locals() and 'y_pred' in locals():
+      print("[EVAL] Calcul de la Quantile Loss (Pinball Loss)...")
+      try:
+          actual = np.array(y_test)
+          forecast = np.array(y_pred)
+          
+          # [PARAM: TARGET_QUANTILE | number]
+          TARGET_QUANTILE = 0.90
+          # [/PARAM]
+          
+          errors = actual - forecast
+          # Pinball Loss = (q * E) if E > 0 else ((1-q) * -E)
+          loss = np.maximum(TARGET_QUANTILE * errors, (TARGET_QUANTILE - 1) * errors)
+          
+          mean_loss = np.mean(loss)
+          
+          evaluation_metrics["quantile_loss"] = float(mean_loss)
+          evaluation_metrics["target_quantile"] = float(TARGET_QUANTILE)
+          
+          print(f"[EVAL] Pinball Loss (q={TARGET_QUANTILE}): {mean_loss:.4f}")
+      except Exception as e:
+          print(f"[EVAL ERREUR] Quantile Loss : {str(e)}")
+_metadata:
+  bloc: 4
+  section: "1_evaluation"

@@ -1,0 +1,42 @@
+id: "eval_accuracy"
+name: "Eval: Accuracy Score"
+description: "Calcule le taux de bonnes predictions (accuracy). Proportion d'echantillons correctement classes parmi l'ensemble des predictions."
+category: "Metriques de Classification"
+tags: ["eval", "classification", "accuracy", "sklearn"]
+applies_to: ["Classification"]
+when_to_use: "Metrique de base pour evaluer un classifieur, surtout lorsque les classes sont equilibrees."
+pros:
+  - "Intuitive et facile a interpreter."
+  - "Fonctionne pour les problemes binaires et multi-classes."
+cons:
+  - "Trompeuse sur des jeux de donnees desequilibres (une classe majoritaire gonfle le score)."
+  - "Ne distingue pas les types d'erreurs (faux positifs vs faux negatifs)."
+code_template: |
+  import numpy as np
+  from sklearn.metrics import accuracy_score, balanced_accuracy_score
+
+  evaluation_metrics = {}
+
+  print("[EVAL] Calcul de l'Accuracy Score...")
+
+  try:
+      acc = accuracy_score(y_test, y_pred)
+      evaluation_metrics["accuracy"] = float(np.round(acc, 6))
+      print(f"[EVAL] Accuracy : {acc:.4f}")
+
+      bal_acc = balanced_accuracy_score(y_test, y_pred)
+      evaluation_metrics["balanced_accuracy"] = float(np.round(bal_acc, 6))
+      print(f"[EVAL] Balanced Accuracy : {bal_acc:.4f}")
+
+      n_correct = int(np.sum(np.array(y_test) == np.array(y_pred)))
+      n_total = len(y_test)
+      evaluation_metrics["n_correct"] = n_correct
+      evaluation_metrics["n_total"] = n_total
+      print(f"[EVAL] {n_correct} / {n_total} predictions correctes.")
+
+  except Exception as e:
+      print(f"[EVAL][ERREUR] Echec du calcul de l'accuracy : {e}")
+      evaluation_metrics["error"] = str(e)
+_metadata:
+  bloc: 4
+  section: "1_evaluation"

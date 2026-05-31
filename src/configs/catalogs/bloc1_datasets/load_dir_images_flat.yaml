@@ -1,0 +1,60 @@
+id: "load_dir_images_flat"
+name: "Load: Dossier d'Images (Plat)"
+description: "Parcourt un dossier et renvoie un DataFrame contenant les chemins absolus de toutes les images. Idéal pour être croisé avec un fichier de labels."
+category: "2. Load"
+tags: ["load", "directory", "images", "crawler"]
+code_template: |
+  import os
+  import glob
+  import pandas as pd
+  import time
+
+  # [PARAM: DIRECTORY_PATH | dir]
+  DIRECTORY_PATH = "./data/extracted/images"
+  # [/PARAM]
+  
+  # [PARAM: EXTENSION | string]
+  EXTENSION = "*.jpg"
+  # [/PARAM]
+
+  print(f"[LOAD] Parcours du dossier {DIRECTORY_PATH} à la recherche de {EXTENSION}...")
+  if not os.path.exists(DIRECTORY_PATH):
+      raise FileNotFoundError(f"[ERREUR LOAD] Le dossier n'existe pas : {DIRECTORY_PATH}")
+
+  try:
+      start_time = time.time()
+      
+      search_pattern = os.path.join(DIRECTORY_PATH, EXTENSION)
+      # On cherche tous les fichiers qui matchent
+      image_files = glob.glob(search_pattern)
+      
+      if not image_files:
+          print(f"[ATTENTION] Aucune image trouvée avec le pattern {search_pattern}")
+          
+      # On extrait l'ID (ex: "image_0001") pour faciliter la jointure avec des labels
+      data = []
+      for filepath in image_files:
+          filename = os.path.basename(filepath)
+          file_id, ext = os.path.splitext(filename)
+          data.append({
+              "file_id": file_id,
+              "filename": filename,
+              "absolute_path": os.path.abspath(filepath)
+          })
+          
+      df = pd.DataFrame(data)
+      # Tri par ID pour assurer la consistance
+      df = df.sort_values(by="file_id").reset_index(drop=True)
+      
+      duration = time.time() - start_time
+      print(f"[LOAD] Succès Crawler. {len(df)} chemins d'images indexés en {duration:.2f}s.")
+  except Exception as e:
+      print(f"[ERREUR LOAD] Erreur lors du parcours du dossier : {str(e)}")
+      raise e
+
+  target_name = None
+  task_type = "computer_vision"
+  meta = {"format": "directory_flat", "images_found": len(df)}
+_metadata:
+  bloc: 1
+  section: "2_load"

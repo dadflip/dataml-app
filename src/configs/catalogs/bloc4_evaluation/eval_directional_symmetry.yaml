@@ -1,0 +1,41 @@
+id: "eval_directional_symmetry"
+name: "Eval Metric: Directional Symmetry (DS)"
+description: "Pourcentage du temps où le modèle a prédit correctement la direction (hausse ou baisse) de la prochaine valeur."
+category: "Time Series Metrics"
+tags: ["eval", "metric", "timeseries", "forecasting", "finance"]
+applies_to: ["Forecasting"]
+when_to_use: "En trading algorithmique. Avoir la bonne valeur absolue importe souvent moins que d'avoir la bonne DIRECTION (acheter/vendre)."
+pros:
+  - "Parfaitement aligné avec le besoin métier financier."
+cons:
+  - "Ne mesure pas l'ampleur de l'erreur."
+code_template: |
+  import numpy as np
+
+  evaluation_metrics = {}
+
+  if task_type in ["forecasting", "regression"] and 'y_test' in locals() and 'y_pred' in locals():
+      print("[EVAL] Calcul de la Symétrie Directionnelle (DS)...")
+      try:
+          actual = np.array(y_test)
+          forecast = np.array(y_pred)
+          
+          if len(actual) > 1:
+              # Directions réelles vs prédites
+              dir_actual = np.sign(actual[1:] - actual[:-1])
+              dir_forecast = np.sign(forecast[1:] - actual[:-1])
+              
+              # Quand le signe est le même, le produit est positif (ou zéro)
+              correct_dirs = (dir_actual * dir_forecast) > 0
+              
+              ds_score = np.mean(correct_dirs) * 100
+              evaluation_metrics["directional_symmetry_pct"] = float(ds_score)
+              
+              print(f"[EVAL] Directional Symmetry: {ds_score:.2f}% (Le modèle a la bonne tendance {ds_score:.2f}% du temps)")
+          else:
+              print("[EVAL] Pas assez de données pour le DS.")
+      except Exception as e:
+          print(f"[EVAL ERREUR] DS : {str(e)}")
+_metadata:
+  bloc: 4
+  section: "1_evaluation"

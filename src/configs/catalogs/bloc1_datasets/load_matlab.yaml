@@ -1,0 +1,49 @@
+id: "load_matlab"
+name: "Load: Fichier MATLAB (.mat)"
+description: "Charge les matrices et variables sauvegardées dans un fichier MATLAB."
+category: "2. Load"
+tags: ["load", "matlab", "scipy", "matrix"]
+code_template: |
+  import scipy.io
+  import time
+  import os
+
+  # [PARAM: FILE_PATH | file]
+  FILE_PATH = "./data/raw/data.mat"
+  # [/PARAM]
+  
+  # [PARAM: VARIABLE_NAME | string]
+  VARIABLE_NAME = "my_matrix"
+  # [/PARAM]
+
+  print(f"[LOAD] Lecture du fichier MATLAB : {FILE_PATH}...")
+  if not os.path.exists(FILE_PATH):
+      raise FileNotFoundError(f"[ERREUR LOAD] Fichier MATLAB introuvable : {FILE_PATH}")
+
+  try:
+      start_time = time.time()
+      
+      mat = scipy.io.loadmat(FILE_PATH)
+      
+      if VARIABLE_NAME not in mat:
+          keys = [k for k in mat.keys() if not k.startswith('__')]
+          raise KeyError(f"Variable '{VARIABLE_NAME}' absente. Variables trouvées : {keys}")
+          
+      data = mat[VARIABLE_NAME]
+      
+      duration = time.time() - start_time
+      print(f"[LOAD] Succès MATLAB. Matrice {data.shape} chargée en {duration:.2f}s.")
+  except ImportError:
+      print("[ERREUR LOAD] Le module 'scipy' est requis.")
+      raise
+  except Exception as e:
+      print(f"[ERREUR LOAD] Impossible de lire le fichier .mat : {str(e)}")
+      raise e
+
+  df = None
+  target_name = None
+  task_type = "unknown"
+  meta = {"format": "matlab", "shape": data.shape}
+_metadata:
+  bloc: 1
+  section: "2_load"

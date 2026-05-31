@@ -1,0 +1,43 @@
+id: "extract_rest"
+name: "Extract: API REST (JSON)"
+description: "Fait un appel GET à une API REST publique."
+category: "1. Extract"
+tags: ["extract", "rest", "api", "json"]
+code_template: |
+  import requests
+  import json
+  import os
+  import time
+
+  # [PARAM: API_URL | string]
+  API_URL = "https://jsonplaceholder.typicode.com/posts"
+  # [/PARAM]
+  
+  # [PARAM: DEST_PATH | string]
+  DEST_PATH = "./data/raw/rest_api.json"
+  # [/PARAM]
+
+  print(f"[EXTRACT] Appel GET vers {API_URL}...")
+  os.makedirs(os.path.dirname(DEST_PATH), exist_ok=True)
+
+  try:
+      start_time = time.time()
+      response = requests.get(API_URL, timeout=30)
+      response.raise_for_status()
+      
+      with open(DEST_PATH, "w", encoding="utf-8") as f:
+          json.dump(response.json(), f, indent=2)
+          
+      duration = time.time() - start_time
+      print(f"[EXTRACT] Succès API REST. Dump JSON sauvegardé en {duration:.2f}s.")
+  except Exception as e:
+      print(f"[ERREUR EXTRACT] Erreur HTTP : {str(e)}")
+      raise e
+
+  df = None
+  target_name = None
+  task_type = "unknown"
+  meta = {"source": "rest", "path": DEST_PATH}
+_metadata:
+  bloc: 1
+  section: "1_extract"

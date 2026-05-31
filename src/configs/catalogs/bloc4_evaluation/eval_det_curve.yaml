@@ -1,0 +1,88 @@
+id: "eval_det_curve"
+name: "Eval: Courbe DET (Detection Error Tradeoff)"
+description: "Trace la courbe DET qui represente le taux de faux positifs contre le taux de faux negatifs sur une echelle de deviance normale. Alternative a la courbe ROC pour mieux visualiser les differences entre classifieurs."
+category: "Calibration"
+tags: ["eval", "det", "classification", "plot", "matplotlib", "error_tradeoff"]
+applies_to: ["Classification"]
+when_to_use: "Lorsqu'on souhaite comparer les compromis entre faux positifs et faux negatifs. Particulierement utile en detection (fraude, intrusion) ou les deux types d'erreurs ont des couts differents."
+pros:
+  - "Meilleure lisibilite que la courbe ROC pour comparer des modeles proches"
+  - "Echelle de deviance normale qui etire les regions d'interet"
+  - "Standard dans la communaute de reconnaissance vocale et biometrie"
+cons:
+  - "Necessite y_proba (predict_proba)"
+  - "Moins connue que la courbe ROC, peut etre moins intuitive"
+  - "Uniquement pour la classification binaire ou one-vs-rest"
+code_template: |
+  import numpy as np
+  import matplotlib
+  matplotlib.use("Agg")
+  import matplotlib.pyplot as plt
+
+  evaluation_metrics = {}
+
+  if task_type not in ("classification", "binary", "multiclass"):
+      print("[EVAL] Courbe DET: applicable uniquement en classification.")
+      evaluation_metrics["status"] = "skipped"
+      evaluation_metrics["reason"] = "task_type is not classification"
+  elif y_proba is None:
+      print("[EVAL] Courbe DET: y_proba requis.")
+      evaluation_metrics["status"] = "skipped"
+      evaluation_metrics["reason"] = "y_proba is None"
+  else:
+      try:
+          from sklearn.metrics import det_curve
+
+          proba = y_proba
+          if proba.ndim == 2:
+              if proba.shape[1] == 2:
+                  proba = proba[:, 1]
+              else:
+                  proba = proba[:, 1]  # Fallback: use second column
+
+          fpr, fnr, thresholds = det_curve(y_test, proba)
+
+          fig, ax = plt.subplots(figsize=(8, 6))
+          ax.plot(fpr, fnr, linewidth=2, label="Modele")
+          ax.set_xlabel("Taux de Faux Positifs (FPR)")
+          ax.set_ylabel("Taux de Faux Negatifs (FNR)")
+          ax.set_title("Courbe DET (Detection Error Tradeoff)")
+          ax.legend(loc="upper right")
+          ax.grid(True, alpha=0.3)
+
+          # Try to set normal deviate scale if scipy is available
+          try:
+              import scipy.stats as stats
+              ax.set_xscale("function", functions=(stats.norm.ppf, stats.norm.cdf))
+              ax.set_yscale("function", functions=(stats.norm.ppf, stats.norm.cdf))
+              ticks = [0.001, 0.01, 0.05, 0.1, 0.2, 0.4]
+              ax.set_xticks(ticks)
+              ax.set_yticks(ticks)
+              ax.set_xticklabels([f"{t*100:.1f}%" for t in ticks])
+              ax.set_yticklabels([f"{t*100:.1f}%" for t in ticks])
+          except Exception:
+              print("[EVAL] scipy non disponible, echelle lineaire utilisee.")
+
+          plt.tight_layout()
+
+          fig_path = "det_curve.png"
+          fig.savefig(fig_path, dpi=150, bbox_inches="tight")
+          plt.close(fig)
+          print(f"[EVAL] Figure sauvegardee: {fig_path}")
+
+          # Equal Error Rate approximation
+          eer_idx = np.nanargmin(np.abs(fpr - fnr))
+          eer = float(round((fpr[eer_idx] + fnr[eer_idx]) / 2, 6))
+          print(f"[EVAL] Equal Error Rate (approx): {eer:.6f}")
+
+          evaluation_metrics["status"] = "success"
+          evaluation_metrics["figure_path"] = fig_path
+          evaluation_metrics["equal_error_rate_approx"] = eer
+
+      except Exception as e:
+          print(f"[EVAL] Erreur courbe DET: {e}")
+          evaluation_metrics["status"] = "error"
+          evaluation_metrics["error"] = str(e)
+_metadata:
+  bloc: 4
+  section: "1_evaluation"

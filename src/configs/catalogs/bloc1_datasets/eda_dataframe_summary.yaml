@@ -1,0 +1,21 @@
+id: "eda_dataframe_summary"
+name: "EDA: Résumé DataFrame"
+description: "Affiche les infos générales, statistiques descriptives et un aperçu du jeu de données."
+category: "3. Exploratory Data Analysis"
+tags: ["eda", "summary", "tabular", "pandas"]
+code_template: |
+  import pandas as pd
+
+  # [PARAM: HEAD_N | number]
+  HEAD_N = 5
+  # [/PARAM]
+  
+  print("[EDA] === INFORMATIONS GÉNÉRALES ===")
+  df.info()
+  print("\n[EDA] === STATISTIQUES DESCRIPTIVES ===")
+  display(df.describe(include='all'))
+  print("\n[EDA] === APERÇU (HEAD) ===")
+  display(df.head(HEAD_N))
+_metadata:
+  bloc: 1
+  section: "3_eda"

@@ -1,0 +1,99 @@
+id: "model_variational_autoencoder"
+name: "Model: Variational Autoencoder (VAE)"
+description: "Réseau génératif probabiliste. Encode l'espace latent sous forme de distribution gaussienne."
+category: "Génératif & Non-Supervisé"
+tags: ["model", "generative", "unsupervised", "pytorch", "vae", "deep-learning"]
+applies_to: ["Tabulaire", "Images"]
+when_to_use: "Pour générer de nouvelles données réalistes ou faire des interpolations dans l'espace latent."
+pros:
+  - "Espace latent continu et exploitable."
+cons:
+  - "Génère souvent des données un peu floues comparé aux GANs."
+hyperparameters:
+  latent_dim: "Taille de l'espace latent (ex: 2)."
+  epochs: "Nombre d'époques (ex: 20)."
+code_template: |
+  import pandas as pd
+  import numpy as np
+  try:
+      import torch
+      import torch.nn as nn
+      import torch.nn.functional as F
+      import torch.optim as optim
+      from torch.utils.data import DataLoader, TensorDataset
+  except ImportError:
+      torch = None
+      print("[ERREUR] torch n'est pas installé.")
+
+  # [PARAM: LATENT_DIM | number]
+  LATENT_DIM = 2
+  # [/PARAM]
+
+  # [PARAM: EPOCHS | number]
+  EPOCHS = 20
+  # [/PARAM]
+
+  print(f"[MODEL] Entraînement VAE (latent={LATENT_DIM})...")
+  if 'X_train' in locals() and 'X_test' in locals() and torch is not None:
+      X_tr_np = np.array(X_train, dtype=np.float32)
+      X_te_np = np.array(X_test, dtype=np.float32)
+      dataset = TensorDataset(torch.tensor(X_tr_np))
+      loader = DataLoader(dataset, batch_size=64, shuffle=True)
+      dim = X_tr_np.shape[1]
+      ld = int(LATENT_DIM)
+
+      class VAE(nn.Module):
+          def __init__(self):
+              super().__init__()
+              self.fc1 = nn.Linear(dim, 64)
+              self.fc_mu = nn.Linear(64, ld)
+              self.fc_lv = nn.Linear(64, ld)
+              self.fc3 = nn.Linear(ld, 64)
+              self.fc4 = nn.Linear(64, dim)
+          def encode(self, x):
+              h = F.relu(self.fc1(x))
+              return self.fc_mu(h), self.fc_lv(h)
+          def reparameterize(self, mu, lv):
+              return mu + torch.exp(0.5*lv) * torch.randn_like(lv)
+          def decode(self, z):
+              return torch.sigmoid(self.fc4(F.relu(self.fc3(z))))
+          def forward(self, x):
+              mu, lv = self.encode(x)
+              return self.decode(self.reparameterize(mu, lv)), mu, lv
+
+      def vae_loss(rx, x, mu, lv):
+          return F.mse_loss(rx, x, reduction='sum') - 0.5 * torch.sum(1 + lv - mu.pow(2) - lv.exp())
+
+      model = VAE()
+      device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+      model = model.to(device)
+      optimizer = optim.Adam(model.parameters(), lr=0.001)
+      model.train()
+      for epoch in range(int(EPOCHS)):
+          for (bx,) in loader:
+              bx = bx.to(device)
+              optimizer.zero_grad()
+              rx, mu, lv = model(bx)
+              loss = vae_loss(rx, bx, mu, lv)
+              loss.backward()
+              optimizer.step()
+      model.eval()
+      with torch.no_grad():
+          y_pred, _, _ = model(torch.tensor(X_te_np).to(device))
+          y_pred = y_pred.cpu().numpy()
+      y_proba = None
+      feature_importances = None
+      if 'preprocessor' in locals() and preprocessor is not None:
+          try: from imblearn.pipeline import Pipeline
+          except: from sklearn.pipeline import Pipeline
+          full_pipeline = Pipeline(steps=preprocessor.steps + [('model', model)])
+      else:
+          full_pipeline = model
+      training_history = {"status": "success", "loss": float(loss)}
+      task_type = "generative"
+      print("[MODEL] VAE entraîné avec succès.")
+  else:
+      print("[ERREUR] Données ou torch manquants.")
+_metadata:
+  bloc: 3
+  section: "6_neural_networks"

@@ -1,0 +1,95 @@
+id: "model_cnn_3d"
+name: "Model: 3D CNN (Video/Volume)"
+description: "Réseau Convolutif 3D, capte le contexte spatial ET temporel. Pour la vidéo ou l'imagerie médicale volumétrique."
+category: "Réseaux Convolutifs (CNN)"
+tags: ["model", "vision", "video", "classification", "pytorch", "cnn-3d", "deep-learning"]
+applies_to: ["Vidéo", "Volumes"]
+when_to_use: "Pour classifier des actions dans des vidéos ou de l'imagerie médicale volumétrique (IRM 3D)."
+pros:
+  - "Capte la dimension temporelle de l'image (mouvement)."
+cons:
+  - "Extrêmement lourd en VRAM."
+hyperparameters:
+  epochs: "Nombre d'époques (ex: 5)."
+code_template: |
+  import pandas as pd
+  import numpy as np
+  try:
+      import torch
+      import torch.nn as nn
+      import torch.optim as optim
+      from torch.utils.data import DataLoader, TensorDataset
+  except ImportError:
+      torch = None
+      print("[ERREUR] torch n'est pas installé.")
+
+  # [PARAM: EPOCHS | number]
+  EPOCHS = 5
+  # [/PARAM]
+
+  print(f"[MODEL] Entraînement CNN 3D PyTorch...")
+  if 'X_train' in locals() and 'y_train' in locals() and 'X_test' in locals() and torch is not None:
+      X_tr_np = np.array(X_train)
+      X_te_np = np.array(X_test)
+      # CNN 3D attend (N, C, D, H, W)
+      if len(X_tr_np.shape) != 5:
+          print("[ERREUR] Les données doivent être en 5D (N, C, D, H, W). Utilisez un preprocessor adapté.")
+          y_pred = np.zeros(len(X_test))
+          y_proba = None
+          feature_importances = None
+          full_pipeline = "CNN 3D Incompatible Input"
+          training_history = {"status": "error", "reason": "input shape != 5D"}
+          task_type = "classification"
+      else:
+          classes = np.unique(y_train)
+          num_classes = len(classes)
+          label2id = {c: i for i, c in enumerate(classes)}
+          id2label = {i: c for i, c in enumerate(classes)}
+          y_tr_enc = np.array([label2id[y] for y in y_train])
+          dataset = TensorDataset(torch.tensor(X_tr_np, dtype=torch.float32), torch.tensor(y_tr_enc, dtype=torch.long))
+          loader = DataLoader(dataset, batch_size=4, shuffle=True)
+
+          class CNN3DClassifier(nn.Module):
+              def __init__(self, in_ch, num_classes):
+                  super().__init__()
+                  self.features = nn.Sequential(
+                      nn.Conv3d(in_ch, 8, 3, padding=1), nn.ReLU(), nn.MaxPool3d(2),
+                      nn.Conv3d(8, 16, 3, padding=1), nn.ReLU(), nn.AdaptiveAvgPool3d(1))
+                  self.fc = nn.Linear(16, num_classes)
+              def forward(self, x):
+                  return self.fc(self.features(x).flatten(1))
+
+          model = CNN3DClassifier(X_tr_np.shape[1], num_classes)
+          device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+          model = model.to(device)
+          criterion = nn.CrossEntropyLoss()
+          optimizer = optim.Adam(model.parameters(), lr=0.001)
+          model.train()
+          for epoch in range(int(EPOCHS)):
+              for batch_X, batch_y in loader:
+                  batch_X, batch_y = batch_X.to(device), batch_y.to(device)
+                  optimizer.zero_grad()
+                  loss = criterion(model(batch_X), batch_y)
+                  loss.backward()
+                  optimizer.step()
+          model.eval()
+          with torch.no_grad():
+              logits = model(torch.tensor(X_te_np, dtype=torch.float32).to(device))
+              preds_idx = torch.argmax(logits, dim=1).cpu().numpy()
+              y_pred = np.array([id2label[i] for i in preds_idx])
+              y_proba = torch.nn.functional.softmax(logits, dim=-1).cpu().numpy()
+          feature_importances = None
+          if 'preprocessor' in locals() and preprocessor is not None:
+              try: from imblearn.pipeline import Pipeline
+              except: from sklearn.pipeline import Pipeline
+              full_pipeline = Pipeline(steps=preprocessor.steps + [('model', model)])
+          else:
+              full_pipeline = model
+          training_history = {"status": "success", "loss": float(loss)}
+          task_type = "classification"
+          print("[MODEL] CNN 3D entraîné avec succès.")
+  else:
+      print("[ERREUR] Données ou torch manquants.")
+_metadata:
+  bloc: 3
+  section: "6_neural_networks"

@@ -1,0 +1,58 @@
+id: "eval_forecast_prediction_intervals"
+name: "Eval Plot: Forecast Prediction Intervals"
+description: "Trace la prévision avec une bande de confiance (si le modèle renvoie un écart-type via y_proba)."
+category: "Time Series Visualizations"
+tags: ["eval", "plot", "timeseries", "forecasting", "intervals"]
+applies_to: ["Forecasting"]
+when_to_use: "Quand vous voulez montrer le niveau d'incertitude autour d'une prévision."
+pros:
+  - "Fondamental pour l'aide à la décision (ex: stock de sécurité)."
+cons:
+  - "Nécessite que le modèle puisse fournir un écart-type ou intervalle (souvent passé dans y_proba en hack)."
+code_template: |
+  import os
+  import numpy as np
+  import matplotlib.pyplot as plt
+
+  evaluation_metrics = {}
+
+  if task_type in ["forecasting", "regression"] and 'y_test' in locals() and 'y_pred' in locals() and 'y_proba' in locals() and y_proba is not None:
+      print("[EVAL] Génération des Prediction Intervals...")
+      try:
+          os.makedirs("outputs/evaluation", exist_ok=True)
+          
+          # On suppose que y_proba contient l'écart-type de la prédiction (standard error)
+          # ce qui est courant pour les Processus Gaussiens ou les modèles bayésiens.
+          std_err = np.array(y_proba).flatten()
+          
+          if len(std_err) == len(y_pred):
+              fig, ax = plt.subplots(figsize=(12, 5))
+              
+              x_axis = np.arange(len(y_test))
+              
+              ax.plot(x_axis, y_test, label='Actual', color='black')
+              ax.plot(x_axis, y_pred, label='Forecast', color='blue')
+              
+              # Intervalle 95% (+- 1.96 * std)
+              lower = np.array(y_pred) - 1.96 * std_err
+              upper = np.array(y_pred) + 1.96 * std_err
+              
+              ax.fill_between(x_axis, lower, upper, color='blue', alpha=0.2, label='95% Confidence Interval')
+              
+              ax.set_title('Forecast with Prediction Intervals')
+              ax.legend()
+              ax.grid(True, alpha=0.3)
+              
+              plot_path = "outputs/evaluation/forecast_intervals.png"
+              fig.savefig(plot_path, dpi=300)
+              plt.close(fig)
+              
+              evaluation_metrics["forecast_intervals_plot"] = plot_path
+              print(f"[EVAL] Plot sauvegardé sous {plot_path}")
+          else:
+              print("[EVAL] y_proba ne semble pas contenir les écart-types associés à y_pred.")
+      except Exception as e:
+          print(f"[EVAL ERREUR] Intervals Plot : {str(e)}")
+_metadata:
+  bloc: 4
+  section: "1_evaluation"

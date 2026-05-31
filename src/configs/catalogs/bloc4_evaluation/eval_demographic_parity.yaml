@@ -1,0 +1,56 @@
+id: "eval_demographic_parity"
+name: "Eval Fairness: Demographic Parity Difference"
+description: "Mesure l'équité d'un modèle en vérifiant si le taux de prédictions positives est le même entre un groupe privilégié et un groupe non privilégié."
+category: "Fairness & Bias Metrics"
+tags: ["eval", "metric", "fairness", "bias", "classification"]
+applies_to: ["Classification Binaire"]
+when_to_use: "Pour vérifier légalement ou éthiquement qu'un modèle ne discrimine pas selon le sexe, l'âge, l'ethnie, etc."
+pros:
+  - "Très intuitif : 'Est-ce que j'accorde autant de prêts aux hommes qu'aux femmes ?'."
+cons:
+  - "Nécessite d'isoler une feature 'sensible' dans X_test."
+code_template: |
+  import numpy as np
+
+  evaluation_metrics = {}
+
+  if task_type == "classification" and 'X_test' in locals() and 'y_pred' in locals():
+      print("[EVAL] Calcul du Demographic Parity Difference...")
+      try:
+          # On suppose que la feature sensible est dans 'X_test'
+          # [PARAM: SENSITIVE_COLUMN_INDEX | number]
+          SENSITIVE_COLUMN_INDEX = 0
+          # [/PARAM]
+          
+          # [PARAM: PRIVILEGED_VALUE | number/string]
+          PRIVILEGED_VALUE = 1
+          # [/PARAM]
+          
+          X_arr = np.array(X_test)
+          if len(X_arr.shape) > 1 and X_arr.shape[1] > SENSITIVE_COLUMN_INDEX:
+              sensitive_attr = X_arr[:, int(SENSITIVE_COLUMN_INDEX)]
+              
+              # On suppose y_pred contient 0 ou 1, 1 étant le résultat positif/favorable
+              preds = np.array(y_pred)
+              
+              idx_priv = (sensitive_attr == PRIVILEGED_VALUE)
+              idx_unpriv = (sensitive_attr != PRIVILEGED_VALUE)
+              
+              if sum(idx_priv) > 0 and sum(idx_unpriv) > 0:
+                  rate_priv = np.mean(preds[idx_priv] == 1)
+                  rate_unpriv = np.mean(preds[idx_unpriv] == 1)
+                  
+                  dp_diff = rate_priv - rate_unpriv
+                  
+                  evaluation_metrics["demographic_parity_difference"] = float(dp_diff)
+                  evaluation_metrics["positive_rate_privileged"] = float(rate_priv)
+                  evaluation_metrics["positive_rate_unprivileged"] = float(rate_unpriv)
+                  
+                  print(f"[EVAL] DP Difference: {dp_diff:.3f} (Idéalement proche de 0)")
+              else:
+                  print("[EVAL] Impossible de diviser les groupes privilégiés/non-privilégiés.")
+      except Exception as e:
+          print(f"[EVAL ERREUR] Fairness : {str(e)}")
+_metadata:
+  bloc: 4
+  section: "1_evaluation"

@@ -1,0 +1,96 @@
+id: "eval_average_precision"
+name: "Eval: Average Precision Score"
+description: >
+  Calcule l'Average Precision (AP), qui resume la courbe precision-rappel
+  en une seule valeur. L'AP est definie comme la moyenne ponderee des
+  precisions atteintes a chaque seuil, avec le changement de rappel comme
+  poids. Un AP de 1.0 represente un classifieur parfait. Cette metrique
+  est particulierement adaptee aux classes desequilibrees. Necessite y_proba.
+category: "Metriques de Classification"
+tags: ["eval", "classification", "average_precision", "precision_recall", "probabilites"]
+applies_to: ["Classification"]
+when_to_use: >
+  Utiliser comme metrique synthese de la courbe precision-rappel, surtout
+  pour les problemes desequilibres. Preferer l'AP a l'AUC-ROC quand la classe
+  positive est rare. Necessite que y_proba soit disponible.
+pros:
+  - "Resume la courbe PR en une seule valeur"
+  - "Plus discriminante que l'AUC-ROC pour les classes rares"
+  - "Ne depend pas du choix d'un seuil de decision"
+  - "Supporte les strategies micro, macro et weighted en multiclasse"
+cons:
+  - "Necessite les probabilites predites (y_proba)"
+  - "Sensible a la calibration des probabilites"
+  - "Moins intuitif que l'accuracy pour les non-specialistes"
+code_template: |
+  evaluation_metrics = {}
+  try:
+      from sklearn.metrics import average_precision_score
+      from sklearn.preprocessing import label_binarize
+      import numpy as np
+
+      print("[EVAL] Calcul de l'Average Precision Score...")
+
+      if y_proba is None:
+          print("[EVAL] y_proba est None, Average Precision impossible a calculer.")
+          evaluation_metrics["average_precision"] = None
+          evaluation_metrics["error"] = "y_proba requis pour Average Precision"
+      else:
+          classes = np.unique(y_test)
+          n_classes = len(classes)
+
+          if n_classes == 2:
+              # Binary classification
+              if y_proba.ndim > 1:
+                  proba_positive = y_proba[:, 1]
+              else:
+                  proba_positive = y_proba
+
+              ap = average_precision_score(y_test, proba_positive, pos_label=classes[1])
+              evaluation_metrics["average_precision"] = float(ap)
+              print(f"[EVAL] Average Precision (binary): {ap:.4f}")
+          else:
+              # Multiclass: binarize and compute per-class and aggregated
+              y_test_bin = label_binarize(y_test, classes=classes)
+
+              # Per-class AP
+              ap_per_class = {}
+              for i, cls in enumerate(classes):
+                  if i < y_proba.shape[1]:
+                      ap_cls = average_precision_score(y_test_bin[:, i], y_proba[:, i])
+                      ap_per_class[str(cls)] = float(ap_cls)
+                      print(f"[EVAL] Classe {cls} - AP: {ap_cls:.4f}")
+
+              evaluation_metrics["average_precision_per_class"] = ap_per_class
+
+              # Macro AP
+              try:
+                  macro_ap = average_precision_score(y_test_bin, y_proba, average="macro")
+                  evaluation_metrics["average_precision_macro"] = float(macro_ap)
+                  print(f"[EVAL] Average Precision (macro): {macro_ap:.4f}")
+              except Exception as e_macro:
+                  print(f"[EVAL] Macro AP non disponible: {e_macro}")
+
+              # Weighted AP
+              try:
+                  weighted_ap = average_precision_score(y_test_bin, y_proba, average="weighted")
+                  evaluation_metrics["average_precision_weighted"] = float(weighted_ap)
+                  print(f"[EVAL] Average Precision (weighted): {weighted_ap:.4f}")
+              except Exception as e_w:
+                  print(f"[EVAL] Weighted AP non disponible: {e_w}")
+
+              # Micro AP
+              try:
+                  micro_ap = average_precision_score(y_test_bin, y_proba, average="micro")
+                  evaluation_metrics["average_precision_micro"] = float(micro_ap)
+                  print(f"[EVAL] Average Precision (micro): {micro_ap:.4f}")
+              except Exception as e_mi:
+                  print(f"[EVAL] Micro AP non disponible: {e_mi}")
+
+          print("[EVAL] Average Precision Score termine avec succes.")
+  except Exception as e:
+      print(f"[EVAL] Erreur lors du calcul de l'Average Precision: {e}")
+      evaluation_metrics["error"] = str(e)
+_metadata:
+  bloc: 4
+  section: "1_evaluation"

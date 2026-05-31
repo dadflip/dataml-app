@@ -1,0 +1,68 @@
+id: "model_local_outlier_factor"
+name: "Model: Local Outlier Factor (LOF)"
+description: "Détection d'anomalies basée sur la densité locale de chaque point."
+category: "Détection d'Anomalies (Non-Supervisé)"
+tags: ["model", "anomaly-detection", "tabular", "sklearn", "lof"]
+applies_to: ["Tabulaire"]
+when_to_use: "Pour détecter des anomalies contextuelles (un point très éloigné de son petit voisinage)."
+pros:
+  - "Excellent pour les anomalies locales cachées dans des clusters denses."
+cons:
+  - "Très lent sur les gros datasets (calcul de distances)."
+hyperparameters:
+  n_neighbors: "Nombre de voisins K (ex: 20)."
+  contamination: "Proportion d'anomalies attendue (ex: 0.05)."
+code_template: |
+  import pandas as pd
+  import numpy as np
+  from sklearn.neighbors import LocalOutlierFactor
+
+  # [PARAM: N_NEIGHBORS | number]
+  N_NEIGHBORS = 20
+  # [/PARAM]
+
+  # [PARAM: CONTAMINATION | number]
+  CONTAMINATION = 0.05
+  # [/PARAM]
+
+  print(f"[MODEL] Entraînement Local Outlier Factor (k={N_NEIGHBORS}, cont={CONTAMINATION})...")
+  if 'X_train' in locals() and 'X_test' in locals():
+      # LOF en mode "novelty=True" permet le predict sur X_test, sinon c'est transductif
+      model = LocalOutlierFactor(n_neighbors=int(N_NEIGHBORS), contamination=float(CONTAMINATION), novelty=True)
+      model.fit(X_train)
+      
+      # -1 = Anomalie, 1 = Normal
+      preds = model.predict(X_test)
+      y_pred = np.where(preds == -1, 1, 0) # 1 = Anomalie
+      
+      y_proba = model.decision_function(X_test)
+      feature_importances = None
+      
+      from sklearn.base import BaseEstimator, ClassifierMixin
+      class LOFWrapper(BaseEstimator, ClassifierMixin):
+          def __init__(self, model): self.model = model
+          def fit(self, X, y=None): return self
+          def predict(self, X): 
+              return np.where(self.model.predict(X) == -1, 1, 0)
+          def predict_proba(self, X):
+              return self.model.decision_function(X)
+              
+      wrapped_model = LOFWrapper(model)
+      
+      if 'preprocessor' in locals() and preprocessor is not None:
+          try: from imblearn.pipeline import Pipeline
+          except: from sklearn.pipeline import Pipeline
+          full_pipeline = Pipeline(steps=preprocessor.steps + [('model', wrapped_model)])
+      else:
+          try: from imblearn.pipeline import Pipeline
+          except: from sklearn.pipeline import Pipeline
+          full_pipeline = Pipeline(steps=[('model', wrapped_model)])
+          
+      training_history = {"status": "success", "anomalies_found": int(np.sum(y_pred))}
+      task_type = "anomaly_detection"
+      print("[MODEL] LOF entraîné avec succès.")
+  else:
+      print("[ERREUR] Données d'entraînement introuvables.")
+_metadata:
+  bloc: 3
+  section: "5_clustering_automl_and_nn"

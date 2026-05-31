@@ -1,0 +1,106 @@
+id: "model_siamese_network"
+name: "Model: Siamese Network (Few-Shot)"
+description: "Deux réseaux jumeaux partageant les mêmes poids, entraînés à comparer deux entrées par distance euclidienne."
+category: "Réseaux Spécialisés"
+tags: ["model", "few-shot", "similarity", "pytorch", "siamese", "deep-learning"]
+applies_to: ["Images", "Tabulaire"]
+when_to_use: "Pour la vérification d'identité (visages), la détection de duplicatas, ou le few-shot learning."
+pros:
+  - "Fonctionne avec très peu d'exemples par classe."
+cons:
+  - "Nécessite de construire des paires (positives/négatives)."
+hyperparameters:
+  embedding_dim: "Dimension de l'espace d'embedding (ex: 32)."
+  epochs: "Nombre d'époques (ex: 10)."
+code_template: |
+  import pandas as pd
+  import numpy as np
+  try:
+      import torch
+      import torch.nn as nn
+      import torch.optim as optim
+      from torch.utils.data import DataLoader, TensorDataset
+  except ImportError:
+      torch = None
+      print("[ERREUR] torch n'est pas installé.")
+
+  # [PARAM: EMBEDDING_DIM | number]
+  EMBEDDING_DIM = 32
+  # [/PARAM]
+
+  # [PARAM: EPOCHS | number]
+  EPOCHS = 10
+  # [/PARAM]
+
+  print(f"[MODEL] Entraînement Siamese Network...")
+  if 'X_train' in locals() and 'y_train' in locals() and 'X_test' in locals() and torch is not None:
+      X_tr_np = np.array(X_train, dtype=np.float32)
+      X_te_np = np.array(X_test, dtype=np.float32)
+      in_feat = X_tr_np.shape[1]
+      ed = int(EMBEDDING_DIM)
+
+      class SiameseEmbedder(nn.Module):
+          def __init__(self, in_f, emb_d):
+              super().__init__()
+              self.net = nn.Sequential(nn.Linear(in_f, 64), nn.ReLU(), nn.Linear(64, emb_d))
+          def forward(self, x):
+              return self.net(x)
+
+      # Construction de paires
+      y_tr = np.array(y_train)
+      pairs_x1, pairs_x2, pairs_label = [], [], []
+      n = min(len(X_tr_np), 2000) # Limiter pour la démo
+      for i in range(n):
+          # Positive pair
+          same_class = np.where(y_tr == y_tr[i])[0]
+          if len(same_class) > 1:
+              j = np.random.choice(same_class[same_class != i])
+              pairs_x1.append(X_tr_np[i]); pairs_x2.append(X_tr_np[j]); pairs_label.append(1.0)
+          # Negative pair
+          diff_class = np.where(y_tr != y_tr[i])[0]
+          if len(diff_class) > 0:
+              j = np.random.choice(diff_class)
+              pairs_x1.append(X_tr_np[i]); pairs_x2.append(X_tr_np[j]); pairs_label.append(0.0)
+
+      dataset = TensorDataset(torch.tensor(np.array(pairs_x1)), torch.tensor(np.array(pairs_x2)), torch.tensor(np.array(pairs_label, dtype=np.float32)))
+      loader = DataLoader(dataset, batch_size=64, shuffle=True)
+
+      model = SiameseEmbedder(in_feat, ed)
+      device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+      model = model.to(device)
+      optimizer = optim.Adam(model.parameters(), lr=0.001)
+
+      # Contrastive Loss
+      def contrastive_loss(out1, out2, label, margin=1.0):
+          dist = torch.nn.functional.pairwise_distance(out1, out2)
+          return torch.mean(label * dist.pow(2) + (1 - label) * torch.clamp(margin - dist, min=0).pow(2))
+
+      model.train()
+      for epoch in range(int(EPOCHS)):
+          for bx1, bx2, bl in loader:
+              bx1, bx2, bl = bx1.to(device), bx2.to(device), bl.to(device)
+              optimizer.zero_grad()
+              loss = contrastive_loss(model(bx1), model(bx2), bl)
+              loss.backward()
+              optimizer.step()
+
+      model.eval()
+      with torch.no_grad():
+          embeddings = model(torch.tensor(X_te_np).to(device)).cpu().numpy()
+      y_pred = embeddings # Les embeddings sont la sortie principale
+      y_proba = None
+      feature_importances = None
+      if 'preprocessor' in locals() and preprocessor is not None:
+          try: from imblearn.pipeline import Pipeline
+          except: from sklearn.pipeline import Pipeline
+          full_pipeline = Pipeline(steps=preprocessor.steps + [('model', model)])
+      else:
+          full_pipeline = model
+      training_history = {"status": "success", "loss": float(loss)}
+      task_type = "similarity"
+      print("[MODEL] Siamese Network entraîné avec succès.")
+  else:
+      print("[ERREUR] Données ou torch manquants.")
+_metadata:
+  bloc: 3
+  section: "6_neural_networks"

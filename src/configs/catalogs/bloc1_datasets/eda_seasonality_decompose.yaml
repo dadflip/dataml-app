@@ -1,0 +1,33 @@
+id: "eda_seasonality_decompose"
+name: "EDA: Décomposition Saisonnière"
+description: "Décomposition Trend/Season/Resid d'une time series."
+category: "3. Exploratory Data Analysis"
+tags: ["eda", "timeseries", "statsmodels"]
+code_template: |
+  import pandas as pd
+  import matplotlib.pyplot as plt
+  from statsmodels.tsa.seasonal import seasonal_decompose
+
+  # [PARAM: TIME_COL | string]
+  TIME_COL = "date"
+  # [/PARAM]
+
+  # [PARAM: PERIOD | number]
+  PERIOD = 12
+  # [/PARAM]
+
+  if TIME_COL in df.columns and 'target_name' in locals() and target_name:
+      temp_df = df.copy()
+      temp_df[TIME_COL] = pd.to_datetime(temp_df[TIME_COL], errors='coerce')
+      temp_df = temp_df.dropna(subset=[TIME_COL, target_name]).sort_values(TIME_COL).set_index(TIME_COL)
+      
+      print(f"[EDA] Décomposition (période={PERIOD}) de {target_name}")
+      result = seasonal_decompose(temp_df[target_name], model='additive', period=PERIOD)
+      result.plot()
+      plt.gcf().set_size_inches(12, 8)
+      plt.show()
+  else:
+      print("[EDA] Colonnes temporelles manquantes.")
+_metadata:
+  bloc: 1
+  section: "3_eda"

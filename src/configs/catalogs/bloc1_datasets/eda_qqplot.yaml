@@ -1,0 +1,23 @@
+id: "eda_qqplot"
+name: "EDA: QQ-Plot Normalité"
+description: "Vérifie graphiquement si les features numériques suivent une loi normale."
+category: "3. Exploratory Data Analysis"
+tags: ["eda", "qqplot", "tabular", "scipy"]
+code_template: |
+  import numpy as np
+  import matplotlib.pyplot as plt
+  import scipy.stats as stats
+
+  num_cols = df.select_dtypes(include=[np.number]).columns.tolist()[:4]
+  print("[EDA] === QQ-PLOTS (Test de normalité) ===")
+
+  plt.figure(figsize=(12, 10))
+  for i, col in enumerate(num_cols):
+      plt.subplot(2, 2, i + 1)
+      stats.probplot(df[col].dropna(), dist="norm", plot=plt)
+      plt.title(f"QQ-Plot : {col}")
+  plt.tight_layout()
+  plt.show()
+_metadata:
+  bloc: 1
+  section: "3_eda"

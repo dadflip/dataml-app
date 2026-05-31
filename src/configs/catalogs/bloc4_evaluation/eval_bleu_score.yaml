@@ -1,0 +1,151 @@
+id: "eval_bleu_score"
+name: "Eval: Score BLEU"
+description: "Calcule le score BLEU (Bilingual Evaluation Understudy) pour evaluer la qualite de sequences generees en NLP. Compare les n-grammes entre les textes de reference et generes."
+category: "Generative Models"
+tags: ["eval", "bleu", "nlp", "text_generation", "translation", "sequence"]
+applies_to: ["NLP", "Text Generation", "Translation"]
+when_to_use: "Pour evaluer la qualite de traductions automatiques, de texte genere, ou de tout systeme produisant des sequences de tokens. y_test contient les references, y_pred les predictions (listes de tokens ou chaines de caracteres)."
+pros:
+  - "Metrique standard en traduction automatique et generation de texte"
+  - "Calcul rapide base sur le recouvrement de n-grammes"
+  - "Score corpus-level et par echantillon disponibles"
+cons:
+  - "Ne capture pas le sens semantique ni la fluence"
+  - "Penalise les paraphrases valides"
+  - "Necessite nltk pour l'implementation standard (fallback disponible)"
+code_template: |
+  import numpy as np
+  from collections import Counter
+
+  evaluation_metrics = {}
+
+  try:
+      # Ensure y_test and y_pred are sequences (list of strings or list of token lists)
+      y_ref = list(y_test)
+      y_hyp = list(y_pred)
+
+      if len(y_ref) != len(y_hyp):
+          print(f"[EVAL] BLEU: longueurs differentes: {len(y_ref)} refs vs {len(y_hyp)} hyps")
+          evaluation_metrics["status"] = "error"
+          evaluation_metrics["reason"] = f"Length mismatch: {len(y_ref)} vs {len(y_hyp)}"
+      elif len(y_ref) == 0:
+          print("[EVAL] BLEU: aucune donnee.")
+          evaluation_metrics["status"] = "skipped"
+          evaluation_metrics["reason"] = "empty data"
+      else:
+          # Tokenize if strings
+          def tokenize(text):
+              if isinstance(text, str):
+                  return text.lower().split()
+              return list(text)
+
+          # BLEU n-gram precision (clipped)
+          def ngrams(tokens, n):
+              return [tuple(tokens[i:i+n]) for i in range(len(tokens)-n+1)]
+
+          def modified_precision(references_tokens, hypothesis_tokens, n):
+              hyp_ngrams = ngrams(hypothesis_tokens, n)
+              if len(hyp_ngrams) == 0:
+                  return 0.0, 0
+              hyp_counts = Counter(hyp_ngrams)
+              ref_counts = Counter(ngrams(references_tokens, n))
+              clipped = {ng: min(count, ref_counts.get(ng, 0)) for ng, count in hyp_counts.items()}
+              return sum(clipped.values()), len(hyp_ngrams)
+
+          def brevity_penalty(ref_len, hyp_len):
+              if hyp_len == 0:
+                  return 0.0
+              ratio = ref_len / hyp_len
+              if ratio <= 1.0:
+                  return 1.0
+              return np.exp(1 - ratio)
+
+          # Try nltk first
+          use_nltk = False
+          try:
+              from nltk.translate.bleu_score import corpus_bleu, sentence_bleu, SmoothingFunction
+              use_nltk = True
+              print("[EVAL] Utilisation de nltk pour le calcul BLEU.")
+          except ImportError:
+              print("[EVAL] nltk non disponible, utilisation de l'implementation interne.")
+
+          if use_nltk:
+              smoother = SmoothingFunction().method1
+              refs_tokenized = [[tokenize(r)] for r in y_ref]
+              hyps_tokenized = [tokenize(h) for h in y_hyp]
+
+              corpus_score = corpus_bleu(refs_tokenized, hyps_tokenized, smoothing_function=smoother)
+
+              # Per-sample scores (sample up to 500 for performance)
+              sample_scores = []
+              sample_indices = range(min(500, len(y_ref)))
+              for i in sample_indices:
+                  s = sentence_bleu(refs_tokenized[i], hyps_tokenized[i], smoothing_function=smoother)
+                  sample_scores.append(s)
+          else:
+              # Manual BLEU-4 computation
+              max_n = 4
+              total_clipped = [0] * max_n
+              total_count = [0] * max_n
+              total_ref_len = 0
+              total_hyp_len = 0
+              sample_scores = []
+
+              for ref_text, hyp_text in zip(y_ref, y_hyp):
+                  ref_tokens = tokenize(ref_text)
+                  hyp_tokens = tokenize(hyp_text)
+                  total_ref_len += len(ref_tokens)
+                  total_hyp_len += len(hyp_tokens)
+
+                  sentence_precisions = []
+                  for n in range(1, max_n + 1):
+                      clipped, count = modified_precision(ref_tokens, hyp_tokens, n)
+                      total_clipped[n-1] += clipped
+                      total_count[n-1] += count
+                      if count > 0:
+                          sentence_precisions.append(clipped / count)
+                      else:
+                          sentence_precisions.append(0.0)
+
+                  # Sentence-level BLEU
+                  bp = brevity_penalty(len(ref_tokens), len(hyp_tokens))
+                  log_avg = 0.0
+                  valid = True
+                  for p in sentence_precisions:
+                      if p == 0:
+                          valid = False
+                          break
+                      log_avg += np.log(p) / max_n
+                  s_bleu = bp * np.exp(log_avg) if valid else 0.0
+                  sample_scores.append(s_bleu)
+
+              # Corpus-level BLEU
+              bp_corpus = brevity_penalty(total_ref_len, total_hyp_len)
+              log_avg_corpus = 0.0
+              valid_corpus = True
+              for n in range(max_n):
+                  if total_count[n] == 0 or total_clipped[n] == 0:
+                      valid_corpus = False
+                      break
+                  log_avg_corpus += np.log(total_clipped[n] / total_count[n]) / max_n
+              corpus_score = bp_corpus * np.exp(log_avg_corpus) if valid_corpus else 0.0
+
+          avg_sentence_score = float(np.mean(sample_scores)) if sample_scores else 0.0
+
+          print(f"[EVAL] BLEU corpus: {corpus_score:.4f}")
+          print(f"[EVAL] BLEU sentence moyen: {avg_sentence_score:.4f}")
+
+          evaluation_metrics["status"] = "success"
+          evaluation_metrics["bleu_corpus"] = float(round(corpus_score, 6))
+          evaluation_metrics["bleu_sentence_mean"] = float(round(avg_sentence_score, 6))
+          evaluation_metrics["bleu_sentence_std"] = float(round(np.std(sample_scores), 6)) if sample_scores else 0.0
+          evaluation_metrics["n_samples"] = len(y_ref)
+          evaluation_metrics["backend"] = "nltk" if use_nltk else "internal"
+
+  except Exception as e:
+      print(f"[EVAL] Erreur calcul BLEU: {e}")
+      evaluation_metrics["status"] = "error"
+      evaluation_metrics["error"] = str(e)
+_metadata:
+  bloc: 4
+  section: "1_evaluation"

@@ -1,0 +1,98 @@
+id: "eval_permutation_importance"
+name: "Eval: Importance par Permutation"
+description: "Calcule l'importance des features par permutation : mesure la degradation du score en melangeant chaque variable individuellement. Methode model-agnostic applicable a tout pipeline sklearn."
+category: "Interpretabilite"
+tags: ["eval", "permutation", "importance", "features", "interpretability"]
+applies_to: ["Classification", "Regression"]
+when_to_use: "Lorsqu'on veut connaitre l'importance relative des variables sans dependre de la structure interne du modele. Utile pour detecter les variables non informatives et simplifier le modele."
+pros:
+  - "Methode model-agnostic, fonctionne avec tout estimateur sklearn"
+  - "Facile a interpreter : impact direct sur le score"
+  - "Prend en compte les interactions implicitement (via le pipeline complet)"
+cons:
+  - "Peut etre lent si le dataset est volumineux (n_repeats permutations par feature)"
+  - "Necessite X_test en plus des variables du contrat"
+  - "Biaise si des features sont fortement correlees entre elles"
+code_template: |
+  import numpy as np
+  import matplotlib
+  matplotlib.use("Agg")
+  import matplotlib.pyplot as plt
+
+  evaluation_metrics = {}
+
+  try:
+      from sklearn.inspection import permutation_importance
+
+      # X_test must be available in scope
+      if "X_test" not in dir() and "X_test" not in globals():
+          print("[EVAL] X_test requis pour l'importance par permutation.")
+          evaluation_metrics["status"] = "skipped"
+          evaluation_metrics["reason"] = "X_test not available in scope"
+      else:
+          scoring = "accuracy" if task_type in ("classification", "binary", "multiclass") else "neg_mean_squared_error"
+          n_repeats = 10
+
+          print(f"[EVAL] Calcul de l'importance par permutation ({n_repeats} repeats)...")
+          result = permutation_importance(
+              full_pipeline, X_test, y_test,
+              n_repeats=n_repeats,
+              scoring=scoring,
+              random_state=42,
+              n_jobs=-1
+          )
+
+          importances_mean = result.importances_mean
+          importances_std = result.importances_std
+
+          # Try to get feature names
+          try:
+              feature_names = np.array(X_test.columns.tolist())
+          except AttributeError:
+              feature_names = np.array([f"feature_{i}" for i in range(len(importances_mean))])
+
+          # Sort by importance
+          sorted_idx = np.argsort(importances_mean)[::-1]
+          top_n = min(20, len(sorted_idx))
+          top_idx = sorted_idx[:top_n]
+
+          fig, ax = plt.subplots(figsize=(10, max(6, top_n * 0.35)))
+          ax.barh(
+              range(top_n),
+              importances_mean[top_idx][::-1],
+              xerr=importances_std[top_idx][::-1],
+              align="center",
+              color="steelblue",
+              alpha=0.8
+          )
+          ax.set_yticks(range(top_n))
+          ax.set_yticklabels(feature_names[top_idx][::-1])
+          ax.set_xlabel(f"Diminution moyenne du score ({scoring})")
+          ax.set_title("Importance par Permutation (Top features)")
+          ax.grid(True, axis="x", alpha=0.3)
+          plt.tight_layout()
+
+          fig_path = "permutation_importance.png"
+          fig.savefig(fig_path, dpi=150, bbox_inches="tight")
+          plt.close(fig)
+          print(f"[EVAL] Figure sauvegardee: {fig_path}")
+
+          # Build results dict
+          feature_importance_dict = {}
+          for i in sorted_idx[:top_n]:
+              feature_importance_dict[str(feature_names[i])] = float(round(importances_mean[i], 6))
+
+          evaluation_metrics["status"] = "success"
+          evaluation_metrics["figure_path"] = fig_path
+          evaluation_metrics["scoring"] = scoring
+          evaluation_metrics["n_repeats"] = n_repeats
+          evaluation_metrics["top_features"] = feature_importance_dict
+          print(f"[EVAL] Top 5 features: {dict(list(feature_importance_dict.items())[:5])}")
+
+  except Exception as e:
+      print(f"[EVAL] Erreur importance par permutation: {e}")
+      evaluation_metrics["status"] = "error"
+      evaluation_metrics["error"] = str(e)
+_metadata:
+  bloc: 4
+  section: "1_evaluation"

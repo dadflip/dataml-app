@@ -1,0 +1,60 @@
+id: "load_pytorch_geometric"
+name: "Load: PyTorch Geometric (Graph to DataFrame + Edge Index)"
+description: "Charge les données d'un graphe. Exporte les caractéristiques des nœuds dans `df` et cache la matrice d'adjacence `edge_index` dans le dictionnaire `meta` pour respecter le contrat."
+category: "2. Load"
+tags: ["load", "graph", "pytorch-geometric", "gnn"]
+code_template: |
+  import pandas as pd
+  import numpy as np
+  import time
+  try:
+      from torch_geometric.datasets import Planetoid
+      import torch_geometric.transforms as T
+  except ImportError:
+      Planetoid = None
+      print("[ERREUR LOAD] 'torch_geometric' n'est pas installé.")
+
+  # [PARAM: DATASET_NAME | string]
+  DATASET_NAME = "Cora"
+  # [/PARAM]
+
+  # [PARAM: ROOT_DIR | string]
+  ROOT_DIR = "./data/raw/graphs"
+  # [/PARAM]
+
+  print(f"[LOAD] Chargement du Graphe {DATASET_NAME} depuis {ROOT_DIR}...")
+
+  try:
+      start_time = time.time()
+      if Planetoid is not None:
+          # On charge le dataset depuis le disque (déjà extrait logiquement)
+          dataset = Planetoid(root=ROOT_DIR, name=DATASET_NAME, transform=T.NormalizeFeatures())
+          data = dataset[0]
+          
+          # 1. df = Node Features + Target
+          # On convertit les tenseurs x et y en DataFrame pour garder l'aspect tabulaire standard de DataML
+          df = pd.DataFrame(data.x.numpy())
+          df['target_node_class'] = data.y.numpy()
+          
+          # 2. meta = Structure du graphe
+          # Le contrat exige meta: "dict". On y glisse l'edge_index pour les GNN (Bloc 3)
+          edge_idx = data.edge_index.numpy()
+          
+          duration = time.time() - start_time
+          print(f"[LOAD] Succès. {data.num_nodes} nœuds, {data.num_edges} arêtes chargées en {duration:.2f}s.")
+          
+          target_name = "target_node_class"
+          task_type = "node_classification"
+          meta = {"format": "graph", "shape": df.shape, "edge_index": edge_idx}
+      else:
+          df = None
+          target_name = None
+          task_type = "unknown"
+          meta = {}
+  except Exception as e:
+      print(f"[ERREUR LOAD] Échec du chargement du graphe : {str(e)}")
+      raise e
+
+_metadata:
+  bloc: 1
+  section: "2_load"

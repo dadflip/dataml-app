@@ -1,0 +1,27 @@
+id: "pipeline_gnn_cora"
+name: "Recette : Graph Neural Network (Cora)"
+description: "Classification de noeuds sur un graphe de citations avec PyTorch Geometric et export TorchScript."
+category: "Graph Neural Networks"
+nodes:
+  - node_id: "load_cora"
+    block_id: "extract_pytorch_geometric"
+    params:
+      DATASET_NAME: "Cora"
+
+  - node_id: "preprocess_graph"
+    block_id: "transform_graph_adjacency"
+    depends_on: ["load_cora"]
+
+  - node_id: "model_gcn"
+    block_id: "model_graph_convolutional_network"
+    depends_on: ["preprocess_graph"]
+    params:
+      HIDDEN_CHANNELS: 16
+
+  - node_id: "eval_accuracy"
+    block_id: "eval_accuracy"
+    depends_on: ["model_gcn"]
+
+  - node_id: "deploy_torchscript"
+    block_id: "deploy_torchscript"
+    depends_on: ["eval_accuracy"]

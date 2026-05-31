@@ -1,0 +1,73 @@
+id: "model_graph_convolutional_network"
+name: "Model: Graph Convolutional Network (GCN)"
+description: "Convolutions sur graphe via la matrice d'adjacence pour agréger les features des voisins."
+category: "Graphes & Réseaux"
+tags: ["model", "graph", "pytorch-geometric", "gcn", "deep-learning"]
+applies_to: ["Graphes"]
+when_to_use: "Pour classifier des noeuds dans un réseau (recommandation, détection de fraude)."
+pros:
+  - "Performant sur les topologies de graphes."
+cons:
+  - "Nécessite PyTorch Geometric et global_edge_index (depuis le transform_graph_adjacency)."
+hyperparameters:
+  hidden_channels: "Taille de la couche cachée (ex: 16)."
+  epochs: "Nombre d'époques (ex: 100)."
+code_template: |
+  import pandas as pd
+  import numpy as np
+  try:
+      import torch
+      import torch.nn.functional as F
+      from torch_geometric.nn import GCNConv
+  except ImportError:
+      GCNConv = None
+      print("[ERREUR] torch_geometric n'est pas installé.")
+
+  # [PARAM: HIDDEN_CHANNELS | number]
+  HIDDEN_CHANNELS = 16
+  # [/PARAM]
+
+  # [PARAM: EPOCHS | number]
+  EPOCHS = 100
+  # [/PARAM]
+
+  print(f"[MODEL] Entraînement GCN PyTorch Geometric...")
+  if 'X_train' in locals() and 'y_train' in locals() and 'global_edge_index' in dir() and GCNConv is not None:
+      X_t = torch.tensor(np.array(X_train, dtype=np.float32))
+      y_t = torch.tensor(np.array(y_train, dtype=np.int64))
+      edge_index = torch.tensor(global_edge_index, dtype=torch.long)
+      num_classes = len(np.unique(y_train))
+
+      class GCN(torch.nn.Module):
+          def __init__(self, in_ch, hid, out):
+              super().__init__()
+              self.conv1 = GCNConv(in_ch, hid)
+              self.conv2 = GCNConv(hid, out)
+          def forward(self, x, ei):
+              x = F.dropout(F.relu(self.conv1(x, ei)), p=0.5, training=self.training)
+              return self.conv2(x, ei)
+
+      model = GCN(X_t.shape[1], int(HIDDEN_CHANNELS), num_classes)
+      optimizer = torch.optim.Adam(model.parameters(), lr=0.01, weight_decay=5e-4)
+      criterion = torch.nn.CrossEntropyLoss()
+      model.train()
+      for epoch in range(int(EPOCHS)):
+          optimizer.zero_grad()
+          loss = criterion(model(X_t, edge_index), y_t)
+          loss.backward()
+          optimizer.step()
+      model.eval()
+      with torch.no_grad():
+          out = model(X_t, edge_index)
+          y_pred = out.argmax(dim=1).cpu().numpy()
+          y_proba = F.softmax(out, dim=1).cpu().numpy()
+      feature_importances = None
+      full_pipeline = model
+      training_history = {"status": "success"}
+      task_type = "node_classification"
+      print("[MODEL] GCN entraîné avec succès.")
+  else:
+      print("[ERREUR] Données, torch_geometric ou 'global_edge_index' manquants.")
+_metadata:
+  bloc: 3
+  section: "6_neural_networks"

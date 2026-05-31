@@ -1,0 +1,33 @@
+id: "deploy_joblib"
+name: "Deploy: Scikit-Learn Joblib"
+description: "Sauvegarde le pipeline complet au format .joblib (le format recommandé par Scikit-Learn)."
+category: "Serialization"
+tags: ["deploy", "export", "joblib", "sklearn"]
+applies_to: ["Classification", "Regression", "Clustering"]
+when_to_use: "Pour sauvegarder n'importe quel pipeline basé sur Scikit-Learn."
+pros:
+  - "Plus performant que Pickle pour les gros tableaux NumPy."
+cons:
+  - "Lié à la version de Python et Scikit-Learn utilisée lors de l'entraînement."
+code_template: |
+  import os
+  import joblib
+
+  deployment_artifacts = {}
+
+  if 'full_pipeline' in locals():
+      print("[DEPLOY] Sauvegarde du modèle via Joblib...")
+      try:
+          os.makedirs("outputs/deployment", exist_ok=True)
+          
+          model_path = "outputs/deployment/model.joblib"
+          joblib.dump(full_pipeline, model_path)
+          
+          deployment_artifacts["model_path"] = model_path
+          deployment_artifacts["format"] = "joblib"
+          print(f"[DEPLOY] Modèle sauvegardé avec succès sous {model_path}")
+      except Exception as e:
+          print(f"[DEPLOY ERREUR] Sauvegarde Joblib : {str(e)}")
+_metadata:
+  bloc: 5
+  section: "1_serialization"

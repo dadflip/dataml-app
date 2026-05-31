@@ -1,0 +1,51 @@
+id: "eval_time_series_cross_val_plot"
+name: "Eval Plot: Time Series Cross-Validation"
+description: "Affiche comment les données sont divisées lors d'une validation croisée temporelle (Time Series Split) pour éviter le data leakage."
+category: "Time Series Visualizations"
+tags: ["eval", "plot", "timeseries", "forecasting", "cv"]
+applies_to: ["Forecasting"]
+when_to_use: "Dans la phase de modélisation pour s'assurer que le modèle est évalué proprement 'dans le futur'."
+pros:
+  - "Indispensable pour débugger le leakage temporel."
+cons:
+  - "Nécessite TimeSeriesSplit de sklearn et X_train."
+code_template: |
+  import os
+  import numpy as np
+  import matplotlib.pyplot as plt
+  from sklearn.model_selection import TimeSeriesSplit
+
+  evaluation_metrics = {}
+
+  if 'X_train' in locals() and task_type in ["forecasting", "regression"]:
+      print("[EVAL] Génération du Time Series Cross-Val Plot...")
+      try:
+          os.makedirs("outputs/evaluation", exist_ok=True)
+          
+          tscv = TimeSeriesSplit(n_splits=5)
+          X_len = len(X_train)
+          
+          fig, ax = plt.subplots(figsize=(10, 6))
+          
+          for i, (train_idx, test_idx) in enumerate(tscv.split(np.zeros(X_len))):
+              ax.barh(y=i, width=len(train_idx), left=0, color='royalblue', label='Train' if i==0 else "")
+              ax.barh(y=i, width=len(test_idx), left=len(train_idx), color='darkorange', label='Validation' if i==0 else "")
+              
+          ax.set_yticks(np.arange(5))
+          ax.set_yticklabels([f'Split {i+1}' for i in range(5)])
+          ax.set_xlabel('Time / Index')
+          ax.set_title('Time Series Cross-Validation Splits (n_splits=5)')
+          ax.legend(loc='lower right')
+          ax.grid(axis='x', alpha=0.3)
+          
+          plot_path = "outputs/evaluation/ts_cv_splits.png"
+          fig.savefig(plot_path, dpi=300)
+          plt.close(fig)
+          
+          evaluation_metrics["ts_cv_plot"] = plot_path
+          print(f"[EVAL] Plot sauvegardé sous {plot_path}")
+      except Exception as e:
+          print(f"[EVAL ERREUR] TS CV Plot : {str(e)}")
+_metadata:
+  bloc: 4
+  section: "1_evaluation"

@@ -1,0 +1,27 @@
+id: "pipeline_anomaly_detection"
+name: "Recette : Network Anomaly Detection"
+description: "Détection d'intrusions ou d'anomalies non-supervisée (Isolation Forest) et export MLflow."
+category: "Anomaly Detection"
+nodes:
+  - node_id: "load_logs"
+    block_id: "load_csv"
+    params:
+      FILE_PATH: "./data/raw/network_logs.csv"
+
+  - node_id: "preprocess_logs"
+    block_id: "transform_standard_scaler"
+    depends_on: ["load_logs"]
+
+  - node_id: "model_iforest"
+    block_id: "model_isolation_forest"
+    depends_on: ["preprocess_logs"]
+    params:
+      CONTAMINATION: 0.05
+
+  - node_id: "eval_roc"
+    block_id: "eval_roc_curve_plot"
+    depends_on: ["model_iforest"]
+
+  - node_id: "deploy_mlflow"
+    block_id: "deploy_mlflow_registry"
+    depends_on: ["eval_roc"]

@@ -1,0 +1,42 @@
+id: "load_fastq"
+name: "Load: Séquençage FASTQ"
+description: "Charge un fichier FASTQ (Séquences ADN + Qualité) via Biopython."
+category: "2. Load"
+tags: ["load", "fastq", "bioinformatics", "dna"]
+code_template: |
+  import time
+  import os
+
+  # [PARAM: FILE_PATH | file]
+  FILE_PATH = "./data/raw/reads.fastq"
+  # [/PARAM]
+
+  print(f"[LOAD] Parsing FASTQ : {FILE_PATH}...")
+  if not os.path.exists(FILE_PATH):
+      raise FileNotFoundError(f"[ERREUR LOAD] Fichier FASTQ introuvable : {FILE_PATH}")
+
+  try:
+      start_time = time.time()
+      from Bio import SeqIO
+      
+      # Lecture sous forme de générateur pour éviter l'OOM sur les très gros fichiers
+      # Ici on charge en mémoire pour l'exemple
+      records = list(SeqIO.parse(FILE_PATH, "fastq"))
+      count = len(records)
+      
+      duration = time.time() - start_time
+      print(f"[LOAD] Succès FASTQ. {count} reads chargés en {duration:.2f}s.")
+  except ImportError:
+      print("[ERREUR LOAD] Le module 'biopython' est requis.")
+      raise
+  except Exception as e:
+      print(f"[ERREUR LOAD] Erreur de parsing FASTQ : {str(e)}")
+      raise e
+
+  df = None
+  target_name = None
+  task_type = "nlp_sequence"
+  meta = {"format": "fastq", "num_reads": count}
+_metadata:
+  bloc: 1
+  section: "2_load"

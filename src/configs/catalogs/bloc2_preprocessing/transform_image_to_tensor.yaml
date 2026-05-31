@@ -1,0 +1,48 @@
+id: "transform_image_to_tensor"
+name: "Transform: Image ToTensor & Normalize"
+description: "Convertit les images d'une colonne en tenseurs PyTorch."
+category: "4.1 Preprocessing"
+tags: ["transform", "image", "multimedia", "torchvision", "pipeline"]
+applies_to: ["Images"]
+when_to_use: "Étape indispensable avant CNN."
+pros:
+  - "Normalisation."
+cons:
+  - "Lourd en mémoire."
+hyperparameters:
+  img_col: "Colonne images"
+code_template: |
+  import pandas as pd
+  import torchvision.transforms as T
+  from PIL import Image
+  from sklearn.preprocessing import FunctionTransformer
+
+  # [PARAM: IMG_COL | string]
+  IMG_COL = "image"
+  # [/PARAM]
+
+  print(f"[TRANSFORM] Image ToTensor sur '{IMG_COL}'...")
+  if 'df' in locals():
+      if 'pipeline_steps' not in locals(): pipeline_steps = {}
+      
+      if IMG_COL in df.columns:
+          def to_tensor_func(X):
+              X_df = pd.DataFrame(X) if not isinstance(X, pd.DataFrame) else X
+              tf = T.Compose([T.ToTensor(), T.Normalize([0.485, 0.456, 0.406], [0.229, 0.224, 0.225])])
+              X_df[IMG_COL] = X_df[IMG_COL].apply(lambda x: tf(x) if isinstance(x, Image.Image) else x)
+              return X_df
+
+          transformer = FunctionTransformer(to_tensor_func)
+          
+          step_name = 'image_to_tensor'
+          pipeline_steps[step_name] = (step_name, transformer)
+          
+          df = transformer.transform(df)
+          print("[TRANSFORM] Tenseurs PyTorch appliqués.")
+      else:
+          print("[ERREUR] Colonne introuvable.")
+  else:
+      print("[ERREUR] 'df' introuvable.")
+_metadata:
+  bloc: 2
+  section: "4_preprocessing"

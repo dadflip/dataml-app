@@ -1,0 +1,92 @@
+id: "eval_fid_score"
+name: "Eval: Score FID (Frechet Inception Distance)"
+description: "Approximation du score FID (Frechet Inception Distance) pour les modeles generatifs. Calcule la distance de Frechet entre les distributions gaussiennes multivariees des features reelles et generees."
+category: "Generative Models"
+tags: ["eval", "fid", "generative", "distance", "frechet", "image_generation"]
+applies_to: ["Generative", "GAN", "VAE"]
+when_to_use: "Pour evaluer la qualite de donnees generees en comparant leur distribution statistique aux donnees reelles. y_test contient les vecteurs de features reels, y_pred les vecteurs de features generes (issus d'un extracteur comme InceptionV3 ou autre)."
+pros:
+  - "Metrique standard pour l'evaluation des modeles generatifs d'images"
+  - "Capture a la fois la qualite et la diversite des echantillons generes"
+  - "Score unique facilitant la comparaison entre modeles"
+cons:
+  - "Necessite scipy pour le calcul de la racine carree matricielle"
+  - "Approximation gaussienne peut etre inadequate pour des distributions multimodales"
+  - "Les features doivent etre pre-extraites (Inception, etc.) avant d'appeler cette evaluation"
+code_template: |
+  import numpy as np
+
+  evaluation_metrics = {}
+
+  try:
+      from scipy.linalg import sqrtm
+
+      y_real = np.array(y_test, dtype=np.float64)
+      y_gen = np.array(y_pred, dtype=np.float64)
+
+      # Ensure 2D feature vectors
+      if y_real.ndim == 1:
+          y_real = y_real.reshape(-1, 1)
+      if y_gen.ndim == 1:
+          y_gen = y_gen.reshape(-1, 1)
+
+      if y_real.shape[1] != y_gen.shape[1]:
+          print(f"[EVAL] FID: dimensions incompatibles: {y_real.shape[1]} vs {y_gen.shape[1]}")
+          evaluation_metrics["status"] = "error"
+          evaluation_metrics["reason"] = f"Feature dimension mismatch: {y_real.shape[1]} vs {y_gen.shape[1]}"
+      else:
+          print(f"[EVAL] Calcul FID sur {y_real.shape[0]} reels, {y_gen.shape[0]} generes, dim={y_real.shape[1]}")
+
+          # Compute statistics
+          mu_real = np.mean(y_real, axis=0)
+          mu_gen = np.mean(y_gen, axis=0)
+          sigma_real = np.cov(y_real, rowvar=False)
+          sigma_gen = np.cov(y_gen, rowvar=False)
+
+          # Ensure covariance matrices are 2D
+          if sigma_real.ndim == 0:
+              sigma_real = np.array([[sigma_real]])
+          if sigma_gen.ndim == 0:
+              sigma_gen = np.array([[sigma_gen]])
+
+          # Frechet distance
+          diff = mu_real - mu_gen
+          covmean, _ = sqrtm(sigma_real @ sigma_gen, disp=False)
+
+          # Numerical stability: remove imaginary components
+          if np.iscomplexobj(covmean):
+              if not np.allclose(np.diagonal(covmean).imag, 0, atol=1e-3):
+                  print("[EVAL] FID: composantes imaginaires significatives dans sqrtm, resultat approximatif.")
+              covmean = covmean.real
+
+          fid = float(
+              diff @ diff
+              + np.trace(sigma_real)
+              + np.trace(sigma_gen)
+              - 2 * np.trace(covmean)
+          )
+
+          # Ensure non-negative (numerical precision)
+          fid = max(0.0, fid)
+
+          print(f"[EVAL] FID Score: {fid:.4f}")
+          print(f"[EVAL] (FID = 0 signifie distributions identiques, plus petit = meilleur)")
+
+          evaluation_metrics["status"] = "success"
+          evaluation_metrics["fid_score"] = round(fid, 6)
+          evaluation_metrics["n_real_samples"] = int(y_real.shape[0])
+          evaluation_metrics["n_generated_samples"] = int(y_gen.shape[0])
+          evaluation_metrics["feature_dimension"] = int(y_real.shape[1])
+          evaluation_metrics["mean_distance_l2"] = float(round(np.linalg.norm(diff), 6))
+
+  except ImportError:
+      print("[EVAL] scipy requis pour le calcul FID. pip install scipy")
+      evaluation_metrics["status"] = "skipped"
+      evaluation_metrics["reason"] = "scipy not installed"
+  except Exception as e:
+      print(f"[EVAL] Erreur calcul FID: {e}")
+      evaluation_metrics["status"] = "error"
+      evaluation_metrics["error"] = str(e)
+_metadata:
+  bloc: 4
+  section: "1_evaluation"

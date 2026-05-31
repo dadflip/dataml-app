@@ -1,0 +1,80 @@
+id: "deploy_dash"
+name: "Deploy: Plotly Dash Web App"
+description: "Génère une UI d'entreprise analytique complexe avec Plotly Dash."
+category: "UI Generation"
+tags: ["deploy", "ui", "dash", "plotly", "dashboard"]
+applies_to: ["Classification", "Regression"]
+when_to_use: "Pour des dashboards professionnels où un contrôle très fin sur le HTML/CSS est requis (contrairement à Streamlit)."
+pros:
+  - "Robuste, basé sur Flask, personnalisable à l'infini."
+cons:
+  - "Beaucoup plus verbeux que Streamlit."
+code_template: |
+  import os
+  import joblib
+
+  deployment_artifacts = {}
+
+  if 'full_pipeline' in locals():
+      print("[DEPLOY] Génération de l'application Dash...")
+      try:
+          os.makedirs("outputs/deployment", exist_ok=True)
+          
+          model_path = "outputs/deployment/model.joblib"
+          joblib.dump(full_pipeline, model_path)
+          deployment_artifacts["model_path"] = model_path
+          
+          dash_code = """import dash
+  from dash import dcc, html, Input, Output, State
+  import joblib
+  import pandas as pd
+  import json
+  
+  app = dash.Dash(__name__)
+  model = joblib.load('model.joblib')
+  
+  app.layout = html.Div([
+      html.H1("DataML App - Dash Interface"),
+      html.P("Test du modèle avec Plotly Dash."),
+      
+      dcc.Textarea(
+          id='input-json',
+          value='{\\n  "feature_1": 0.0,\\n  "feature_2": 1.0\\n}',
+          style={'width': '100%', 'height': 200}
+      ),
+      html.Button('Prédire', id='predict-val', n_clicks=0),
+      
+      html.Div(id='output-prediction', style={'marginTop': 20, 'fontSize': 24})
+  ])
+  
+  @app.callback(
+      Output('output-prediction', 'children'),
+      Input('predict-val', 'n_clicks'),
+      State('input-json', 'value')
+  )
+  def update_output(n_clicks, json_val):
+      if n_clicks > 0:
+          try:
+              data_dict = json.loads(json_val)
+              df = pd.DataFrame([data_dict])
+              pred = model.predict(df)[0]
+              return f"Prédiction : {pred}"
+          except Exception as e:
+              return f"Erreur : {str(e)}"
+      return ""
+  
+  if __name__ == '__main__':
+      app.run_server(debug=True, port=8050)
+  """
+          ui_script_path = "outputs/deployment/dash_app.py"
+          with open(ui_script_path, "w", encoding="utf-8") as f:
+              f.write(dash_code)
+              
+          deployment_artifacts["dash_script"] = ui_script_path
+          print(f"[DEPLOY] Application Dash générée sous {ui_script_path}")
+          print(f"[DEPLOY] Pour lancer : cd outputs/deployment && python dash_app.py")
+      except Exception as e:
+          print(f"[DEPLOY ERREUR] Dash : {str(e)}")
+_metadata:
+  bloc: 5
+  section: "3_ui"

@@ -1,0 +1,45 @@
+id: "load_sqlite"
+name: "Load: Base SQLite (.db)"
+description: "Exécute une requête SQL directement sur un fichier de base SQLite local."
+category: "2. Load"
+tags: ["load", "sqlite", "sql", "db"]
+code_template: |
+  import sqlite3
+  import pandas as pd
+  import time
+  import os
+
+  # [PARAM: FILE_PATH | file]
+  FILE_PATH = "./data/raw/database.db"
+  # [/PARAM]
+  
+  # [PARAM: QUERY | string]
+  QUERY = "SELECT * FROM my_table"
+  # [/PARAM]
+  
+  # [PARAM: TARGET_COL | string]
+  TARGET_COL = "target"
+  # [/PARAM]
+
+  print(f"[LOAD] Connexion à la base SQLite {FILE_PATH}...")
+  if not os.path.exists(FILE_PATH):
+      raise FileNotFoundError(f"[ERREUR LOAD] Base de données introuvable : {FILE_PATH}")
+
+  try:
+      start_time = time.time()
+      conn = sqlite3.connect(FILE_PATH)
+      df = pd.read_sql_query(QUERY, conn)
+      conn.close()
+      
+      duration = time.time() - start_time
+      print(f"[LOAD] Succès SQLite. Résultat de la requête ({df.shape[0]} lignes) chargé en {duration:.2f}s.")
+  except Exception as e:
+      print(f"[ERREUR LOAD] Erreur SQLite : {str(e)}")
+      raise e
+
+  target_name = TARGET_COL if TARGET_COL and TARGET_COL in df.columns else None
+  task_type = "unknown"
+  meta = {"format": "sqlite", "shape": df.shape}
+_metadata:
+  bloc: 1
+  section: "2_load"

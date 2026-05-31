@@ -1,0 +1,53 @@
+id: "model_linear_svc"
+name: "Model: Linear SVC"
+description: "Support Vector Classifier strictement linéaire. Ultra-rapide comparé au SVC classique."
+category: "Modèles Basés sur la Distance / Marges"
+tags: ["model", "classification", "tabular", "sklearn", "svm", "linear"]
+applies_to: ["Tabulaire"]
+when_to_use: "Grands jeux de données où on cherche un séparateur linéaire (ex: texte avec TF-IDF)."
+pros:
+  - "Échelle O(n), peut gérer des millions de lignes."
+cons:
+  - "Ne produit pas de probabilités (pas de predict_proba)."
+hyperparameters:
+  C: "Paramètre de pénalité."
+code_template: |
+  import pandas as pd
+  import numpy as np
+  from sklearn.svm import LinearSVC
+
+  # [PARAM: C_PARAM | number]
+  C_PARAM = 1.0
+  # [/PARAM]
+
+  print(f"[MODEL] Entraînement LinearSVC (C={C_PARAM})...")
+  if 'X_train' in locals() and 'y_train' in locals() and 'X_test' in locals():
+      model = LinearSVC(C=float(C_PARAM), random_state=42, dual=False) # dual=False recommandé quand n_samples > n_features
+      model.fit(X_train, y_train)
+      
+      y_pred = model.predict(X_test)
+      y_proba = None
+      
+      feature_importances = None
+      if 'feature_names_out' in locals():
+          coefs = np.abs(model.coef_).mean(axis=0) if model.coef_.ndim > 1 else np.abs(model.coef_[0])
+          if len(coefs) == len(feature_names_out):
+              feature_importances = pd.Series(coefs, index=feature_names_out)
+              
+      if 'preprocessor' in locals() and preprocessor is not None:
+          try: from imblearn.pipeline import Pipeline
+          except: from sklearn.pipeline import Pipeline
+          full_pipeline = Pipeline(steps=preprocessor.steps + [('model', model)])
+      else:
+          try: from imblearn.pipeline import Pipeline
+          except: from sklearn.pipeline import Pipeline
+          full_pipeline = Pipeline(steps=[('model', model)])
+          
+      training_history = {"status": "success", "fitted_on": len(X_train)}
+      task_type = "classification"
+      print("[MODEL] Modèle entraîné et Full Pipeline compilé avec succès.")
+  else:
+      print("[ERREUR] Données d'entraînement introuvables.")
+_metadata:
+  bloc: 3
+  section: "1_classification_tabulaire"

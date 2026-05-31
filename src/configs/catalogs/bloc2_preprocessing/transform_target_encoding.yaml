@@ -1,0 +1,52 @@
+id: "transform_target_encoding"
+name: "Transform: Target Encoding"
+description: "Encode les catégories par la moyenne de la cible."
+category: "4.1 Preprocessing"
+tags: ["transform", "encoding", "tabular", "category_encoders", "pipeline"]
+applies_to: ["Tabulaire"]
+when_to_use: "Pour des catégories à haute cardinalité."
+pros:
+  - "Performant."
+cons:
+  - "Nécessite le package category_encoders."
+hyperparameters:
+  smoothing: "Paramètre de lissage."
+code_template: |
+  import pandas as pd
+  try:
+      import category_encoders as ce
+  except ImportError:
+      ce = None
+      print("[ERREUR] Installez category_encoders: !pip install category_encoders")
+  from sklearn.compose import ColumnTransformer
+
+  # [PARAM: SMOOTHING | number]
+  SMOOTHING = 10
+  # [/PARAM]
+
+  print("[TRANSFORM] Target Encoding...")
+  if 'df' in locals() and 'target_name' in locals() and target_name and ce:
+      if 'pipeline_steps' not in locals(): pipeline_steps = {}
+      
+      cat_cols = df.select_dtypes(exclude=['number', 'datetime']).columns.tolist()
+      if target_name in cat_cols: cat_cols.remove(target_name)
+          
+      if len(cat_cols) > 0:
+          te = ce.TargetEncoder(cols=cat_cols, smoothing=SMOOTHING)
+          
+          # TargetEncoder s'applique avec df et y. On ne peut l'encapsuler dans un ColumnTransformer 
+          # classique s'il a besoin de cols= spécifiques (ou on lui passe tout le DF).
+          # Heureusement, category_encoders fonctionne comme un transformer sklearn sur le DF entier.
+          
+          step_name = 'target_encoding'
+          pipeline_steps[step_name] = (step_name, te)
+          
+          df = te.fit_transform(df, df[target_name])
+          print(f"[TRANSFORM] Target Encoding ajouté au pipeline sur {len(cat_cols)} colonnes.")
+      else:
+          print("[TRANSFORM] Aucune variable catégorielle.")
+  else:
+      print("[ERREUR] 'df' ou cible introuvable.")
+_metadata:
+  bloc: 2
+  section: "4_preprocessing"

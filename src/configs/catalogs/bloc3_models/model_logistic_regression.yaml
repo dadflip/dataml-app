@@ -1,0 +1,65 @@
+id: "model_logistic_regression"
+name: "Model: Logistic Regression"
+description: "Modèle linéaire basique pour la classification. Calcule la probabilité d'appartenance à une classe."
+category: "Modèles Linéaires"
+tags: ["model", "classification", "tabular", "sklearn", "linear"]
+applies_to: ["Tabulaire"]
+when_to_use: "Comme modèle de référence (baseline) pour la classification binaire ou multiclasse."
+pros:
+  - "Facilement interprétable (poids des variables)."
+  - "Très rapide à entraîner."
+  - "Sort des probabilités bien calibrées."
+cons:
+  - "Incapable de modéliser des relations non-linéaires complexes."
+hyperparameters:
+  penalty: "Type de régularisation ('l2', 'l1', 'elasticnet', 'none')."
+  C: "Inverse de la force de régularisation (ex: 1.0). Plus C est petit, plus la régularisation est forte."
+code_template: |
+  import pandas as pd
+  import numpy as np
+  from sklearn.linear_model import LogisticRegression
+
+  # [PARAM: PENALTY | string]
+  PENALTY = "l2"
+  # [/PARAM]
+
+  # [PARAM: C_PARAM | number]
+  C_PARAM = 1.0
+  # [/PARAM]
+
+  print(f"[MODEL] Entraînement de la Régression Logistique (penalty={PENALTY}, C={C_PARAM})...")
+  if 'X_train' in locals() and 'y_train' in locals() and 'X_test' in locals():
+      # Initialisation et entraînement du modèle
+      model = LogisticRegression(penalty=PENALTY, C=C_PARAM, max_iter=1000, random_state=42)
+      model.fit(X_train, y_train)
+      
+      # Inférence
+      y_pred = model.predict(X_test)
+      y_proba = model.predict_proba(X_test) if hasattr(model, 'predict_proba') else None
+      
+      # Importances (coefficients pour les modèles linéaires)
+      feature_importances = None
+      if 'feature_names_out' in locals():
+          # On prend la moyenne absolue des coefficients si multiclasse
+          coefs = np.abs(model.coef_).mean(axis=0) if model.coef_.ndim > 1 else np.abs(model.coef_[0])
+          if len(coefs) == len(feature_names_out):
+              feature_importances = pd.Series(coefs, index=feature_names_out)
+              
+      # Compilation du Full Pipeline pour l'export
+      if 'preprocessor' in locals() and preprocessor is not None:
+          try: from imblearn.pipeline import Pipeline
+          except: from sklearn.pipeline import Pipeline
+          full_pipeline = Pipeline(steps=preprocessor.steps + [('model', model)])
+      else:
+          try: from imblearn.pipeline import Pipeline
+          except: from sklearn.pipeline import Pipeline
+          full_pipeline = Pipeline(steps=[('model', model)])
+          
+      training_history = {"status": "success", "fitted_on": len(X_train), "classes": len(np.unique(y_train))}
+      task_type = "classification"
+      print("[MODEL] Modèle entraîné et Full Pipeline compilé avec succès.")
+  else:
+      print("[ERREUR] X_train, y_train ou X_test introuvables. Le Bloc 2 a-t-il été exécuté ?")
+_metadata:
+  bloc: 3
+  section: "1_classification_tabulaire"

@@ -1,0 +1,61 @@
+id: "model_nmf_topic"
+name: "Model: Non-Negative Matrix Factorization (NMF)"
+description: "Algorithme d'algèbre linéaire pour la modélisation thématique (Topic Modeling)."
+category: "Modèles NLP (Entraînés)"
+tags: ["model", "nlp", "unsupervised", "topic-modeling", "sklearn", "nmf"]
+applies_to: ["Texte"]
+when_to_use: "Alternative à LDA, souvent meilleure et plus rapide lorsqu'on utilise des embeddings TF-IDF plutôt que CountVectorizer."
+pros:
+  - "Très performant avec TF-IDF."
+  - "Rapide."
+cons:
+  - "Ne produit pas de vraies probabilités comme le LDA."
+hyperparameters:
+  n_components: "Nombre de topics (ex: 10)."
+code_template: |
+  import pandas as pd
+  import numpy as np
+  from sklearn.decomposition import NMF
+
+  # [PARAM: N_COMPONENTS | number]
+  N_COMPONENTS = 10
+  # [/PARAM]
+
+  print(f"[MODEL] Entraînement NMF Topic Modeling (n_topics={N_COMPONENTS})...")
+  if 'X_train' in locals() and 'X_test' in locals():
+      model = NMF(n_components=int(N_COMPONENTS), init='nndsvda', random_state=42)
+      
+      X_tr_proc = X_train
+      X_te_proc = X_test
+      
+      if isinstance(X_train, pd.DataFrame) and 'text' in X_train.columns:
+          from sklearn.feature_extraction.text import TfidfVectorizer
+          tv = TfidfVectorizer(max_features=5000)
+          X_tr_proc = tv.fit_transform(X_train['text'].astype(str))
+          X_te_proc = tv.transform(X_test['text'].astype(str))
+          
+      model.fit(X_tr_proc)
+      
+      topic_dist = model.transform(X_te_proc)
+      y_pred = np.argmax(topic_dist, axis=1) # Topic dominant
+      y_proba = None
+      
+      feature_importances = None
+      
+      if 'preprocessor' in locals() and preprocessor is not None:
+          try: from imblearn.pipeline import Pipeline
+          except: from sklearn.pipeline import Pipeline
+          full_pipeline = Pipeline(steps=preprocessor.steps + [('model', model)])
+      else:
+          try: from imblearn.pipeline import Pipeline
+          except: from sklearn.pipeline import Pipeline
+          full_pipeline = Pipeline(steps=[('model', model)])
+          
+      training_history = {"status": "success", "reconstruction_err": model.reconstruction_err_}
+      task_type = "clustering"
+      print("[MODEL] NMF entraîné avec succès.")
+  else:
+      print("[ERREUR] Données d'entraînement introuvables.")
+_metadata:
+  bloc: 3
+  section: "3_nlp_and_timeseries"

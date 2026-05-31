@@ -1,0 +1,73 @@
+id: "eval_top_k_accuracy"
+name: "Eval: Top-K Accuracy"
+description: >
+  Calcule la Top-K Accuracy, qui mesure la proportion d'echantillons pour
+  lesquels la vraie classe figure parmi les K classes les plus probables
+  selon le modele. Necessite les probabilites predites (y_proba). Cette
+  metrique est particulierement pertinente pour les problemes multiclasses
+  avec un grand nombre de categories, ou se tromper de quelques rangs reste
+  acceptable.
+category: "Metriques de Classification"
+tags: ["eval", "classification", "top_k", "probabilites", "multiclasse"]
+applies_to: ["Classification"]
+when_to_use: >
+  Utiliser pour les problemes multiclasses a nombreuses categories (par
+  exemple, reconnaissance d'images avec des centaines de classes) ou il est
+  utile de savoir si la bonne reponse figure parmi les K meilleures
+  predictions. Necessite que y_proba soit disponible.
+pros:
+  - "Mesure plus souple que l'accuracy stricte pour les problemes multiclasses"
+  - "Permet d'evaluer la qualite du ranking des probabilites"
+  - "Standard industriel pour l'evaluation en vision par ordinateur (Top-5)"
+  - "Facile a interpreter"
+cons:
+  - "Necessite les probabilites predites (y_proba)"
+  - "Le choix de K est arbitraire et dependant du probleme"
+  - "Peu informatif pour les problemes binaires ou avec peu de classes"
+  - "Ne mesure pas la calibration des probabilites"
+code_template: |
+  evaluation_metrics = {}
+  try:
+      from sklearn.metrics import top_k_accuracy_score
+      import numpy as np
+
+      print("[EVAL] Calcul de la Top-K Accuracy...")
+
+      if y_proba is None:
+          print("[EVAL] y_proba est None, Top-K Accuracy impossible a calculer.")
+          evaluation_metrics["top_k_accuracy"] = None
+          evaluation_metrics["error"] = "y_proba requis pour Top-K Accuracy"
+      else:
+          n_classes = y_proba.shape[1] if y_proba.ndim > 1 else 2
+
+          if n_classes <= 2:
+              print("[EVAL] Seulement 2 classes detectees, Top-K non pertinent. Calcul avec k=1.")
+              top_1_acc = top_k_accuracy_score(y_test, y_proba, k=1)
+              evaluation_metrics["top_1_accuracy"] = float(top_1_acc)
+              print(f"[EVAL] Top-1 Accuracy: {top_1_acc:.4f}")
+          else:
+              # Compute for multiple K values
+              k_values = []
+              for k in [1, 2, 3, 5, 10]:
+                  if k < n_classes:
+                      k_values.append(k)
+
+              for k in k_values:
+                  try:
+                      top_k_acc = top_k_accuracy_score(y_test, y_proba, k=k)
+                      evaluation_metrics[f"top_{k}_accuracy"] = float(top_k_acc)
+                      print(f"[EVAL] Top-{k} Accuracy: {top_k_acc:.4f}")
+                  except Exception as e_k:
+                      print(f"[EVAL] Erreur pour Top-{k}: {e_k}")
+
+              # Summary
+              evaluation_metrics["n_classes"] = int(n_classes)
+              evaluation_metrics["k_values_evaluated"] = k_values
+
+          print("[EVAL] Top-K Accuracy termine avec succes.")
+  except Exception as e:
+      print(f"[EVAL] Erreur lors du calcul de la Top-K Accuracy: {e}")
+      evaluation_metrics["error"] = str(e)
+_metadata:
+  bloc: 4
+  section: "1_evaluation"

@@ -1,0 +1,43 @@
+id: "load_avro"
+name: "Load: Fichier Avro"
+description: "Charge un fichier de sérialisation de données Apache Avro."
+category: "2. Load"
+tags: ["load", "avro", "bigdata", "pandas"]
+code_template: |
+  import pandas as pd
+  import time
+  import os
+
+  # [PARAM: FILE_PATH | file]
+  FILE_PATH = "./data/raw/data.avro"
+  # [/PARAM]
+  
+  # [PARAM: TARGET_COL | string]
+  TARGET_COL = "target"
+  # [/PARAM]
+
+  print(f"[LOAD] Chargement du fichier Avro depuis {FILE_PATH}...")
+  if not os.path.exists(FILE_PATH):
+      raise FileNotFoundError(f"[ERREUR LOAD] Fichier Avro introuvable : {FILE_PATH}")
+
+  try:
+      start_time = time.time()
+      # pandavro est la méthode la plus simple pour lier Avro et Pandas
+      import pandavro as pdx
+      df = pdx.read_avro(FILE_PATH)
+      
+      duration = time.time() - start_time
+      print(f"[LOAD] Succès Avro. {df.shape[0]} lignes chargées en {duration:.2f}s.")
+  except ImportError:
+      print("[ERREUR LOAD] Le module 'pandavro' est requis (pip install pandavro).")
+      raise
+  except Exception as e:
+      print(f"[ERREUR LOAD] Impossible de lire le fichier Avro : {str(e)}")
+      raise e
+
+  target_name = TARGET_COL if TARGET_COL and TARGET_COL in df.columns else None
+  task_type = "unknown"
+  meta = {"format": "avro", "shape": df.shape}
+_metadata:
+  bloc: 1
+  section: "2_load"

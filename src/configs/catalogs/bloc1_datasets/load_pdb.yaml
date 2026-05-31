@@ -1,0 +1,47 @@
+id: "load_pdb"
+name: "Load: Protéine 3D PDB"
+description: "Charge les coordonnées atomiques 3D d'une protéine (.pdb) via Biopython."
+category: "2. Load"
+tags: ["load", "pdb", "protein", "3d"]
+code_template: |
+  import time
+  import os
+
+  # [PARAM: FILE_PATH | file]
+  FILE_PATH = "./data/raw/protein.pdb"
+  # [/PARAM]
+  
+  # [PARAM: PDB_ID | string]
+  PDB_ID = "1A2B"
+  # [/PARAM]
+
+  print(f"[LOAD] Parsing de la protéine {PDB_ID} depuis {FILE_PATH}...")
+  if not os.path.exists(FILE_PATH):
+      raise FileNotFoundError(f"[ERREUR LOAD] Fichier PDB introuvable : {FILE_PATH}")
+
+  try:
+      start_time = time.time()
+      from Bio.PDB import PDBParser
+      
+      parser = PDBParser(PERMISSIVE=1)
+      structure = parser.get_structure(PDB_ID, FILE_PATH)
+      
+      models = list(structure.get_models())
+      chains = list(structure.get_chains())
+      
+      duration = time.time() - start_time
+      print(f"[LOAD] Succès PDB. {len(models)} modèles et {len(chains)} chaînes lus en {duration:.2f}s.")
+  except ImportError:
+      print("[ERREUR LOAD] Le module 'biopython' est requis.")
+      raise
+  except Exception as e:
+      print(f"[ERREUR LOAD] Erreur de parsing PDB : {str(e)}")
+      raise e
+
+  df = None
+  target_name = None
+  task_type = "bioinformatics_3d"
+  meta = {"format": "pdb", "chains": len(chains)}
+_metadata:
+  bloc: 1
+  section: "2_load"

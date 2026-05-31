@@ -1,0 +1,62 @@
+id: "model_kmeans_image_quantization"
+name: "Model: Image Color Quantization (K-Means)"
+description: "Réduit la palette de couleurs d'une image en utilisant K-Means sur les pixels."
+category: "Vision par Ordinateur (Modèles Entraînés)"
+tags: ["model", "vision", "unsupervised", "sklearn", "kmeans", "quantization"]
+applies_to: ["Images"]
+when_to_use: "Pour créer un effet 'pixel art / retro' ou compresser drastiquement les couleurs d'une image."
+pros:
+  - "Très rapide, basé sur Sklearn classique."
+cons:
+  - "Détruit les dégradés fluides."
+hyperparameters:
+  n_colors: "Nombre de couleurs dans la palette finale (ex: 8)."
+code_template: |
+  import pandas as pd
+  import numpy as np
+  from sklearn.cluster import KMeans
+
+  # [PARAM: N_COLORS | number]
+  N_COLORS = 8
+  # [/PARAM]
+
+  print(f"[MODEL] Quantisation d'image (K={N_COLORS})...")
+  # Ce modèle est particulier, il traite généralement UNE image à la fois, ou un lot.
+  # On va simuler le traitement sur X_test.
+  if 'X_test' in locals():
+      X_te_np = np.array(X_test)
+      
+      y_pred_list = []
+      # On va quantifier chaque image de test
+      for img in X_te_np:
+          # On suppose img de taille (H, W, 3)
+          if len(img.shape) == 3 and img.shape[-1] == 3:
+              w, h, d = tuple(img.shape)
+              image_array = np.reshape(img, (w * h, d))
+              
+              kmeans = KMeans(n_clusters=int(N_COLORS), random_state=42, n_init="auto").fit(image_array)
+              labels = kmeans.predict(image_array)
+              
+              # Reconstruire l'image avec les centres de cluster
+              quantized = kmeans.cluster_centers_[labels]
+              quantized = np.reshape(quantized, (w, h, d)).astype('uint8')
+              y_pred_list.append(quantized)
+          else:
+              y_pred_list.append(img) # fallback
+              
+      y_pred = np.array(y_pred_list)
+      y_proba = None
+      feature_importances = None
+      
+      from sklearn.preprocessing import FunctionTransformer
+      model = FunctionTransformer(lambda X: y_pred)
+      full_pipeline = model
+          
+      training_history = {"status": "success", "colors": N_COLORS}
+      task_type = "image_transformation"
+      print("[MODEL] Quantisation K-Means terminée.")
+  else:
+      print("[ERREUR] Données de test introuvables.")
+_metadata:
+  bloc: 3
+  section: "4_vision_and_audio"

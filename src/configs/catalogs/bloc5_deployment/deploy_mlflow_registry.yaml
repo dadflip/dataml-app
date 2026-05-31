@@ -1,0 +1,56 @@
+id: "deploy_mlflow_registry"
+name: "Deploy: MLflow Model Registry"
+description: "Enregistre le modèle, ses paramètres et ses métriques dans un serveur MLflow local."
+category: "Model Registry"
+tags: ["deploy", "mlops", "mlflow", "tracking"]
+applies_to: ["Classification", "Regression", "Clustering"]
+when_to_use: "Au cœur d'une stratégie MLOps pour versionner les modèles au fil du temps et suivre leurs performances."
+pros:
+  - "Indispensable pour la gouvernance et la reproductibilité des modèles (MLOps)."
+cons:
+  - "Nécessite qu'un serveur MLflow tourne."
+code_template: |
+  import os
+  try:
+      import mlflow
+      import mlflow.sklearn
+  except ImportError:
+      mlflow = None
+
+  deployment_artifacts = {}
+
+  if 'full_pipeline' in locals() and mlflow is not None:
+      print("[DEPLOY] Logging du modèle vers MLflow...")
+      try:
+          # Configuration du dossier local de tracking
+          os.makedirs("outputs/mlruns", exist_ok=True)
+          mlflow.set_tracking_uri("file://" + os.path.abspath("outputs/mlruns"))
+          
+          # Nom de l'expérience basé sur le type de tâche
+          exp_name = task_type if 'task_type' in locals() else "DataML_Experiment"
+          mlflow.set_experiment(exp_name)
+          
+          with mlflow.start_run(run_name="DataML_Export"):
+              # Logger le pipeline
+              mlflow.sklearn.log_model(full_pipeline, artifact_path="model")
+              
+              # Logger les métriques si disponibles
+              if 'evaluation_metrics' in locals() and isinstance(evaluation_metrics, dict):
+                  for key, val in evaluation_metrics.items():
+                      if isinstance(val, (int, float)):
+                          mlflow.log_metric(key, val)
+                          
+              run_id = mlflow.active_run().info.run_id
+              
+          deployment_artifacts["mlflow_run_id"] = run_id
+          deployment_artifacts["mlflow_tracking_dir"] = "outputs/mlruns"
+          
+          print(f"[DEPLOY] Modèle loggé dans MLflow avec succès (Run ID: {run_id})")
+          print(f"[DEPLOY] Pour voir l'UI : mlflow ui --backend-store-uri outputs/mlruns")
+      except Exception as e:
+          print(f"[DEPLOY ERREUR] MLflow : {str(e)}")
+  elif mlflow is None:
+      print("[DEPLOY ERREUR] Le package 'mlflow' n'est pas installé.")
+_metadata:
+  bloc: 5
+  section: "5_mlops"

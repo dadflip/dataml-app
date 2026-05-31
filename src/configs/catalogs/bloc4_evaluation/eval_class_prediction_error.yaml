@@ -1,0 +1,54 @@
+id: "eval_class_prediction_error"
+name: "Eval Plot: Class Prediction Error"
+description: "Visualisation sous forme de barres empilées montrant les erreurs de prédiction par classe (inspiré de Yellowbrick)."
+category: "Classification Visualizations"
+tags: ["eval", "plot", "classification", "matplotlib", "error-analysis"]
+applies_to: ["Classification"]
+when_to_use: "Pour visualiser rapidement quelles classes sont confondues avec quelles autres de manière proportionnelle."
+pros:
+  - "Plus lisible qu'une matrice de confusion brute pour les jeux de données déséquilibrés."
+cons:
+  - "Devient illisible s'il y a trop de classes."
+code_template: |
+  import os
+  import numpy as np
+  import pandas as pd
+  import matplotlib.pyplot as plt
+  from sklearn.metrics import confusion_matrix
+
+  evaluation_metrics = {}
+
+  if task_type == "classification" and 'y_test' in locals() and 'y_pred' in locals():
+      print("[EVAL] Génération du Class Prediction Error Plot...")
+      try:
+          os.makedirs("outputs/evaluation", exist_ok=True)
+          cm = confusion_matrix(y_test, y_pred)
+          classes = np.unique(np.concatenate([y_test, y_pred]))
+          
+          fig, ax = plt.subplots(figsize=(10, 6))
+          
+          # Barres empilées
+          bottom = np.zeros(len(classes))
+          colors = plt.cm.get_cmap('tab20', len(classes))
+          
+          for i, cls_pred in enumerate(classes):
+              ax.bar(classes, cm[:, i], bottom=bottom, label=f'Pred: {cls_pred}', color=colors(i))
+              bottom += cm[:, i]
+              
+          ax.set_xlabel('Classe Réelle')
+          ax.set_ylabel('Nombre de Prédictions')
+          ax.set_title('Class Prediction Error')
+          ax.legend(title='Classe Prédite', bbox_to_anchor=(1.05, 1), loc='upper left')
+          plt.tight_layout()
+          
+          plot_path = "outputs/evaluation/class_prediction_error.png"
+          fig.savefig(plot_path, dpi=300)
+          plt.close(fig)
+          
+          evaluation_metrics["class_prediction_error_plot"] = plot_path
+          print(f"[EVAL] Plot sauvegardé sous {plot_path}")
+      except Exception as e:
+          print(f"[EVAL ERREUR] Impossible de générer le plot : {str(e)}")
+_metadata:
+  bloc: 4
+  section: "1_evaluation"

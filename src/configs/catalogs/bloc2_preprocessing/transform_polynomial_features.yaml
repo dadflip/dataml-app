@@ -1,0 +1,52 @@
+id: "transform_polynomial_features"
+name: "Transform: Polynomial Features"
+description: "Génère de nouvelles variables (carrés, interactions)."
+category: "4.1 Preprocessing"
+tags: ["transform", "feature-engineering", "tabular", "sklearn", "pipeline"]
+applies_to: ["Tabulaire"]
+when_to_use: "Modèles linéaires sous-performants (non linéarité)."
+pros:
+  - "Capture interactions."
+cons:
+  - "Explosion combinatoire."
+hyperparameters:
+  degree: "Degré (ex: 2)."
+code_template: |
+  import pandas as pd
+  import numpy as np
+  from sklearn.preprocessing import PolynomialFeatures
+  from sklearn.compose import ColumnTransformer
+
+  # [PARAM: DEGREE | number]
+  DEGREE = 2
+  # [/PARAM]
+
+  print(f"[TRANSFORM] PolynomialFeatures (degree={DEGREE})...")
+  if 'df' in locals():
+      if 'pipeline_steps' not in locals(): pipeline_steps = {}
+      
+      num_cols = df.select_dtypes(include=[np.number]).columns.tolist()
+      if 'target_name' in locals() and target_name in num_cols:
+          num_cols.remove(target_name)
+          
+      if len(num_cols) > 0:
+          poly = PolynomialFeatures(degree=DEGREE, include_bias=False)
+          ct = ColumnTransformer(
+              [('poly', poly, num_cols)],
+              remainder='passthrough', verbose_feature_names_out=False
+          )
+          try: ct.set_output(transform="pandas")
+          except: pass
+          
+          step_name = 'poly_features'
+          pipeline_steps[step_name] = (step_name, ct)
+          
+          df = pd.DataFrame(ct.fit_transform(df))
+          print(f"[TRANSFORM] Variables polynomiales ajoutées. Nbre colonnes: {df.shape[1]}")
+      else:
+          print("[TRANSFORM] Aucune colonne numérique.")
+  else:
+      print("[ERREUR] 'df' introuvable.")
+_metadata:
+  bloc: 2
+  section: "4_preprocessing"

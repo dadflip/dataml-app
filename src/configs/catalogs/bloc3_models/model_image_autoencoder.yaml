@@ -1,0 +1,105 @@
+id: "model_image_autoencoder"
+name: "Model: Convolutional Autoencoder"
+description: "Réseau non-supervisé pour compresser une image (encoder) puis la reconstruire (decoder)."
+category: "Vision par Ordinateur (Modèles Entraînés)"
+tags: ["model", "vision", "unsupervised", "pytorch", "autoencoder", "deep-learning"]
+applies_to: ["Images"]
+when_to_use: "Pour faire de la réduction de dimension d'images (embeddings), du débruitage, ou détecter des anomalies visuelles (défauts d'usine)."
+pros:
+  - "Apprend seul les caractéristiques (non supervisé)."
+cons:
+  - "Reconstruction souvent floue sur des images complexes."
+hyperparameters:
+  epochs: "Nombre d'époques (ex: 5)."
+code_template: |
+  import pandas as pd
+  import numpy as np
+  try:
+      import torch
+      import torch.nn as nn
+      import torch.optim as optim
+      from torch.utils.data import DataLoader, TensorDataset
+  except ImportError:
+      torch = None
+      print("[ERREUR] torch n'est pas installé. Lancez : !pip install torch torchvision")
+
+  # [PARAM: EPOCHS | number]
+  EPOCHS = 5
+  # [/PARAM]
+
+  print(f"[MODEL] Entraînement Conv Autoencoder (epochs={EPOCHS})...")
+  if 'X_train' in locals() and 'X_test' in locals() and torch is not None:
+      # On attend X_train (N, C, H, W). Pour l'exemple, on force un reshape carré si plat
+      X_tr_np = np.array(X_train)
+      X_te_np = np.array(X_test)
+      
+      if len(X_tr_np.shape) == 2:
+          side = int(np.sqrt(X_tr_np.shape[1]))
+          X_tr_np = X_tr_np.reshape(-1, 1, side, side)
+          X_te_np = X_te_np.reshape(-1, 1, side, side)
+          
+      dataset = TensorDataset(torch.tensor(X_tr_np, dtype=torch.float32), torch.tensor(X_tr_np, dtype=torch.float32)) # target = input
+      loader = DataLoader(dataset, batch_size=32, shuffle=True)
+      
+      class Autoencoder(nn.Module):
+          def __init__(self, in_channels):
+              super().__init__()
+              # Encoder
+              self.enc = nn.Sequential(
+                  nn.Conv2d(in_channels, 16, 3, stride=2, padding=1),
+                  nn.ReLU(),
+                  nn.Conv2d(16, 32, 3, stride=2, padding=1),
+                  nn.ReLU()
+              )
+              # Decoder
+              self.dec = nn.Sequential(
+                  nn.ConvTranspose2d(32, 16, 3, stride=2, padding=1, output_padding=1),
+                  nn.ReLU(),
+                  nn.ConvTranspose2d(16, in_channels, 3, stride=2, padding=1, output_padding=1),
+                  nn.Sigmoid() # Si images normalisées 0-1
+              )
+          def forward(self, x):
+              return self.dec(self.enc(x))
+              
+      in_channels = X_tr_np.shape[1]
+      model = Autoencoder(in_channels)
+      
+      criterion = nn.MSELoss()
+      optimizer = optim.Adam(model.parameters(), lr=0.001)
+      
+      model.train()
+      for epoch in range(int(EPOCHS)):
+          for batch_X, batch_y in loader:
+              optimizer.zero_grad()
+              outputs = model(batch_X)
+              loss = criterion(outputs, batch_y)
+              loss.backward()
+              optimizer.step()
+              
+      model.eval()
+      with torch.no_grad():
+          X_te_t = torch.tensor(X_te_np, dtype=torch.float32)
+          # Reconstruction (y_pred est l'image reconstruite)
+          reconstructed = model(X_te_t).numpy()
+          # On peut aussi calculer l'erreur de reconstruction par image (utile pour détection anomalie)
+          mse_per_image = np.mean((X_te_np - reconstructed)**2, axis=(1,2,3))
+          
+      y_pred = reconstructed
+      y_proba = mse_per_image # On stocke l'erreur ici pour référence
+      feature_importances = None
+      
+      if 'preprocessor' in locals() and preprocessor is not None:
+          try: from imblearn.pipeline import Pipeline
+          except: from sklearn.pipeline import Pipeline
+          full_pipeline = Pipeline(steps=preprocessor.steps + [('model', model)])
+      else:
+          full_pipeline = model
+          
+      training_history = {"status": "success", "final_loss": float(loss)}
+      task_type = "image_reconstruction"
+      print("[MODEL] Autoencoder entraîné avec succès.")
+  else:
+      print("[ERREUR] Données ou torch introuvables.")
+_metadata:
+  bloc: 3
+  section: "4_vision_and_audio"

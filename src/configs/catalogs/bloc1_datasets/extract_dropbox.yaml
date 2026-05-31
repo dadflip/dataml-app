@@ -1,0 +1,46 @@
+id: "extract_dropbox"
+name: "Extract: Dropbox API"
+description: "Télécharge un fichier depuis Dropbox via token OAuth."
+category: "1. Extract"
+tags: ["extract", "dropbox", "api"]
+code_template: |
+  import dropbox
+  import os
+  import time
+
+  # [PARAM: ACCESS_TOKEN | string]
+  ACCESS_TOKEN = "votre_token_dropbox"
+  # [/PARAM]
+  
+  # [PARAM: DBX_PATH | string]
+  DBX_PATH = "/MonDossier/data.csv"
+  # [/PARAM]
+  
+  # [PARAM: DEST_PATH | string]
+  DEST_PATH = "./data/raw/dropbox_data.csv"
+  # [/PARAM]
+
+  print(f"[EXTRACT] Connexion à l'API Dropbox...")
+  os.makedirs(os.path.dirname(DEST_PATH), exist_ok=True)
+
+  try:
+      start_time = time.time()
+      dbx = dropbox.Dropbox(ACCESS_TOKEN)
+      metadata, res = dbx.files_download(DBX_PATH)
+      
+      with open(DEST_PATH, 'wb') as f:
+          f.write(res.content)
+          
+      duration = time.time() - start_time
+      print(f"[EXTRACT] Succès Dropbox. Fichier téléchargé en {duration:.2f}s.")
+  except Exception as e:
+      print(f"[ERREUR EXTRACT] Erreur d'API Dropbox : {str(e)}")
+      raise e
+
+  df = None
+  target_name = None
+  task_type = "unknown"
+  meta = {"source": "dropbox", "path": DEST_PATH}
+_metadata:
+  bloc: 1
+  section: "1_extract"

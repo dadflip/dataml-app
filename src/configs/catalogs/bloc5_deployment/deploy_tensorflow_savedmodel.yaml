@@ -1,0 +1,42 @@
+id: "deploy_tensorflow_savedmodel"
+name: "Deploy: TensorFlow SavedModel Export"
+description: "Exporte un modèle Keras/TensorFlow au format SavedModel, requis par TensorFlow Serving."
+category: "Serialization"
+tags: ["deploy", "tensorflow", "keras", "savedmodel", "export"]
+applies_to: ["Classification", "Regression", "Computer Vision"]
+when_to_use: "Pour déployer des modèles Deep Learning en production de manière scalable avec TF Serving."
+pros:
+  - "Format officiel et optimisé pour Google Cloud Vertex AI."
+cons:
+  - "Uniquement pour les modèles TensorFlow."
+code_template: |
+  import os
+  try:
+      import tensorflow as tf
+  except ImportError:
+      tf = None
+
+  deployment_artifacts = {}
+
+  if 'full_pipeline' in locals() and tf is not None:
+      print("[DEPLOY] Exportation vers TensorFlow SavedModel...")
+      try:
+          os.makedirs("outputs/deployment/saved_model", exist_ok=True)
+          
+          model = full_pipeline.steps[-1][1] if hasattr(full_pipeline, 'steps') else full_pipeline
+          
+          if not isinstance(model, tf.keras.Model):
+              raise ValueError("Le modèle ne semble pas être un tf.keras.Model.")
+              
+          model_path = "outputs/deployment/saved_model"
+          model.save(model_path)
+          
+          deployment_artifacts["tf_savedmodel_path"] = model_path
+          print(f"[DEPLOY] Modèle Keras exporté sous {model_path}")
+      except Exception as e:
+          print(f"[DEPLOY ERREUR] TF SavedModel : {str(e)}")
+  elif tf is None:
+      print("[DEPLOY ERREUR] Le package 'tensorflow' n'est pas installé.")
+_metadata:
+  bloc: 5
+  section: "1_serialization"

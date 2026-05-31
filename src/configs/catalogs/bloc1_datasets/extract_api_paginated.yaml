@@ -1,0 +1,63 @@
+id: "extract_api_paginated"
+name: "Extract: API REST (Paginée)"
+description: "Extrait toutes les pages d'une API REST qui utilise une pagination (offset/limit)."
+category: "1. Extract"
+tags: ["extract", "api", "rest", "pagination"]
+code_template: |
+  import requests
+  import json
+  import os
+  import time
+
+  # [PARAM: BASE_URL | string]
+  BASE_URL = "https://api.example.com/v1/records"
+  # [/PARAM]
+  
+  # [PARAM: MAX_PAGES | string]
+  MAX_PAGES = "5"
+  # [/PARAM]
+  
+  # [PARAM: DEST_PATH | string]
+  DEST_PATH = "./data/raw/api_paginated.jsonlines"
+  # [/PARAM]
+
+  print(f"[EXTRACT] Extraction paginée depuis {BASE_URL}...")
+  os.makedirs(os.path.dirname(DEST_PATH), exist_ok=True)
+
+  try:
+      start_time = time.time()
+      page = 1
+      total_records = 0
+      
+      with open(DEST_PATH, "w", encoding="utf-8") as f:
+          while page <= int(MAX_PAGES):
+              resp = requests.get(f"{BASE_URL}?page={page}&limit=100", timeout=15)
+              if resp.status_code != 200:
+                  break
+                  
+              data = resp.json()
+              # Suppose que l'API renvoie { "data": [...] }
+              records = data.get("data", [])
+              if not records:
+                  break
+                  
+              for r in records:
+                  f.write(json.dumps(r) + "\\n")
+                  
+              total_records += len(records)
+              page += 1
+              time.sleep(0.5) # Anti rate-limit
+              
+      duration = time.time() - start_time
+      print(f"[EXTRACT] Succès Pagination API. {total_records} records extraits en {duration:.2f}s.")
+  except Exception as e:
+      print(f"[ERREUR EXTRACT] Échec API paginée : {str(e)}")
+      raise e
+
+  df = None
+  target_name = None
+  task_type = "unknown"
+  meta = {"source": "api_paginated", "path": DEST_PATH}
+_metadata:
+  bloc: 1
+  section: "1_extract"

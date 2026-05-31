@@ -1,0 +1,61 @@
+id: "load_graphml"
+name: "Load: Fichier GraphML"
+description: "Charge un graphe au format GraphML via NetworkX. Exporte les attributs des noeuds dans df et l'edge_index dans meta."
+category: "2. Load"
+tags: ["load", "graph", "graphml", "networkx"]
+code_template: |
+  import pandas as pd
+  import numpy as np
+  import time
+  try:
+      import networkx as nx
+  except ImportError:
+      nx = None
+      print("[ERREUR LOAD] 'networkx' n'est pas installé.")
+
+  # [PARAM: FILE_PATH | file]
+  FILE_PATH = "./data/raw/graph.graphml"
+  # [/PARAM]
+
+  # [PARAM: TARGET_ATTR | string]
+  TARGET_ATTR = ""
+  # [/PARAM]
+
+  print(f"[LOAD] Chargement du graphe GraphML depuis {FILE_PATH}...")
+
+  try:
+      if nx is not None:
+          start_time = time.time()
+          G = nx.read_graphml(FILE_PATH)
+          
+          node_data = []
+          for node_id, attrs in G.nodes(data=True):
+              row = {"node_id": node_id}
+              row.update(attrs)
+              node_data.append(row)
+          df = pd.DataFrame(node_data)
+          
+          node_list = list(G.nodes())
+          node2idx = {n: i for i, n in enumerate(node_list)}
+          src = [node2idx[u] for u, v in G.edges()]
+          dst = [node2idx[v] for u, v in G.edges()]
+          edge_index = np.array([src, dst], dtype=np.int64)
+          
+          duration = time.time() - start_time
+          print(f"[LOAD] Succès GraphML. {G.number_of_nodes()} noeuds, {G.number_of_edges()} arêtes en {duration:.2f}s.")
+          
+          target_name = TARGET_ATTR if TARGET_ATTR and TARGET_ATTR in df.columns else None
+          task_type = "node_classification" if target_name else "graph_unsupervised"
+          meta = {"format": "graphml", "shape": df.shape, "edge_index": edge_index, "node_list": node_list}
+      else:
+          df = None
+          target_name = None
+          task_type = "unknown"
+          meta = {}
+  except Exception as e:
+      print(f"[ERREUR LOAD] Échec du chargement GraphML : {str(e)}")
+      raise e
+
+_metadata:
+  bloc: 1
+  section: "2_load"

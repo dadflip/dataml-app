@@ -1,0 +1,39 @@
+id: "load_nifti"
+name: "Load: IRM 3D NIfTI (.nii)"
+description: "Charge un volume 3D/4D d'imagerie par résonance magnétique (IRM)."
+category: "2. Load"
+tags: ["load", "nifti", "medical", "3d"]
+code_template: |
+  import nibabel as nib
+  import time
+  import os
+
+  # [PARAM: FILE_PATH | file]
+  FILE_PATH = "./data/raw/brain.nii.gz"
+  # [/PARAM]
+
+  print(f"[LOAD] Lecture du volume NIfTI : {FILE_PATH}...")
+  if not os.path.exists(FILE_PATH):
+      raise FileNotFoundError(f"[ERREUR LOAD] Fichier NIfTI introuvable : {FILE_PATH}")
+
+  try:
+      start_time = time.time()
+      img = nib.load(FILE_PATH)
+      volume_data = img.get_fdata()
+      
+      duration = time.time() - start_time
+      print(f"[LOAD] Succès NIfTI. Volume {volume_data.shape} chargé en {duration:.2f}s.")
+  except ImportError:
+      print("[ERREUR LOAD] Le module 'nibabel' est requis.")
+      raise
+  except Exception as e:
+      print(f"[ERREUR LOAD] Erreur de lecture NIfTI : {str(e)}")
+      raise e
+
+  df = None
+  target_name = None
+  task_type = "computer_vision_3d"
+  meta = {"format": "nifti", "shape": volume_data.shape}
+_metadata:
+  bloc: 1
+  section: "2_load"

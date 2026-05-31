@@ -23,17 +23,8 @@ export interface PackagesCatalog {
   packages: PackageMeta[];
 }
 
-const CATALOG_URL = "/configs/packages_config.yaml";
+import catalogData from "../configs/packages_catalog.json";
 
 export async function loadPackagesCatalog(): Promise<PackagesCatalog> {
-  try {
-    const res = await fetch(CATALOG_URL);
-    const text = await res.text();
-    const data = yaml.load(text) as PackagesCatalog;
-    if (!data || !Array.isArray(data.packages)) return { packages: [] };
-    return data;
-  } catch (e) {
-    console.error("Failed to load packages catalog:", e);
-    return { packages: [] };
-  }
+  return catalogData as PackagesCatalog;
 }

@@ -1,0 +1,101 @@
+id: "eval_reconstruction_error"
+name: "Eval: Erreur de Reconstruction Moyenne"
+description: "Calcule l'erreur de reconstruction moyenne (MSE, MAE) entre les donnees originales et reconstruites. Metrique fondamentale pour evaluer les autoencoders et modeles generatifs a reconstruction."
+category: "Generative Models"
+tags: ["eval", "reconstruction", "autoencoder", "generative", "mse", "mae"]
+applies_to: ["Generative", "Autoencoder", "Regression"]
+when_to_use: "Lorsqu'on evalue un autoencoder, VAE ou tout modele generatif base sur la reconstruction. y_test contient les donnees originales et y_pred les reconstructions."
+pros:
+  - "Metrique simple et directe pour les modeles a reconstruction"
+  - "MSE et MAE couvrent differents aspects de la qualite"
+  - "La distribution des erreurs revele les outliers et modes de defaillance"
+cons:
+  - "Ne capture pas la qualite perceptuelle (images floues peuvent avoir un bon MSE)"
+  - "Necessite que y_test et y_pred aient la meme dimensionnalite"
+  - "Non applicable aux modeles generatifs sans reconstruction (GAN pur)"
+code_template: |
+  import numpy as np
+  import matplotlib
+  matplotlib.use("Agg")
+  import matplotlib.pyplot as plt
+
+  evaluation_metrics = {}
+
+  try:
+      y_true = np.array(y_test, dtype=np.float64)
+      y_p = np.array(y_pred, dtype=np.float64)
+
+      if y_true.shape != y_p.shape:
+          print(f"[EVAL] Shapes incompatibles: y_test={y_true.shape}, y_pred={y_p.shape}")
+          evaluation_metrics["status"] = "error"
+          evaluation_metrics["reason"] = f"Shape mismatch: {y_true.shape} vs {y_p.shape}"
+      else:
+          # Flatten if multidimensional (e.g. images)
+          if y_true.ndim > 1:
+              y_true_flat = y_true.reshape(y_true.shape[0], -1)
+              y_p_flat = y_p.reshape(y_p.shape[0], -1)
+          else:
+              y_true_flat = y_true.reshape(-1, 1)
+              y_p_flat = y_p.reshape(-1, 1)
+
+          # Per-sample reconstruction error
+          per_sample_mse = np.mean((y_true_flat - y_p_flat) ** 2, axis=1)
+          per_sample_mae = np.mean(np.abs(y_true_flat - y_p_flat), axis=1)
+
+          # Global metrics
+          global_mse = float(np.mean(per_sample_mse))
+          global_mae = float(np.mean(per_sample_mae))
+          global_rmse = float(np.sqrt(global_mse))
+
+          print(f"[EVAL] Erreur de reconstruction - MSE: {global_mse:.6f}")
+          print(f"[EVAL] Erreur de reconstruction - RMSE: {global_rmse:.6f}")
+          print(f"[EVAL] Erreur de reconstruction - MAE: {global_mae:.6f}")
+
+          # Distribution of per-sample errors
+          fig, axes = plt.subplots(1, 2, figsize=(14, 5))
+
+          axes[0].hist(per_sample_mse, bins=50, color="steelblue", alpha=0.8, edgecolor="white")
+          axes[0].axvline(global_mse, color="red", linestyle="--", label=f"Moyenne: {global_mse:.4f}")
+          axes[0].set_xlabel("MSE par echantillon")
+          axes[0].set_ylabel("Frequence")
+          axes[0].set_title("Distribution des MSE de Reconstruction")
+          axes[0].legend()
+          axes[0].grid(True, alpha=0.3)
+
+          axes[1].hist(per_sample_mae, bins=50, color="darkorange", alpha=0.8, edgecolor="white")
+          axes[1].axvline(global_mae, color="red", linestyle="--", label=f"Moyenne: {global_mae:.4f}")
+          axes[1].set_xlabel("MAE par echantillon")
+          axes[1].set_ylabel("Frequence")
+          axes[1].set_title("Distribution des MAE de Reconstruction")
+          axes[1].legend()
+          axes[1].grid(True, alpha=0.3)
+
+          plt.tight_layout()
+          fig_path = "reconstruction_error_dist.png"
+          fig.savefig(fig_path, dpi=150, bbox_inches="tight")
+          plt.close(fig)
+          print(f"[EVAL] Figure sauvegardee: {fig_path}")
+
+          # Percentiles for anomaly detection thresholds
+          p90 = float(np.percentile(per_sample_mse, 90))
+          p95 = float(np.percentile(per_sample_mse, 95))
+          p99 = float(np.percentile(per_sample_mse, 99))
+
+          evaluation_metrics["status"] = "success"
+          evaluation_metrics["figure_path"] = fig_path
+          evaluation_metrics["mse"] = round(global_mse, 6)
+          evaluation_metrics["rmse"] = round(global_rmse, 6)
+          evaluation_metrics["mae"] = round(global_mae, 6)
+          evaluation_metrics["mse_std"] = float(round(np.std(per_sample_mse), 6))
+          evaluation_metrics["mse_p90"] = round(p90, 6)
+          evaluation_metrics["mse_p95"] = round(p95, 6)
+          evaluation_metrics["mse_p99"] = round(p99, 6)
+          evaluation_metrics["n_samples"] = int(len(per_sample_mse))
+
+  except Exception as e:
+      print(f"[EVAL] Erreur calcul reconstruction: {e}")
+      evaluation_metrics["status"] = "error"
+      evaluation_metrics["error"] = str(e)
+_metadata:
+  bloc: 4
+  section: "1_evaluation"

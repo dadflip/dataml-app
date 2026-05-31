@@ -1,0 +1,38 @@
+id: "load_json"
+name: "Load: Fichier JSON (Records)"
+description: "Charge un fichier JSON structuré en liste de dictionnaires."
+category: "2. Load"
+tags: ["load", "json", "tabular", "pandas"]
+code_template: |
+  import pandas as pd
+  import time
+  import os
+
+  # [PARAM: FILE_PATH | file]
+  FILE_PATH = "./data/raw/data.json"
+  # [/PARAM]
+  
+  # [PARAM: TARGET_COL | string]
+  TARGET_COL = "target"
+  # [/PARAM]
+
+  print(f"[LOAD] Chargement du JSON depuis {FILE_PATH}...")
+  if not os.path.exists(FILE_PATH):
+      raise FileNotFoundError(f"[ERREUR LOAD] Fichier JSON introuvable : {FILE_PATH}")
+
+  try:
+      start_time = time.time()
+      df = pd.read_json(FILE_PATH, orient='records')
+      
+      duration = time.time() - start_time
+      print(f"[LOAD] Succès JSON. {df.shape[0]} entrées parsées en {duration:.2f}s.")
+  except Exception as e:
+      print(f"[ERREUR LOAD] Le JSON est malformé ou n'est pas une liste d'objets : {str(e)}")
+      raise e
+
+  target_name = TARGET_COL if TARGET_COL and TARGET_COL in df.columns else None
+  task_type = "unknown"
+  meta = {"format": "json", "shape": df.shape}
+_metadata:
+  bloc: 1
+  section: "2_load"

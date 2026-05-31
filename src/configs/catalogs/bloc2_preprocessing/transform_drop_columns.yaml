@@ -1,0 +1,46 @@
+id: "transform_drop_columns"
+name: "Transform: Drop Columns"
+description: "Supprime des colonnes inutiles."
+category: "4.1 Preprocessing"
+tags: ["transform", "cleaning", "tabular", "pandas", "pipeline"]
+applies_to: ["Tabulaire"]
+when_to_use: "Pour retirer explicitement des colonnes."
+pros:
+  - "Réduit le bruit pour les modèles."
+cons:
+  - "Peut supprimer de l'information utile."
+hyperparameters:
+  columns_to_drop: "Noms des colonnes séparés par des virgules."
+code_template: |
+  import pandas as pd
+  from sklearn.preprocessing import FunctionTransformer
+
+  # [PARAM: COLUMNS_TO_DROP | string]
+  COLUMNS_TO_DROP = ""
+  # [/PARAM]
+
+  print("[TRANSFORM] Suppression de colonnes ciblées...")
+  if 'df' in locals():
+      if 'pipeline_steps' not in locals(): pipeline_steps = {}
+      
+      def drop_cols_func(X):
+          X_df = pd.DataFrame(X) if not isinstance(X, pd.DataFrame) else X
+          if COLUMNS_TO_DROP.strip():
+              cols = [c.strip() for c in COLUMNS_TO_DROP.split(',')]
+              valid = [c for c in cols if c in X_df.columns]
+              return X_df.drop(columns=valid)
+          return X_df
+
+      transformer = FunctionTransformer(drop_cols_func)
+      
+      step_name = 'drop_cols'
+      pipeline_steps[step_name] = (step_name, transformer)
+      
+      initial_cols = df.shape[1]
+      df = transformer.transform(df)
+      print(f"[TRANSFORM] Colonnes supprimées. Nouvelles colonnes : {df.shape[1]}")
+  else:
+      print("[ERREUR] 'df' introuvable.")
+_metadata:
+  bloc: 2
+  section: "4_preprocessing"

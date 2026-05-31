@@ -1,0 +1,68 @@
+id: "extract_snowflake"
+name: "Extract: Snowflake Data Warehouse"
+description: "Interroge un cluster Snowflake via le connecteur officiel Python."
+category: "1. Extract"
+tags: ["extract", "snowflake", "dwh", "sql"]
+code_template: |
+  import snowflake.connector
+  import pandas as pd
+  import os
+  import time
+
+  # [PARAM: USER | string]
+  USER = "user_name"
+  # [/PARAM]
+  
+  # [PARAM: PASSWORD | string]
+  PASSWORD = "secret_password"
+  # [/PARAM]
+  
+  # [PARAM: ACCOUNT | string]
+  ACCOUNT = "xy12345.us-east-1"
+  # [/PARAM]
+  
+  # [PARAM: WAREHOUSE | string]
+  WAREHOUSE = "COMPUTE_WH"
+  # [/PARAM]
+  
+  # [PARAM: QUERY | string]
+  QUERY = "SELECT * FROM my_db.my_schema.my_table"
+  # [/PARAM]
+  
+  # [PARAM: DEST_PATH | string]
+  DEST_PATH = "./data/raw/snowflake_export.csv"
+  # [/PARAM]
+
+  print(f"[EXTRACT] Interrogation du Data Warehouse Snowflake ({ACCOUNT})...")
+  os.makedirs(os.path.dirname(DEST_PATH), exist_ok=True)
+
+  try:
+      start_time = time.time()
+      ctx = snowflake.connector.connect(
+          user=USER,
+          password=PASSWORD,
+          account=ACCOUNT,
+          warehouse=WAREHOUSE
+      )
+      
+      # execute_dataframe nécessite pandas et pyarrow (option de fetch très rapide)
+      cursor = ctx.cursor()
+      cursor.execute(QUERY)
+      df_temp = cursor.fetch_pandas_all()
+      
+      df_temp.to_csv(DEST_PATH, index=False)
+      ctx.close()
+      
+      duration = time.time() - start_time
+      print(f"[EXTRACT] Succès Snowflake. {df_temp.shape[0]} lignes dumpées en {duration:.2f}s.")
+  except Exception as e:
+      print(f"[ERREUR EXTRACT] Échec de la connexion ou requête Snowflake : {str(e)}")
+      raise e
+
+  df = None
+  target_name = None
+  task_type = "unknown"
+  meta = {"source": "snowflake", "path": DEST_PATH}
+_metadata:
+  bloc: 1
+  section: "1_extract"

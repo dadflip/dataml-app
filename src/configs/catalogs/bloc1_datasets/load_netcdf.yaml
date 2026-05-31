@@ -1,0 +1,43 @@
+id: "load_netcdf"
+name: "Load: Géoscience NetCDF"
+description: "Charge un fichier de données météorologiques ou climatiques au format NetCDF (.nc)."
+category: "2. Load"
+tags: ["load", "netcdf", "weather", "science"]
+code_template: |
+  import time
+  import os
+
+  # [PARAM: FILE_PATH | file]
+  FILE_PATH = "./data/raw/climate.nc"
+  # [/PARAM]
+
+  print(f"[LOAD] Lecture du fichier NetCDF : {FILE_PATH}...")
+  if not os.path.exists(FILE_PATH):
+      raise FileNotFoundError(f"[ERREUR LOAD] Fichier NetCDF introuvable : {FILE_PATH}")
+
+  try:
+      start_time = time.time()
+      import netCDF4 as nc
+      
+      dataset = nc.Dataset(FILE_PATH, 'r')
+      variables = list(dataset.variables.keys())
+      
+      duration = time.time() - start_time
+      print(f"[LOAD] Succès NetCDF. Fichier ouvert en {duration:.2f}s.")
+      print(f"[LOAD] Variables détectées : {variables[:5]}{'...' if len(variables)>5 else ''}")
+      
+      # Le dataset reste ouvert dans 'dataset' pour exploitation ultérieure
+  except ImportError:
+      print("[ERREUR LOAD] Le module 'netCDF4' est requis.")
+      raise
+  except Exception as e:
+      print(f"[ERREUR LOAD] Erreur de parsing NetCDF : {str(e)}")
+      raise e
+
+  df = None
+  target_name = None
+  task_type = "unknown"
+  meta = {"format": "netcdf", "variables": len(variables)}
+_metadata:
+  bloc: 1
+  section: "2_load"

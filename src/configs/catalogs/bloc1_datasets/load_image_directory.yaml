@@ -1,0 +1,53 @@
+id: "load_image_directory"
+name: "Load: Image Directory (Paths)"
+description: "Scanne un dossier d'images organisé en sous-dossiers (classes) et construit un DataFrame avec les chemins et les cibles."
+category: "2. Load"
+tags: ["load", "image", "vision", "cnn"]
+code_template: |
+  import pandas as pd
+  import os
+  import glob
+  import time
+
+  # [PARAM: DIRECTORY_PATH | string]
+  DIRECTORY_PATH = "./data/raw/images_extracted"
+  # [/PARAM]
+
+  print(f"[LOAD] Analyse du dossier image : {DIRECTORY_PATH}...")
+
+  try:
+      start_time = time.time()
+      paths = []
+      labels = []
+      
+      if os.path.exists(DIRECTORY_PATH) and os.path.isdir(DIRECTORY_PATH):
+          classes = [d for d in os.listdir(DIRECTORY_PATH) if os.path.isdir(os.path.join(DIRECTORY_PATH, d))]
+          
+          for cls in classes:
+              cls_path = os.path.join(DIRECTORY_PATH, cls)
+              for ext in ('*.jpg', '*.jpeg', '*.png'):
+                  for img_file in glob.glob(os.path.join(cls_path, ext)):
+                      paths.append(img_file)
+                      labels.append(cls)
+                      
+          df = pd.DataFrame({'image_path': paths, 'target_class': labels})
+          
+          duration = time.time() - start_time
+          print(f"[LOAD] Succès. {len(paths)} images listées dans {len(classes)} classes en {duration:.2f}s.")
+          
+          target_name = "target_class"
+          task_type = "image_classification"
+          meta = {"format": "image_directory", "shape": df.shape, "classes": classes}
+      else:
+          print(f"[ERREUR LOAD] Le dossier {DIRECTORY_PATH} est introuvable.")
+          df = None
+          target_name = None
+          task_type = "unknown"
+          meta = {}
+  except Exception as e:
+      print(f"[ERREUR LOAD] Échec de l'analyse du dossier : {str(e)}")
+      raise e
+
+_metadata:
+  bloc: 1
+  section: "2_load"

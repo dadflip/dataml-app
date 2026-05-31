@@ -1,0 +1,96 @@
+id: "model_vit_classifier"
+name: "Model: Vision Transformer (ViT)"
+description: "Vision Transformer par Google. Applique l'architecture Transformer (Self-Attention) directement sur des patchs d'images."
+category: "Vision par Ordinateur (Modèles Entraînés)"
+tags: ["model", "vision", "classification", "transformers", "huggingface", "vit", "deep-learning"]
+applies_to: ["Images"]
+when_to_use: "Sur de gigantesques datasets où les ViT surclassent les CNN (ResNet)."
+pros:
+  - "State-of-the-art absolu sur d'énormes volumes de données."
+cons:
+  - "Plus lent et gourmand en VRAM qu'un CNN. Difficile à entraîner sur petit dataset sans fort pré-entraînement."
+hyperparameters:
+  epochs: "Nombre d'époques (ex: 3)."
+code_template: |
+  import pandas as pd
+  import numpy as np
+  try:
+      import torch
+      from transformers import ViTForImageClassification, ViTFeatureExtractor, Trainer, TrainingArguments
+      from datasets import Dataset
+  except ImportError:
+      ViTForImageClassification = None
+      print("[ERREUR] transformers ou datasets n'est pas installé. Lancez : !pip install transformers datasets")
+
+  # [PARAM: EPOCHS | number]
+  EPOCHS = 3
+  # [/PARAM]
+
+  print(f"[MODEL] Fine-Tuning Vision Transformer (ViT) (epochs={EPOCHS})...")
+  if 'X_train' in locals() and 'y_train' in locals() and 'X_test' in locals() and ViTForImageClassification is not None:
+      # X_train devrait être une liste de PIL Images ou de numpy arrays RGB
+      X_tr_list = list(X_train)
+      X_te_list = list(X_test)
+      
+      classes = np.unique(y_train)
+      label2id = {c: i for i, c in enumerate(classes)}
+      id2label = {i: c for i, c in enumerate(classes)}
+      y_tr_enc = np.array([label2id[y] for y in y_train])
+      
+      model_name = "google/vit-base-patch16-224-in21k"
+      feature_extractor = ViTFeatureExtractor.from_pretrained(model_name)
+      model_hf = ViTForImageClassification.from_pretrained(model_name, num_labels=len(classes), id2label=id2label, label2id=label2id)
+      
+      train_ds = Dataset.from_dict({'image': X_tr_list, 'label': y_tr_enc})
+      test_ds = Dataset.from_dict({'image': X_te_list})
+      
+      def preprocess_images(examples):
+          # Les images doivent être au format PIL ou Tensor (C, H, W)
+          # On laisse l'extracteur s'en charger
+          return feature_extractor(images=examples['image'], return_tensors="pt")
+          
+      train_ds = train_ds.with_transform(preprocess_images)
+      test_ds = test_ds.with_transform(preprocess_images)
+      
+      training_args = TrainingArguments(
+          output_dir="./results_vit",
+          num_train_epochs=int(EPOCHS),
+          learning_rate=2e-5,
+          per_device_train_batch_size=8,
+          remove_unused_columns=False,
+          evaluation_strategy="no",
+          save_strategy="no"
+      )
+      
+      trainer = Trainer(
+          model=model_hf,
+          args=training_args,
+          train_dataset=train_ds
+      )
+      
+      print("Début de l'entraînement ViT...")
+      trainer.train()
+      
+      predictions = trainer.predict(test_ds)
+      y_pred_idx = np.argmax(predictions.predictions, axis=1)
+      y_pred = np.array([id2label[i] for i in y_pred_idx])
+      
+      y_proba = torch.nn.functional.softmax(torch.tensor(predictions.predictions), dim=-1).numpy()
+      feature_importances = None
+      model = trainer
+      
+      if 'preprocessor' in locals() and preprocessor is not None:
+          try: from imblearn.pipeline import Pipeline
+          except: from sklearn.pipeline import Pipeline
+          full_pipeline = Pipeline(steps=preprocessor.steps + [('model', model)])
+      else:
+          full_pipeline = model
+          
+      training_history = {"status": "success", "type": "hf_vit_finetuned"}
+      task_type = "classification"
+      print("[MODEL] ViT entraîné avec succès.")
+  else:
+      print("[ERREUR] Données ou packages introuvables. Les images doivent être gérées par HuggingFace Datasets.")
+_metadata:
+  bloc: 3
+  section: "4_vision_and_audio"

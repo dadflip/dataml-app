@@ -1,0 +1,32 @@
+id: "pipeline_timeseries_forecasting"
+name: "Recette : Time Series Forecasting"
+description: "Prévision des ventes avec Prophet, graphiques interactifs et export vers Dash."
+category: "Time Series"
+nodes:
+  - node_id: "load_sales"
+    block_id: "load_csv"
+    params:
+      FILE_PATH: "./data/raw/sales.csv"
+      SEP: ","
+      TARGET_COL: "Sales"
+      TIME_COL: "Date"
+
+  - node_id: "preprocess_ts"
+    block_id: "transform_standard_scaler"
+    depends_on: ["load_sales"]
+
+  - node_id: "model_prophet"
+    block_id: "model_prophet"
+    depends_on: ["preprocess_ts"]
+
+  - node_id: "eval_forecast_plot"
+    block_id: "eval_forecast_vs_actual_plot"
+    depends_on: ["model_prophet"]
+
+  - node_id: "eval_smape"
+    block_id: "eval_smape_score"
+    depends_on: ["model_prophet"]
+
+  - node_id: "deploy_dash"
+    block_id: "deploy_dash"
+    depends_on: ["eval_smape", "eval_forecast_plot"]

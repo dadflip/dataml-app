@@ -1,0 +1,141 @@
+id: "eval_residuals_plot"
+name: "Eval: Residuals Plot (Graphique des Residus)"
+description: >
+  Genere un graphique des residus (erreurs de prediction) pour un modele de regression.
+  Le graphique inclut : (1) residus vs predictions, (2) distribution des residus,
+  (3) QQ-plot pour verifier la normalite. Le fichier est sauvegarde au format PNG.
+  Les statistiques descriptives des residus sont egalement calculees.
+category: "Visualisation de Regression"
+tags: ["eval", "regression", "residus", "plot", "visualisation", "diagnostic"]
+applies_to: ["Regression"]
+when_to_use: >
+  Utiliser pour diagnostiquer visuellement la qualite d'un modele de regression.
+  Permet de detecter des patterns dans les erreurs (non-linearite, heteroscedasticite,
+  valeurs aberrantes) qui ne sont pas visibles avec les metriques numeriques seules.
+pros:
+  - "Diagnostic visuel puissant pour detecter des problemes de modelisation"
+  - "Detecte la non-linearite, l'heteroscedasticite et les outliers"
+  - "Combine plusieurs vues complementaires en un seul graphique"
+cons:
+  - "Necessite matplotlib, peut echouer en environnement sans affichage"
+  - "Interpretation subjective, necessite de l'experience"
+  - "Le fichier de sortie peut etre volumineux pour de grands jeux de donnees"
+code_template: |
+  evaluation_metrics = {}
+  try:
+      import numpy as np
+      import os
+
+      print("[EVAL] Generation du graphique des residus...")
+
+      residuals = np.array(y_test) - np.array(y_pred)
+
+      # Compute residual statistics
+      residual_mean = float(np.mean(residuals))
+      residual_std = float(np.std(residuals))
+      residual_median = float(np.median(residuals))
+      residual_min = float(np.min(residuals))
+      residual_max = float(np.max(residuals))
+      residual_skew = float(0.0)
+      residual_kurtosis = float(0.0)
+
+      try:
+          from scipy import stats as sp_stats
+          residual_skew = float(sp_stats.skew(residuals))
+          residual_kurtosis = float(sp_stats.kurtosis(residuals))
+      except ImportError:
+          print("[EVAL] scipy non disponible, skewness et kurtosis non calculees")
+
+      evaluation_metrics["residual_mean"] = residual_mean
+      evaluation_metrics["residual_std"] = residual_std
+      evaluation_metrics["residual_median"] = residual_median
+      evaluation_metrics["residual_min"] = residual_min
+      evaluation_metrics["residual_max"] = residual_max
+      evaluation_metrics["residual_skewness"] = residual_skew
+      evaluation_metrics["residual_kurtosis"] = residual_kurtosis
+
+      # Generate the plot
+      try:
+          import matplotlib
+          matplotlib.use("Agg")
+          import matplotlib.pyplot as plt
+
+          fig, axes = plt.subplots(2, 2, figsize=(14, 10))
+          fig.suptitle("Analyse des Residus - Diagnostic de Regression", fontsize=14, fontweight="bold")
+
+          # 1. Residuals vs Predicted
+          ax1 = axes[0, 0]
+          ax1.scatter(y_pred, residuals, alpha=0.5, edgecolors="k", linewidths=0.3, s=20)
+          ax1.axhline(y=0, color="r", linestyle="--", linewidth=1)
+          ax1.set_xlabel("Valeurs Predites")
+          ax1.set_ylabel("Residus")
+          ax1.set_title("Residus vs Predictions")
+
+          # 2. Histogram of residuals
+          ax2 = axes[0, 1]
+          n_bins = min(50, max(10, len(residuals) // 10))
+          ax2.hist(residuals, bins=n_bins, edgecolor="black", alpha=0.7, density=True, color="steelblue")
+          # Overlay normal distribution
+          x_range = np.linspace(residual_min - residual_std, residual_max + residual_std, 200)
+          from scipy.stats import norm
+          ax2.plot(x_range, norm.pdf(x_range, residual_mean, residual_std), "r-", linewidth=2, label="Distribution normale")
+          ax2.set_xlabel("Residus")
+          ax2.set_ylabel("Densite")
+          ax2.set_title("Distribution des Residus")
+          ax2.legend()
+
+          # 3. QQ-Plot
+          ax3 = axes[1, 0]
+          sorted_residuals = np.sort(residuals)
+          n = len(sorted_residuals)
+          theoretical_quantiles = norm.ppf(np.linspace(0.01, 0.99, n))
+          ax3.scatter(theoretical_quantiles, sorted_residuals, alpha=0.5, s=15, edgecolors="k", linewidths=0.3)
+          # Reference line
+          q25, q75 = np.percentile(sorted_residuals, [25, 75])
+          t25, t75 = norm.ppf(0.25), norm.ppf(0.75)
+          slope = (q75 - q25) / (t75 - t25)
+          intercept = q25 - slope * t25
+          ref_line = slope * theoretical_quantiles + intercept
+          ax3.plot(theoretical_quantiles, ref_line, "r--", linewidth=1.5)
+          ax3.set_xlabel("Quantiles Theoriques")
+          ax3.set_ylabel("Quantiles Observes")
+          ax3.set_title("QQ-Plot des Residus")
+
+          # 4. Actual vs Predicted
+          ax4 = axes[1, 1]
+          ax4.scatter(y_test, y_pred, alpha=0.5, edgecolors="k", linewidths=0.3, s=20)
+          min_val = min(np.min(y_test), np.min(y_pred))
+          max_val = max(np.max(y_test), np.max(y_pred))
+          ax4.plot([min_val, max_val], [min_val, max_val], "r--", linewidth=1.5, label="Prediction parfaite")
+          ax4.set_xlabel("Valeurs Reelles")
+          ax4.set_ylabel("Valeurs Predites")
+          ax4.set_title("Reel vs Predit")
+          ax4.legend()
+
+          plt.tight_layout()
+
+          # Save figure
+          output_dir = os.path.join(os.getcwd(), "outputs", "evaluation")
+          os.makedirs(output_dir, exist_ok=True)
+          fig_path = os.path.join(output_dir, "residuals_plot.png")
+          fig.savefig(fig_path, dpi=150, bbox_inches="tight")
+          plt.close(fig)
+
+          evaluation_metrics["plot_path"] = fig_path
+          print(f"[EVAL] Graphique sauvegarde : {fig_path}")
+
+      except ImportError as ie:
+          print(f"[EVAL] matplotlib ou scipy non disponible, graphique non genere : {ie}")
+          evaluation_metrics["plot_path"] = None
+          evaluation_metrics["warning"] = f"Graphique non genere : {ie}"
+
+      print(f"[EVAL] Residus : moyenne={residual_mean:.6f}, std={residual_std:.6f}, "
+            f"min={residual_min:.6f}, max={residual_max:.6f}")
+
+  except Exception as e:
+      print(f"[EVAL] Erreur lors de la generation du graphique des residus : {e}")
+      evaluation_metrics["plot_path"] = None
+      evaluation_metrics["error"] = str(e)
+_metadata:
+  bloc: 4
+  section: "1_evaluation"

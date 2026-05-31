@@ -1,0 +1,48 @@
+id: "load_huggingface_local"
+name: "Load: HuggingFace (from Disk)"
+description: "Charge un dataset HuggingFace précédemment extrait sur le disque local en DataFrame Pandas."
+category: "2. Load"
+tags: ["load", "huggingface", "nlp", "pandas"]
+code_template: |
+  import pandas as pd
+  import time
+  try:
+      from datasets import load_from_disk
+  except ImportError:
+      load_from_disk = None
+      print("[ERREUR LOAD] La librairie 'datasets' n'est pas installée.")
+
+  # [PARAM: LOCAL_PATH | string]
+  LOCAL_PATH = "./data/raw/huggingface_cache/imdb_train"
+  # [/PARAM]
+  
+  # [PARAM: TARGET_COL | string]
+  TARGET_COL = "label"
+  # [/PARAM]
+
+  print(f"[LOAD] Chargement du dataset HuggingFace depuis {LOCAL_PATH}...")
+  
+  try:
+      start_time = time.time()
+      if load_from_disk is not None:
+          hf_dataset = load_from_disk(LOCAL_PATH)
+          df = hf_dataset.to_pandas()
+          
+          duration = time.time() - start_time
+          print(f"[LOAD] Succès HuggingFace Load. {df.shape[0]} lignes chargées en {duration:.2f}s.")
+          
+          target_name = TARGET_COL if TARGET_COL and TARGET_COL in df.columns else None
+          task_type = "classification" if target_name and df[target_name].nunique() < 20 else "unknown"
+          meta = {"format": "huggingface", "shape": df.shape}
+      else:
+          df = None
+          target_name = None
+          task_type = "unknown"
+          meta = {}
+  except Exception as e:
+      print(f"[ERREUR LOAD] Échec du chargement HuggingFace : {str(e)}")
+      raise e
+
+_metadata:
+  bloc: 1
+  section: "2_load"

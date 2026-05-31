@@ -1,0 +1,87 @@
+id: "eval_brier_score"
+name: "Eval: Brier Score Loss"
+description: >
+  Calcule le Brier Score, qui mesure l'erreur quadratique moyenne entre les
+  probabilites predites et les resultats reels (0 ou 1). Le Brier Score varie
+  entre 0 (predictions parfaites) et 1 (pires predictions). C'est une mesure
+  de la calibration et de la precision des probabilites predites. Applicable
+  principalement en classification binaire. Necessite y_proba.
+category: "Metriques de Classification"
+tags: ["eval", "classification", "brier_score", "calibration", "probabilites", "binaire"]
+applies_to: ["Classification"]
+when_to_use: >
+  Utiliser pour evaluer la qualite de la calibration des probabilites predites
+  en classification binaire. Le Brier Score combine discrimination et
+  calibration en une seule metrique. Ideal pour comparer des modeles
+  probabilistes (par exemple, pour la prise de decision medicale ou financiere).
+pros:
+  - "Mesure a la fois la discrimination et la calibration"
+  - "Score proper : le meilleur score est atteint par les vraies probabilites"
+  - "Simple a interpreter (0 = parfait, 1 = pire)"
+  - "Penalise les predictions confiantes mais erronees"
+cons:
+  - "Concu pour la classification binaire uniquement"
+  - "Necessite les probabilites predites (y_proba)"
+  - "Moins discriminant que le log-loss pour les predictions extremes"
+  - "Sensible au desequilibre des classes"
+code_template: |
+  evaluation_metrics = {}
+  try:
+      from sklearn.metrics import brier_score_loss
+      import numpy as np
+
+      print("[EVAL] Calcul du Brier Score Loss...")
+
+      if y_proba is None:
+          print("[EVAL] y_proba est None, Brier Score impossible a calculer.")
+          evaluation_metrics["brier_score"] = None
+          evaluation_metrics["error"] = "y_proba requis pour le Brier Score"
+      else:
+          classes = np.unique(y_test)
+          n_classes = len(classes)
+
+          if n_classes != 2:
+              print(f"[EVAL] Brier Score classique adapte au binaire. {n_classes} classes detectees.")
+              print("[EVAL] Calcul du Brier Score multiclasse (one-vs-rest)...")
+
+              from sklearn.preprocessing import label_binarize
+              y_test_bin = label_binarize(y_test, classes=classes)
+              brier_per_class = {}
+
+              for i, cls in enumerate(classes):
+                  if i < y_proba.shape[1]:
+                      bs_cls = brier_score_loss(y_test_bin[:, i], y_proba[:, i])
+                      brier_per_class[str(cls)] = float(bs_cls)
+                      print(f"[EVAL] Classe {cls} - Brier Score: {bs_cls:.4f}")
+
+              macro_brier = float(np.mean(list(brier_per_class.values())))
+              evaluation_metrics["brier_score_per_class"] = brier_per_class
+              evaluation_metrics["brier_score_macro"] = macro_brier
+              print(f"[EVAL] Brier Score (macro): {macro_brier:.4f}")
+          else:
+              # Binary classification
+              if y_proba.ndim > 1:
+                  proba_positive = y_proba[:, 1]
+              else:
+                  proba_positive = y_proba
+
+              brier = brier_score_loss(y_test, proba_positive, pos_label=classes[1])
+              evaluation_metrics["brier_score"] = float(brier)
+              print(f"[EVAL] Brier Score Loss: {brier:.4f}")
+
+              # Reference: score of a naive model predicting base rate
+              base_rate = float(np.mean(y_test == classes[1]))
+              brier_baseline = base_rate * (1 - base_rate)
+              evaluation_metrics["brier_baseline"] = float(brier_baseline)
+              evaluation_metrics["brier_skill_score"] = float(1.0 - brier / brier_baseline) if brier_baseline > 0 else None
+              print(f"[EVAL] Brier Baseline (naive): {brier_baseline:.4f}")
+              if evaluation_metrics["brier_skill_score"] is not None:
+                  print(f"[EVAL] Brier Skill Score: {evaluation_metrics['brier_skill_score']:.4f}")
+
+          print("[EVAL] Brier Score Loss termine avec succes.")
+  except Exception as e:
+      print(f"[EVAL] Erreur lors du calcul du Brier Score: {e}")
+      evaluation_metrics["error"] = str(e)
+_metadata:
+  bloc: 4
+  section: "1_evaluation"

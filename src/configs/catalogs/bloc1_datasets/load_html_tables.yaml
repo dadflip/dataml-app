@@ -1,0 +1,45 @@
+id: "load_html_tables"
+name: "Load: Tableaux HTML"
+description: "Parse une page web HTML et extrait tous les tableaux <table> dans une liste de DataFrames."
+category: "2. Load"
+tags: ["load", "html", "tables", "pandas"]
+code_template: |
+  import pandas as pd
+  import time
+  import os
+
+  # [PARAM: FILE_PATH | file]
+  FILE_PATH = "./data/raw/page.html"
+  # [/PARAM]
+
+  print(f"[LOAD] Extraction des tableaux HTML depuis {FILE_PATH}...")
+  if not os.path.exists(FILE_PATH):
+      raise FileNotFoundError(f"[ERREUR LOAD] Fichier HTML introuvable : {FILE_PATH}")
+
+  try:
+      start_time = time.time()
+      # read_html nécessite lxml ou html5lib
+      dfs = pd.read_html(FILE_PATH)
+      
+      duration = time.time() - start_time
+      print(f"[LOAD] Succès HTML. {len(dfs)} tableaux trouvés en {duration:.2f}s.")
+      
+      # Par défaut on garde le premier tableau, souvent le plus grand ou le principal
+      df = dfs[0] if len(dfs) > 0 else pd.DataFrame()
+  except ImportError:
+      print("[ERREUR LOAD] Le module 'lxml' est requis.")
+      raise
+  except ValueError:
+      print("[ERREUR LOAD] Aucun tableau trouvé dans le fichier HTML.")
+      df = pd.DataFrame()
+      dfs = []
+  except Exception as e:
+      print(f"[ERREUR LOAD] Erreur de lecture HTML : {str(e)}")
+      raise e
+
+  target_name = None
+  task_type = "unknown"
+  meta = {"format": "html_table", "tables_found": len(dfs), "primary_shape": df.shape}
+_metadata:
+  bloc: 1
+  section: "2_load"

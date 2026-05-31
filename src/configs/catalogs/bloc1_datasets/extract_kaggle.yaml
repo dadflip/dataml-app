@@ -1,0 +1,44 @@
+id: "extract_kaggle"
+name: "Extract: Kaggle API"
+description: "Télécharge et décompresse un dataset via l'API officielle Kaggle."
+category: "1. Extract"
+tags: ["extract", "kaggle", "api"]
+code_template: |
+  import os
+  import time
+
+  # [PARAM: DATASET_ID | string]
+  DATASET_ID = "paultimothymooney/chest-xray-pneumonia"
+  # [/PARAM]
+  
+  # [PARAM: DEST_DIR | dir]
+  DEST_DIR = "./data/raw/kaggle"
+  # [/PARAM]
+
+  print(f"[EXTRACT] Appel à l'API Kaggle pour le dataset {DATASET_ID}...")
+  os.makedirs(DEST_DIR, exist_ok=True)
+
+  try:
+      # L'import vérifie la présence du fichier ~/.kaggle/kaggle.json
+      import kaggle
+      start_time = time.time()
+      
+      # Télécharge et dézippe à la volée
+      kaggle.api.dataset_download_files(DATASET_ID, path=DEST_DIR, unzip=True)
+      
+      duration = time.time() - start_time
+      print(f"[EXTRACT] Succès Kaggle. Données prêtes dans {DEST_DIR} en {duration:.2f}s.")
+  except ImportError:
+      print("[ERREUR EXTRACT] Le module 'kaggle' n'est pas installé.")
+      raise
+  except Exception as e:
+      print(f"[ERREUR EXTRACT] Impossible de télécharger via Kaggle : {str(e)}")
+      raise e
+
+  df = None
+  target_name = None
+  task_type = "unknown"
+  meta = {"source": "kaggle", "path": DEST_DIR}
+_metadata:
+  bloc: 1
+  section: "1_extract"

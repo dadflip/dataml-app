@@ -1,0 +1,67 @@
+id: "eval_f1_vs_threshold"
+name: "Eval Plot: F1 Score vs Threshold"
+description: "Affiche l'évolution du F1-Score en fonction du seuil pour identifier le point de performance maximale."
+category: "Classification Visualizations"
+tags: ["eval", "plot", "classification", "binary", "threshold", "f1-score"]
+applies_to: ["Classification Binaire"]
+when_to_use: "Quand vous voulez maximiser globalement la qualité des prédictions (F1) plutôt que d'utiliser le seuil par défaut de 0.5."
+pros:
+  - "Aide à corriger les modèles non-calibrés."
+cons:
+  - "Binaire uniquement."
+code_template: |
+  import os
+  import numpy as np
+  import matplotlib.pyplot as plt
+  from sklearn.metrics import precision_recall_curve
+
+  evaluation_metrics = {}
+
+  if task_type == "classification" and 'y_test' in locals() and 'y_proba' in locals() and y_proba is not None:
+      classes = np.unique(y_test)
+      if len(classes) == 2:
+          print("[EVAL] Génération du F1 vs Threshold Plot...")
+          try:
+              os.makedirs("outputs/evaluation", exist_ok=True)
+              
+              y_true = (y_test == classes[1]).astype(int)
+              probas = y_proba[:, 1]
+              
+              precisions, recalls, thresholds = precision_recall_curve(y_true, probas)
+              
+              # Calcul du F1
+              f1_scores = 2 * (precisions * recalls) / (precisions + recalls + 1e-10)
+              f1_scores = f1_scores[:-1] # Match thresholds length
+              
+              best_idx = np.argmax(f1_scores)
+              best_threshold = thresholds[best_idx]
+              best_f1 = f1_scores[best_idx]
+              
+              fig, ax = plt.subplots(figsize=(8, 6))
+              ax.plot(thresholds, f1_scores, 'purple', linewidth=2, label='F1 Score')
+              
+              ax.scatter([best_threshold], [best_f1], color='red', zorder=5)
+              ax.axvline(best_threshold, color='red', linestyle='--', alpha=0.5)
+              ax.annotate(f'Max F1: {best_f1:.3f}\nThresh: {best_threshold:.3f}', 
+                          xy=(best_threshold, best_f1), xytext=(best_threshold+0.05, best_f1-0.1),
+                          arrowprops=dict(facecolor='black', shrink=0.05, width=1, headwidth=5))
+              
+              ax.set_title('F1 Score vs Decision Threshold')
+              ax.set_xlabel('Threshold')
+              ax.set_ylabel('F1 Score')
+              ax.grid(True, alpha=0.3)
+              ax.legend()
+              
+              plot_path = "outputs/evaluation/f1_vs_threshold.png"
+              fig.savefig(plot_path, dpi=300)
+              plt.close(fig)
+              
+              evaluation_metrics["optimal_f1_threshold"] = float(best_threshold)
+              evaluation_metrics["optimal_f1_score"] = float(best_f1)
+              evaluation_metrics["f1_vs_threshold_plot"] = plot_path
+              print(f"[EVAL] Plot sauvegardé sous {plot_path}")
+          except Exception as e:
+              print(f"[EVAL ERREUR] : {str(e)}")
+_metadata:
+  bloc: 4
+  section: "1_evaluation"

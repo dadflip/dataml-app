@@ -1,0 +1,39 @@
+id: "eval_smape_score"
+name: "Eval Metric: SMAPE (Symmetric MAPE)"
+description: "Symmetric Mean Absolute Percentage Error. Gère mieux les valeurs proches de zéro que le MAPE classique."
+category: "Time Series Metrics"
+tags: ["eval", "metric", "timeseries", "forecasting", "smape"]
+applies_to: ["Forecasting", "Regression"]
+when_to_use: "Quand vous voulez un pourcentage d'erreur relatif, mais que la valeur réelle peut parfois être petite."
+pros:
+  - "Saut temporel d'erreur limité à 200% (contrairement au MAPE qui va à l'infini)."
+cons:
+  - "Asymétrique vis-à-vis des sur/sous-prédictions."
+code_template: |
+  import numpy as np
+
+  evaluation_metrics = {}
+
+  if task_type in ["forecasting", "regression"] and 'y_test' in locals() and 'y_pred' in locals():
+      print("[EVAL] Calcul du SMAPE...")
+      try:
+          actual = np.array(y_test)
+          forecast = np.array(y_pred)
+          
+          denominator = (np.abs(actual) + np.abs(forecast)) / 2.0
+          
+          # Eviter division par zéro
+          non_zero = denominator != 0
+          
+          if np.any(non_zero):
+              smape = np.mean(np.abs(actual[non_zero] - forecast[non_zero]) / denominator[non_zero]) * 100
+          else:
+              smape = 0.0
+              
+          evaluation_metrics["smape_percentage"] = float(smape)
+          print(f"[EVAL] SMAPE: {smape:.2f}%")
+      except Exception as e:
+          print(f"[EVAL ERREUR] SMAPE : {str(e)}")
+_metadata:
+  bloc: 4
+  section: "1_evaluation"

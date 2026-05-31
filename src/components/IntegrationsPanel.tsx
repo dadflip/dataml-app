@@ -1,5 +1,6 @@
 import { useState, useMemo } from "react";
 import { Button } from "@/components/ui/button";
+import { CodeBlock } from "@/components/ui/CodeBlock";
 import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
 import {
@@ -102,7 +103,7 @@ export function IntegrationsPanel({ catalog, state, onApply }: Props) {
           )}
         </Button>
       </DialogTrigger>
-      <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
+      <DialogContent className="w-[calc(100%-2rem)] sm:max-w-3xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <Plug2 className="h-4 w-4" /> Intégrations externes
@@ -278,9 +279,7 @@ function IntegrationSection({
           </button>
 
           {showPreview && (
-            <pre className="max-h-72 overflow-auto rounded-xl border border-border bg-[oklch(0.1_0.004_260)] p-3 font-mono text-[10.5px] leading-relaxed text-foreground/90">
-              <code>{renderIntegrationCode(spec, values)}</code>
-            </pre>
+            <CodeBlock code={renderIntegrationCode(spec, values)} className="max-h-72 overflow-auto" />
           )}
         </div>
       )}

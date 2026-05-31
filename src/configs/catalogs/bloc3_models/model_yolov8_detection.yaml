@@ -1,0 +1,66 @@
+id: "model_yolov8_detection"
+name: "Model: YOLOv8 Object Detection (Ultralytics)"
+description: "You Only Look Once v8. Modèle de détection d'objets (Bounding Boxes) de pointe (rapide et précis)."
+category: "Vision par Ordinateur (Pré-entraînés)"
+tags: ["model", "vision", "object-detection", "yolo", "ultralytics", "zero-shot"]
+applies_to: ["Images", "Vidéo"]
+when_to_use: "Pour détecter, compter ou localiser des objets dans une image ou une frame vidéo."
+pros:
+  - "Très rapide (temps réel)."
+  - "Détecte 80 classes d'objets courants (COCO) par défaut."
+cons:
+  - "Nécessite Ultralytics."
+hyperparameters:
+  conf_threshold: "Seuil de confiance minimum pour garder la boîte (ex: 0.25)."
+code_template: |
+  import pandas as pd
+  import numpy as np
+  import json
+  try:
+      from ultralytics import YOLO
+  except ImportError:
+      YOLO = None
+      print("[ERREUR] ultralytics n'est pas installé. Lancez : !pip install ultralytics")
+
+  # [PARAM: CONF_THRESHOLD | number]
+  CONF_THRESHOLD = 0.25
+  # [/PARAM]
+
+  print(f"[MODEL] Inférence YOLOv8 Object Detection (conf>={CONF_THRESHOLD})...")
+  if 'X_test' in locals() and YOLO is not None:
+      # X_test est supposé être une liste de chemins d'images, ou d'arrays Numpy (BGR/RGB)
+      images = list(X_test)
+      
+      print("Chargement du modèle pré-entraîné YOLOv8n (nano)...")
+      model = YOLO("yolov8n.pt") # Télécharge automatiquement les poids
+      
+      print("Détection en cours...")
+      results = model(images, conf=float(CONF_THRESHOLD))
+      
+      # On va formater y_pred comme une liste de strings JSON
+      # Ex: [{"box": [x1, y1, x2, y2], "class": "person", "conf": 0.9}, ...]
+      all_preds = []
+      for res in results:
+          boxes = res.boxes
+          img_preds = []
+          for box in boxes:
+              b = box.xyxy[0].tolist()
+              c = model.names[int(box.cls)]
+              cnf = float(box.conf)
+              img_preds.append({"box": b, "class": c, "conf": cnf})
+          all_preds.append(json.dumps(img_preds))
+          
+      y_pred = np.array(all_preds)
+      y_proba = None
+      feature_importances = None
+      
+      full_pipeline = model
+          
+      training_history = {"status": "success", "type": "yolo_detection_zeroshot"}
+      task_type = "object_detection"
+      print("[MODEL] Inférence YOLOv8 terminée.")
+  else:
+      print("[ERREUR] Données (X_test) ou ultralytics introuvables.")
+_metadata:
+  bloc: 3
+  section: "4_vision_and_audio"

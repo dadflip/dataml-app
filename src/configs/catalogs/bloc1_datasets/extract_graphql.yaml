@@ -1,0 +1,53 @@
+id: "extract_graphql"
+name: "Extract: API GraphQL"
+description: "Exécute une requête GraphQL et sauvegarde le résultat JSON."
+category: "1. Extract"
+tags: ["extract", "graphql", "api"]
+code_template: |
+  import requests
+  import json
+  import os
+  import time
+
+  # [PARAM: ENDPOINT | string]
+  ENDPOINT = "https://api.github.com/graphql"
+  # [/PARAM]
+  
+  # [PARAM: QUERY | string]
+  QUERY = '{"query": "query { viewer { login } }"}'
+  # [/PARAM]
+  
+  # [PARAM: TOKEN | string]
+  TOKEN = "YOUR_BEARER_TOKEN"
+  # [/PARAM]
+  
+  # [PARAM: DEST_PATH | string]
+  DEST_PATH = "./data/raw/graphql_resp.json"
+  # [/PARAM]
+
+  print(f"[EXTRACT] Exécution de la requête GraphQL vers {ENDPOINT}...")
+  os.makedirs(os.path.dirname(DEST_PATH), exist_ok=True)
+
+  try:
+      start_time = time.time()
+      headers = {"Authorization": f"Bearer {TOKEN}", "Content-Type": "application/json"}
+      
+      response = requests.post(ENDPOINT, headers=headers, data=QUERY)
+      response.raise_for_status()
+      
+      with open(DEST_PATH, "w", encoding="utf-8") as f:
+          json.dump(response.json(), f, indent=2)
+          
+      duration = time.time() - start_time
+      print(f"[EXTRACT] Succès GraphQL. Fichier dumpé en {duration:.2f}s.")
+  except Exception as e:
+      print(f"[ERREUR EXTRACT] Erreur GraphQL : {str(e)}")
+      raise e
+
+  df = None
+  target_name = None
+  task_type = "unknown"
+  meta = {"source": "graphql", "path": DEST_PATH}
+_metadata:
+  bloc: 1
+  section: "1_extract"

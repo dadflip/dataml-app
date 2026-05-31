@@ -1,0 +1,46 @@
+id: "load_vcf"
+name: "Load: Variants Génomiques VCF"
+description: "Parse un fichier Variant Call Format (.vcf) contenant des mutations ADN."
+category: "2. Load"
+tags: ["load", "vcf", "genetics", "variants"]
+code_template: |
+  import time
+  import os
+
+  # [PARAM: FILE_PATH | file]
+  FILE_PATH = "./data/raw/variants.vcf"
+  # [/PARAM]
+
+  print(f"[LOAD] Parsing du fichier VCF : {FILE_PATH}...")
+  if not os.path.exists(FILE_PATH):
+      raise FileNotFoundError(f"[ERREUR LOAD] Fichier VCF introuvable : {FILE_PATH}")
+
+  try:
+      start_time = time.time()
+      import vcf  # via PyVCF
+      
+      vcf_reader = vcf.Reader(open(FILE_PATH, 'r'))
+      records = []
+      
+      # On limite à 10000 par sécurité pour la démo
+      for i, record in enumerate(vcf_reader):
+          records.append(record)
+          if i >= 10000:
+              break
+              
+      duration = time.time() - start_time
+      print(f"[LOAD] Succès VCF. {len(records)} variants chargés en {duration:.2f}s.")
+  except ImportError:
+      print("[ERREUR LOAD] Le module 'PyVCF' est requis.")
+      raise
+  except Exception as e:
+      print(f"[ERREUR LOAD] Erreur de parsing VCF : {str(e)}")
+      raise e
+
+  df = None
+  target_name = None
+  task_type = "bioinformatics"
+  meta = {"format": "vcf", "variants": len(records)}
+_metadata:
+  bloc: 1
+  section: "2_load"

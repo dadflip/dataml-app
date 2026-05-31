@@ -1,0 +1,27 @@
+id: "eda_timeseries_autocorrelation"
+name: "EDA: Autocorrélation (ACF/PACF)"
+description: "Affiche les fonctions d'autocorrélation pour les séries temporelles."
+category: "3. Exploratory Data Analysis"
+tags: ["eda", "timeseries", "acf", "statsmodels"]
+code_template: |
+  import pandas as pd
+  import matplotlib.pyplot as plt
+  from statsmodels.graphics.tsaplots import plot_acf, plot_pacf
+
+  # [PARAM: TIME_COL | string]
+  TIME_COL = "date"
+  # [/PARAM]
+
+  if TIME_COL in df.columns and 'target_name' in locals() and target_name:
+      temp_df = df.dropna(subset=[TIME_COL, target_name]).sort_values(TIME_COL)
+      ts = temp_df[target_name].values
+      
+      fig, axes = plt.subplots(1, 2, figsize=(16, 4))
+      plot_acf(ts, ax=axes[0], lags=40, title=f"Autocorrélation (ACF) de {target_name}")
+      plot_pacf(ts, ax=axes[1], lags=40, title=f"Autocorrélation Partielle (PACF)")
+      plt.show()
+  else:
+      print("[EDA] Colonnes temporelles manquantes.")
+_metadata:
+  bloc: 1
+  section: "3_eda"

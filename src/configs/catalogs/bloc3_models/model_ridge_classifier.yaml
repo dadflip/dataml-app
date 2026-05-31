@@ -1,0 +1,54 @@
+id: "model_ridge_classifier"
+name: "Model: Ridge Classifier"
+description: "Classifieur basé sur la régression Ridge. Convertit la cible en {-1, 1} et applique une régression avec pénalité L2."
+category: "Modèles Linéaires"
+tags: ["model", "classification", "tabular", "sklearn", "linear"]
+applies_to: ["Tabulaire"]
+when_to_use: "Quand vous avez beaucoup de variables colinéaires (multicolinéarité)."
+pros:
+  - "Très rapide (résolution analytique possible)."
+  - "Moins sensible au sur-apprentissage que la régression logistique sans pénalité."
+cons:
+  - "Ne fournit pas de probabilités natives (predict_proba indisponible)."
+hyperparameters:
+  alpha: "Force de régularisation (ex: 1.0). Plus c'est grand, plus c'est robuste au bruit."
+code_template: |
+  import pandas as pd
+  import numpy as np
+  from sklearn.linear_model import RidgeClassifier
+
+  # [PARAM: ALPHA | number]
+  ALPHA = 1.0
+  # [/PARAM]
+
+  print(f"[MODEL] Entraînement Ridge Classifier (alpha={ALPHA})...")
+  if 'X_train' in locals() and 'y_train' in locals() and 'X_test' in locals():
+      model = RidgeClassifier(alpha=ALPHA, random_state=42)
+      model.fit(X_train, y_train)
+      
+      y_pred = model.predict(X_test)
+      y_proba = None # RidgeClassifier ne supporte pas predict_proba nativement
+      
+      feature_importances = None
+      if 'feature_names_out' in locals():
+          coefs = np.abs(model.coef_).mean(axis=0) if model.coef_.ndim > 1 else np.abs(model.coef_[0])
+          if len(coefs) == len(feature_names_out):
+              feature_importances = pd.Series(coefs, index=feature_names_out)
+              
+      if 'preprocessor' in locals() and preprocessor is not None:
+          try: from imblearn.pipeline import Pipeline
+          except: from sklearn.pipeline import Pipeline
+          full_pipeline = Pipeline(steps=preprocessor.steps + [('model', model)])
+      else:
+          try: from imblearn.pipeline import Pipeline
+          except: from sklearn.pipeline import Pipeline
+          full_pipeline = Pipeline(steps=[('model', model)])
+          
+      training_history = {"status": "success", "fitted_on": len(X_train)}
+      task_type = "classification"
+      print("[MODEL] Modèle entraîné et Full Pipeline compilé avec succès.")
+  else:
+      print("[ERREUR] Données d'entraînement introuvables.")
+_metadata:
+  bloc: 3
+  section: "1_classification_tabulaire"

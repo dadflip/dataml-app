@@ -1,0 +1,49 @@
+id: "eval_explained_variance"
+name: "Eval: Explained Variance Score"
+description: >
+  Calcule le score de variance expliquee entre les valeurs reelles et les predictions.
+  Contrairement au R2, la variance expliquee ne tient pas compte du biais systematique
+  du modele. Si le modele a un biais constant, la variance expliquee peut etre elevee
+  alors que le R2 sera plus faible.
+category: "Metriques de Regression"
+tags: ["eval", "regression", "variance", "expliquee", "metrique"]
+applies_to: ["Regression"]
+when_to_use: >
+  Utiliser pour evaluer si le modele capture bien la variabilite des donnees,
+  independamment d'un eventuel biais systematique. Utile en complement du R2.
+pros:
+  - "Mesure la capacite du modele a capturer la variabilite des donnees"
+  - "Peut reveler un biais systematique quand compare au R2"
+  - "Valeur normalisee, facilement interpretable"
+cons:
+  - "Peut donner une fausse impression de qualite si le modele a un biais constant"
+  - "Moins couramment utilisee que le R2"
+  - "Ne remplace pas une analyse complete des residus"
+code_template: |
+  evaluation_metrics = {}
+  try:
+      from sklearn.metrics import explained_variance_score, r2_score
+
+      print("[EVAL] Calcul du Explained Variance Score...")
+
+      ev_value = explained_variance_score(y_test, y_pred)
+      r2_value = r2_score(y_test, y_pred)
+
+      evaluation_metrics["explained_variance"] = float(ev_value)
+      evaluation_metrics["r2_score"] = float(r2_value)
+      evaluation_metrics["bias_indicator"] = float(ev_value - r2_value)
+
+      print(f"[EVAL] Explained Variance = {ev_value:.6f}")
+      print(f"[EVAL] R2 Score = {r2_value:.6f}")
+
+      if abs(ev_value - r2_value) > 0.01:
+          print(f"[EVAL] Ecart EV - R2 = {ev_value - r2_value:.6f} -> biais systematique possible")
+          evaluation_metrics["warning"] = "Ecart significatif entre Explained Variance et R2, biais systematique possible"
+
+  except Exception as e:
+      print(f"[EVAL] Erreur lors du calcul de l'Explained Variance : {e}")
+      evaluation_metrics["explained_variance"] = None
+      evaluation_metrics["error"] = str(e)
+_metadata:
+  bloc: 4
+  section: "1_evaluation"

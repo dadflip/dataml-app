@@ -1,0 +1,63 @@
+id: "eval_classification_report"
+name: "Eval: Rapport de Classification Complet"
+description: "Genere le rapport de classification complet avec precision, recall et F1 pour chaque classe, plus les moyennes macro et weighted."
+category: "Metriques de Classification"
+tags: ["eval", "classification", "report", "precision", "recall", "f1", "sklearn"]
+applies_to: ["Classification"]
+when_to_use: "Pour obtenir une vue d'ensemble detaillee de la performance du modele sur chaque classe."
+pros:
+  - "Vue synthetique et exhaustive de toutes les metriques par classe."
+  - "Inclut le support (nombre d'echantillons) par classe."
+cons:
+  - "Peut etre verbeux pour un tres grand nombre de classes."
+  - "Ne fournit pas d'information sur les probabilites ou la calibration."
+code_template: |
+  import numpy as np
+  from sklearn.metrics import classification_report
+
+  evaluation_metrics = {}
+
+  print("[EVAL] Generation du Rapport de Classification...")
+
+  try:
+      report_dict = classification_report(y_test, y_pred, output_dict=True, zero_division=0)
+      report_text = classification_report(y_test, y_pred, zero_division=0)
+
+      per_class_metrics = {}
+      for key, values in report_dict.items():
+          if key in ("accuracy", "macro avg", "weighted avg"):
+              continue
+          if isinstance(values, dict):
+              per_class_metrics[str(key)] = {
+                  "precision": float(np.round(values.get("precision", 0), 6)),
+                  "recall": float(np.round(values.get("recall", 0), 6)),
+                  "f1_score": float(np.round(values.get("f1-score", 0), 6)),
+                  "support": int(values.get("support", 0)),
+              }
+
+      evaluation_metrics["per_class"] = per_class_metrics
+      evaluation_metrics["accuracy"] = float(np.round(report_dict.get("accuracy", 0), 6))
+
+      for avg_key in ["macro avg", "weighted avg"]:
+          if avg_key in report_dict:
+              safe_key = avg_key.replace(" ", "_")
+              evaluation_metrics[safe_key] = {
+                  "precision": float(np.round(report_dict[avg_key].get("precision", 0), 6)),
+                  "recall": float(np.round(report_dict[avg_key].get("recall", 0), 6)),
+                  "f1_score": float(np.round(report_dict[avg_key].get("f1-score", 0), 6)),
+                  "support": int(report_dict[avg_key].get("support", 0)),
+              }
+
+      evaluation_metrics["report_text"] = report_text
+      evaluation_metrics["n_classes"] = len(per_class_metrics)
+
+      print(f"[EVAL] Rapport genere pour {len(per_class_metrics)} classes.")
+      print(f"[EVAL] Accuracy globale : {evaluation_metrics['accuracy']:.4f}")
+      print(report_text)
+
+  except Exception as e:
+      print(f"[EVAL][ERREUR] Echec de la generation du rapport : {e}")
+      evaluation_metrics["error"] = str(e)
+_metadata:
+  bloc: 4
+  section: "1_evaluation"

@@ -1,0 +1,59 @@
+id: "model_decision_tree_regressor"
+name: "Model: Decision Tree Regressor"
+description: "Arbre de décision pour la régression. Prédit en segmentant l'espace et en moyennant les valeurs dans chaque feuille."
+category: "Modèles Basés sur les Arbres"
+tags: ["model", "regression", "tabular", "sklearn", "tree"]
+applies_to: ["Tabulaire"]
+when_to_use: "Besoin d'un modèle non-linéaire extrêmement simple et interprétable."
+pros:
+  - "Capture les effets non-linéaires très facilement."
+cons:
+  - "Très sujet au sur-apprentissage. Prédit en 'escalier' (non continu)."
+hyperparameters:
+  max_depth: "Profondeur maximale de l'arbre."
+  min_samples_split: "Nombre minimum d'exemples requis pour diviser un nœud."
+code_template: |
+  import pandas as pd
+  import numpy as np
+  from sklearn.tree import DecisionTreeRegressor
+
+  # [PARAM: MAX_DEPTH | number]
+  MAX_DEPTH = 5
+  # [/PARAM]
+
+  # [PARAM: MIN_SAMPLES_SPLIT | number]
+  MIN_SAMPLES_SPLIT = 2
+  # [/PARAM]
+
+  print(f"[MODEL] Entraînement Arbre de Décision Regressor (max_depth={MAX_DEPTH})...")
+  if 'X_train' in locals() and 'y_train' in locals() and 'X_test' in locals():
+      depth = None if MAX_DEPTH <= 0 else int(MAX_DEPTH)
+      
+      model = DecisionTreeRegressor(max_depth=depth, min_samples_split=int(MIN_SAMPLES_SPLIT), random_state=42)
+      model.fit(X_train, y_train)
+      
+      y_pred = model.predict(X_test)
+      y_proba = None
+      
+      feature_importances = None
+      if 'feature_names_out' in locals() and hasattr(model, 'feature_importances_'):
+          if len(model.feature_importances_) == len(feature_names_out):
+              feature_importances = pd.Series(model.feature_importances_, index=feature_names_out)
+              
+      if 'preprocessor' in locals() and preprocessor is not None:
+          try: from imblearn.pipeline import Pipeline
+          except: from sklearn.pipeline import Pipeline
+          full_pipeline = Pipeline(steps=preprocessor.steps + [('model', model)])
+      else:
+          try: from imblearn.pipeline import Pipeline
+          except: from sklearn.pipeline import Pipeline
+          full_pipeline = Pipeline(steps=[('model', model)])
+          
+      training_history = {"status": "success", "fitted_on": len(X_train), "depth": model.get_depth()}
+      task_type = "regression"
+      print("[MODEL] Modèle entraîné et Full Pipeline compilé avec succès.")
+  else:
+      print("[ERREUR] Données d'entraînement introuvables.")
+_metadata:
+  bloc: 3
+  section: "2_regression_tabulaire"

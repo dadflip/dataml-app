@@ -1,0 +1,95 @@
+id: "eval_feature_importance_plot"
+name: "Eval: Feature Importance (Bar Chart)"
+description: "Genere un graphique en barres horizontales des importances des features. Utilise feature_importances du scope ou calcule l'importance par permutation si indisponible."
+category: "Analyse Avancee"
+tags: ["eval", "feature_importance", "visualization", "matplotlib", "interpretability"]
+applies_to: ["Classification", "Regression"]
+when_to_use: "Pour comprendre quelles variables contribuent le plus aux predictions du modele et guider la selection de features."
+pros:
+  - "Interpretation directe de l'impact de chaque variable."
+  - "Fallback automatique vers l'importance par permutation."
+cons:
+  - "L'importance basee sur les arbres peut etre biaisee pour les variables a haute cardinalite."
+  - "L'importance par permutation est couteuse en calcul."
+code_template: |
+  import numpy as np
+  import pandas as pd
+  import matplotlib
+  matplotlib.use("Agg")
+  import matplotlib.pyplot as plt
+  import os
+
+  # [PARAM: TOP_N | number]
+  TOP_N = 20
+  # [/PARAM]
+
+  evaluation_metrics = {}
+
+  print("[EVAL] Generation du graphique d'importance des features...")
+  try:
+      feat_imp = None
+
+      if 'feature_importances' in dir() or 'feature_importances' in locals():
+          if feature_importances is not None:
+              if isinstance(feature_importances, pd.Series):
+                  feat_imp = feature_importances.copy()
+              elif isinstance(feature_importances, (np.ndarray, list)):
+                  feat_imp = pd.Series(feature_importances)
+              print("[EVAL] Utilisation des feature_importances du scope.")
+
+      if feat_imp is None:
+          print("[EVAL] feature_importances non disponible. Tentative d'importance par permutation...")
+          try:
+              from sklearn.inspection import permutation_importance
+
+              if 'X_test' in dir() or 'X_test' in locals():
+                  model_to_inspect = full_pipeline
+                  perm_result = permutation_importance(
+                      model_to_inspect, X_test, y_test,
+                      n_repeats=10, random_state=42, n_jobs=-1
+                  )
+                  if hasattr(X_test, 'columns'):
+                      feat_names = X_test.columns.tolist()
+                  else:
+                      feat_names = [f"Feature_{i}" for i in range(perm_result.importances_mean.shape[0])]
+                  feat_imp = pd.Series(perm_result.importances_mean, index=feat_names)
+                  print("[EVAL] Importance par permutation calculee.")
+              else:
+                  raise NameError("X_test introuvable pour le calcul par permutation.")
+          except Exception as perm_err:
+              raise ValueError(f"Impossible de calculer l'importance des features: {perm_err}")
+
+      feat_imp = feat_imp.sort_values(ascending=True)
+      top_features = feat_imp.tail(int(TOP_N))
+
+      fig, ax = plt.subplots(figsize=(10, max(6, len(top_features) * 0.35)))
+      colors = plt.cm.viridis(np.linspace(0.3, 0.9, len(top_features)))
+      ax.barh(range(len(top_features)), top_features.values, color=colors)
+      ax.set_yticks(range(len(top_features)))
+      ax.set_yticklabels(top_features.index, fontsize=9)
+      ax.set_xlabel("Importance")
+      ax.set_title(f"Top {len(top_features)} - Importance des Features")
+      ax.grid(axis="x", alpha=0.3)
+      plt.tight_layout()
+
+      save_dir = os.path.join(os.getcwd(), "outputs")
+      os.makedirs(save_dir, exist_ok=True)
+      fig_path = os.path.join(save_dir, "feature_importance.png")
+      fig.savefig(fig_path, dpi=150, bbox_inches="tight")
+      plt.close(fig)
+
+      evaluation_metrics["feature_importance_top_n"] = int(TOP_N)
+      evaluation_metrics["feature_importance_top_features"] = {
+          str(k): float(v) for k, v in top_features.items()
+      }
+      evaluation_metrics["feature_importance_figure_path"] = fig_path
+      evaluation_metrics["feature_importance_total_features"] = len(feat_imp)
+
+      print(f"[EVAL] Top 3 features: {list(top_features.index[-3:])}")
+      print(f"[EVAL] Figure sauvegardee: {fig_path}")
+  except Exception as e:
+      print(f"[EVAL][ERREUR] Feature Importance echouee: {e}")
+      evaluation_metrics["feature_importance_error"] = str(e)
+_metadata:
+  bloc: 4
+  section: "1_evaluation"

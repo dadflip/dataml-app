@@ -1,0 +1,49 @@
+id: "eval_precision"
+name: "Eval: Precision Score"
+description: "Calcule la precision (ratio de vrais positifs parmi les predictions positives) avec les moyennes macro, micro et weighted."
+category: "Metriques de Classification"
+tags: ["eval", "classification", "precision", "sklearn"]
+applies_to: ["Classification"]
+when_to_use: "Lorsque le cout des faux positifs est eleve (ex: detection de spam, diagnostic medical)."
+pros:
+  - "Mesure la fiabilite des predictions positives."
+  - "Disponible en macro, micro et weighted pour les cas multi-classes."
+cons:
+  - "Ne tient pas compte des faux negatifs (a combiner avec le recall)."
+  - "Peut etre indefinie si aucune prediction positive n'est faite pour une classe."
+code_template: |
+  import numpy as np
+  from sklearn.metrics import precision_score
+
+  evaluation_metrics = {}
+
+  print("[EVAL] Calcul du Precision Score...")
+
+  try:
+      unique_classes = np.unique(y_test)
+      is_binary = len(unique_classes) <= 2
+      avg_default = "binary" if is_binary else "weighted"
+
+      for avg in ["macro", "micro", "weighted"]:
+          prec = precision_score(y_test, y_pred, average=avg, zero_division=0)
+          evaluation_metrics[f"precision_{avg}"] = float(np.round(prec, 6))
+          print(f"[EVAL] Precision ({avg}) : {prec:.4f}")
+
+      if is_binary:
+          prec_bin = precision_score(y_test, y_pred, average="binary", zero_division=0)
+          evaluation_metrics["precision_binary"] = float(np.round(prec_bin, 6))
+          print(f"[EVAL] Precision (binary) : {prec_bin:.4f}")
+
+      per_class = precision_score(y_test, y_pred, average=None, zero_division=0)
+      evaluation_metrics["precision_per_class"] = {
+          str(cls): float(np.round(val, 6))
+          for cls, val in zip(unique_classes, per_class)
+      }
+      print(f"[EVAL] Precision par classe calculee pour {len(unique_classes)} classes.")
+
+  except Exception as e:
+      print(f"[EVAL][ERREUR] Echec du calcul de la precision : {e}")
+      evaluation_metrics["error"] = str(e)
+_metadata:
+  bloc: 4
+  section: "1_evaluation"

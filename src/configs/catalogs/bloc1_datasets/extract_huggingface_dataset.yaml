@@ -1,0 +1,54 @@
+id: "extract_huggingface_dataset"
+name: "Extract: HuggingFace Dataset"
+description: "Télécharge un dataset (NLP, Vision, Audio) depuis le Hub HuggingFace vers le disque local."
+category: "1. Extract"
+tags: ["extract", "huggingface", "nlp", "vision", "audio"]
+code_template: |
+  import os
+  import time
+  try:
+      from datasets import load_dataset
+  except ImportError:
+      load_dataset = None
+      print("[ERREUR EXTRACT] La librairie 'datasets' n'est pas installée. Lancez : !pip install datasets")
+
+  # [PARAM: HF_DATASET_ID | string]
+  HF_DATASET_ID = "imdb"
+  # [/PARAM]
+  
+  # [PARAM: SPLIT | string]
+  SPLIT = "train"
+  # [/PARAM]
+
+  # [PARAM: DEST_DIR | string]
+  DEST_DIR = "./data/raw/huggingface_cache"
+  # [/PARAM]
+
+  print(f"[EXTRACT] Téléchargement du dataset HF '{HF_DATASET_ID}' (split={SPLIT})...")
+  os.makedirs(DEST_DIR, exist_ok=True)
+
+  try:
+      if load_dataset is not None:
+          start_time = time.time()
+          
+          # Télécharge et met en cache localement
+          dataset = load_dataset(HF_DATASET_ID, split=SPLIT, cache_dir=DEST_DIR)
+          
+          # Sauvegarde sur disque au format flèche (Arrow) ou CSV pour être repris par le Load
+          save_path = os.path.join(DEST_DIR, f"{HF_DATASET_ID.replace('/', '_')}_{SPLIT}")
+          dataset.save_to_disk(save_path)
+          
+          duration = time.time() - start_time
+          print(f"[EXTRACT] Succès. Dataset sauvegardé dans {save_path} en {duration:.2f}s.")
+          
+          df = None
+          target_name = None
+          task_type = "unknown"
+          meta = {"source": "huggingface", "dataset_id": HF_DATASET_ID, "path": save_path}
+  except Exception as e:
+      print(f"[ERREUR EXTRACT] Échec de l'extraction HuggingFace : {str(e)}")
+      raise e
+
+_metadata:
+  bloc: 1
+  section: "1_extract"

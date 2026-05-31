@@ -1,0 +1,54 @@
+id: "transform_one_hot_encoding"
+name: "Transform: One-Hot Encoding"
+description: "OHE sur les colonnes catégorielles."
+category: "4.1 Preprocessing"
+tags: ["transform", "encoding", "tabular", "sklearn", "pipeline"]
+applies_to: ["Tabulaire"]
+when_to_use: "Indispensable pour les modèles linéaires."
+pros:
+  - "Empêche l'ordre implicite."
+cons:
+  - "Augmente la dimension."
+hyperparameters:
+  drop_first: "True pour éviter la multicolinéarité parfaite."
+code_template: |
+  import pandas as pd
+  from sklearn.preprocessing import OneHotEncoder
+  from sklearn.compose import ColumnTransformer
+
+  # [PARAM: DROP_FIRST | boolean]
+  DROP_FIRST = True
+  # [/PARAM]
+
+  print("[TRANSFORM] One-Hot Encoding...")
+  if 'df' in locals():
+      if 'pipeline_steps' not in locals(): pipeline_steps = {}
+      
+      cat_cols = df.select_dtypes(exclude=['number', 'datetime']).columns.tolist()
+      if 'target_name' in locals() and target_name in cat_cols:
+          cat_cols.remove(target_name)
+          
+      if len(cat_cols) > 0:
+          drop_mode = 'first' if DROP_FIRST else None
+          ohe = OneHotEncoder(drop=drop_mode, sparse_output=False, handle_unknown='ignore')
+          
+          ct = ColumnTransformer(
+              [('ohe', ohe, cat_cols)],
+              remainder='passthrough', verbose_feature_names_out=False
+          )
+          try: ct.set_output(transform="pandas")
+          except: pass
+          
+          step_name = 'ohe'
+          pipeline_steps[step_name] = (step_name, ct)
+          
+          df = pd.DataFrame(ct.fit_transform(df))
+          # Renommage optionnel si pandas set_output non dispo
+          print(f"[TRANSFORM] OHE appliqué au pipeline. Shape: {df.shape}")
+      else:
+          print("[TRANSFORM] Aucune variable catégorielle.")
+  else:
+      print("[ERREUR] 'df' introuvable.")
+_metadata:
+  bloc: 2
+  section: "4_preprocessing"

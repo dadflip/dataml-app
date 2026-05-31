@@ -1,0 +1,58 @@
+id: "model_gradient_boosting_classifier"
+name: "Model: Gradient Boosting Classifier"
+description: "Construit une série d'arbres faibles de manière séquentielle, chaque arbre corrigeant les erreurs du précédent."
+category: "Modèles Basés sur les Arbres"
+tags: ["model", "classification", "tabular", "sklearn", "ensemble", "boosting"]
+applies_to: ["Tabulaire"]
+when_to_use: "Excellentes performances par défaut sur des jeux de données de taille moyenne."
+pros:
+  - "Très haute précision."
+  - "Gère bien les features hétérogènes."
+cons:
+  - "Lent à entraîner (séquentiel)."
+hyperparameters:
+  n_estimators: "Nombre de boosting stages (ex: 100)."
+  learning_rate: "Taux d'apprentissage (réduit la contribution de chaque arbre)."
+code_template: |
+  import pandas as pd
+  import numpy as np
+  from sklearn.ensemble import GradientBoostingClassifier
+
+  # [PARAM: N_ESTIMATORS | number]
+  N_ESTIMATORS = 100
+  # [/PARAM]
+
+  # [PARAM: LEARNING_RATE | number]
+  LEARNING_RATE = 0.1
+  # [/PARAM]
+
+  print(f"[MODEL] Entraînement Gradient Boosting (n={N_ESTIMATORS}, lr={LEARNING_RATE})...")
+  if 'X_train' in locals() and 'y_train' in locals() and 'X_test' in locals():
+      model = GradientBoostingClassifier(n_estimators=int(N_ESTIMATORS), learning_rate=float(LEARNING_RATE), random_state=42)
+      model.fit(X_train, y_train)
+      
+      y_pred = model.predict(X_test)
+      y_proba = model.predict_proba(X_test) if hasattr(model, 'predict_proba') else None
+      
+      feature_importances = None
+      if 'feature_names_out' in locals() and hasattr(model, 'feature_importances_'):
+          if len(model.feature_importances_) == len(feature_names_out):
+              feature_importances = pd.Series(model.feature_importances_, index=feature_names_out)
+              
+      if 'preprocessor' in locals() and preprocessor is not None:
+          try: from imblearn.pipeline import Pipeline
+          except: from sklearn.pipeline import Pipeline
+          full_pipeline = Pipeline(steps=preprocessor.steps + [('model', model)])
+      else:
+          try: from imblearn.pipeline import Pipeline
+          except: from sklearn.pipeline import Pipeline
+          full_pipeline = Pipeline(steps=[('model', model)])
+          
+      training_history = {"status": "success", "fitted_on": len(X_train)}
+      task_type = "classification"
+      print("[MODEL] Modèle entraîné et Full Pipeline compilé avec succès.")
+  else:
+      print("[ERREUR] Données d'entraînement introuvables.")
+_metadata:
+  bloc: 3
+  section: "1_classification_tabulaire"

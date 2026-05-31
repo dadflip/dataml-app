@@ -1,0 +1,50 @@
+id: "transform_timeseries_lag"
+name: "Transform: Time Series Lag"
+description: "Génère des décalages temporels (Lags)."
+category: "4.1 Preprocessing"
+tags: ["transform", "timeseries", "feature-engineering", "pandas", "pipeline"]
+applies_to: ["Séries Temporelles"]
+when_to_use: "Pour Machine Learning tabulaire."
+pros:
+  - "Exploite le passé."
+cons:
+  - "Génère des NaNs."
+hyperparameters:
+  lag_col: "Colonne"
+code_template: |
+  import pandas as pd
+  from sklearn.preprocessing import FunctionTransformer
+
+  # [PARAM: LAG_COL | string]
+  LAG_COL = "value"
+  # [/PARAM]
+
+  # [PARAM: NLAGS | number]
+  NLAGS = 3
+  # [/PARAM]
+
+  print(f"[TRANSFORM] Lag sur '{LAG_COL}'...")
+  if 'df' in locals():
+      if 'pipeline_steps' not in locals(): pipeline_steps = {}
+      
+      if LAG_COL in df.columns:
+          def lag_func(X):
+              X_df = pd.DataFrame(X) if not isinstance(X, pd.DataFrame) else X
+              for i in range(1, NLAGS + 1):
+                  X_df[f"{LAG_COL}_lag_{i}"] = X_df[LAG_COL].shift(i)
+              return X_df
+
+          transformer = FunctionTransformer(lag_func)
+          
+          step_name = 'timeseries_lag'
+          pipeline_steps[step_name] = (step_name, transformer)
+          
+          df = transformer.transform(df)
+          print(f"[TRANSFORM] Lags appliqués. Attention aux NaNs.")
+      else:
+          print("[ERREUR] Colonne introuvable.")
+  else:
+      print("[ERREUR] 'df' introuvable.")
+_metadata:
+  bloc: 2
+  section: "4_preprocessing"

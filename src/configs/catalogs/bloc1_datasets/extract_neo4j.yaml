@@ -1,0 +1,60 @@
+id: "extract_neo4j"
+name: "Extract: Graphe Neo4j"
+description: "Exécute une requête Cypher sur Neo4j et exporte le résultat en CSV."
+category: "1. Extract"
+tags: ["extract", "neo4j", "graph", "cypher"]
+code_template: |
+  from neo4j import GraphDatabase
+  import pandas as pd
+  import os
+  import time
+
+  # [PARAM: URI | string]
+  URI = "bolt://localhost:7687"
+  # [/PARAM]
+  
+  # [PARAM: USER | string]
+  USER = "neo4j"
+  # [/PARAM]
+  
+  # [PARAM: PASSWORD | string]
+  PASSWORD = "password"
+  # [/PARAM]
+  
+  # [PARAM: CYPHER_QUERY | string]
+  CYPHER_QUERY = "MATCH (n:Person) RETURN n.name AS name, n.age AS age LIMIT 100"
+  # [/PARAM]
+  
+  # [PARAM: DEST_PATH | string]
+  DEST_PATH = "./data/raw/neo4j_export.csv"
+  # [/PARAM]
+
+  print(f"[EXTRACT] Exécution de la requête Cypher sur Neo4j ({URI})...")
+  os.makedirs(os.path.dirname(DEST_PATH), exist_ok=True)
+
+  try:
+      start_time = time.time()
+      driver = GraphDatabase.driver(URI, auth=(USER, PASSWORD))
+      
+      with driver.session() as session:
+          result = session.run(CYPHER_QUERY)
+          data = [record.data() for record in result]
+          
+      driver.close()
+      
+      df_temp = pd.DataFrame(data)
+      df_temp.to_csv(DEST_PATH, index=False)
+      
+      duration = time.time() - start_time
+      print(f"[EXTRACT] Succès Neo4j. {len(data)} noeuds/relations exportés en {duration:.2f}s.")
+  except Exception as e:
+      print(f"[ERREUR EXTRACT] Échec Neo4j : {str(e)}")
+      raise e
+
+  df = None
+  target_name = None
+  task_type = "unknown"
+  meta = {"source": "neo4j", "path": DEST_PATH}
+_metadata:
+  bloc: 1
+  section: "1_extract"

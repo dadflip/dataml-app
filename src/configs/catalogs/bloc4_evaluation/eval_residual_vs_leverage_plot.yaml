@@ -1,0 +1,64 @@
+id: "eval_residual_vs_leverage_plot"
+name: "Eval Plot: Residuals vs Leverage"
+description: "Affiche les résidus standardisés en fonction du levier (leverage). Aide à trouver les points extrêmes qui influencent fortement la régression."
+category: "Regression Visualizations"
+tags: ["eval", "plot", "regression", "leverage", "outliers"]
+applies_to: ["Regression"]
+when_to_use: "Pour repérer visuellement les points en haut à droite (haut levier, grand résidu) qui déforment le modèle."
+pros:
+  - "Standard de diagnostic statistique (ex: plot R par défaut)."
+cons:
+  - "Le calcul exact du levier (Hat matrix) est lourd ou impossible pour les forêts aléatoires. On utilise une approximation PCA."
+code_template: |
+  import os
+  import numpy as np
+  import matplotlib.pyplot as plt
+  from sklearn.decomposition import PCA
+
+  evaluation_metrics = {}
+
+  if task_type == "regression" and 'X_test' in locals() and 'y_test' in locals() and 'y_pred' in locals():
+      print("[EVAL] Génération du Residuals vs Leverage Plot...")
+      try:
+          os.makedirs("outputs/evaluation", exist_ok=True)
+          
+          # Approximation du leverage par la distance de Mahalanobis dans l'espace PCA
+          X_arr = np.array(X_test)
+          if len(X_arr.shape) > 2:
+              X_arr = X_arr.reshape(X_arr.shape[0], -1)
+              
+          pca = PCA(n_components=min(5, X_arr.shape[1]))
+          X_pca = pca.fit_transform(X_arr)
+          
+          # Distance au centre = proxy du leverage
+          leverage = np.sum((X_pca / pca.singular_values_) ** 2, axis=1)
+          
+          # Standardisation des résidus
+          residuals = np.array(y_test) - np.array(y_pred)
+          std_res = (residuals - np.mean(residuals)) / np.std(residuals)
+          
+          fig, ax = plt.subplots(figsize=(8, 6))
+          
+          scatter = ax.scatter(leverage, std_res, alpha=0.5, c=np.abs(std_res), cmap='coolwarm')
+          
+          ax.axhline(0, color='grey', linestyle='dashed')
+          ax.axhline(3, color='red', linestyle='dotted', label='+3 Std Dev')
+          ax.axhline(-3, color='red', linestyle='dotted')
+          
+          ax.set_title('Residuals vs Leverage (Approximated)')
+          ax.set_xlabel('Leverage (PCA Mahalanobis Distance)')
+          ax.set_ylabel('Standardized Residuals')
+          ax.legend()
+          ax.grid(True, alpha=0.3)
+          
+          plot_path = "outputs/evaluation/residual_vs_leverage.png"
+          fig.savefig(plot_path, dpi=300)
+          plt.close(fig)
+          
+          evaluation_metrics["residual_vs_leverage_plot"] = plot_path
+          print(f"[EVAL] Plot sauvegardé sous {plot_path}")
+      except Exception as e:
+          print(f"[EVAL ERREUR] : {str(e)}")
+_metadata:
+  bloc: 4
+  section: "1_evaluation"

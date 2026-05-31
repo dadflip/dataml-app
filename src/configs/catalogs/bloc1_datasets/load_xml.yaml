@@ -1,0 +1,46 @@
+id: "load_xml"
+name: "Load: Fichier XML"
+description: "Parse un fichier XML complexe et l'aplatit dans un DataFrame."
+category: "2. Load"
+tags: ["load", "xml", "tabular", "pandas"]
+code_template: |
+  import pandas as pd
+  import time
+  import os
+
+  # [PARAM: FILE_PATH | file]
+  FILE_PATH = "./data/raw/data.xml"
+  # [/PARAM]
+  
+  # [PARAM: XPATH | string]
+  XPATH = ".//record"
+  # [/PARAM]
+  
+  # [PARAM: TARGET_COL | string]
+  TARGET_COL = "target"
+  # [/PARAM]
+
+  print(f"[LOAD] Parsing XML depuis {FILE_PATH} avec XPath '{XPATH}'...")
+  if not os.path.exists(FILE_PATH):
+      raise FileNotFoundError(f"[ERREUR LOAD] Fichier XML introuvable : {FILE_PATH}")
+
+  try:
+      start_time = time.time()
+      # read_xml nécessite lxml
+      df = pd.read_xml(FILE_PATH, xpath=XPATH)
+      
+      duration = time.time() - start_time
+      print(f"[LOAD] Succès XML. {df.shape[0]} noeuds parsés en {duration:.2f}s.")
+  except ImportError:
+      print("[ERREUR LOAD] Le module 'lxml' est requis pour parser le XML.")
+      raise
+  except Exception as e:
+      print(f"[ERREUR LOAD] Erreur de parsing XML : {str(e)}")
+      raise e
+
+  target_name = TARGET_COL if TARGET_COL and TARGET_COL in df.columns else None
+  task_type = "unknown"
+  meta = {"format": "xml", "xpath": XPATH, "shape": df.shape}
+_metadata:
+  bloc: 1
+  section: "2_load"

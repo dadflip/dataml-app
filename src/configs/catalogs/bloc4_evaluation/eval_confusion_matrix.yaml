@@ -1,0 +1,53 @@
+id: "eval_confusion_matrix"
+name: "Eval: Matrice de Confusion"
+description: "Genere la matrice de confusion brute et normalisee. Permet d'identifier les confusions entre classes."
+category: "Metriques de Classification"
+tags: ["eval", "classification", "confusion_matrix", "sklearn"]
+applies_to: ["Classification"]
+when_to_use: "Pour diagnostiquer les erreurs du modele et identifier quelles classes sont confondues."
+pros:
+  - "Vue complete des vrais positifs, faux positifs, vrais negatifs, faux negatifs."
+  - "Permet d'identifier les classes problematiques."
+cons:
+  - "Difficile a lire pour un grand nombre de classes."
+  - "Ne fournit pas un score unique de performance."
+code_template: |
+  import numpy as np
+  from sklearn.metrics import confusion_matrix
+
+  evaluation_metrics = {}
+
+  print("[EVAL] Calcul de la Matrice de Confusion...")
+
+  try:
+      unique_classes = sorted(np.unique(np.concatenate([np.unique(y_test), np.unique(y_pred)])))
+
+      cm_raw = confusion_matrix(y_test, y_pred, labels=unique_classes)
+      evaluation_metrics["confusion_matrix"] = cm_raw.tolist()
+      evaluation_metrics["labels"] = [str(c) for c in unique_classes]
+      print(f"[EVAL] Matrice de confusion ({len(unique_classes)}x{len(unique_classes)}) calculee.")
+
+      row_sums = cm_raw.sum(axis=1, keepdims=True)
+      row_sums = np.where(row_sums == 0, 1, row_sums)
+      cm_normalized = np.round(cm_raw.astype(float) / row_sums, 4)
+      evaluation_metrics["confusion_matrix_normalized"] = cm_normalized.tolist()
+      print("[EVAL] Matrice de confusion normalisee calculee.")
+
+      if len(unique_classes) == 2:
+          tn, fp, fn, tp = cm_raw.ravel()
+          evaluation_metrics["true_negatives"] = int(tn)
+          evaluation_metrics["false_positives"] = int(fp)
+          evaluation_metrics["false_negatives"] = int(fn)
+          evaluation_metrics["true_positives"] = int(tp)
+          print(f"[EVAL] TP={tp}, TN={tn}, FP={fp}, FN={fn}")
+
+      total = int(cm_raw.sum())
+      evaluation_metrics["total_samples"] = total
+      print(f"[EVAL] Total echantillons : {total}")
+
+  except Exception as e:
+      print(f"[EVAL][ERREUR] Echec du calcul de la matrice de confusion : {e}")
+      evaluation_metrics["error"] = str(e)
+_metadata:
+  bloc: 4
+  section: "1_evaluation"

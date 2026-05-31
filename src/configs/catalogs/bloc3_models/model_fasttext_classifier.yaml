@@ -1,0 +1,70 @@
+id: "model_fasttext_classifier"
+name: "Model: FastText Classifier (Facebook)"
+description: "Classification de texte ultra-rapide par Facebook Research. Gère l'OOV (Out Of Vocabulary) grâce aux n-grammes de caractères."
+category: "Modèles NLP (Entraînés)"
+tags: ["model", "nlp", "classification", "fasttext"]
+applies_to: ["Texte"]
+when_to_use: "Besoin de performances de type Word2Vec mais 100x plus rapide à entraîner (très utile sur CPU)."
+pros:
+  - "Vitesse de l'éclair, gère les mots inconnus."
+cons:
+  - "Nécessite le package fasttext (installation C++ parfois capricieuse)."
+hyperparameters:
+  epoch: "Nombre d'époques (ex: 25)."
+  lr: "Taux d'apprentissage (ex: 0.1)."
+code_template: |
+  import pandas as pd
+  import numpy as np
+  import os
+  try:
+      import fasttext
+  except ImportError:
+      fasttext = None
+      print("[ERREUR] fasttext n'est pas installé. Lancez : !pip install fasttext")
+
+  # [PARAM: EPOCH | number]
+  EPOCH = 25
+  # [/PARAM]
+
+  # [PARAM: LR | number]
+  LR = 0.1
+  # [/PARAM]
+
+  print(f"[MODEL] Entraînement FastText (epoch={EPOCH}, lr={LR})...")
+  if 'X_train' in locals() and 'y_train' in locals() and 'X_test' in locals() and fasttext is not None:
+      # FastText exige un fichier texte d'entraînement au format: __label__NOM texte
+      X_tr_text = X_train['text'] if (isinstance(X_train, pd.DataFrame) and 'text' in X_train.columns) else X_train
+      X_te_text = X_test['text'] if (isinstance(X_test, pd.DataFrame) and 'text' in X_test.columns) else X_test
+      if isinstance(X_tr_text, pd.DataFrame): X_tr_text = X_tr_text.apply(lambda row: ' '.join(row.values.astype(str)), axis=1)
+      if isinstance(X_te_text, pd.DataFrame): X_te_text = X_te_text.apply(lambda row: ' '.join(row.values.astype(str)), axis=1)
+      
+      train_file = "fasttext_train.txt"
+      with open(train_file, "w", encoding="utf-8") as f:
+          for txt, lbl in zip(X_tr_text, y_train):
+              lbl_str = str(lbl).replace(" ", "_")
+              f.write(f"__label__{lbl_str} {str(txt).replace(chr(10), ' ')}\n")
+              
+      model = fasttext.train_supervised(input=train_file, epoch=int(EPOCH), lr=float(LR), wordNgrams=2)
+      
+      # Inférence
+      preds = model.predict(list(X_te_text.astype(str)))
+      # preds = (tuple_labels, tuple_probs)
+      # Extract pure label name (remove __label__)
+      y_pred = np.array([lbl[0].replace("__label__", "") for lbl in preds[0]])
+      y_proba = np.array([p[0] for p in preds[1]])
+      
+      feature_importances = None
+      full_pipeline = model
+      
+      training_history = {"status": "success", "fitted_on": len(X_train)}
+      task_type = "classification"
+      
+      # Nettoyage
+      if os.path.exists(train_file): os.remove(train_file)
+      
+      print("[MODEL] Modèle FastText entraîné avec succès.")
+  else:
+      print("[ERREUR] Données introuvables ou fasttext manquant.")
+_metadata:
+  bloc: 3
+  section: "3_nlp_and_timeseries"

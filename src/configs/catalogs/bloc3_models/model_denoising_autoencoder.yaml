@@ -1,0 +1,84 @@
+id: "model_denoising_autoencoder"
+name: "Model: Denoising Autoencoder (DAE)"
+description: "Réseau non-supervisé entraîné à reconstruire l'entrée originale à partir d'une version volontairement bruitée."
+category: "Génératif & Non-Supervisé"
+tags: ["model", "unsupervised", "denoising", "pytorch", "autoencoder", "deep-learning"]
+applies_to: ["Tabulaire", "Images"]
+when_to_use: "Pour nettoyer des données bruitées ou extraire des features très robustes."
+pros:
+  - "Force le réseau à apprendre une représentation invariante au bruit."
+cons:
+  - "Taille de l'espace latent difficile à calibrer."
+hyperparameters:
+  noise_factor: "Quantité de bruit ajoutée (ex: 0.2)."
+  epochs: "Nombre d'époques (ex: 20)."
+code_template: |
+  import pandas as pd
+  import numpy as np
+  try:
+      import torch
+      import torch.nn as nn
+      import torch.optim as optim
+      from torch.utils.data import DataLoader, TensorDataset
+  except ImportError:
+      torch = None
+      print("[ERREUR] torch n'est pas installé.")
+
+  # [PARAM: NOISE_FACTOR | number]
+  NOISE_FACTOR = 0.2
+  # [/PARAM]
+
+  # [PARAM: EPOCHS | number]
+  EPOCHS = 20
+  # [/PARAM]
+
+  print(f"[MODEL] Entraînement Denoising Autoencoder (noise={NOISE_FACTOR})...")
+  if 'X_train' in locals() and 'X_test' in locals() and torch is not None:
+      X_tr_np = np.array(X_train, dtype=np.float32)
+      X_te_np = np.array(X_test, dtype=np.float32)
+      noise_tr = float(NOISE_FACTOR) * np.random.normal(0, 1, X_tr_np.shape).astype(np.float32)
+      X_tr_noisy = np.clip(X_tr_np + noise_tr, 0., 1.)
+      dataset = TensorDataset(torch.tensor(X_tr_noisy), torch.tensor(X_tr_np))
+      loader = DataLoader(dataset, batch_size=64, shuffle=True)
+      in_features = X_tr_np.shape[1]
+
+      class DAE(nn.Module):
+          def __init__(self, dim):
+              super().__init__()
+              self.enc = nn.Sequential(nn.Linear(dim, 64), nn.ReLU(), nn.Linear(64, 32))
+              self.dec = nn.Sequential(nn.Linear(32, 64), nn.ReLU(), nn.Linear(64, dim), nn.Sigmoid())
+          def forward(self, x):
+              return self.dec(self.enc(x))
+
+      model = DAE(in_features)
+      device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+      model = model.to(device)
+      criterion = nn.MSELoss()
+      optimizer = optim.Adam(model.parameters(), lr=0.001)
+      model.train()
+      for epoch in range(int(EPOCHS)):
+          for bx, by in loader:
+              bx, by = bx.to(device), by.to(device)
+              optimizer.zero_grad()
+              loss = criterion(model(bx), by)
+              loss.backward()
+              optimizer.step()
+      model.eval()
+      with torch.no_grad():
+          y_pred = model(torch.tensor(X_te_np).to(device)).cpu().numpy()
+      y_proba = None
+      feature_importances = None
+      if 'preprocessor' in locals() and preprocessor is not None:
+          try: from imblearn.pipeline import Pipeline
+          except: from sklearn.pipeline import Pipeline
+          full_pipeline = Pipeline(steps=preprocessor.steps + [('model', model)])
+      else:
+          full_pipeline = model
+      training_history = {"status": "success", "loss": float(loss)}
+      task_type = "data_reconstruction"
+      print("[MODEL] DAE entraîné avec succès.")
+  else:
+      print("[ERREUR] Données ou torch manquants.")
+_metadata:
+  bloc: 3
+  section: "6_neural_networks"

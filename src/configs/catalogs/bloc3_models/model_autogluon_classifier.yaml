@@ -1,0 +1,55 @@
+id: "model_autogluon_classifier"
+name: "Model: AutoGluon (Amazon AutoML)"
+description: "AutoML d'Amazon extrêmement performant pour les données tabulaires, incluant de l'empilement (stacking) avancé."
+category: "AutoML"
+tags: ["model", "automl", "classification", "tabular", "autogluon"]
+applies_to: ["Tabulaire"]
+when_to_use: "Pour battre les Kagglers sans effort sur des données tabulaires."
+pros:
+  - "Très souvent State of the Art en Tabulaire."
+cons:
+  - "Installation complexe (conflits de dépendances fréquents)."
+  - "Modèle résultant lourd et difficile à exporter proprement dans un Pipeline Sklearn classique."
+hyperparameters:
+  time_limit: "Temps maximum alloué en secondes (ex: 60)."
+code_template: |
+  import pandas as pd
+  import numpy as np
+  try:
+      from autogluon.tabular import TabularDataset, TabularPredictor
+  except ImportError:
+      TabularPredictor = None
+      print("[ERREUR] autogluon n'est pas installé. Lancez : !pip install autogluon")
+
+  # [PARAM: TIME_LIMIT | number]
+  TIME_LIMIT = 60
+  # [/PARAM]
+
+  print(f"[MODEL] AutoGluon Classifier (time_limit={TIME_LIMIT}s)...")
+  if 'X_train' in locals() and 'y_train' in locals() and 'X_test' in locals() and TabularPredictor is not None:
+      # AutoGluon s'attend à un dataframe complet
+      train_df = pd.DataFrame(X_train) if not isinstance(X_train, pd.DataFrame) else X_train.copy()
+      train_df['target'] = y_train
+      test_df = pd.DataFrame(X_test) if not isinstance(X_test, pd.DataFrame) else X_test.copy()
+      
+      train_data = TabularDataset(train_df)
+      test_data = TabularDataset(test_df)
+      
+      print(f"Entraînement AutoGluon pour max {TIME_LIMIT}s...")
+      predictor = TabularPredictor(label='target').fit(train_data, time_limit=int(TIME_LIMIT))
+      
+      y_pred = predictor.predict(test_data).values
+      y_proba = predictor.predict_proba(test_data).values
+      feature_importances = None
+      
+      # AutoGluon ne s'exporte pas nativement dans Sklearn Pipeline, on renvoie l'objet predictor
+      full_pipeline = predictor
+          
+      training_history = {"status": "success", "leaderboard": predictor.leaderboard(silent=True).to_dict()}
+      task_type = "classification"
+      print("[MODEL] AutoGluon AutoML terminé avec succès.")
+  else:
+      print("[ERREUR] Données d'entraînement ou module autogluon introuvables.")
+_metadata:
+  bloc: 3
+  section: "5_clustering_automl_and_nn"

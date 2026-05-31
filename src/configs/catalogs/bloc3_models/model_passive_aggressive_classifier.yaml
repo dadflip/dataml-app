@@ -1,0 +1,54 @@
+id: "model_passive_aggressive_classifier"
+name: "Model: Passive Aggressive Classifier"
+description: "Algorithme d'apprentissage en ligne, idéal pour traiter d'énormes flux de données séquentiellement."
+category: "Modèles Linéaires"
+tags: ["model", "classification", "tabular", "sklearn", "online-learning"]
+applies_to: ["Tabulaire"]
+when_to_use: "Données très massives où fit() ne tient pas en RAM (utilise partial_fit en coulisses)."
+pros:
+  - "Rapide."
+  - "Très utile pour le Big Data NLP."
+cons:
+  - "Moins performant que des modèles d'ensemble sur des petits datasets."
+hyperparameters:
+  C: "Pénalité maximale."
+code_template: |
+  import pandas as pd
+  import numpy as np
+  from sklearn.linear_model import PassiveAggressiveClassifier
+
+  # [PARAM: C_PARAM | number]
+  C_PARAM = 1.0
+  # [/PARAM]
+
+  print(f"[MODEL] Entraînement Passive Aggressive Classifier (C={C_PARAM})...")
+  if 'X_train' in locals() and 'y_train' in locals() and 'X_test' in locals():
+      model = PassiveAggressiveClassifier(C=float(C_PARAM), random_state=42)
+      model.fit(X_train, y_train)
+      
+      y_pred = model.predict(X_test)
+      y_proba = None
+      
+      feature_importances = None
+      if 'feature_names_out' in locals():
+          coefs = np.abs(model.coef_).mean(axis=0) if model.coef_.ndim > 1 else np.abs(model.coef_[0])
+          if len(coefs) == len(feature_names_out):
+              feature_importances = pd.Series(coefs, index=feature_names_out)
+              
+      if 'preprocessor' in locals() and preprocessor is not None:
+          try: from imblearn.pipeline import Pipeline
+          except: from sklearn.pipeline import Pipeline
+          full_pipeline = Pipeline(steps=preprocessor.steps + [('model', model)])
+      else:
+          try: from imblearn.pipeline import Pipeline
+          except: from sklearn.pipeline import Pipeline
+          full_pipeline = Pipeline(steps=[('model', model)])
+          
+      training_history = {"status": "success", "fitted_on": len(X_train)}
+      task_type = "classification"
+      print("[MODEL] Modèle entraîné et Full Pipeline compilé avec succès.")
+  else:
+      print("[ERREUR] Données d'entraînement introuvables.")
+_metadata:
+  bloc: 3
+  section: "1_classification_tabulaire"

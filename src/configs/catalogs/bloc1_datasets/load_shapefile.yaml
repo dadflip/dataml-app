@@ -1,0 +1,42 @@
+id: "load_shapefile"
+name: "Load: ESRI Shapefile"
+description: "Charge un fichier SIG Shapefile (.shp) dans un GeoDataFrame."
+category: "2. Load"
+tags: ["load", "shapefile", "spatial", "gis"]
+code_template: |
+  import time
+  import os
+
+  # [PARAM: FILE_PATH | file]
+  FILE_PATH = "./data/raw/data.shp"
+  # [/PARAM]
+  
+  # [PARAM: TARGET_COL | string]
+  TARGET_COL = "target"
+  # [/PARAM]
+
+  print(f"[LOAD] Chargement du Shapefile : {FILE_PATH}...")
+  if not os.path.exists(FILE_PATH):
+      raise FileNotFoundError(f"[ERREUR LOAD] Fichier Shapefile introuvable : {FILE_PATH}")
+
+  try:
+      start_time = time.time()
+      import geopandas as gpd
+      
+      df = gpd.read_file(FILE_PATH)
+      
+      duration = time.time() - start_time
+      print(f"[LOAD] Succès Shapefile. {df.shape[0]} entités chargées en {duration:.2f}s.")
+  except ImportError:
+      print("[ERREUR LOAD] Le module 'geopandas' est requis.")
+      raise
+  except Exception as e:
+      print(f"[ERREUR LOAD] Impossible de lire le Shapefile (Fichiers .shx et .dbf manquants ?) : {str(e)}")
+      raise e
+
+  target_name = TARGET_COL if TARGET_COL and TARGET_COL in df.columns else None
+  task_type = "spatial_analysis"
+  meta = {"format": "shapefile", "shape": df.shape, "crs": str(df.crs)}
+_metadata:
+  bloc: 1
+  section: "2_load"

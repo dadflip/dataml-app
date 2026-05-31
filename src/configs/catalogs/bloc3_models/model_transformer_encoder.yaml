@@ -1,0 +1,98 @@
+id: "model_transformer_encoder"
+name: "Model: Transformer Encoder (PyTorch)"
+description: "Architecture de base de l'attention multi-têtes (sans le décodeur), similaire à BERT."
+category: "Attention & Transformers"
+tags: ["model", "nlp", "timeseries", "pytorch", "transformer", "attention"]
+applies_to: ["Séquences", "Texte"]
+when_to_use: "Pour un modèle de classification très puissant basé sur l'attention from scratch."
+pros:
+  - "Gère le contexte global nativement."
+cons:
+  - "Besoin de beaucoup de données pour converger from scratch."
+hyperparameters:
+  d_model: "Dimension d'embedding (ex: 64)."
+  nhead: "Nombre de têtes d'attention (ex: 4)."
+  num_layers: "Nombre de couches d'encodeur (ex: 2)."
+code_template: |
+  import pandas as pd
+  import numpy as np
+  try:
+      import torch
+      import torch.nn as nn
+      import torch.optim as optim
+      from torch.utils.data import DataLoader, TensorDataset
+  except ImportError:
+      torch = None
+      print("[ERREUR] torch n'est pas installé.")
+
+  # [PARAM: D_MODEL | number]
+  D_MODEL = 64
+  # [/PARAM]
+
+  # [PARAM: NHEAD | number]
+  NHEAD = 4
+  # [/PARAM]
+
+  # [PARAM: NUM_LAYERS | number]
+  NUM_LAYERS = 2
+  # [/PARAM]
+
+  print(f"[MODEL] Entraînement Transformer Encoder PyTorch...")
+  if 'X_train' in locals() and 'y_train' in locals() and 'X_test' in locals() and torch is not None:
+      X_tr_np = np.array(X_train)
+      X_te_np = np.array(X_test)
+      if len(X_tr_np.shape) == 2:
+          X_tr_np = X_tr_np.reshape((X_tr_np.shape[0], 1, X_tr_np.shape[1]))
+          X_te_np = X_te_np.reshape((X_te_np.shape[0], 1, X_te_np.shape[1]))
+      classes = np.unique(y_train)
+      num_classes = len(classes)
+      label2id = {c: i for i, c in enumerate(classes)}
+      id2label = {i: c for i, c in enumerate(classes)}
+      y_tr_enc = np.array([label2id[y] for y in y_train])
+      dataset = TensorDataset(torch.tensor(X_tr_np, dtype=torch.float32), torch.tensor(y_tr_enc, dtype=torch.long))
+      loader = DataLoader(dataset, batch_size=32, shuffle=True)
+
+      class TransformerClf(nn.Module):
+          def __init__(self, in_feat, d_model, nhead, num_layers, num_classes):
+              super().__init__()
+              self.embedding = nn.Linear(in_feat, d_model)
+              enc_layer = nn.TransformerEncoderLayer(d_model=d_model, nhead=nhead, batch_first=True)
+              self.encoder = nn.TransformerEncoder(enc_layer, num_layers=num_layers)
+              self.fc = nn.Linear(d_model, num_classes)
+          def forward(self, x):
+              return self.fc(self.encoder(self.embedding(x)).mean(dim=1))
+
+      model = TransformerClf(X_tr_np.shape[2], int(D_MODEL), int(NHEAD), int(NUM_LAYERS), num_classes)
+      device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+      model = model.to(device)
+      criterion = nn.CrossEntropyLoss()
+      optimizer = optim.Adam(model.parameters(), lr=0.001)
+      model.train()
+      for epoch in range(5):
+          for batch_X, batch_y in loader:
+              batch_X, batch_y = batch_X.to(device), batch_y.to(device)
+              optimizer.zero_grad()
+              loss = criterion(model(batch_X), batch_y)
+              loss.backward()
+              optimizer.step()
+      model.eval()
+      with torch.no_grad():
+          logits = model(torch.tensor(X_te_np, dtype=torch.float32).to(device))
+          preds_idx = torch.argmax(logits, dim=1).cpu().numpy()
+          y_pred = np.array([id2label[i] for i in preds_idx])
+          y_proba = torch.nn.functional.softmax(logits, dim=-1).cpu().numpy()
+      feature_importances = None
+      if 'preprocessor' in locals() and preprocessor is not None:
+          try: from imblearn.pipeline import Pipeline
+          except: from sklearn.pipeline import Pipeline
+          full_pipeline = Pipeline(steps=preprocessor.steps + [('model', model)])
+      else:
+          full_pipeline = model
+      training_history = {"status": "success"}
+      task_type = "classification"
+      print("[MODEL] Transformer Encoder entraîné avec succès.")
+  else:
+      print("[ERREUR] Données ou torch manquants.")
+_metadata:
+  bloc: 3
+  section: "6_neural_networks"

@@ -1,0 +1,45 @@
+id: "eval_meteor_score"
+name: "Eval Metric: METEOR Score"
+description: "Calcule le score METEOR (Metric for Evaluation of Translation with Explicit ORdering) pour la génération de texte."
+category: "NLP Metrics"
+tags: ["eval", "metric", "nlp", "generation", "meteor"]
+applies_to: ["NLP Generation"]
+when_to_use: "Pour évaluer la traduction automatique ou le résumé avec une meilleure corrélation avec le jugement humain que BLEU."
+pros:
+  - "Prend en compte la synonymie et la racinisation."
+cons:
+  - "Lent à calculer, dépend de NLTK."
+code_template: |
+  import os
+  try:
+      import nltk
+      from nltk.translate.meteor_score import meteor_score
+  except ImportError:
+      nltk = None
+
+  evaluation_metrics = {}
+
+  if 'y_test' in locals() and 'y_pred' in locals() and nltk is not None:
+      print("[EVAL] Calcul du score METEOR...")
+      try:
+          nltk.download('wordnet', quiet=True)
+          
+          if isinstance(y_test[0], str) and isinstance(y_pred[0], str):
+              scores = []
+              for ref, pred in zip(y_test, y_pred):
+                  # meteor_score prend une liste de références, et une prédiction tokenize
+                  scores.append(meteor_score([ref.split()], pred.split()))
+                  
+              mean_meteor = sum(scores) / len(scores)
+              evaluation_metrics["meteor_score"] = float(mean_meteor)
+              
+              print(f"[EVAL] METEOR Score: {mean_meteor:.3f}")
+          else:
+              print("[EVAL] y_test/y_pred ne sont pas des chaînes de caractères.")
+      except Exception as e:
+          print(f"[EVAL ERREUR] METEOR : {str(e)}")
+  elif nltk is None:
+      print("[EVAL ERREUR] Le package 'nltk' n'est pas installé.")
+_metadata:
+  bloc: 4
+  section: "1_evaluation"

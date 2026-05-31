@@ -1,0 +1,71 @@
+id: "eval_cohen_kappa"
+name: "Eval: Cohen's Kappa Score"
+description: >
+  Calcule le coefficient Kappa de Cohen, une mesure d'accord inter-evaluateurs
+  qui corrige l'accord du au hasard. Un kappa de 1 indique un accord parfait,
+  0 un accord equivalent au hasard, et les valeurs negatives un desaccord
+  systematique. Particulierement utile pour les jeux de donnees desequilibres
+  ou l'accuracy seule peut etre trompeuse.
+category: "Metriques de Classification"
+tags: ["eval", "classification", "kappa", "accord", "desequilibre"]
+applies_to: ["Classification"]
+when_to_use: >
+  Utiliser lorsque les classes sont desequilibrees et que l'accuracy brute
+  ne suffit pas a evaluer la qualite du modele. Egalement utile pour comparer
+  les predictions du modele a un annotateur humain ou a un autre modele.
+pros:
+  - "Corrige l'accord du au hasard, contrairement a l'accuracy"
+  - "Robuste face aux distributions de classes desequilibrees"
+  - "Interpretable : 0 = hasard, 1 = accord parfait"
+  - "Applicable en multiclasse sans modification"
+cons:
+  - "Peut etre sensible a la prevalence des classes (paradoxe de Kappa)"
+  - "Difficile a interpreter pour des valeurs intermediaires (0.4-0.6)"
+  - "Ne prend pas en compte les probabilites, seulement les predictions dures"
+code_template: |
+  evaluation_metrics = {}
+  try:
+      from sklearn.metrics import cohen_kappa_score
+      import numpy as np
+
+      print("[EVAL] Calcul du Cohen's Kappa Score...")
+
+      # Standard Cohen's Kappa (unweighted)
+      kappa = cohen_kappa_score(y_test, y_pred)
+      evaluation_metrics["cohen_kappa"] = float(kappa)
+      print(f"[EVAL] Cohen's Kappa (unweighted): {kappa:.4f}")
+
+      # Weighted variants for ordinal or multiclass
+      try:
+          kappa_linear = cohen_kappa_score(y_test, y_pred, weights="linear")
+          kappa_quadratic = cohen_kappa_score(y_test, y_pred, weights="quadratic")
+          evaluation_metrics["cohen_kappa_linear"] = float(kappa_linear)
+          evaluation_metrics["cohen_kappa_quadratic"] = float(kappa_quadratic)
+          print(f"[EVAL] Cohen's Kappa (linear weighted): {kappa_linear:.4f}")
+          print(f"[EVAL] Cohen's Kappa (quadratic weighted): {kappa_quadratic:.4f}")
+      except Exception as e_w:
+          print(f"[EVAL] Kappa pondere non disponible: {e_w}")
+
+      # Interpretation
+      if kappa < 0:
+          interpretation = "Desaccord systematique"
+      elif kappa < 0.20:
+          interpretation = "Accord negligeable"
+      elif kappa < 0.40:
+          interpretation = "Accord faible"
+      elif kappa < 0.60:
+          interpretation = "Accord modere"
+      elif kappa < 0.80:
+          interpretation = "Accord substantiel"
+      else:
+          interpretation = "Accord quasi-parfait"
+      evaluation_metrics["cohen_kappa_interpretation"] = interpretation
+      print(f"[EVAL] Interpretation: {interpretation}")
+
+      print("[EVAL] Cohen's Kappa Score termine avec succes.")
+  except Exception as e:
+      print(f"[EVAL] Erreur lors du calcul du Cohen's Kappa: {e}")
+      evaluation_metrics["error"] = str(e)
+_metadata:
+  bloc: 4
+  section: "1_evaluation"

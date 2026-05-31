@@ -1,4 +1,6 @@
 import { useMemo, useState, useEffect, useCallback, useRef } from "react";
+import { CodeBlock } from "@/components/ui/CodeBlock";
+import Editor from "@monaco-editor/react";
 import {
   DndContext,
   closestCenter,
@@ -19,6 +21,7 @@ import {
   applyParamOverrides,
   buildNotebookJSON,
   buildPythonScript,
+  buildPipelineYaml,
   downloadText,
   extractParams,
   openInColab,
@@ -182,7 +185,7 @@ export function NotebookBuilder({ cells, setCells, catalogs }: Props) {
 
   const updateCode = (uid: string, code: string) =>
     setCells(
-      cells.map((c) => (c.uid === uid ? { ...c, code, params: extractParams(code) } : c)),
+      cells.map((c) => (c.uid === uid ? { ...c, code, params: extractParams(code), overrides: {} } : c)),
     );
 
   const runCell = async (cell: NotebookCell) => {
@@ -314,6 +317,16 @@ export function NotebookBuilder({ cells, setCells, catalogs }: Props) {
               <FileCode className="h-3.5 w-3.5" />
               <span className="hidden md:inline">.py</span>
             </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              disabled={!cells.length}
+              onClick={() => downloadText("pipeline_recipe.yaml", buildPipelineYaml(cells), "text/yaml")}
+              title="Enregistrer comme Recette YAML"
+            >
+              <Download className="h-3.5 w-3.5" />
+              <span className="hidden md:inline">Recette</span>
+            </Button>
             <input
               type="file"
               accept=".ipynb"
@@ -431,7 +444,7 @@ function ClearNotebookDialog({
           Vider
         </Button>
       </DialogTrigger>
-      <DialogContent className="max-w-sm">
+      <DialogContent className="w-[calc(100%-2rem)] sm:max-w-sm">
         <DialogHeader>
           <DialogTitle>Vider le notebook ?</DialogTitle>
         </DialogHeader>
@@ -688,13 +701,24 @@ function SortableCell({
               </button>
             </div>
             {editing ? (
-              <textarea
-                value={cell.code}
-                onChange={(e) => onCode(e.target.value)}
-                spellCheck={false}
-                className="block w-full resize-y rounded-xl border border-border bg-[oklch(0.1_0.004_260)] p-4 font-mono text-[11px] leading-relaxed text-foreground/95 outline-none focus:border-foreground/30"
-                style={{ minHeight: "20rem", tabSize: 4 }}
-              />
+              <div className="rounded-xl border border-border bg-[oklch(0.1_0.004_260)] p-2 overflow-hidden h-[30rem] sm:h-[40rem]">
+                <Editor
+                  height="100%"
+                  language={cell.type === "markdown" ? "markdown" : "python"}
+                  theme="vs-dark"
+                  value={finalCode}
+                  onChange={(val) => onCode(val || "")}
+                  options={{
+                    minimap: { enabled: false },
+                    fontSize: 12,
+                    fontFamily: "var(--font-mono)",
+                    scrollBeyondLastLine: false,
+                    wordWrap: "on",
+                    padding: { top: 12, bottom: 12 },
+                    lineNumbers: "on",
+                  }}
+                />
+              </div>
             ) : cell.type === "markdown" ? (
               <div className="text-[13px] leading-relaxed text-foreground/90">
                 <ReactMarkdown
@@ -714,11 +738,7 @@ function SortableCell({
                       const { children, className, node, ...rest } = props;
                       const match = /language-(\w+)/.exec(className || '');
                       return match || String(children).includes("\n") ? (
-                        <pre className="my-3 overflow-x-auto rounded-xl border border-border bg-[oklch(0.1_0.004_260)] p-4 font-mono text-[11px] leading-relaxed">
-                          <code className={className} {...rest}>
-                            {children}
-                          </code>
-                        </pre>
+                        <CodeBlock code={String(children).replace(/\n$/, '')} language={match ? match[1] : 'python'} className="my-3 overflow-x-auto" />
                       ) : (
                         <code className="rounded-md bg-muted/60 px-1.5 py-0.5 font-mono text-[11px] text-[color:var(--color-primary)]" {...rest}>
                           {children}
@@ -731,9 +751,7 @@ function SortableCell({
                 </ReactMarkdown>
               </div>
             ) : (
-              <pre className="max-h-[28rem] overflow-auto rounded-xl border border-border bg-[oklch(0.1_0.004_260)] p-4 font-mono text-[11px] leading-relaxed">
-                <code>{finalCode}</code>
-              </pre>
+              <CodeBlock code={finalCode} className="max-h-[28rem] overflow-auto" />
             )}
           </div>
 

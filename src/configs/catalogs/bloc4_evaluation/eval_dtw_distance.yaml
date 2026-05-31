@@ -1,0 +1,40 @@
+id: "eval_dtw_distance"
+name: "Eval Metric: Dynamic Time Warping (DTW) Distance"
+description: "Calcule la distance entre la série réelle et prédite, en s'affranchissant des petits décalages temporels (Time Shifts)."
+category: "Time Series Metrics"
+tags: ["eval", "metric", "timeseries", "dtw", "distance"]
+applies_to: ["Forecasting", "Time Series Classification"]
+when_to_use: "Quand vous voulez tolérer qu'un pic prédit arrive un jour plus tard ou plus tôt que la réalité."
+pros:
+  - "Extrêmement robuste aux décalages temporels."
+cons:
+  - "Quadratique en temps (O(N^2)), peut être très lent sur de longues séries."
+code_template: |
+  import numpy as np
+  try:
+      from fastdtw import fastdtw
+      from scipy.spatial.distance import euclidean
+  except ImportError:
+      fastdtw = None
+
+  evaluation_metrics = {}
+
+  if task_type in ["forecasting", "regression"] and 'y_test' in locals() and 'y_pred' in locals():
+      print("[EVAL] Calcul de la distance DTW...")
+      try:
+          if fastdtw is not None:
+              actual = np.array(y_test)
+              forecast = np.array(y_pred)
+              
+              # fastdtw renvoie (distance, path)
+              distance, _ = fastdtw(actual, forecast, dist=euclidean)
+              
+              evaluation_metrics["dtw_distance"] = float(distance)
+              print(f"[EVAL] DTW Distance: {distance:.3f}")
+          else:
+              print("[EVAL ERREUR] 'fastdtw' n'est pas installé. (pip install fastdtw scipy)")
+      except Exception as e:
+          print(f"[EVAL ERREUR] DTW : {str(e)}")
+_metadata:
+  bloc: 4
+  section: "1_evaluation"

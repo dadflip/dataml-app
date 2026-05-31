@@ -1,0 +1,30 @@
+id: "eda_text_wordcloud"
+name: "EDA: Nuage de Mots"
+description: "Génère un WordCloud à partir d'une colonne de texte."
+category: "3. Exploratory Data Analysis"
+tags: ["eda", "text", "nlp", "wordcloud"]
+code_template: |
+  import pandas as pd
+  import matplotlib.pyplot as plt
+  from wordcloud import WordCloud
+
+  # [PARAM: TEXT_COL | string]
+  TEXT_COL = "text"
+  # [/PARAM]
+
+  if TEXT_COL in df.columns:
+      text_data = " ".join([str(t) for t in df[TEXT_COL] if isinstance(t, str)])
+      if text_data.strip():
+          wordcloud = WordCloud(width=800, height=400, background_color='white').generate(text_data)
+          plt.figure(figsize=(12, 6))
+          plt.imshow(wordcloud, interpolation='bilinear')
+          plt.axis('off')
+          plt.title("Nuage de mots")
+          plt.show()
+      else:
+          print("[EDA] Texte vide.")
+  else:
+      print(f"[EDA] Colonne {TEXT_COL} introuvable.")
+_metadata:
+  bloc: 1
+  section: "3_eda"

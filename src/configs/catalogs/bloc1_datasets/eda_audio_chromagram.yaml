@@ -1,0 +1,26 @@
+id: "eda_audio_chromagram"
+name: "EDA: Visualisation Temporelle Audio"
+description: "Trace la puissance du signal audio (Energy)."
+category: "3. Exploratory Data Analysis"
+tags: ["eda", "audio", "multimedia"]
+code_template: |
+  import matplotlib.pyplot as plt
+  import numpy as np
+
+  if 'waveform' in locals():
+      signal = waveform[0].numpy()
+      # Calcul de l'énergie locale au carré (fenêtres glissantes très basique)
+      window = 100
+      energy = np.convolve(signal**2, np.ones(window)/window, mode='same')
+      
+      plt.figure(figsize=(10, 4))
+      plt.plot(energy, color='orange')
+      plt.title("Énergie temporelle du signal audio")
+      plt.xlabel("Frames")
+      plt.ylabel("Énergie")
+      plt.show()
+  else:
+      print("[EDA] Tensor 'waveform' introuvable.")
+_metadata:
+  bloc: 1
+  section: "3_eda"

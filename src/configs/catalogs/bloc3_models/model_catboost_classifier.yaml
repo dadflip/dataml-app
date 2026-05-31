@@ -1,0 +1,83 @@
+id: "model_catboost_classifier"
+name: "Model: CatBoost Classifier"
+description: "Categorical Boosting. Framework Yandex, ultra-optimisé pour les variables catégorielles sans pré-encodage OHE."
+category: "Modèles Basés sur les Arbres"
+tags: ["model", "classification", "tabular", "catboost", "ensemble", "boosting"]
+applies_to: ["Tabulaire"]
+when_to_use: "Quand vous avez énormément de variables catégorielles."
+pros:
+  - "L'un des meilleurs modèles au monde out-of-the-box."
+  - "Évite l'encodage fastidieux."
+cons:
+  - "Package lourd, inférence parfois plus lente que LGBM."
+hyperparameters:
+  iterations: "Nombre d'itérations (ex: 500)."
+  learning_rate: "Taux d'apprentissage (ex: 0.1)."
+  depth: "Profondeur des arbres (ex: 6)."
+code_template: |
+  import pandas as pd
+  import numpy as np
+  try:
+      from catboost import CatBoostClassifier
+  except ImportError:
+      CatBoostClassifier = None
+      print("[ERREUR] catboost n'est pas installé. Lancez : !pip install catboost")
+
+  # [PARAM: ITERATIONS | number]
+  ITERATIONS = 500
+  # [/PARAM]
+
+  # [PARAM: LEARNING_RATE | number]
+  LEARNING_RATE = 0.1
+  # [/PARAM]
+
+  # [PARAM: DEPTH | number]
+  DEPTH = 6
+  # [/PARAM]
+
+  print(f"[MODEL] Entraînement CatBoost (iter={ITERATIONS}, lr={LEARNING_RATE})...")
+  if 'X_train' in locals() and 'y_train' in locals() and 'X_test' in locals() and CatBoostClassifier is not None:
+      # Identification automatique des catégorielles (si elles n'ont pas été encodées)
+      cat_features = []
+      if isinstance(X_train, pd.DataFrame):
+          cat_features = list(X_train.select_dtypes(include=['object', 'category']).columns)
+          # FillNa sur les cat_features pour éviter les erreurs de Catboost
+          for c in cat_features:
+              X_train[c] = X_train[c].fillna("MISSING").astype(str)
+              X_test[c] = X_test[c].fillna("MISSING").astype(str)
+              
+      model = CatBoostClassifier(
+          iterations=int(ITERATIONS), 
+          learning_rate=float(LEARNING_RATE), 
+          depth=int(DEPTH),
+          cat_features=cat_features if cat_features else None,
+          verbose=0,
+          random_seed=42
+      )
+      model.fit(X_train, y_train)
+      
+      y_pred = model.predict(X_test)
+      y_proba = model.predict_proba(X_test) if hasattr(model, 'predict_proba') else None
+      
+      feature_importances = None
+      if 'feature_names_out' in locals() and hasattr(model, 'feature_importances_'):
+          if len(model.feature_importances_) == len(feature_names_out):
+              feature_importances = pd.Series(model.feature_importances_, index=feature_names_out)
+              
+      if 'preprocessor' in locals() and preprocessor is not None:
+          try: from imblearn.pipeline import Pipeline
+          except: from sklearn.pipeline import Pipeline
+          full_pipeline = Pipeline(steps=preprocessor.steps + [('model', model)])
+      else:
+          try: from imblearn.pipeline import Pipeline
+          except: from sklearn.pipeline import Pipeline
+          full_pipeline = Pipeline(steps=[('model', model)])
+          
+      training_history = {"status": "success", "fitted_on": len(X_train)}
+      task_type = "classification"
+      print("[MODEL] Modèle entraîné et Full Pipeline compilé avec succès.")
+  else:
+      print("[ERREUR] Données d'entraînement ou module catboost introuvables.")
+_metadata:
+  bloc: 3
+  section: "1_classification_tabulaire"

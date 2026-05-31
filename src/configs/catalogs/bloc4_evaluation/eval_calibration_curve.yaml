@@ -1,0 +1,92 @@
+id: "eval_calibration_curve"
+name: "Eval: Courbe de Calibration"
+description: "Trace la courbe de calibration (reliability diagram) comparant les probabilites predites aux frequences observees. Permet de verifier si un classifieur est bien calibre."
+category: "Calibration"
+tags: ["eval", "calibration", "classification", "plot", "matplotlib"]
+applies_to: ["Classification"]
+when_to_use: "Lorsqu'on souhaite evaluer si les probabilites predites par le modele correspondent aux frequences reelles des classes. Essentiel avant d'utiliser les probabilites pour la prise de decision."
+pros:
+  - "Visualisation intuitive de la qualite de calibration"
+  - "Permet de detecter la sur-confiance ou sous-confiance du modele"
+  - "Compatible avec tout classifieur fournissant des probabilites"
+cons:
+  - "Necessite y_proba (predict_proba)"
+  - "Peu fiable si le jeu de test est trop petit"
+  - "Ne fonctionne que pour la classification"
+code_template: |
+  import numpy as np
+  import matplotlib
+  matplotlib.use("Agg")
+  import matplotlib.pyplot as plt
+  from sklearn.calibration import calibration_curve
+
+  evaluation_metrics = {}
+
+  if task_type not in ("classification", "binary", "multiclass"):
+      print("[EVAL] Courbe de calibration: applicable uniquement en classification.")
+      evaluation_metrics["status"] = "skipped"
+      evaluation_metrics["reason"] = "task_type is not classification"
+  elif y_proba is None:
+      print("[EVAL] Courbe de calibration: y_proba requis.")
+      evaluation_metrics["status"] = "skipped"
+      evaluation_metrics["reason"] = "y_proba is None"
+  else:
+      try:
+          proba = y_proba
+          # If y_proba is 2D, take the positive class column
+          if proba.ndim == 2:
+              if proba.shape[1] == 2:
+                  proba = proba[:, 1]
+              else:
+                  # Multiclass: use one-vs-rest for each class, plot the first 5
+                  pass
+
+          fig, ax = plt.subplots(figsize=(8, 6))
+
+          if proba.ndim == 1:
+              fraction_of_positives, mean_predicted_value = calibration_curve(
+                  y_test, proba, n_bins=10, strategy="uniform"
+              )
+              ax.plot(mean_predicted_value, fraction_of_positives, "s-", label="Modele")
+              ax.plot([0, 1], [0, 1], "k--", label="Calibration parfaite")
+
+              # Brier score
+              from sklearn.metrics import brier_score_loss
+              brier = brier_score_loss(y_test, proba)
+              evaluation_metrics["brier_score"] = float(round(brier, 6))
+              print(f"[EVAL] Brier Score: {brier:.6f}")
+          else:
+              # Multiclass: plot per-class calibration for up to 5 classes
+              from sklearn.preprocessing import label_binarize
+              classes = np.unique(y_test)
+              y_test_bin = label_binarize(y_test, classes=classes)
+              n_plot = min(len(classes), 5)
+              for i in range(n_plot):
+                  frac_pos, mean_pred = calibration_curve(
+                      y_test_bin[:, i], proba[:, i], n_bins=10, strategy="uniform"
+                  )
+                  ax.plot(mean_pred, frac_pos, "s-", label=f"Classe {classes[i]}")
+              ax.plot([0, 1], [0, 1], "k--", label="Calibration parfaite")
+
+          ax.set_xlabel("Probabilite predite moyenne")
+          ax.set_ylabel("Fraction de positifs")
+          ax.set_title("Courbe de Calibration (Reliability Diagram)")
+          ax.legend(loc="lower right")
+          ax.grid(True, alpha=0.3)
+          plt.tight_layout()
+
+          fig_path = "calibration_curve.png"
+          fig.savefig(fig_path, dpi=150, bbox_inches="tight")
+          plt.close(fig)
+          print(f"[EVAL] Figure sauvegardee: {fig_path}")
+
+          evaluation_metrics["status"] = "success"
+          evaluation_metrics["figure_path"] = fig_path
+
+      except Exception as e:
+          print(f"[EVAL] Erreur courbe de calibration: {e}")
+          evaluation_metrics["status"] = "error"
+          evaluation_metrics["error"] = str(e)
+_metadata:
+  bloc: 4
+  section: "1_evaluation"

@@ -1,0 +1,59 @@
+id: "model_wav2vec2_audio_clf"
+name: "Model: Wav2Vec2 Audio Classifier"
+description: "Classification audio Zero-Shot ou Feature Extraction via le modèle de Facebook (HuggingFace)."
+category: "Multimédia & Audio"
+tags: ["model", "audio", "classification", "transformers", "huggingface", "wav2vec2"]
+applies_to: ["Audio"]
+when_to_use: "Pour classifier des émotions vocales, des commandes vocales ou extraire des features d'un signal audio."
+pros:
+  - "Très performant sur la voix humaine."
+cons:
+  - "Entrées très lourdes (tableaux de fréquences à 16kHz)."
+hyperparameters: {}
+code_template: |
+  import pandas as pd
+  import numpy as np
+  try:
+      from transformers import pipeline
+  except ImportError:
+      pipeline = None
+      print("[ERREUR] transformers n'est pas installé. Lancez : !pip install transformers librosa")
+
+  print(f"[MODEL] HuggingFace Audio Classification...")
+  if 'X_test' in locals() and pipeline is not None:
+      # X_test contient des chemins vers des fichiers .wav ou des arrays numpy (rate 16000)
+      audios = list(X_test)
+      
+      print("Chargement du classifieur audio...")
+      # Modèle générique de classification d'émotions
+      classifier = pipeline("audio-classification", model="ehcalabres/wav2vec2-lg-xlsr-en-speech-emotion-recognition")
+      
+      print("Inférence en cours...")
+      results = []
+      for a in audios:
+          try:
+              res = classifier(a)
+              results.append(res[0]['label'])
+          except Exception as e:
+              results.append("Erreur")
+              
+      y_pred = np.array(results)
+      y_proba = None
+      feature_importances = None
+      model = classifier
+      
+      if 'preprocessor' in locals() and preprocessor is not None:
+          try: from imblearn.pipeline import Pipeline
+          except: from sklearn.pipeline import Pipeline
+          full_pipeline = Pipeline(steps=preprocessor.steps + [('model', model)])
+      else:
+          full_pipeline = model
+          
+      training_history = {"status": "success"}
+      task_type = "classification"
+      print("[MODEL] Inférence audio terminée avec succès.")
+  else:
+      print("[ERREUR] Données introuvables ou transformers non installé.")
+_metadata:
+  bloc: 3
+  section: "4_vision_and_audio"

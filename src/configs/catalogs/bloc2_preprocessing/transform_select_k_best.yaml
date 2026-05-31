@@ -1,0 +1,55 @@
+id: "transform_select_k_best"
+name: "Transform: Select K Best Features"
+description: "Sélectionne les K meilleures variables."
+category: "4.1 Preprocessing"
+tags: ["transform", "feature-engineering", "tabular", "sklearn", "pipeline"]
+applies_to: ["Tabulaire"]
+when_to_use: "Trop de variables peu informatives."
+pros:
+  - "Accélère l'entraînement."
+cons:
+  - "Peut rater des interactions."
+hyperparameters:
+  k: "Nombre de variables."
+code_template: |
+  import pandas as pd
+  from sklearn.feature_selection import SelectKBest, f_classif
+  from sklearn.compose import ColumnTransformer
+
+  # [PARAM: K_FEATURES | number]
+  K_FEATURES = 10
+  # [/PARAM]
+
+  print(f"[TRANSFORM] SelectKBest (k={K_FEATURES})...")
+  if 'df' in locals() and 'target_name' in locals() and target_name:
+      if 'pipeline_steps' not in locals(): pipeline_steps = {}
+      
+      num_cols = df.select_dtypes(include=['number']).columns.tolist()
+      if target_name in num_cols: num_cols.remove(target_name)
+      
+      if len(num_cols) > 0:
+          k = min(K_FEATURES, len(num_cols))
+          skb = SelectKBest(score_func=f_classif, k=k)
+          
+          ct = ColumnTransformer(
+              [('skb', skb, num_cols)],
+              remainder='passthrough', verbose_feature_names_out=False
+          )
+          try: ct.set_output(transform="pandas")
+          except: pass
+          
+          step_name = 'select_k_best'
+          pipeline_steps[step_name] = (step_name, ct)
+          
+          # Fit avec target pour calculer les scores (on ne l'applique que sur les colonnes ciblées par CT mais f_classif requiert le bon y_aligné)
+          # Note: CT a besoin d'être fit sur X, y. L'API sklearn ColumnTransformer le permet.
+          y = df[target_name]
+          df = pd.DataFrame(ct.fit_transform(df, y))
+          print(f"[TRANSFORM] Variables sélectionnées ajoutées au pipeline.")
+      else:
+          print("[TRANSFORM] Aucune colonne.")
+  else:
+      print("[ERREUR] 'df' ou cible introuvable.")
+_metadata:
+  bloc: 2
+  section: "4_preprocessing"

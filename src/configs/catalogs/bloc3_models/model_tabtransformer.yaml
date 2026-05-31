@@ -1,0 +1,104 @@
+id: "model_tabtransformer"
+name: "Model: TabTransformer (Tabulaire)"
+description: "Transformer adapté aux données tabulaires. Les colonnes catégorielles sont traitées par de l'attention multi-têtes."
+category: "Attention & Transformers"
+tags: ["model", "classification", "tabular", "pytorch", "transformer", "deep-learning"]
+applies_to: ["Tabulaire"]
+when_to_use: "Quand vous voulez appliquer l'attention aux données tabulaires (alternative aux GBDTs)."
+pros:
+  - "Capture les interactions entre colonnes catégorielles."
+cons:
+  - "Souvent surpassé par XGBoost/LightGBM sur les petits datasets."
+hyperparameters:
+  d_model: "Dimension d'embedding par colonne (ex: 32)."
+  nhead: "Nombre de têtes d'attention (ex: 4)."
+  epochs: "Nombre d'époques (ex: 10)."
+code_template: |
+  import pandas as pd
+  import numpy as np
+  try:
+      import torch
+      import torch.nn as nn
+      import torch.optim as optim
+      from torch.utils.data import DataLoader, TensorDataset
+  except ImportError:
+      torch = None
+      print("[ERREUR] torch n'est pas installé.")
+
+  # [PARAM: D_MODEL | number]
+  D_MODEL = 32
+  # [/PARAM]
+
+  # [PARAM: NHEAD | number]
+  NHEAD = 4
+  # [/PARAM]
+
+  # [PARAM: EPOCHS | number]
+  EPOCHS = 10
+  # [/PARAM]
+
+  print(f"[MODEL] Entraînement TabTransformer...")
+  if 'X_train' in locals() and 'y_train' in locals() and 'X_test' in locals() and torch is not None:
+      X_tr_np = np.array(X_train, dtype=np.float32)
+      X_te_np = np.array(X_test, dtype=np.float32)
+      classes = np.unique(y_train)
+      num_classes = len(classes)
+      label2id = {c: i for i, c in enumerate(classes)}
+      id2label = {i: c for i, c in enumerate(classes)}
+      y_tr_enc = np.array([label2id[y] for y in y_train])
+      n_cols = X_tr_np.shape[1]
+      dm = int(D_MODEL)
+      nh = int(NHEAD)
+
+      class TabTransformer(nn.Module):
+          def __init__(self, n_cols, d_model, nhead, num_classes):
+              super().__init__()
+              # Chaque colonne est projetée dans un embedding de taille d_model
+              self.col_embeddings = nn.ModuleList([nn.Linear(1, d_model) for _ in range(n_cols)])
+              enc_layer = nn.TransformerEncoderLayer(d_model=d_model, nhead=nhead, batch_first=True)
+              self.encoder = nn.TransformerEncoder(enc_layer, num_layers=2)
+              self.fc = nn.Linear(d_model * n_cols, num_classes)
+          def forward(self, x):
+              # x: (batch, n_cols)
+              embeddings = [self.col_embeddings[i](x[:, i:i+1]) for i in range(x.shape[1])]
+              # Stack: (batch, n_cols, d_model)
+              x_emb = torch.stack(embeddings, dim=1)
+              out = self.encoder(x_emb)
+              return self.fc(out.flatten(1))
+
+      dataset = TensorDataset(torch.tensor(X_tr_np), torch.tensor(y_tr_enc, dtype=torch.long))
+      loader = DataLoader(dataset, batch_size=64, shuffle=True)
+      model = TabTransformer(n_cols, dm, nh, num_classes)
+      device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+      model = model.to(device)
+      criterion = nn.CrossEntropyLoss()
+      optimizer = optim.Adam(model.parameters(), lr=0.001)
+      model.train()
+      for epoch in range(int(EPOCHS)):
+          for bx, by in loader:
+              bx, by = bx.to(device), by.to(device)
+              optimizer.zero_grad()
+              loss = criterion(model(bx), by)
+              loss.backward()
+              optimizer.step()
+      model.eval()
+      with torch.no_grad():
+          logits = model(torch.tensor(X_te_np).to(device))
+          preds_idx = torch.argmax(logits, dim=1).cpu().numpy()
+          y_pred = np.array([id2label[i] for i in preds_idx])
+          y_proba = torch.nn.functional.softmax(logits, dim=-1).cpu().numpy()
+      feature_importances = None
+      if 'preprocessor' in locals() and preprocessor is not None:
+          try: from imblearn.pipeline import Pipeline
+          except: from sklearn.pipeline import Pipeline
+          full_pipeline = Pipeline(steps=preprocessor.steps + [('model', model)])
+      else:
+          full_pipeline = model
+      training_history = {"status": "success", "loss": float(loss)}
+      task_type = "classification"
+      print("[MODEL] TabTransformer entraîné avec succès.")
+  else:
+      print("[ERREUR] Données ou torch manquants.")
+_metadata:
+  bloc: 3
+  section: "6_neural_networks"

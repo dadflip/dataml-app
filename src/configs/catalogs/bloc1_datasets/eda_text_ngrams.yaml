@@ -1,0 +1,39 @@
+id: "eda_text_ngrams"
+name: "EDA: N-Grams les plus fréquents"
+description: "Extrait les bigrammes ou trigrammes les plus courants du texte."
+category: "3. Exploratory Data Analysis"
+tags: ["eda", "text", "nlp", "ngrams"]
+code_template: |
+  import pandas as pd
+  import matplotlib.pyplot as plt
+  import seaborn as sns
+  from sklearn.feature_extraction.text import CountVectorizer
+
+  # [PARAM: TEXT_COL | string]
+  TEXT_COL = "text"
+  # [/PARAM]
+
+  # [PARAM: N_GRAM | number]
+  N_GRAM = 2
+  # [/PARAM]
+
+  if TEXT_COL in df.columns:
+      corpus = df[TEXT_COL].dropna()
+      vec = CountVectorizer(ngram_range=(N_GRAM, N_GRAM), stop_words='english').fit(corpus)
+      bag_of_words = vec.transform(corpus)
+      sum_words = bag_of_words.sum(axis=0) 
+      
+      words_freq = [(word, sum_words[0, idx]) for word, idx in vec.vocabulary_.items()]
+      words_freq = sorted(words_freq, key=lambda x: x[1], reverse=True)[:20]
+      
+      df_freq = pd.DataFrame(words_freq, columns=['N-gram', 'Fréquence'])
+      
+      plt.figure(figsize=(10, 8))
+      sns.barplot(x='Fréquence', y='N-gram', data=df_freq, palette='viridis')
+      plt.title(f"Top 20 {N_GRAM}-grams dans {TEXT_COL}")
+      plt.show()
+  else:
+      print(f"[EDA] Colonne {TEXT_COL} introuvable.")
+_metadata:
+  bloc: 1
+  section: "3_eda"

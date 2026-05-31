@@ -1,0 +1,53 @@
+id: "deploy_boto3_s3"
+name: "Deploy: Upload to AWS S3"
+description: "Sauvegarde le modèle au format Joblib et l'envoie sur un bucket AWS S3 via boto3."
+category: "Cloud Services"
+tags: ["deploy", "aws", "s3", "cloud", "boto3"]
+applies_to: ["Classification", "Regression", "Clustering"]
+when_to_use: "Pour stocker de manière sécurisée et centralisée un modèle dans le Cloud, afin qu'il soit consommé par une Lambda ou SageMaker."
+pros:
+  - "Stockage pas cher, haute disponibilité."
+cons:
+  - "Nécessite des identifiants AWS valides dans l'environnement."
+code_template: |
+  import os
+  import joblib
+  try:
+      import boto3
+  except ImportError:
+      boto3 = None
+
+  deployment_artifacts = {}
+
+  if 'full_pipeline' in locals() and boto3 is not None:
+      print("[DEPLOY] Upload du modèle vers AWS S3...")
+      try:
+          os.makedirs("outputs/deployment", exist_ok=True)
+          
+          # Sauvegarde locale d'abord
+          model_path = "outputs/deployment/model.joblib"
+          joblib.dump(full_pipeline, model_path)
+          
+          # [PARAM: AWS_BUCKET_NAME | string]
+          AWS_BUCKET_NAME = "my-dataml-models-bucket"
+          # [/PARAM]
+          
+          # [PARAM: S3_OBJECT_NAME | string]
+          S3_OBJECT_NAME = "models/latest_model.joblib"
+          # [/PARAM]
+          
+          print(f"[DEPLOY] (Simulation) Boto3: Uploading {model_path} to s3://{AWS_BUCKET_NAME}/{S3_OBJECT_NAME}")
+          # Code réel décommenté pour l'upload (commenté pour éviter le crash sans creds)
+          # s3_client = boto3.client('s3')
+          # s3_client.upload_file(model_path, AWS_BUCKET_NAME, S3_OBJECT_NAME)
+          
+          deployment_artifacts["local_model_path"] = model_path
+          deployment_artifacts["s3_uri"] = f"s3://{AWS_BUCKET_NAME}/{S3_OBJECT_NAME}"
+          print(f"[DEPLOY] Upload simulé réussi vers S3.")
+      except Exception as e:
+          print(f"[DEPLOY ERREUR] AWS S3 : {str(e)}")
+  elif boto3 is None:
+      print("[DEPLOY ERREUR] Le package 'boto3' n'est pas installé.")
+_metadata:
+  bloc: 5
+  section: "5_cloud"

@@ -1,0 +1,71 @@
+id: "deploy_fastapi_docker"
+name: "Deploy: FastAPI + Docker Full Stack"
+description: "Le combo absolu : génère l'API FastAPI et son Dockerfile en une seule passe pour un déploiement Cloud-ready immédiat."
+category: "Containerization"
+tags: ["deploy", "api", "docker", "fastapi", "python"]
+applies_to: ["Classification", "Regression"]
+when_to_use: "Le standard pour mettre un modèle Scikit-Learn en production sur un cluster Kubernetes, AWS Fargate ou Google Cloud Run."
+pros:
+  - "Génère 3 fichiers (model, server.py, Dockerfile) d'un coup."
+cons:
+  - "Prend un peu de place sur le disque."
+code_template: |
+  import os
+  import joblib
+
+  deployment_artifacts = {}
+
+  if 'full_pipeline' in locals():
+      print("[DEPLOY] Génération du Full Stack FastAPI + Docker...")
+      try:
+          os.makedirs("outputs/deployment", exist_ok=True)
+          
+          # 1. Sauvegarde du modèle
+          model_path = "outputs/deployment/model.joblib"
+          joblib.dump(full_pipeline, model_path)
+          deployment_artifacts["model_path"] = model_path
+          
+          # 2. Génération FastAPI (server.py)
+          fastapi_code = """import joblib
+  import pandas as pd
+  from fastapi import FastAPI
+  from pydantic import BaseModel
+  
+  model = joblib.load('model.joblib')
+  app = FastAPI(title="DataML Production API")
+  
+  class PredictionInput(BaseModel):
+      data: dict
+  
+  @app.post("/predict")
+  def predict(payload: PredictionInput):
+      df = pd.DataFrame([payload.data])
+      pred = model.predict(df)[0]
+      resp = {"prediction": pred.item() if hasattr(pred, 'item') else pred}
+      if hasattr(model, 'predict_proba'):
+          resp["probabilities"] = model.predict_proba(df)[0].tolist()
+      return resp
+  """
+          api_script_path = "outputs/deployment/server.py"
+          with open(api_script_path, "w", encoding="utf-8") as f:
+              f.write(fastapi_code)
+          deployment_artifacts["api_script"] = api_script_path
+          
+          # 3. Génération Dockerfile
+          dockerfile = """FROM python:3.9-slim
+  WORKDIR /app
+  RUN pip install fastapi uvicorn scikit-learn pandas pydantic joblib
+  COPY . .
+  CMD ["uvicorn", "server:app", "--host", "0.0.0.0", "--port", "8000"]
+  """
+          docker_path = "outputs/deployment/Dockerfile"
+          with open(docker_path, "w") as f:
+              f.write(dockerfile)
+          deployment_artifacts["dockerfile"] = docker_path
+          
+          print(f"[DEPLOY] API et Dockerfile générés avec succès.")
+      except Exception as e:
+          print(f"[DEPLOY ERREUR] FastAPI Docker : {str(e)}")
+_metadata:
+  bloc: 5
+  section: "4_container"

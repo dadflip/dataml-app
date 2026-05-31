@@ -1,0 +1,62 @@
+id: "eval_tree_surrogate_plot"
+name: "Eval Plot: Decision Tree Surrogate Plot"
+description: "Entraîne un arbre de décision simple (profondeur 3) sur les PRÉDICTIONS du modèle complexe pour expliquer sa logique globale."
+category: "Explainability & Feature Importance"
+tags: ["eval", "plot", "explainability", "surrogate", "tree"]
+applies_to: ["Classification", "Regression"]
+when_to_use: "Pour traduire un modèle black-box (ex: Réseau de Neurones) en un ensemble de règles simples lisibles par l'humain."
+pros:
+  - "Très apprécié par le métier pour extraire des règles 'si/alors'."
+cons:
+  - "L'arbre est une approximation grossière du vrai modèle."
+code_template: |
+  import os
+  import numpy as np
+  import matplotlib.pyplot as plt
+  from sklearn.tree import DecisionTreeClassifier, DecisionTreeRegressor, plot_tree
+
+  evaluation_metrics = {}
+
+  if 'X_test' in locals() and 'y_pred' in locals():
+      print("[EVAL] Génération de l'Arbre de Substitution (Surrogate Tree)...")
+      try:
+          os.makedirs("outputs/evaluation", exist_ok=True)
+          
+          X_arr = np.array(X_test)
+          if len(X_arr.shape) > 2:
+              X_arr = X_arr.reshape(X_arr.shape[0], -1)
+              
+          if 'feature_names_out' in locals() and len(feature_names_out) == X_arr.shape[1]:
+              feat_names = feature_names_out
+          else:
+              feat_names = [f"F_{i}" for i in range(X_arr.shape[1])]
+              
+          # Entraîner l'arbre sur y_pred (et non y_test !)
+          if task_type == 'classification':
+              surrogate = DecisionTreeClassifier(max_depth=3, random_state=42)
+          else:
+              surrogate = DecisionTreeRegressor(max_depth=3, random_state=42)
+              
+          surrogate.fit(X_arr, y_pred)
+          
+          fig, ax = plt.subplots(figsize=(20, 10))
+          plot_tree(surrogate, feature_names=feat_names, filled=True, rounded=True, 
+                    class_names=[str(c) for c in np.unique(y_pred)] if task_type == 'classification' else None,
+                    ax=ax, fontsize=10)
+          
+          ax.set_title("Surrogate Model (Depth 3 Approximation of Original Model)")
+          
+          plot_path = "outputs/evaluation/surrogate_tree.png"
+          fig.savefig(plot_path, dpi=300, bbox_inches='tight')
+          plt.close(fig)
+          
+          evaluation_metrics["surrogate_tree_plot"] = plot_path
+          # Score de fidélité de l'arbre par rapport au modèle original
+          fidelity_score = surrogate.score(X_arr, y_pred)
+          evaluation_metrics["surrogate_fidelity_score"] = float(fidelity_score)
+          print(f"[EVAL] Plot sauvegardé sous {plot_path}. Fidelity: {fidelity_score:.3f}")
+      except Exception as e:
+          print(f"[EVAL ERREUR] Surrogate Tree : {str(e)}")
+_metadata:
+  bloc: 4
+  section: "1_evaluation"

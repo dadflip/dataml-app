@@ -1,0 +1,54 @@
+id: "deploy_torchscript"
+name: "Deploy: PyTorch TorchScript Export"
+description: "Convertit un modèle PyTorch (via Tracing) en TorchScript pour un déploiement haute performance (C++ ou Python sans les dépendances d'entraînement)."
+category: "Serialization"
+tags: ["deploy", "pytorch", "torchscript", "export"]
+applies_to: ["Classification", "Regression", "Computer Vision", "NLP Generation"]
+when_to_use: "Pour déployer un modèle Deep Learning en production sur des environnements contraints (mobile, embarqué, ou backend C++)."
+pros:
+  - "Très rapide, libère du Global Interpreter Lock (GIL) de Python."
+cons:
+  - "Le 'Tracing' nécessite de fournir un tenseur d'entrée (dummy input). Ne supporte pas le flux de contrôle dynamique (if/else) dans le forward."
+code_template: |
+  import os
+  import numpy as np
+  try:
+      import torch
+  except ImportError:
+      torch = None
+
+  deployment_artifacts = {}
+
+  if 'full_pipeline' in locals() and 'X_train' in locals() and torch is not None:
+      print("[DEPLOY] Exportation vers TorchScript (Tracing)...")
+      try:
+          os.makedirs("outputs/deployment", exist_ok=True)
+          
+          # Extraction du modèle PyTorch s'il est dans un pipeline
+          model = full_pipeline.steps[-1][1] if hasattr(full_pipeline, 'steps') else full_pipeline
+          
+          if not hasattr(model, 'forward'):
+              raise ValueError("Le modèle ne semble pas être un module PyTorch (pas de méthode forward).")
+              
+          model.eval() # Mode inférence
+          
+          # Création du tenseur exemple basé sur la première ligne de X_train
+          # Attention: suppose que X_train contient des nombres
+          example_data = np.array(X_train[0:1], dtype=np.float32)
+          example_tensor = torch.from_numpy(example_data)
+          
+          # Tracing
+          traced_script_module = torch.jit.trace(model, example_tensor)
+          
+          model_path = "outputs/deployment/model.pt"
+          traced_script_module.save(model_path)
+          
+          deployment_artifacts["torchscript_model_path"] = model_path
+          print(f"[DEPLOY] Modèle exporté en TorchScript sous {model_path}")
+      except Exception as e:
+          print(f"[DEPLOY ERREUR] TorchScript : {str(e)}")
+  elif torch is None:
+      print("[DEPLOY ERREUR] Le package 'torch' n'est pas installé.")
+_metadata:
+  bloc: 5
+  section: "1_serialization"

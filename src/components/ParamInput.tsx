@@ -50,6 +50,7 @@ const KIND_META: Record<string, { icon: any; label: string }> = {
   boolean: { icon: Code2, label: "bool" },
   int: { icon: Hash, label: "int" },
   number: { icon: Hash, label: "float" },
+  ratio: { icon: Hash, label: "ratio" },
   string: { icon: Type, label: "str" },
   text: { icon: AlignLeft, label: "texte" },
   expr: { icon: Code2, label: "expr" },
@@ -129,7 +130,7 @@ export function ParamInput({ param, override, onChange, onReset }: Props) {
   const [numericKind, setNumericKind] = useState<string>(param.kind);
 
   useEffect(() => {
-    if (param.kind === "int" || param.kind === "number") {
+    if (param.kind === "int" || param.kind === "number" || param.kind === "ratio") {
       setNumericKind(param.kind);
     }
   }, [param.kind]);
@@ -153,22 +154,23 @@ export function ParamInput({ param, override, onChange, onReset }: Props) {
       );
     }
 
-    if (param.kind === "text") {
-      const lineCount = Math.min(14, Math.max(4, display.split("\n").length + 1));
+    if (param.kind === "text" || param.kind === "expr" || display.includes("\n")) {
+      const baseRows = param.kind === "text" ? 4 : 2;
+      const lineCount = Math.min(14, Math.max(baseRows, display.split("\n").length));
       return (
         <textarea
           value={display}
           onChange={(e) => handleText(e.target.value)}
           spellCheck={false}
           rows={lineCount}
-          placeholder={"SELECT *\nFROM table\nWHERE ..."}
+          placeholder={param.kind === "text" ? "Texte..." : "Expression Python..."}
           className="block w-full resize-y rounded-lg border border-input bg-[oklch(0.1_0.004_260)] px-2.5 py-2 font-mono text-[11px] leading-relaxed text-foreground/95 outline-none transition focus:border-foreground/30 focus:ring-1 focus:ring-ring"
           style={{ tabSize: 2 }}
         />
       );
     }
 
-    if (param.kind === "int" || param.kind === "number") {
+    if (param.kind === "int" || param.kind === "number" || param.kind === "ratio") {
       return (
         <div className="flex gap-1.5">
           <Input
@@ -186,6 +188,7 @@ export function ParamInput({ param, override, onChange, onReset }: Props) {
           >
             <option value="number">float</option>
             <option value="int">int</option>
+            <option value="ratio">ratio</option>
           </select>
         </div>
       );

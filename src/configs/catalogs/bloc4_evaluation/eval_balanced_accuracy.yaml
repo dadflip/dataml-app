@@ -1,0 +1,62 @@
+id: "eval_balanced_accuracy"
+name: "Eval: Balanced Accuracy"
+description: >
+  Calcule la Balanced Accuracy, definie comme la moyenne des rappels (recall)
+  obtenus sur chaque classe. Contrairement a l'accuracy classique, cette
+  metrique accorde un poids egal a chaque classe, independamment de sa
+  frequence dans le jeu de donnees. Elle varie entre 0 et 1, ou 0.5
+  correspond a un classifieur aleatoire pour les problemes binaires.
+category: "Metriques de Classification"
+tags: ["eval", "classification", "balanced_accuracy", "desequilibre", "recall"]
+applies_to: ["Classification"]
+when_to_use: >
+  Utiliser comme alternative a l'accuracy standard lorsque les classes sont
+  desequilibrees. Particulierement adapte pour evaluer un modele ou chaque
+  classe a une importance egale, meme si certaines classes sont rares.
+pros:
+  - "Insensible au desequilibre des classes"
+  - "Simple a interpreter (moyenne des recalls par classe)"
+  - "Directement comparable entre jeux de donnees avec distributions differentes"
+  - "Supporte nativement le multiclasse"
+cons:
+  - "Ne capture pas les performances fines par classe individuelle"
+  - "Peut masquer un mauvais recall sur une classe specifique"
+  - "Ne prend pas en compte les probabilites predites"
+code_template: |
+  evaluation_metrics = {}
+  try:
+      from sklearn.metrics import balanced_accuracy_score, accuracy_score
+      import numpy as np
+
+      print("[EVAL] Calcul de la Balanced Accuracy...")
+
+      bal_acc = balanced_accuracy_score(y_test, y_pred)
+      evaluation_metrics["balanced_accuracy"] = float(bal_acc)
+      print(f"[EVAL] Balanced Accuracy: {bal_acc:.4f}")
+
+      # Also compute adjusted balanced accuracy (chance-level = 0)
+      bal_acc_adjusted = balanced_accuracy_score(y_test, y_pred, adjusted=True)
+      evaluation_metrics["balanced_accuracy_adjusted"] = float(bal_acc_adjusted)
+      print(f"[EVAL] Balanced Accuracy (adjusted, chance=0): {bal_acc_adjusted:.4f}")
+
+      # Compare with standard accuracy for context
+      std_acc = accuracy_score(y_test, y_pred)
+      evaluation_metrics["standard_accuracy"] = float(std_acc)
+      gap = std_acc - bal_acc
+      evaluation_metrics["accuracy_gap"] = float(gap)
+      print(f"[EVAL] Standard Accuracy: {std_acc:.4f}")
+      print(f"[EVAL] Ecart (standard - balanced): {gap:.4f}")
+
+      if abs(gap) > 0.05:
+          print("[EVAL] Ecart significatif detecte : le jeu de donnees est probablement desequilibre.")
+          evaluation_metrics["imbalance_warning"] = True
+      else:
+          evaluation_metrics["imbalance_warning"] = False
+
+      print("[EVAL] Balanced Accuracy termine avec succes.")
+  except Exception as e:
+      print(f"[EVAL] Erreur lors du calcul de la Balanced Accuracy: {e}")
+      evaluation_metrics["error"] = str(e)
+_metadata:
+  bloc: 4
+  section: "1_evaluation"

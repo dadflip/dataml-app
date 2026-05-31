@@ -1,0 +1,39 @@
+id: "load_webdataset"
+name: "Load: WebDataset (.tar streaming)"
+description: "Charge de très gros datasets encapsulés dans des fichiers .tar de manière distribuée (standard PyTorch)."
+category: "2. Load"
+tags: ["load", "webdataset", "pytorch", "streaming"]
+code_template: |
+  import glob
+  import os
+  import time
+
+  # [PARAM: URL_OR_PATH | string]
+  URL_OR_PATH = "./data/extracted/shards/{00000..00099}.tar"
+  # [/PARAM]
+
+  print(f"[LOAD] Initialisation WebDataset (WDS) sur {URL_OR_PATH}...")
+
+  try:
+      start_time = time.time()
+      import webdataset as wds
+      
+      # WebDataset gère nativement le format brace-expansion {00..99}
+      dataset = wds.WebDataset(URL_OR_PATH).shuffle(1000).decode("rgb")
+      
+      duration = time.time() - start_time
+      print(f"[LOAD] Succès WebDataset. Itérateur prêt en {duration:.2f}s.")
+  except ImportError:
+      print("[ERREUR LOAD] Le module 'webdataset' est requis (pip install webdataset).")
+      raise
+  except Exception as e:
+      print(f"[ERREUR LOAD] Erreur WebDataset : {str(e)}")
+      raise e
+
+  df = None
+  target_name = None
+  task_type = "unknown"
+  meta = {"format": "webdataset", "path_pattern": URL_OR_PATH}
+_metadata:
+  bloc: 1
+  section: "2_load"

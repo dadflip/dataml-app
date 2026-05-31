@@ -1,0 +1,94 @@
+id: "eval_learning_curve"
+name: "Eval: Courbe d'Apprentissage (Learning Curve)"
+description: "Trace la courbe d'apprentissage montrant les scores d'entrainement et de validation en fonction de la taille du jeu de donnees. Permet de diagnostiquer le biais et la variance."
+category: "Validation Croisee"
+tags: ["eval", "learning_curve", "visualization", "matplotlib", "sklearn", "bias_variance"]
+applies_to: ["Classification", "Regression"]
+when_to_use: "Pour diagnostiquer si un modele souffre de sur-apprentissage (haute variance) ou de sous-apprentissage (haut biais)."
+pros:
+  - "Diagnostic visuel clair du compromis biais/variance."
+  - "Aide a decider si collecter plus de donnees serait benefique."
+cons:
+  - "Tres couteux en calcul (entrainements multiples a differentes tailles)."
+  - "Necessite X_train et y_train dans le scope."
+code_template: |
+  import numpy as np
+  import matplotlib
+  matplotlib.use("Agg")
+  import matplotlib.pyplot as plt
+  from sklearn.model_selection import learning_curve
+  import os
+
+  # [PARAM: N_FOLDS | number]
+  N_FOLDS = 5
+  # [/PARAM]
+
+  # [PARAM: N_POINTS | number]
+  N_POINTS = 10
+  # [/PARAM]
+
+  evaluation_metrics = {}
+
+  print(f"[EVAL] Calcul de la courbe d'apprentissage (K={N_FOLDS}, points={N_POINTS})...")
+  try:
+      if 'full_pipeline' not in dir() and 'full_pipeline' not in locals():
+          raise NameError("full_pipeline introuvable dans le scope.")
+      if 'X_train' not in dir() and 'X_train' not in locals():
+          raise NameError("X_train introuvable dans le scope.")
+      if 'y_train' not in dir() and 'y_train' not in locals():
+          raise NameError("y_train introuvable dans le scope.")
+
+      if task_type == "classification":
+          scoring = "accuracy"
+      else:
+          scoring = "r2"
+
+      train_sizes_abs, train_scores, val_scores = learning_curve(
+          full_pipeline, X_train, y_train,
+          cv=int(N_FOLDS),
+          scoring=scoring,
+          train_sizes=np.linspace(0.1, 1.0, int(N_POINTS)),
+          n_jobs=-1,
+          random_state=42
+      )
+
+      train_mean = np.mean(train_scores, axis=1)
+      train_std = np.std(train_scores, axis=1)
+      val_mean = np.mean(val_scores, axis=1)
+      val_std = np.std(val_scores, axis=1)
+
+      fig, ax = plt.subplots(figsize=(10, 6))
+      ax.fill_between(train_sizes_abs, train_mean - train_std, train_mean + train_std, alpha=0.15, color="blue")
+      ax.fill_between(train_sizes_abs, val_mean - val_std, val_mean + val_std, alpha=0.15, color="orange")
+      ax.plot(train_sizes_abs, train_mean, "o-", color="blue", label="Score Entrainement")
+      ax.plot(train_sizes_abs, val_mean, "o-", color="orange", label="Score Validation")
+      ax.set_xlabel("Taille du jeu d'entrainement")
+      ax.set_ylabel(f"Score ({scoring})")
+      ax.set_title("Courbe d'Apprentissage (Learning Curve)")
+      ax.legend(loc="best")
+      ax.grid(True, alpha=0.3)
+      plt.tight_layout()
+
+      save_dir = os.path.join(os.getcwd(), "outputs")
+      os.makedirs(save_dir, exist_ok=True)
+      fig_path = os.path.join(save_dir, "learning_curve.png")
+      fig.savefig(fig_path, dpi=150, bbox_inches="tight")
+      plt.close(fig)
+
+      evaluation_metrics["learning_curve_scoring"] = scoring
+      evaluation_metrics["learning_curve_train_sizes"] = train_sizes_abs.tolist()
+      evaluation_metrics["learning_curve_train_mean"] = train_mean.tolist()
+      evaluation_metrics["learning_curve_val_mean"] = val_mean.tolist()
+      evaluation_metrics["learning_curve_gap_final"] = float(train_mean[-1] - val_mean[-1])
+      evaluation_metrics["learning_curve_figure_path"] = fig_path
+
+      print(f"[EVAL] Score final entrainement: {train_mean[-1]:.4f}")
+      print(f"[EVAL] Score final validation: {val_mean[-1]:.4f}")
+      print(f"[EVAL] Ecart (overfitting gap): {train_mean[-1] - val_mean[-1]:.4f}")
+      print(f"[EVAL] Figure sauvegardee: {fig_path}")
+  except Exception as e:
+      print(f"[EVAL][ERREUR] Learning Curve echouee: {e}")
+      evaluation_metrics["learning_curve_error"] = str(e)
+_metadata:
+  bloc: 4
+  section: "1_evaluation"

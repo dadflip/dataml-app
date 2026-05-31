@@ -1,0 +1,44 @@
+id: "transform_copy_df"
+name: "Transform: Init Pipeline & DataFrame"
+description: "Initialise l'objet de tracking du pipeline et permet de créer (ou non) une copie de sécurité de 'df'."
+category: "4.0 Init"
+tags: ["transform", "core", "pandas"]
+applies_to: ["Tabulaire", "Texte", "Images", "Audio"]
+when_to_use: "Au tout début du pipeline de transformations."
+pros:
+  - "Évite les SettingWithCopyWarning."
+  - "Initialise correctement l'objet preprocessor pour le contrat."
+cons:
+  - "Double l'empreinte mémoire si la copie est activée."
+hyperparameters:
+  make_copy: "Activer pour créer une copie profonde du DataFrame (recommandé)."
+code_template: |
+  import pandas as pd
+
+  # [PARAM: MAKE_COPY | boolean]
+  MAKE_COPY = True
+  # [/PARAM]
+
+  print("[TRANSFORM] Initialisation du Pipeline...")
+  if 'df' in locals():
+      # 1. Copie du DF
+      if MAKE_COPY:
+          df = df.copy(deep=True)
+          print(f"[TRANSFORM] Copie profonde de df créée (shape: {df.shape}).")
+      else:
+          print("[TRANSFORM] Utilisation du DataFrame original (Pas de copie).")
+      
+      # 2. Initialisation de la mémoire du pipeline
+      if 'pipeline_steps' not in locals():
+          pipeline_steps = {}
+          print("[TRANSFORM] Tracking des étapes du pipeline initialisé.")
+      else:
+          print("[TRANSFORM] pipeline_steps existe déjà. Les étapes vont s'y ajouter.")
+          
+      # On initialise preprocessor à None pour l'instant
+      preprocessor = None
+  else:
+      print("[ERREUR] 'df' introuvable.")
+_metadata:
+  bloc: 2
+  section: "3.9_init_pipeline"

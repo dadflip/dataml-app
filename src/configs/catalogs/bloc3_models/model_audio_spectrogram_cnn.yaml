@@ -1,0 +1,34 @@
+id: "model_audio_spectrogram_cnn"
+name: "Model: Audio Spectrogram CNN"
+description: "Convertit l'audio en image (spectrogramme Mel) puis le classifie avec un CNN 2D PyTorch."
+category: "Multimédia & Audio"
+tags: ["model", "audio", "classification", "pytorch", "cnn", "spectrogram"]
+applies_to: ["Audio"]
+when_to_use: "Quand vous voulez créer un modèle audio custom depuis zéro (ex: détection d'aboiements)."
+pros:
+  - "Plus léger que Wav2Vec2."
+cons:
+  - "Nécessite le package librosa."
+hyperparameters:
+  epochs: "Nombre d'époques d'entraînement (ex: 5)."
+code_template: |
+  import pandas as pd
+  import numpy as np
+  print("[MODEL] Dummy export pour Audio Spectrogram CNN.")
+  # Modèle complexe nécessitant Librosa pour la conversion Mel-Spectrogram + PyTorch CNN 2D.
+  # Placeholder structurel fourni pour intégration future.
+  
+  if 'X_test' in locals():
+      y_pred = np.zeros(len(X_test)) 
+      y_proba = None
+      feature_importances = None
+      
+      full_pipeline = "Audio CNN Placeholder"
+      training_history = {"status": "placeholder"}
+      task_type = "classification"
+      print("[MODEL] Placeholder généré.")
+  else:
+      print("[ERREUR] Données introuvables.")
+_metadata:
+  bloc: 3
+  section: "4_vision_and_audio"

@@ -1,0 +1,41 @@
+id: "eval_r2_score"
+name: "Eval: R-Squared (Coefficient de Determination)"
+description: >
+  Calcule le coefficient de determination R2 qui mesure la proportion de la variance
+  de la variable cible expliquee par le modele. Un R2 de 1.0 indique une prediction
+  parfaite, 0.0 indique que le modele n'est pas meilleur que la moyenne, et une valeur
+  negative indique un modele pire que la moyenne.
+category: "Metriques de Regression"
+tags: ["eval", "regression", "r2", "coefficient", "determination", "metrique"]
+applies_to: ["Regression"]
+when_to_use: >
+  Utiliser pour evaluer la qualite globale d'un modele de regression en termes de
+  proportion de variance expliquee. Ideal pour comparer des modeles entre eux.
+pros:
+  - "Valeur normalisee entre -inf et 1, facilitant l'interpretation"
+  - "Permet de comparer des modeles sur des echelles differentes"
+  - "Indique directement la proportion de variance expliquee"
+cons:
+  - "Peut augmenter artificiellement avec l'ajout de variables non pertinentes"
+  - "Ne garantit pas que le modele est correct, seulement qu'il explique la variance"
+  - "Sensible aux valeurs aberrantes"
+code_template: |
+  evaluation_metrics = {}
+  try:
+      from sklearn.metrics import r2_score
+
+      print("[EVAL] Calcul du R-Squared (R2)...")
+
+      r2_value = r2_score(y_test, y_pred)
+
+      evaluation_metrics["r2_score"] = float(r2_value)
+
+      print(f"[EVAL] R2 = {r2_value:.6f}")
+
+  except Exception as e:
+      print(f"[EVAL] Erreur lors du calcul du R2 : {e}")
+      evaluation_metrics["r2_score"] = None
+      evaluation_metrics["error"] = str(e)
+_metadata:
+  bloc: 4
+  section: "1_evaluation"

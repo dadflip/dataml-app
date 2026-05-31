@@ -1,0 +1,76 @@
+id: "eval_confidence_interval_bootstrap"
+name: "Eval: Intervalle de Confiance par Bootstrap"
+description: "Estime un intervalle de confiance a 95% sur la metrique principale (accuracy pour la classification, RMSE pour la regression) par reeechantillonnage bootstrap."
+category: "Calibration"
+tags: ["eval", "bootstrap", "confidence_interval", "statistics", "robustness"]
+applies_to: ["Classification", "Regression"]
+when_to_use: "Lorsqu'on veut quantifier l'incertitude sur la performance du modele. Indispensable pour reporter des resultats fiables et comparer rigoureusement des modeles."
+pros:
+  - "Methode non-parametrique, aucune hypothese sur la distribution"
+  - "Applicable a n'importe quelle metrique"
+  - "Fournit une mesure d'incertitude manquante dans les scores ponctuels"
+cons:
+  - "Peut etre lent avec un grand nombre d'iterations"
+  - "Ne remplace pas la validation croisee pour l'estimation de generalisation"
+  - "Intervalle potentiellement trop etroit si le jeu de test est petit"
+code_template: |
+  import numpy as np
+
+  evaluation_metrics = {}
+
+  try:
+      from sklearn.metrics import accuracy_score, mean_squared_error
+
+      n_bootstrap = 1000
+      confidence_level = 0.95
+      alpha = 1.0 - confidence_level
+      rng = np.random.RandomState(42)
+
+      y_true = np.array(y_test)
+      y_p = np.array(y_pred)
+      n = len(y_true)
+
+      if n < 10:
+          print("[EVAL] Jeu de test trop petit pour un bootstrap fiable.")
+          evaluation_metrics["status"] = "skipped"
+          evaluation_metrics["reason"] = "test set too small (n < 10)"
+      else:
+          is_classif = task_type in ("classification", "binary", "multiclass")
+
+          scores = np.zeros(n_bootstrap)
+          for i in range(n_bootstrap):
+              idx = rng.randint(0, n, size=n)
+              if is_classif:
+                  scores[i] = accuracy_score(y_true[idx], y_p[idx])
+              else:
+                  scores[i] = np.sqrt(mean_squared_error(y_true[idx], y_p[idx]))
+
+          # Percentile method
+          lower = float(np.percentile(scores, 100 * alpha / 2))
+          upper = float(np.percentile(scores, 100 * (1 - alpha / 2)))
+          point_estimate = float(np.mean(scores))
+          std_estimate = float(np.std(scores))
+
+          metric_name = "accuracy" if is_classif else "rmse"
+
+          print(f"[EVAL] Bootstrap {metric_name}: {point_estimate:.4f}")
+          print(f"[EVAL] IC {int(confidence_level*100)}%: [{lower:.4f}, {upper:.4f}]")
+          print(f"[EVAL] Ecart-type bootstrap: {std_estimate:.4f}")
+
+          evaluation_metrics["status"] = "success"
+          evaluation_metrics["metric_name"] = metric_name
+          evaluation_metrics["point_estimate"] = round(point_estimate, 6)
+          evaluation_metrics["ci_lower"] = round(lower, 6)
+          evaluation_metrics["ci_upper"] = round(upper, 6)
+          evaluation_metrics["ci_width"] = round(upper - lower, 6)
+          evaluation_metrics["std_bootstrap"] = round(std_estimate, 6)
+          evaluation_metrics["confidence_level"] = confidence_level
+          evaluation_metrics["n_bootstrap"] = n_bootstrap
+
+  except Exception as e:
+      print(f"[EVAL] Erreur bootstrap: {e}")
+      evaluation_metrics["status"] = "error"
+      evaluation_metrics["error"] = str(e)
+_metadata:
+  bloc: 4
+  section: "1_evaluation"

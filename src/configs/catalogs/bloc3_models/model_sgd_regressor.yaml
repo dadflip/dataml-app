@@ -1,0 +1,57 @@
+id: "model_sgd_regressor"
+name: "Model: SGD Regressor"
+description: "Régression Linéaire résolue par descente de gradient stochastique."
+category: "Modèles Linéaires"
+tags: ["model", "regression", "tabular", "sklearn", "linear", "online-learning"]
+applies_to: ["Tabulaire"]
+when_to_use: "Jeux de données massifs (> 100k lignes) où LinearRegression crashe la RAM."
+pros:
+  - "Peut s'entraîner en batchs (partial_fit)."
+cons:
+  - "Très sensible au scaling."
+hyperparameters:
+  loss: "Fonction de perte ('squared_error', 'huber', 'epsilon_insensitive')."
+  penalty: "Régularisation ('l2', 'l1', 'elasticnet')."
+code_template: |
+  import pandas as pd
+  import numpy as np
+  from sklearn.linear_model import SGDRegressor
+
+  # [PARAM: LOSS | string]
+  LOSS = "squared_error"
+  # [/PARAM]
+
+  # [PARAM: PENALTY | string]
+  PENALTY = "l2"
+  # [/PARAM]
+
+  print(f"[MODEL] Entraînement SGD Regressor (loss={LOSS}, penalty={PENALTY})...")
+  if 'X_train' in locals() and 'y_train' in locals() and 'X_test' in locals():
+      model = SGDRegressor(loss=LOSS, penalty=PENALTY, random_state=42)
+      model.fit(X_train, y_train)
+      
+      y_pred = model.predict(X_test)
+      y_proba = None
+      
+      feature_importances = None
+      if 'feature_names_out' in locals():
+          if len(model.coef_) == len(feature_names_out):
+              feature_importances = pd.Series(np.abs(model.coef_), index=feature_names_out)
+              
+      if 'preprocessor' in locals() and preprocessor is not None:
+          try: from imblearn.pipeline import Pipeline
+          except: from sklearn.pipeline import Pipeline
+          full_pipeline = Pipeline(steps=preprocessor.steps + [('model', model)])
+      else:
+          try: from imblearn.pipeline import Pipeline
+          except: from sklearn.pipeline import Pipeline
+          full_pipeline = Pipeline(steps=[('model', model)])
+          
+      training_history = {"status": "success", "fitted_on": len(X_train)}
+      task_type = "regression"
+      print("[MODEL] Modèle entraîné et Full Pipeline compilé avec succès.")
+  else:
+      print("[ERREUR] Données d'entraînement introuvables.")
+_metadata:
+  bloc: 3
+  section: "2_regression_tabulaire"

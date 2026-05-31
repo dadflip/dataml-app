@@ -1,0 +1,42 @@
+id: "load_parquet"
+name: "Load: Fichier Parquet"
+description: "Charge un fichier binaire orienté colonnes (très performant pour le Big Data)."
+category: "2. Load"
+tags: ["load", "parquet", "bigdata", "pandas"]
+code_template: |
+  import pandas as pd
+  import time
+  import os
+
+  # [PARAM: FILE_PATH | file]
+  FILE_PATH = "./data/raw/data.parquet"
+  # [/PARAM]
+  
+  # [PARAM: TARGET_COL | string]
+  TARGET_COL = "target"
+  # [/PARAM]
+
+  print(f"[LOAD] Chargement du dataset Parquet depuis {FILE_PATH}...")
+  if not os.path.exists(FILE_PATH):
+      raise FileNotFoundError(f"[ERREUR LOAD] Fichier Parquet introuvable : {FILE_PATH}")
+
+  try:
+      start_time = time.time()
+      # Nécessite pyarrow ou fastparquet installé
+      df = pd.read_parquet(FILE_PATH, engine='auto')
+      
+      duration = time.time() - start_time
+      print(f"[LOAD] Succès Parquet. Chargement ultra-rapide ({duration:.2f}s) pour {df.shape[0]} lignes.")
+  except ImportError:
+      print("[ERREUR LOAD] Le module 'pyarrow' ou 'fastparquet' est requis.")
+      raise
+  except Exception as e:
+      print(f"[ERREUR LOAD] Impossible de lire le fichier Parquet : {str(e)}")
+      raise e
+
+  target_name = TARGET_COL if TARGET_COL and TARGET_COL in df.columns else None
+  task_type = "unknown"
+  meta = {"format": "parquet", "shape": df.shape}
+_metadata:
+  bloc: 1
+  section: "2_load"

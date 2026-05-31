@@ -1,0 +1,54 @@
+id: "transform_count_vectorizer"
+name: "Transform: Count Vectorizer"
+description: "Bag of Words."
+category: "4.1 Preprocessing"
+tags: ["transform", "nlp", "text", "sklearn", "pipeline"]
+applies_to: ["Texte"]
+when_to_use: "Modèles Naive Bayes."
+pros:
+  - "Simple."
+cons:
+  - "Donne poids aux mots fréquents."
+hyperparameters:
+  text_col: "Colonne texte"
+  max_features: "Nb de features"
+code_template: |
+  import pandas as pd
+  from sklearn.feature_extraction.text import CountVectorizer
+  from sklearn.compose import ColumnTransformer
+
+  # [PARAM: TEXT_COL | string]
+  TEXT_COL = "text"
+  # [/PARAM]
+
+  # [PARAM: MAX_FEATURES | number]
+  MAX_FEATURES = 5000
+  # [/PARAM]
+
+  print(f"[TRANSFORM] CountVectorizer sur '{TEXT_COL}'...")
+  if 'df' in locals():
+      if 'pipeline_steps' not in locals(): pipeline_steps = {}
+      
+      if TEXT_COL in df.columns:
+          df[TEXT_COL] = df[TEXT_COL].fillna('')
+          
+          cv = CountVectorizer(max_features=MAX_FEATURES)
+          ct = ColumnTransformer(
+              [('cv', cv, TEXT_COL)],
+              remainder='passthrough', verbose_feature_names_out=False
+          )
+          try: ct.set_output(transform="pandas")
+          except: pass
+          
+          step_name = 'count_vectorizer'
+          pipeline_steps[step_name] = (step_name, ct)
+          
+          df = pd.DataFrame(ct.fit_transform(df))
+          print(f"[TRANSFORM] CountVectorizer appliqué. Nbre cols: {df.shape[1]}")
+      else:
+          print("[ERREUR] Colonne introuvable.")
+  else:
+      print("[ERREUR] 'df' introuvable.")
+_metadata:
+  bloc: 2
+  section: "4_preprocessing"

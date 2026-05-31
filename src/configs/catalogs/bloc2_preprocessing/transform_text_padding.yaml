@@ -1,0 +1,54 @@
+id: "transform_text_padding"
+name: "Transform: Text Sequence Padding"
+description: "Padding de séquences d'entiers."
+category: "4.1 Preprocessing"
+tags: ["transform", "nlp", "text", "pandas", "pipeline"]
+applies_to: ["Texte"]
+when_to_use: "RNN/LSTM."
+pros:
+  - "Batching."
+cons:
+  - "Mémoire."
+hyperparameters:
+  seq_col: "Colonne list"
+  max_len: "Longueur"
+code_template: |
+  import pandas as pd
+  import numpy as np
+  from sklearn.preprocessing import FunctionTransformer
+
+  # [PARAM: SEQ_COL | string]
+  SEQ_COL = "sequences"
+  # [/PARAM]
+
+  # [PARAM: MAX_LEN | number]
+  MAX_LEN = 100
+  # [/PARAM]
+
+  print(f"[TRANSFORM] Padding sur '{SEQ_COL}'...")
+  if 'df' in locals():
+      if 'pipeline_steps' not in locals(): pipeline_steps = {}
+      
+      if SEQ_COL in df.columns:
+          def pad_func(X):
+              X_df = pd.DataFrame(X) if not isinstance(X, pd.DataFrame) else X
+              def _pad(s):
+                  if not isinstance(s, (list, np.ndarray)): return s
+                  return s[:MAX_LEN] if len(s) > MAX_LEN else list(s) + [0] * (MAX_LEN - len(s))
+              X_df[SEQ_COL] = X_df[SEQ_COL].apply(_pad)
+              return X_df
+
+          transformer = FunctionTransformer(pad_func)
+          
+          step_name = 'text_padding'
+          pipeline_steps[step_name] = (step_name, transformer)
+          
+          df = transformer.transform(df)
+          print("[TRANSFORM] Padding appliqué au pipeline.")
+      else:
+          print("[ERREUR] Colonne introuvable.")
+  else:
+      print("[ERREUR] 'df' introuvable.")
+_metadata:
+  bloc: 2
+  section: "4_preprocessing"

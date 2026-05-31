@@ -1,0 +1,40 @@
+id: "eval_saliency_map"
+name: "Eval Plot: Saliency Map (CV)"
+description: "Génère une carte de saillance pour comprendre quels pixels d'une image ont le plus influencé la prédiction (approximation par gradient)."
+category: "Computer Vision Visualizations"
+tags: ["eval", "plot", "cv", "images", "saliency", "explainability"]
+applies_to: ["Classification"]
+when_to_use: "Pour vérifier si un réseau de neurones CNN regarde le bon objet ou le fond de l'image."
+pros:
+  - "Fondamental pour debugger les CNN."
+cons:
+  - "Très spécifique aux modèles de Deep Learning (PyTorch/TensorFlow)."
+code_template: |
+  import os
+  import numpy as np
+  import matplotlib.pyplot as plt
+
+  evaluation_metrics = {}
+
+  if task_type == "classification" and 'X_test' in locals() and 'full_pipeline' in locals():
+      print("[EVAL] Génération de la Saliency Map...")
+      try:
+          os.makedirs("outputs/evaluation", exist_ok=True)
+          
+          # Vérification si c'est un modèle PyTorch ou Keras
+          model = full_pipeline.steps[-1][1] if hasattr(full_pipeline, 'steps') else full_pipeline
+          
+          is_pytorch = hasattr(model, 'parameters') and hasattr(model, 'forward')
+          is_keras = hasattr(model, 'get_weights') and hasattr(model, 'fit')
+          
+          if not is_pytorch and not is_keras:
+              print("[EVAL] Saliency Map requiert un modèle PyTorch ou Keras.")
+          else:
+              print("[EVAL] (Mock) Génération de Saliency map non implémentée génériquement sans tenseurs.")
+              # Dans une implémentation réelle, on ferait backward() par rapport à l'input
+              
+      except Exception as e:
+          print(f"[EVAL ERREUR] Saliency Map : {str(e)}")
+_metadata:
+  bloc: 4
+  section: "1_evaluation"

@@ -1,0 +1,27 @@
+id: "eda_text_length_dist"
+name: "EDA: Longueur Textes"
+description: "Histogramme de la taille des documents textuels."
+category: "3. Exploratory Data Analysis"
+tags: ["eda", "text", "nlp", "seaborn"]
+code_template: |
+  import pandas as pd
+  import matplotlib.pyplot as plt
+  import seaborn as sns
+
+  # [PARAM: TEXT_COL | string]
+  TEXT_COL = "text"
+  # [/PARAM]
+
+  if TEXT_COL in df.columns:
+      lengths = df[TEXT_COL].apply(lambda x: len(str(x).split()))
+      plt.figure(figsize=(10, 5))
+      sns.histplot(lengths, bins=50, kde=True)
+      plt.title(f"Distribution de la longueur (mots) - {TEXT_COL}")
+      plt.xlabel("Nombre de mots")
+      plt.show()
+      print(f"[EDA] Longueur max : {lengths.max()}, Moyenne : {lengths.mean():.1f}")
+  else:
+      print(f"[EDA] Colonne {TEXT_COL} introuvable.")
+_metadata:
+  bloc: 1
+  section: "3_eda"

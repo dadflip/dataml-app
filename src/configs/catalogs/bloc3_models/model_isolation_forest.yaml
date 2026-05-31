@@ -1,0 +1,65 @@
+id: "model_isolation_forest"
+name: "Model: Isolation Forest"
+description: "Algorithme de détection d'anomalies (Outliers) basé sur des arbres aléatoires."
+category: "Détection d'Anomalies (Non-Supervisé)"
+tags: ["model", "anomaly-detection", "tabular", "sklearn", "isolation-forest", "ensemble"]
+applies_to: ["Tabulaire"]
+when_to_use: "Pour trouver de la fraude, des pannes, ou nettoyer un dataset massivement bruité."
+pros:
+  - "Très rapide et efficace en haute dimension."
+cons:
+  - "Requiert de définir un taux de contamination (pourcentage d'anomalies estimé)."
+hyperparameters:
+  contamination: "Proportion d'anomalies attendue (ex: 0.05 pour 5%)."
+code_template: |
+  import pandas as pd
+  import numpy as np
+  from sklearn.ensemble import IsolationForest
+
+  # [PARAM: CONTAMINATION | number]
+  CONTAMINATION = 0.05
+  # [/PARAM]
+
+  print(f"[MODEL] Entraînement Isolation Forest (contamination={CONTAMINATION})...")
+  if 'X_train' in locals() and 'X_test' in locals():
+      model = IsolationForest(contamination=float(CONTAMINATION), random_state=42)
+      model.fit(X_train)
+      
+      # IsolationForest renvoie -1 pour anomalie, 1 pour normal.
+      # On va le remaper : 1 = Anomalie, 0 = Normal, pour que ce soit standard
+      preds = model.predict(X_test)
+      y_pred = np.where(preds == -1, 1, 0)
+      
+      # decision_function donne un score d'anomalie
+      y_proba = model.decision_function(X_test)
+      feature_importances = None
+      
+      # Wrapper le modèle pour garder le remap au predict
+      from sklearn.base import BaseEstimator, ClassifierMixin
+      class IForestWrapper(BaseEstimator, ClassifierMixin):
+          def __init__(self, model): self.model = model
+          def fit(self, X, y=None): return self
+          def predict(self, X): 
+              return np.where(self.model.predict(X) == -1, 1, 0)
+          def predict_proba(self, X):
+              return self.model.decision_function(X)
+              
+      wrapped_model = IForestWrapper(model)
+      
+      if 'preprocessor' in locals() and preprocessor is not None:
+          try: from imblearn.pipeline import Pipeline
+          except: from sklearn.pipeline import Pipeline
+          full_pipeline = Pipeline(steps=preprocessor.steps + [('model', wrapped_model)])
+      else:
+          try: from imblearn.pipeline import Pipeline
+          except: from sklearn.pipeline import Pipeline
+          full_pipeline = Pipeline(steps=[('model', wrapped_model)])
+          
+      training_history = {"status": "success", "anomalies_found": int(np.sum(y_pred))}
+      task_type = "anomaly_detection"
+      print("[MODEL] Isolation Forest entraîné avec succès.")
+  else:
+      print("[ERREUR] Données d'entraînement introuvables.")
+_metadata:
+  bloc: 3
+  section: "5_clustering_automl_and_nn"

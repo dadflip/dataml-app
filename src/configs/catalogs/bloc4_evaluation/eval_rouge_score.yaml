@@ -1,0 +1,49 @@
+id: "eval_rouge_score"
+name: "Eval Metric: ROUGE Score"
+description: "Calcule les métriques ROUGE (Recall-Oriented Understudy for Gisting Evaluation) pour évaluer la génération de texte ou le résumé."
+category: "NLP Metrics"
+tags: ["eval", "metric", "nlp", "generation", "rouge"]
+applies_to: ["NLP Generation"]
+when_to_use: "Pour évaluer un modèle seq2seq (Transformers, RNN) sur une tâche de résumé de texte."
+pros:
+  - "Standard de facto pour le résumé automatique."
+cons:
+  - "Ne capte pas le sens sémantique (uniquement le chevauchement lexical)."
+code_template: |
+  import os
+  try:
+      from rouge_score import rouge_scorer
+  except ImportError:
+      rouge_scorer = None
+
+  evaluation_metrics = {}
+
+  if 'y_test' in locals() and 'y_pred' in locals() and rouge_scorer is not None:
+      print("[EVAL] Calcul du score ROUGE...")
+      try:
+          # Assumons que y_test et y_pred sont des listes de strings
+          if isinstance(y_test[0], str) and isinstance(y_pred[0], str):
+              scorer = rouge_scorer.RougeScorer(['rouge1', 'rouge2', 'rougeL'], use_stemmer=True)
+              
+              r1_f, r2_f, rL_f = [], [], []
+              
+              for ref, pred in zip(y_test, y_pred):
+                  scores = scorer.score(ref, pred)
+                  r1_f.append(scores['rouge1'].fmeasure)
+                  r2_f.append(scores['rouge2'].fmeasure)
+                  rL_f.append(scores['rougeL'].fmeasure)
+                  
+              evaluation_metrics["rouge1_fmeasure"] = float(sum(r1_f)/len(r1_f))
+              evaluation_metrics["rouge2_fmeasure"] = float(sum(r2_f)/len(r2_f))
+              evaluation_metrics["rougeL_fmeasure"] = float(sum(rL_f)/len(rL_f))
+              
+              print(f"[EVAL] ROUGE-1: {evaluation_metrics['rouge1_fmeasure']:.3f}, ROUGE-L: {evaluation_metrics['rougeL_fmeasure']:.3f}")
+          else:
+              print("[EVAL] y_test/y_pred ne sont pas des chaînes de caractères.")
+      except Exception as e:
+          print(f"[EVAL ERREUR] ROUGE : {str(e)}")
+  elif rouge_scorer is None:
+      print("[EVAL ERREUR] Le package 'rouge-score' n'est pas installé.")
+_metadata:
+  bloc: 4
+  section: "1_evaluation"

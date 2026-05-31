@@ -1,0 +1,39 @@
+id: "load_dir_parquet_partitioned"
+name: "Load: Parquet Partitionné"
+description: "Charge un dataset Parquet Big Data organisé en sous-dossiers de partition (ex: /year=2023/month=05/)."
+category: "2. Load"
+tags: ["load", "directory", "parquet", "bigdata"]
+code_template: |
+  import pandas as pd
+  import time
+  import os
+
+  # [PARAM: DIRECTORY_PATH | dir]
+  DIRECTORY_PATH = "./data/extracted/parquet_db"
+  # [/PARAM]
+
+  print(f"[LOAD] Chargement du dataset Parquet partitionné depuis {DIRECTORY_PATH}...")
+  if not os.path.exists(DIRECTORY_PATH):
+      raise FileNotFoundError(f"[ERREUR LOAD] Le dossier n'existe pas : {DIRECTORY_PATH}")
+
+  try:
+      start_time = time.time()
+      
+      # pandas (via pyarrow ou fastparquet) gère nativement le directory de partitions
+      df = pd.read_parquet(DIRECTORY_PATH, engine='auto')
+      
+      duration = time.time() - start_time
+      print(f"[LOAD] Succès Parquet Partitionné. {df.shape[0]} lignes chargées en {duration:.2f}s.")
+  except ImportError:
+      print("[ERREUR LOAD] Le module 'pyarrow' ou 'fastparquet' est requis.")
+      raise
+  except Exception as e:
+      print(f"[ERREUR LOAD] Erreur lors de la lecture des partitions Parquet : {str(e)}")
+      raise e
+
+  target_name = None
+  task_type = "unknown"
+  meta = {"format": "parquet_partitioned", "shape": df.shape}
+_metadata:
+  bloc: 1
+  section: "2_load"

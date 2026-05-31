@@ -5,6 +5,7 @@ import {
   DialogContent,
   DialogHeader,
   DialogTitle,
+  DialogDescription,
   DialogTrigger,
 } from "@/components/ui/dialog";
 import { 
@@ -70,7 +71,7 @@ export function KernelManager({ cfg, currentKernelId, onSelectKernel, disabled }
           <span className="hidden sm:inline">Gestionnaire</span>
         </Button>
       </DialogTrigger>
-      <DialogContent className="max-w-xl">
+      <DialogContent className="w-[calc(100%-1rem)] sm:max-w-xl p-4 sm:p-6 max-h-[90vh] flex flex-col">
         <DialogHeader>
           <DialogTitle className="flex items-center justify-between">
             <div className="flex items-center gap-2">
@@ -80,6 +81,9 @@ export function KernelManager({ cfg, currentKernelId, onSelectKernel, disabled }
               <RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
             </Button>
           </DialogTitle>
+          <DialogDescription className="sr-only">
+            Gérez les connexions aux kernels Jupyter distants.
+          </DialogDescription>
         </DialogHeader>
         
         <div className="flex flex-col gap-3 mt-2">
@@ -97,18 +101,18 @@ export function KernelManager({ cfg, currentKernelId, onSelectKernel, disabled }
                   </Button>
                 )}
               </div>
-              <div className="flex flex-col gap-2 max-h-[50vh] overflow-y-auto pr-1">
+              <div className="flex flex-col gap-2 overflow-y-auto pr-2 flex-1 min-h-0">
                 {kernels.map(k => {
                   const isCurrent = k.id === currentKernelId;
                   return (
                     <div key={k.id} className={`flex items-center justify-between p-3 rounded-lg border ${isCurrent ? 'border-primary bg-primary/5' : 'border-border bg-card/50'}`}>
                       <div className="flex flex-col min-w-0">
-                        <div className="flex items-center gap-2 mb-1">
-                          <span className="font-mono text-xs font-semibold text-foreground truncate max-w-[200px]" title={k.id}>
+                        <div className="flex items-center flex-wrap gap-2 mb-1">
+                          <span className="font-mono text-xs font-semibold text-foreground truncate max-w-[120px] sm:max-w-[200px]" title={k.id}>
                             {k.id.split("-")[0]}...
                           </span>
                           {isCurrent && (
-                            <span className="bg-primary/20 text-primary text-[9px] px-1.5 py-0.5 rounded uppercase font-bold tracking-wider">
+                            <span className="bg-primary/20 text-primary text-[9px] px-1.5 py-0.5 rounded uppercase font-bold tracking-wider shrink-0">
                               Actif
                             </span>
                           )}

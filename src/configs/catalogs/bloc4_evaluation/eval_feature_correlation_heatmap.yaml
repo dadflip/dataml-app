@@ -1,0 +1,74 @@
+id: "eval_feature_correlation_heatmap"
+name: "Eval Plot: Feature Correlation Heatmap"
+description: "Carte de chaleur de la corrélation (Pearson) entre les features du jeu de test."
+category: "Explainability & Feature Importance"
+tags: ["eval", "plot", "correlation", "heatmap", "seaborn"]
+applies_to: ["Classification", "Regression"]
+when_to_use: "Pour détecter la colinéarité entre les variables (ce qui peut fausser l'interprétation des importances)."
+pros:
+  - "Fondamental pour l'analyse des données."
+cons:
+  - "La matrice devient illisible au-delà de 30-50 features."
+code_template: |
+  import os
+  import numpy as np
+  import pandas as pd
+  import matplotlib.pyplot as plt
+  try:
+      import seaborn as sns
+  except ImportError:
+      sns = None
+
+  evaluation_metrics = {}
+
+  if 'X_test' in locals():
+      print("[EVAL] Génération du Feature Correlation Heatmap...")
+      try:
+          os.makedirs("outputs/evaluation", exist_ok=True)
+          
+          X_arr = np.array(X_test)
+          if len(X_arr.shape) > 2:
+              X_arr = X_arr.reshape(X_arr.shape[0], -1)
+              
+          # Limiter à 50 features max pour la lisibilité
+          if X_arr.shape[1] > 50:
+              print("[EVAL] Trop de features (>50), seules les 50 premières seront affichées.")
+              X_arr = X_arr[:, :50]
+              
+          if 'feature_names_out' in locals() and len(feature_names_out) >= X_arr.shape[1]:
+              cols = feature_names_out[:X_arr.shape[1]]
+          else:
+              cols = [f"F_{i}" for i in range(X_arr.shape[1])]
+              
+          df = pd.DataFrame(X_arr, columns=cols)
+          corr = df.corr()
+          
+          fig, ax = plt.subplots(figsize=(10, 8))
+          if sns is not None:
+              mask = np.triu(np.ones_like(corr, dtype=bool))
+              cmap = sns.diverging_palette(230, 20, as_cmap=True)
+              sns.heatmap(corr, mask=mask, cmap=cmap, vmax=1, vmin=-1, center=0,
+                          square=True, linewidths=.5, cbar_kws={"shrink": .5}, ax=ax)
+          else:
+              # Fallback matplotlib
+              cax = ax.matshow(corr, cmap='coolwarm', vmin=-1, vmax=1)
+              fig.colorbar(cax)
+              ax.set_xticks(np.arange(len(cols)))
+              ax.set_yticks(np.arange(len(cols)))
+              ax.set_xticklabels(cols, rotation=90)
+              ax.set_yticklabels(cols)
+              
+          ax.set_title('Feature Correlation Matrix')
+          plt.tight_layout()
+          
+          plot_path = "outputs/evaluation/feature_correlation_heatmap.png"
+          fig.savefig(plot_path, dpi=300)
+          plt.close(fig)
+          
+          evaluation_metrics["feature_correlation_plot"] = plot_path
+          print(f"[EVAL] Plot sauvegardé sous {plot_path}")
+      except Exception as e:
+          print(f"[EVAL ERREUR] Correlation Heatmap : {str(e)}")
+_metadata:
+  bloc: 4
+  section: "1_evaluation"

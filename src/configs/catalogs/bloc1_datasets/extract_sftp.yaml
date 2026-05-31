@@ -1,0 +1,57 @@
+id: "extract_sftp"
+name: "Extract: Serveur SFTP"
+description: "Télécharge un fichier de manière sécurisée via Paramiko."
+category: "1. Extract"
+tags: ["extract", "sftp", "ssh"]
+code_template: |
+  import paramiko
+  import os
+  import time
+
+  # [PARAM: HOST | string]
+  HOST = "sftp.example.com"
+  # [/PARAM]
+  
+  # [PARAM: USER | string]
+  USER = "username"
+  # [/PARAM]
+  
+  # [PARAM: PWD | string]
+  PWD = "password"
+  # [/PARAM]
+  
+  # [PARAM: REMOTE_PATH | string]
+  REMOTE_PATH = "/secure/data.csv"
+  # [/PARAM]
+  
+  # [PARAM: DEST_PATH | string]
+  DEST_PATH = "./data/raw/sftp_data.csv"
+  # [/PARAM]
+
+  print(f"[EXTRACT] Connexion SFTP à {HOST}...")
+  os.makedirs(os.path.dirname(DEST_PATH), exist_ok=True)
+
+  try:
+      start_time = time.time()
+      ssh = paramiko.SSHClient()
+      ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
+      ssh.connect(HOST, username=USER, password=PWD)
+      
+      sftp = ssh.open_sftp()
+      sftp.get(REMOTE_PATH, DEST_PATH)
+      sftp.close()
+      ssh.close()
+      
+      duration = time.time() - start_time
+      print(f"[EXTRACT] Succès SFTP en {duration:.2f}s.")
+  except Exception as e:
+      print(f"[ERREUR EXTRACT] Échec SFTP : {str(e)}")
+      raise e
+
+  df = None
+  target_name = None
+  task_type = "unknown"
+  meta = {"source": "sftp", "path": DEST_PATH}
+_metadata:
+  bloc: 1
+  section: "1_extract"

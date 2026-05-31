@@ -1,0 +1,70 @@
+id: "transform_train_test_split"
+name: "Transform: Train / Test Split & Compile"
+description: "Sépare le dataset et compile toutes les étapes de preprocessing précédentes dans un seul objet `preprocessor` exportable."
+category: "4.2 Split & Compile"
+tags: ["transform", "split", "tabular", "sklearn", "pipeline"]
+applies_to: ["Tabulaire"]
+when_to_use: "OBLIGATOIRE à la fin du preprocessing pour respecter le contrat (Sort X_train, X_test, etc et preprocessor)."
+pros:
+  - "Compile le Pipeline imblearn."
+  - "Génère les splits stratifiés."
+cons:
+  - "Doit impérativement être la dernière étape du Bloc 2."
+hyperparameters:
+  test_size: "Proportion du dataset de test (ex: 0.2)."
+  random_state: "Graine aléatoire pour la reproductibilité."
+  stratify: "True pour conserver la proportion des classes."
+code_template: |
+  import pandas as pd
+  from sklearn.model_selection import train_test_split
+  import warnings
+
+  try:
+      from imblearn.pipeline import Pipeline
+  except ImportError:
+      from sklearn.pipeline import Pipeline
+      warnings.warn("imbalanced-learn non installé. Fallback sur sklearn.pipeline (SMOTE ne fonctionnera pas au déploiement).")
+
+  # [PARAM: TEST_SIZE | number]
+  TEST_SIZE = 0.2
+  # [/PARAM]
+
+  # [PARAM: RANDOM_STATE | number]
+  RANDOM_STATE = 42
+  # [/PARAM]
+
+  # [PARAM: STRATIFY | boolean]
+  STRATIFY = True
+  # [/PARAM]
+
+  print("[TRANSFORM] Fin du Preprocessing : Compilation Pipeline et Train/Test Split...")
+
+  # 1. Compilation du preprocessor
+  if 'pipeline_steps' in locals() and len(pipeline_steps) > 0:
+      preprocessor = Pipeline(steps=list(pipeline_steps.values()))
+      print(f"[TRANSFORM] Pipeline compilé avec {len(pipeline_steps)} étapes exportables.")
+  else:
+      preprocessor = None
+      print("[TRANSFORM] Aucune étape de pipeline traçable n'a été ajoutée.")
+
+  # 2. Split
+  if 'df' in locals() and 'target_name' in locals() and target_name:
+      if target_name in df.columns:
+          X = df.drop(columns=[target_name])
+          y = df[target_name]
+          
+          strat = y if STRATIFY and df[target_name].nunique() < 20 else None
+          
+          X_train, X_test, y_train, y_test = train_test_split(
+              X, y, test_size=TEST_SIZE, random_state=RANDOM_STATE, stratify=strat
+          )
+          
+          feature_names_out = X_train.columns.tolist()
+          print(f"[TRANSFORM] Split réussi ! Train: {X_train.shape}, Test: {X_test.shape}")
+      else:
+          print(f"[ERREUR] Cible '{target_name}' introuvable.")
+  else:
+      print("[ERREUR] df ou target_name manquant.")
+_metadata:
+  bloc: 2
+  section: "4.9_split_pipeline"

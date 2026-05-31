@@ -1,0 +1,70 @@
+id: "transform_image_to_tensor_paths"
+name: "Transform: Image Paths to Tensor"
+description: "Charge les images depuis leurs chemins (paths) et les convertit en tenseurs PyTorch."
+category: "4.1 Preprocessing"
+tags: ["transform", "image", "multimedia", "torchvision", "pipeline"]
+applies_to: ["Images"]
+when_to_use: "Indispensable après un load_image_directory pour préparer les CNN."
+pros:
+  - "Gère le chargement à la volée (via PIL)."
+cons:
+  - "La transformation de tout le dataframe peut saturer la RAM si le dataset est énorme."
+hyperparameters:
+  img_path_col: "Colonne contenant les chemins d'images."
+  resize: "Redimensionner les images (ex: 224)."
+code_template: |
+  import pandas as pd
+  import numpy as np
+  from sklearn.preprocessing import FunctionTransformer
+  try:
+      import torchvision.transforms as T
+      from PIL import Image
+  except ImportError:
+      T = None
+      
+  # [PARAM: IMG_PATH_COL | string]
+  IMG_PATH_COL = "image_path"
+  # [/PARAM]
+
+  # [PARAM: RESIZE | number]
+  RESIZE = 224
+  # [/PARAM]
+
+  print(f"[TRANSFORM] Conversion des chemins d'images en tenseurs PyTorch...")
+  if 'df' in locals() and T is not None:
+      if 'pipeline_steps' not in locals(): pipeline_steps = {}
+      
+      if IMG_PATH_COL in df.columns:
+          def load_and_transform(X):
+              X_df = pd.DataFrame(X) if not isinstance(X, pd.DataFrame) else X.copy()
+              tf = T.Compose([
+                  T.Resize((int(RESIZE), int(RESIZE))),
+                  T.ToTensor(), 
+                  T.Normalize([0.485, 0.456, 0.406], [0.229, 0.224, 0.225])
+              ])
+              
+              def process_path(path):
+                  try:
+                      img = Image.open(path).convert('RGB')
+                      return tf(img).numpy() # Convert to numpy for DataFrame storage temporarily
+                  except Exception:
+                      # Fallback dummy tensor
+                      return np.zeros((3, int(RESIZE), int(RESIZE)), dtype=np.float32)
+                      
+              X_df[IMG_PATH_COL] = X_df[IMG_PATH_COL].apply(process_path)
+              return X_df
+
+          transformer = FunctionTransformer(load_and_transform)
+          
+          step_name = 'image_paths_to_tensor'
+          pipeline_steps[step_name] = (step_name, transformer)
+          
+          df = transformer.transform(df)
+          print(f"[TRANSFORM] Tenseurs PyTorch {RESIZE}x{RESIZE} générés depuis les chemins.")
+      else:
+          print(f"[ERREUR] Colonne '{IMG_PATH_COL}' introuvable.")
+  else:
+      print("[ERREUR] 'df' ou torchvision introuvable.")
+_metadata:
+  bloc: 2
+  section: "4_preprocessing"

@@ -1,0 +1,47 @@
+id: "model_linear_regression"
+name: "Model: Linear Regression"
+description: "Régression linéaire classique par les moindres carrés ordinaires (OLS)."
+category: "Modèles Linéaires"
+tags: ["model", "regression", "tabular", "sklearn", "linear"]
+applies_to: ["Tabulaire"]
+when_to_use: "Modèle de référence basique pour prédire une valeur continue. Nécessite une relation linéaire entre X et y."
+pros:
+  - "Très rapide, parfaitement interprétable."
+cons:
+  - "Très sensible aux outliers et à la multicollinéarité."
+hyperparameters: {}
+code_template: |
+  import pandas as pd
+  import numpy as np
+  from sklearn.linear_model import LinearRegression
+
+  print(f"[MODEL] Entraînement Linear Regression...")
+  if 'X_train' in locals() and 'y_train' in locals() and 'X_test' in locals():
+      model = LinearRegression()
+      model.fit(X_train, y_train)
+      
+      y_pred = model.predict(X_test)
+      y_proba = None # Invalide en régression
+      
+      feature_importances = None
+      if 'feature_names_out' in locals():
+          if len(model.coef_) == len(feature_names_out):
+              feature_importances = pd.Series(np.abs(model.coef_), index=feature_names_out)
+              
+      if 'preprocessor' in locals() and preprocessor is not None:
+          try: from imblearn.pipeline import Pipeline
+          except: from sklearn.pipeline import Pipeline
+          full_pipeline = Pipeline(steps=preprocessor.steps + [('model', model)])
+      else:
+          try: from imblearn.pipeline import Pipeline
+          except: from sklearn.pipeline import Pipeline
+          full_pipeline = Pipeline(steps=[('model', model)])
+          
+      training_history = {"status": "success", "fitted_on": len(X_train)}
+      task_type = "regression"
+      print("[MODEL] Modèle entraîné et Full Pipeline compilé avec succès.")
+  else:
+      print("[ERREUR] Données d'entraînement introuvables.")
+_metadata:
+  bloc: 3
+  section: "2_regression_tabulaire"

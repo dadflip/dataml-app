@@ -1,0 +1,29 @@
+id: "eda_text_sentiment"
+name: "EDA: Distribution des Sentiments"
+description: "Analyse la polarité des textes via TextBlob."
+category: "3. Exploratory Data Analysis"
+tags: ["eda", "text", "nlp", "sentiment"]
+code_template: |
+  import pandas as pd
+  import matplotlib.pyplot as plt
+  import seaborn as sns
+  from textblob import TextBlob
+
+  # [PARAM: TEXT_COL | string]
+  TEXT_COL = "text"
+  # [/PARAM]
+
+  if TEXT_COL in df.columns:
+      print("[EDA] Calcul des scores de sentiment en cours...")
+      polarities = df[TEXT_COL].dropna().astype(str).apply(lambda x: TextBlob(x).sentiment.polarity)
+      
+      plt.figure(figsize=(8, 5))
+      sns.histplot(polarities, bins=30, kde=True, color='teal')
+      plt.title(f"Distribution de Polarité des Sentiments - {TEXT_COL}")
+      plt.xlabel("Polarité (-1 = Négatif, 1 = Positif)")
+      plt.show()
+  else:
+      print(f"[EDA] Colonne {TEXT_COL} introuvable.")
+_metadata:
+  bloc: 1
+  section: "3_eda"

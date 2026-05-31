@@ -1,0 +1,29 @@
+id: "eda_missing_values"
+name: "EDA: Valeurs Manquantes"
+description: "Calcule le pourcentage de valeurs manquantes par colonne et affiche une heatmap si possible."
+category: "3. Exploratory Data Analysis"
+tags: ["eda", "missing", "tabular", "seaborn"]
+code_template: |
+  import pandas as pd
+  import matplotlib.pyplot as plt
+  import seaborn as sns
+
+  missing = df.isnull().sum()
+  missing_pct = (missing / len(df)) * 100
+  missing_df = pd.DataFrame({'Manquants': missing, 'Pourcentage': missing_pct}).sort_values('Pourcentage', ascending=False)
+  missing_df = missing_df[missing_df['Manquants'] > 0]
+  
+  print("[EDA] === VALEURS MANQUANTES ===")
+  if len(missing_df) == 0:
+      print("Aucune valeur manquante détectée ! 🎉")
+  else:
+      display(missing_df)
+      
+      # Heatmap
+      plt.figure(figsize=(10, 6))
+      sns.heatmap(df.isnull(), cbar=False, cmap='viridis')
+      plt.title("Heatmap des Valeurs Manquantes")
+      plt.show()
+_metadata:
+  bloc: 1
+  section: "3_eda"

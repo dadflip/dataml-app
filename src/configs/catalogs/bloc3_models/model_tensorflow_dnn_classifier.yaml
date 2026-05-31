@@ -1,0 +1,83 @@
+id: "model_tensorflow_dnn_classifier"
+name: "Model: TensorFlow/Keras DNN (Classification)"
+description: "Réseau de neurones profond utilisant l'API Keras de TensorFlow."
+category: "Réseaux de Neurones"
+tags: ["model", "classification", "tabular", "tensorflow", "keras", "dnn", "deep-learning"]
+applies_to: ["Tabulaire"]
+when_to_use: "Si vous préférez l'écosystème TensorFlow/Keras à PyTorch pour construire des réseaux fully-connected."
+pros:
+  - "Très facile à construire via l'API Sequential."
+  - "Écosystème de déploiement (TF Serving, TFLite)."
+cons:
+  - "Moins 'Pythonic' que PyTorch. Peut avoir des conflits de versions GPU."
+hyperparameters:
+  hidden_layers: "Tailles de couches (ex: '128, 64')."
+  epochs: "Nombre d'époques (ex: 20)."
+code_template: |
+  import pandas as pd
+  import numpy as np
+  try:
+      import tensorflow as tf
+      from tensorflow import keras
+      from tensorflow.keras import layers
+  except ImportError:
+      tf = None
+      print("[ERREUR] tensorflow n'est pas installé. Lancez : !pip install tensorflow")
+
+  # [PARAM: HIDDEN_LAYERS | string]
+  HIDDEN_LAYERS = "128, 64"
+  # [/PARAM]
+
+  # [PARAM: EPOCHS | number]
+  EPOCHS = 20
+  # [/PARAM]
+
+  print(f"[MODEL] Entraînement TensorFlow DNN Classifier (layers={HIDDEN_LAYERS})...")
+  if 'X_train' in locals() and 'y_train' in locals() and 'X_test' in locals() and tf is not None:
+      X_tr_np = np.array(X_train)
+      X_te_np = np.array(X_test)
+      
+      classes = np.unique(y_train)
+      num_classes = len(classes)
+      label2id = {c: i for i, c in enumerate(classes)}
+      id2label = {i: c for i, c in enumerate(classes)}
+      y_tr_enc = np.array([label2id[y] for y in y_train])
+      
+      h_sizes = [int(x.strip()) for x in HIDDEN_LAYERS.split(',') if x.strip()]
+      
+      model = keras.Sequential()
+      model.add(keras.Input(shape=(X_tr_np.shape[1],)))
+      
+      for h in h_sizes:
+          model.add(layers.Dense(h, activation='relu'))
+          model.add(layers.BatchNormalization())
+          model.add(layers.Dropout(0.2))
+          
+      model.add(layers.Dense(num_classes, activation='softmax'))
+      
+      model.compile(optimizer='adam', loss='sparse_categorical_crossentropy', metrics=['accuracy'])
+      
+      history = model.fit(X_tr_np, y_tr_enc, epochs=int(EPOCHS), batch_size=64, verbose=0, validation_split=0.1)
+      
+      logits = model.predict(X_te_np)
+      preds_idx = np.argmax(logits, axis=1)
+      y_pred = np.array([id2label[i] for i in preds_idx])
+      y_proba = logits
+      
+      feature_importances = None
+      
+      if 'preprocessor' in locals() and preprocessor is not None:
+          try: from imblearn.pipeline import Pipeline
+          except: from sklearn.pipeline import Pipeline
+          full_pipeline = Pipeline(steps=preprocessor.steps + [('model', model)])
+      else:
+          full_pipeline = model
+          
+      training_history = {"status": "success", "final_val_acc": float(history.history['val_accuracy'][-1]) if 'val_accuracy' in history.history else None}
+      task_type = "classification"
+      print("[MODEL] TensorFlow DNN entraîné avec succès.")
+  else:
+      print("[ERREUR] Données ou module tensorflow introuvables.")
+_metadata:
+  bloc: 3
+  section: "5_clustering_automl_and_nn"

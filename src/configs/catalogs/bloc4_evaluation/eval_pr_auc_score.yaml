@@ -1,0 +1,41 @@
+id: "eval_pr_auc_score"
+name: "Eval: Precision-Recall AUC Score"
+description: "Aire sous la courbe Precision-Recall (Area Under PR Curve). Contrairement au ROC AUC, c'est la métrique recommandée pour les jeux de données déséquilibrés."
+category: "Classification Metrics"
+tags: ["eval", "metric", "classification", "binary", "pr-auc", "imbalanced"]
+applies_to: ["Classification Binaire"]
+when_to_use: "Lorsque le jeu de données est très déséquilibré (ex: détection de fraude) et que le ROC AUC est trompeur."
+pros:
+  - "Très sensible aux performances sur la classe minoritaire."
+cons:
+  - "Binaire uniquement."
+code_template: |
+  import numpy as np
+  from sklearn.metrics import precision_recall_curve, auc
+
+  evaluation_metrics = {}
+
+  if task_type == "classification" and 'y_test' in locals() and 'y_proba' in locals() and y_proba is not None:
+      classes = np.unique(y_test)
+      if len(classes) == 2:
+          try:
+              y_true = (y_test == classes[1]).astype(int)
+              probas = y_proba[:, 1]
+              
+              precisions, recalls, thresholds = precision_recall_curve(y_true, probas)
+              pr_auc = auc(recalls, precisions)
+              
+              # Baseline (pourcentage de classe positive)
+              baseline = np.sum(y_true) / len(y_true)
+              
+              evaluation_metrics["pr_auc"] = float(pr_auc)
+              evaluation_metrics["pr_auc_baseline"] = float(baseline)
+              
+              print(f"[EVAL] PR AUC Score: {pr_auc:.4f} (Baseline: {baseline:.4f})")
+          except Exception as e:
+              print(f"[EVAL ERREUR] PR AUC : {str(e)}")
+      else:
+          print("[EVAL] PR AUC uniquement pour classification binaire.")
+_metadata:
+  bloc: 4
+  section: "1_evaluation"

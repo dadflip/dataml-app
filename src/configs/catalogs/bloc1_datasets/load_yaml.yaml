@@ -1,0 +1,40 @@
+id: "load_yaml"
+name: "Load: Configuration YAML"
+description: "Parse un fichier de configuration YAML en dictionnaire Python."
+category: "2. Load"
+tags: ["load", "yaml", "config", "dict"]
+code_template: |
+  import time
+  import os
+
+  # [PARAM: FILE_PATH | file]
+  FILE_PATH = "./data/raw/config.yaml"
+  # [/PARAM]
+
+  print(f"[LOAD] Lecture du fichier YAML : {FILE_PATH}...")
+  if not os.path.exists(FILE_PATH):
+      raise FileNotFoundError(f"[ERREUR LOAD] Fichier YAML introuvable : {FILE_PATH}")
+
+  try:
+      start_time = time.time()
+      import yaml
+      
+      with open(FILE_PATH, 'r', encoding='utf-8') as f:
+          data = yaml.safe_load(f)
+          
+      duration = time.time() - start_time
+      print(f"[LOAD] Succès YAML. Dictionnaire chargé en {duration:.2f}s.")
+  except ImportError:
+      print("[ERREUR LOAD] Le module 'PyYAML' est requis.")
+      raise
+  except Exception as e:
+      print(f"[ERREUR LOAD] Erreur de parsing YAML : {str(e)}")
+      raise e
+
+  df = None
+  target_name = None
+  task_type = "unknown"
+  meta = {"format": "yaml", "keys": len(data) if isinstance(data, dict) else 0}
+_metadata:
+  bloc: 1
+  section: "2_load"

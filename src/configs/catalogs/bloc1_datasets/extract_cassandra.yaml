@@ -1,0 +1,58 @@
+id: "extract_cassandra"
+name: "Extract: Apache Cassandra"
+description: "Exécute une requête CQL sur un cluster Cassandra."
+category: "1. Extract"
+tags: ["extract", "cassandra", "cql", "nosql"]
+code_template: |
+  from cassandra.cluster import Cluster
+  import pandas as pd
+  import os
+  import time
+
+  # [PARAM: HOST | string]
+  HOST = "127.0.0.1"
+  # [/PARAM]
+  
+  # [PARAM: KEYSPACE | string]
+  KEYSPACE = "my_keyspace"
+  # [/PARAM]
+  
+  # [PARAM: CQL_QUERY | string]
+  CQL_QUERY = "SELECT * FROM my_table LIMIT 1000"
+  # [/PARAM]
+  
+  # [PARAM: DEST_PATH | string]
+  DEST_PATH = "./data/raw/cassandra_export.csv"
+  # [/PARAM]
+
+  print(f"[EXTRACT] Connexion au cluster Cassandra ({HOST})...")
+  os.makedirs(os.path.dirname(DEST_PATH), exist_ok=True)
+
+  try:
+      start_time = time.time()
+      cluster = Cluster([HOST])
+      session = cluster.connect(KEYSPACE)
+      
+      # Récupération sous forme de dictionnaire dict_factory pour pandas
+      from cassandra.query import dict_factory
+      session.row_factory = dict_factory
+      
+      rows = session.execute(CQL_QUERY)
+      df_temp = pd.DataFrame(list(rows))
+      
+      df_temp.to_csv(DEST_PATH, index=False)
+      cluster.shutdown()
+      
+      duration = time.time() - start_time
+      print(f"[EXTRACT] Succès Cassandra. {df_temp.shape[0]} lignes exportées en {duration:.2f}s.")
+  except Exception as e:
+      print(f"[ERREUR EXTRACT] Échec Cassandra : {str(e)}")
+      raise e
+
+  df = None
+  target_name = None
+  task_type = "unknown"
+  meta = {"source": "cassandra", "path": DEST_PATH}
+_metadata:
+  bloc: 1
+  section: "1_extract"

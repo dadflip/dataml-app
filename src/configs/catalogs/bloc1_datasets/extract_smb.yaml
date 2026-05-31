@@ -1,0 +1,38 @@
+id: "extract_smb"
+name: "Extract: Partage Windows (SMB)"
+description: "Télécharge un fichier depuis un partage réseau Windows."
+category: "1. Extract"
+tags: ["extract", "smb", "windows", "network"]
+code_template: |
+  import shutil
+  import os
+  import time
+
+  # [PARAM: SMB_UNC_PATH | string]
+  SMB_UNC_PATH = r"\\\\SERVER\\Share\\data.csv"
+  # [/PARAM]
+  
+  # [PARAM: DEST_PATH | string]
+  DEST_PATH = "./data/raw/smb_data.csv"
+  # [/PARAM]
+
+  print(f"[EXTRACT] Copie depuis le partage SMB : {SMB_UNC_PATH}...")
+  os.makedirs(os.path.dirname(DEST_PATH), exist_ok=True)
+
+  try:
+      start_time = time.time()
+      shutil.copy2(SMB_UNC_PATH, DEST_PATH)
+      
+      duration = time.time() - start_time
+      print(f"[EXTRACT] Succès SMB. Fichier copié en {duration:.2f}s.")
+  except Exception as e:
+      print(f"[ERREUR EXTRACT] Erreur de réseau Windows (Permissions SMB) : {str(e)}")
+      raise e
+
+  df = None
+  target_name = None
+  task_type = "unknown"
+  meta = {"source": "smb", "path": DEST_PATH}
+_metadata:
+  bloc: 1
+  section: "1_extract"

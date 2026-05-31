@@ -1,0 +1,21 @@
+pipeline_contract:
+  bloc: 3
+  role: "Modèles"
+  input_variables:
+    X_train: "pd.DataFrame"
+    X_test: "pd.DataFrame"
+    y_train: "pd.Series"
+    y_test: "pd.Series"
+    preprocessor: "sklearn.compose.ColumnTransformer | sklearn.pipeline.Pipeline | None"
+    feature_names_out: "list[str]"
+    task_type: "str"
+    meta: "dict"
+  output_variables:
+    full_pipeline: "sklearn.pipeline.Pipeline"
+    model: "Estimator"
+    y_pred: "np.ndarray"
+    y_proba: "np.ndarray | None"
+    feature_importances: "pd.Series | None"
+    training_history: "dict"
+    task_type: "str"
+    meta: "dict"

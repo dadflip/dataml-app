@@ -1,0 +1,41 @@
+id: "load_huggingface"
+name: "Load: HuggingFace Dataset"
+description: "Charge directement un dataset depuis le hub HuggingFace (datasets)."
+category: "2. Load"
+tags: ["load", "huggingface", "hub", "nlp"]
+code_template: |
+  import time
+
+  # [PARAM: DATASET_NAME | string]
+  DATASET_NAME = "imdb"
+  # [/PARAM]
+  
+  # [PARAM: SPLIT | string]
+  SPLIT = "train"
+  # [/PARAM]
+
+  print(f"[LOAD] Chargement du dataset HuggingFace '{DATASET_NAME}' (split: {SPLIT})...")
+
+  try:
+      start_time = time.time()
+      from datasets import load_dataset
+      
+      dataset = load_dataset(DATASET_NAME, split=SPLIT)
+      # Conversion directe en DataFrame Pandas
+      df = dataset.to_pandas()
+      
+      duration = time.time() - start_time
+      print(f"[LOAD] Succès HuggingFace. {df.shape[0]} lignes chargées en {duration:.2f}s.")
+  except ImportError:
+      print("[ERREUR LOAD] Le module 'datasets' est requis (pip install datasets).")
+      raise
+  except Exception as e:
+      print(f"[ERREUR LOAD] Erreur HuggingFace : {str(e)}")
+      raise e
+
+  target_name = "label" if "label" in df.columns else None
+  task_type = "nlp_classification" if target_name else "unknown"
+  meta = {"format": "huggingface", "dataset": DATASET_NAME, "shape": df.shape}
+_metadata:
+  bloc: 1
+  section: "2_load"

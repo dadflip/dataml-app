@@ -1,0 +1,44 @@
+id: "eval_mase_score"
+name: "Eval Metric: MASE (Mean Absolute Scaled Error)"
+description: "Mesure l'erreur relative par rapport à un modèle 'Naif' (qui prédirait simplement la valeur précédente)."
+category: "Time Series Metrics"
+tags: ["eval", "metric", "timeseries", "forecasting", "mase"]
+applies_to: ["Forecasting"]
+when_to_use: "Le standard absolu en Forecasting académique (ex: compétitions M4, M5)."
+pros:
+  - "Ne dépend pas de l'échelle des données, MASE < 1 signifie que vous êtes meilleur qu'un modèle stupide."
+cons:
+  - "Nécessite de calculer l'erreur du modèle naïf sur l'historique (ici on l'approxime sur le test set)."
+code_template: |
+  import numpy as np
+
+  evaluation_metrics = {}
+
+  if task_type in ["forecasting", "regression"] and 'y_test' in locals() and 'y_pred' in locals():
+      print("[EVAL] Calcul du MASE...")
+      try:
+          actual = np.array(y_test)
+          forecast = np.array(y_pred)
+          
+          # Erreur absolue moyenne du modèle
+          mae_model = np.mean(np.abs(actual - forecast))
+          
+          # Erreur absolue moyenne du modèle NAIF (y_t = y_{t-1})
+          # Calculée sur la série temporelle
+          if len(actual) > 1:
+              mae_naive = np.mean(np.abs(np.diff(actual)))
+              
+              if mae_naive > 0:
+                  mase = mae_model / mae_naive
+                  evaluation_metrics["mase"] = float(mase)
+                  evaluation_metrics["is_better_than_naive"] = bool(mase < 1.0)
+                  print(f"[EVAL] MASE: {mase:.3f} (Meilleur que Naïf ? {'Oui' if mase < 1.0 else 'Non'})")
+              else:
+                  print("[EVAL] MASE non calculable (Série constante).")
+          else:
+              print("[EVAL] Pas assez de points pour calculer le MASE.")
+      except Exception as e:
+          print(f"[EVAL ERREUR] MASE : {str(e)}")
+_metadata:
+  bloc: 4
+  section: "1_evaluation"

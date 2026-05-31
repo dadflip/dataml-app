@@ -1,0 +1,51 @@
+id: "transform_audio_melspectrogram"
+name: "Transform: Audio MelSpectrogram"
+description: "Waveform vers MelSpectrogram."
+category: "4.1 Preprocessing"
+tags: ["transform", "audio", "multimedia", "torchaudio", "pipeline"]
+applies_to: ["Audio"]
+when_to_use: "Pour CNN audio."
+pros:
+  - "Très classique."
+cons:
+  - "Perte de phase."
+hyperparameters:
+  audio_col: "Colonne"
+code_template: |
+  import pandas as pd
+  import torch
+  from sklearn.preprocessing import FunctionTransformer
+  try:
+      import torchaudio.transforms as AT
+  except ImportError:
+      AT = None
+
+  # [PARAM: AUDIO_COL | string]
+  AUDIO_COL = "waveform"
+  # [/PARAM]
+
+  print(f"[TRANSFORM] MelSpectrogram sur '{AUDIO_COL}'...")
+  if 'df' in locals():
+      if 'pipeline_steps' not in locals(): pipeline_steps = {}
+      
+      if AUDIO_COL in df.columns and AT is not None:
+          def mel_func(X):
+              X_df = pd.DataFrame(X) if not isinstance(X, pd.DataFrame) else X
+              tf = AT.MelSpectrogram(sample_rate=16000, n_mels=128)
+              X_df[AUDIO_COL] = X_df[AUDIO_COL].apply(lambda x: tf(x) if isinstance(x, torch.Tensor) else x)
+              return X_df
+
+          transformer = FunctionTransformer(mel_func)
+          
+          step_name = 'audio_mel'
+          pipeline_steps[step_name] = (step_name, transformer)
+          
+          df = transformer.transform(df)
+          print("[TRANSFORM] MelSpectrogram appliqué.")
+      else:
+          print("[ERREUR] Colonne introuvable ou torchaudio manquant.")
+  else:
+      print("[ERREUR] 'df' introuvable.")
+_metadata:
+  bloc: 2
+  section: "4_preprocessing"

@@ -1,0 +1,69 @@
+id: "transform_text_tokenizer_padder"
+name: "Transform: Tokenizer & Padder (RNN/Transformer)"
+description: "Tokenise et padde du texte brut pour les réseaux de neurones (Séquences de longueur fixe)."
+category: "4.1 Preprocessing"
+tags: ["transform", "text", "nlp", "keras", "pad"]
+applies_to: ["Texte"]
+when_to_use: "Étape indispensable avant un LSTM, CNN 1D ou Transformer."
+pros:
+  - "Standardise la longueur des séquences."
+cons:
+  - "Nécessite TensorFlow/Keras pour le tokenizer intégré (ou équivalent PyTorch)."
+hyperparameters:
+  text_col: "Colonne texte"
+  max_words: "Taille du vocabulaire (ex: 10000)."
+  max_len: "Longueur maximale de la séquence (ex: 100)."
+code_template: |
+  import pandas as pd
+  import numpy as np
+  from sklearn.preprocessing import FunctionTransformer
+  try:
+      from keras.preprocessing.text import Tokenizer
+      from keras.preprocessing.sequence import pad_sequences
+  except ImportError:
+      Tokenizer = None
+
+  # [PARAM: TEXT_COL | string]
+  TEXT_COL = "text_content"
+  # [/PARAM]
+
+  # [PARAM: MAX_WORDS | number]
+  MAX_WORDS = 10000
+  # [/PARAM]
+
+  # [PARAM: MAX_LEN | number]
+  MAX_LEN = 100
+  # [/PARAM]
+
+  print(f"[TRANSFORM] Tokenization et Padding du texte...")
+  if 'df' in locals() and Tokenizer is not None:
+      if 'pipeline_steps' not in locals(): pipeline_steps = {}
+      
+      if TEXT_COL in df.columns:
+          # On entraîne le tokenizer sur les données actuelles
+          tokenizer = Tokenizer(num_words=int(MAX_WORDS))
+          tokenizer.fit_on_texts(df[TEXT_COL].astype(str))
+          
+          def tokenize_and_pad(X):
+              X_df = pd.DataFrame(X) if not isinstance(X, pd.DataFrame) else X.copy()
+              sequences = tokenizer.texts_to_sequences(X_df[TEXT_COL].astype(str))
+              padded = pad_sequences(sequences, maxlen=int(MAX_LEN), padding='post')
+              
+              # Replace the text column with list of integers
+              X_df[TEXT_COL] = list(padded)
+              return X_df
+
+          transformer = FunctionTransformer(tokenize_and_pad)
+          
+          step_name = 'tokenize_and_pad'
+          pipeline_steps[step_name] = (step_name, transformer)
+          
+          df = transformer.transform(df)
+          print(f"[TRANSFORM] Texte tokenizé et paddé (MaxLen={MAX_LEN}).")
+      else:
+          print(f"[ERREUR] Colonne '{TEXT_COL}' introuvable.")
+  else:
+      print("[ERREUR] 'df' introuvable ou Keras manquant.")
+_metadata:
+  bloc: 2
+  section: "4_preprocessing"

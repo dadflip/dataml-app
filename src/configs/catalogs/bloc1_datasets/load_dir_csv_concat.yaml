@@ -1,0 +1,49 @@
+id: "load_dir_csv_concat"
+name: "Load: Dossier de Fichiers CSV"
+description: "Parcourt un dossier et concatène tous les fichiers CSV trouvés en un seul DataFrame."
+category: "2. Load"
+tags: ["load", "directory", "csv", "concat"]
+code_template: |
+  import os
+  import glob
+  import pandas as pd
+  import time
+
+  # [PARAM: DIRECTORY_PATH | dir]
+  DIRECTORY_PATH = "./data/extracted/csv_parts"
+  # [/PARAM]
+  
+  # [PARAM: SEP | string]
+  SEP = ","
+  # [/PARAM]
+
+  print(f"[LOAD] Concaténation des CSV dans {DIRECTORY_PATH}...")
+  if not os.path.exists(DIRECTORY_PATH):
+      raise FileNotFoundError(f"[ERREUR LOAD] Le dossier n'existe pas : {DIRECTORY_PATH}")
+
+  try:
+      start_time = time.time()
+      
+      csv_files = glob.glob(os.path.join(DIRECTORY_PATH, "*.csv"))
+      if not csv_files:
+          raise ValueError(f"Aucun fichier CSV trouvé dans {DIRECTORY_PATH}")
+          
+      dfs = []
+      for file in csv_files:
+          dfs.append(pd.read_csv(file, sep=SEP, low_memory=False))
+          
+      # Concaténation verticale
+      df = pd.concat(dfs, ignore_index=True)
+      
+      duration = time.time() - start_time
+      print(f"[LOAD] Succès. {len(csv_files)} fichiers fusionnés ({df.shape[0]} lignes) en {duration:.2f}s.")
+  except Exception as e:
+      print(f"[ERREUR LOAD] Erreur lors de la fusion des CSV : {str(e)}")
+      raise e
+
+  target_name = None
+  task_type = "unknown"
+  meta = {"format": "directory_csv", "files_merged": len(csv_files), "shape": df.shape}
+_metadata:
+  bloc: 1
+  section: "2_load"

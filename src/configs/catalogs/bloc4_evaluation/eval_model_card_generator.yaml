@@ -1,0 +1,63 @@
+id: "eval_model_card_generator"
+name: "Eval Report: Model Card Generator (Markdown)"
+description: "Génère automatiquement une 'Model Card' (fiche signalétique du modèle) en format Markdown consolidant les métriques principales."
+category: "Reporting"
+tags: ["eval", "report", "model-card", "markdown"]
+applies_to: ["Classification", "Regression"]
+when_to_use: "A la fin d'un pipeline pour documenter le modèle pour la gouvernance et les audits."
+pros:
+  - "Standard de l'industrie (introduit par Google)."
+cons:
+  - "Ne remplace pas l'analyse humaine du contexte."
+code_template: |
+  import os
+  from datetime import datetime
+
+  evaluation_metrics = {}
+
+  if 'full_pipeline' in locals() and 'task_type' in locals():
+      print("[EVAL] Génération de la Model Card...")
+      try:
+          os.makedirs("outputs/evaluation", exist_ok=True)
+          
+          # Extraction d'infos du pipeline
+          model_name = "Unknown"
+          if hasattr(full_pipeline, 'steps'):
+              model_name = full_pipeline.steps[-1][1].__class__.__name__
+          else:
+              model_name = full_pipeline.__class__.__name__
+              
+          date_str = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+          
+          md_content = f"""# Model Card: {model_name}
+  
+  ## Model Details
+  * **Architecture:** {model_name}
+  * **Task Type:** {task_type.capitalize()}
+  * **Date Generated:** {date_str}
+  
+  ## Intended Use
+  * Primary use cases: [To be filled by human]
+  * Out-of-scope uses: [To be filled by human]
+  
+  ## Data Processing
+  * The model was trained using the `dataml-app` pipeline.
+  
+  ## Evaluation Data
+  * Evaluation was performed on the test split.
+  
+  ## Quantitative Analyses
+  * Please refer to the companion evaluation plots and metrics generated alongside this model card.
+  """
+          
+          card_path = "outputs/evaluation/model_card.md"
+          with open(card_path, "w", encoding="utf-8") as f:
+              f.write(md_content)
+              
+          evaluation_metrics["model_card_path"] = card_path
+          print(f"[EVAL] Model Card sauvegardée sous {card_path}")
+      except Exception as e:
+          print(f"[EVAL ERREUR] Model Card : {str(e)}")
+_metadata:
+  bloc: 4
+  section: "1_evaluation"

@@ -1,0 +1,32 @@
+id: "eda_image_grid"
+name: "EDA: Grille d'Images"
+description: "Affiche un batch d'images en grille."
+category: "3. Exploratory Data Analysis"
+tags: ["eda", "images", "multimedia"]
+code_template: |
+  import matplotlib.pyplot as plt
+  import torchvision.transforms as T
+  from torchvision.utils import make_grid
+  import torch
+
+  # [PARAM: NUM_IMAGES | number]
+  NUM_IMAGES = 16
+  # [/PARAM]
+
+  if 'dataset' in locals():
+      imgs = [dataset[i][0] for i in range(min(NUM_IMAGES, len(dataset)))]
+  else:
+      imgs = []
+      print("[EDA] Dataset non trouvé dans l'environnement local.")
+
+  if len(imgs) > 0:
+      tensors = [T.ToTensor()(img) if not isinstance(img, torch.Tensor) else img for img in imgs]
+      grid = make_grid(tensors, nrow=int(len(tensors)**0.5))
+      plt.figure(figsize=(10, 10))
+      plt.imshow(grid.permute(1, 2, 0).numpy())
+      plt.axis('off')
+      plt.title(f"Aperçu de {len(imgs)} images")
+      plt.show()
+_metadata:
+  bloc: 1
+  section: "3_eda"

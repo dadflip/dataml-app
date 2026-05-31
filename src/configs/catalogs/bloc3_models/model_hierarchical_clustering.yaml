@@ -1,0 +1,56 @@
+id: "model_hierarchical_clustering"
+name: "Model: Agglomerative Hierarchical Clustering"
+description: "Clustering hiérarchique ascendant. Construit un arbre (dendrogramme) de clusters."
+category: "Clustering (Non-Supervisé)"
+tags: ["model", "clustering", "tabular", "sklearn", "hierarchical"]
+applies_to: ["Tabulaire"]
+when_to_use: "Pour visualiser la hiérarchie des groupes (Dendrogramme) sur des datasets petits à moyens."
+pros:
+  - "Très interprétable."
+cons:
+  - "Très lent en O(N^3), inadapté au Big Data."
+hyperparameters:
+  n_clusters: "Nombre de clusters finaux (ex: 3)."
+  linkage: "Critère de liaison ('ward', 'complete', 'average', 'single')."
+code_template: |
+  import pandas as pd
+  import numpy as np
+  from sklearn.cluster import AgglomerativeClustering
+
+  # [PARAM: N_CLUSTERS | number]
+  N_CLUSTERS = 3
+  # [/PARAM]
+
+  # [PARAM: LINKAGE | string]
+  LINKAGE = "ward"
+  # [/PARAM]
+
+  print(f"[MODEL] Agglomerative Clustering (k={N_CLUSTERS}, linkage={LINKAGE})...")
+  if 'X_test' in locals():
+      # Comme DBSCAN, ne possède pas de méthode predict
+      model = AgglomerativeClustering(n_clusters=int(N_CLUSTERS), linkage=LINKAGE)
+      
+      y_pred = model.fit_predict(X_test)
+      y_proba = None
+      feature_importances = None
+      
+      from sklearn.preprocessing import FunctionTransformer
+      wrapped_model = FunctionTransformer(lambda X: model.fit_predict(X))
+      
+      if 'preprocessor' in locals() and preprocessor is not None:
+          try: from imblearn.pipeline import Pipeline
+          except: from sklearn.pipeline import Pipeline
+          full_pipeline = Pipeline(steps=preprocessor.steps + [('model', wrapped_model)])
+      else:
+          try: from imblearn.pipeline import Pipeline
+          except: from sklearn.pipeline import Pipeline
+          full_pipeline = Pipeline(steps=[('model', wrapped_model)])
+          
+      training_history = {"status": "success"}
+      task_type = "clustering"
+      print("[MODEL] Clustering hiérarchique terminé.")
+  else:
+      print("[ERREUR] Données de test introuvables.")
+_metadata:
+  bloc: 3
+  section: "5_clustering_automl_and_nn"

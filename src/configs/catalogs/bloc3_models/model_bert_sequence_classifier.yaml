@@ -1,0 +1,101 @@
+id: "model_bert_sequence_classifier"
+name: "Model: BERT Sequence Classifier (Fine-Tuning)"
+description: "Fine-tune un modèle BERT de HuggingFace via l'API Trainer."
+category: "Modèles NLP (Entraînés)"
+tags: ["model", "nlp", "classification", "transformers", "huggingface", "bert", "deep-learning"]
+applies_to: ["Texte"]
+when_to_use: "Quand vous avez au moins quelques centaines/milliers d'exemples de texte labellisés et vous voulez la précision SOTA (State Of The Art)."
+pros:
+  - "Précision exceptionnelle sur du texte complexe."
+cons:
+  - "Extrêmement lent sur CPU. GPU indispensable."
+hyperparameters:
+  epochs: "Nombre d'époques (ex: 3)."
+  learning_rate: "Taux d'apprentissage (ex: 2e-5)."
+code_template: |
+  import pandas as pd
+  import numpy as np
+  import torch
+  try:
+      from transformers import AutoTokenizer, AutoModelForSequenceClassification, Trainer, TrainingArguments
+      from datasets import Dataset
+  except ImportError:
+      AutoTokenizer = None
+      print("[ERREUR] transformers ou datasets n'est pas installé. Lancez : !pip install transformers datasets")
+
+  # [PARAM: EPOCHS | number]
+  EPOCHS = 3
+  # [/PARAM]
+
+  # [PARAM: LEARNING_RATE | number]
+  LEARNING_RATE = 2e-5
+  # [/PARAM]
+
+  print(f"[MODEL] Fine-tuning BERT (epochs={EPOCHS}, lr={LEARNING_RATE})...")
+  if 'X_train' in locals() and 'y_train' in locals() and 'X_test' in locals() and AutoTokenizer is not None:
+      # Conversion y_train en numérique strict (label encoding si besoin)
+      classes = np.unique(y_train)
+      label2id = {c: i for i, c in enumerate(classes)}
+      id2label = {i: c for i, c in enumerate(classes)}
+      y_tr_enc = np.array([label2id[y] for y in y_train])
+      
+      X_tr_text = X_train['text'].astype(str).tolist() if isinstance(X_train, pd.DataFrame) and 'text' in X_train.columns else [str(x) for x in X_train]
+      X_te_text = X_test['text'].astype(str).tolist() if isinstance(X_test, pd.DataFrame) and 'text' in X_test.columns else [str(x) for x in X_test]
+
+      model_name = "bert-base-uncased"
+      tokenizer = AutoTokenizer.from_pretrained(model_name)
+      model_hf = AutoModelForSequenceClassification.from_pretrained(model_name, num_labels=len(classes), id2label=id2label, label2id=label2id)
+      
+      # Datasets HF
+      train_ds = Dataset.from_dict({'text': X_tr_text, 'label': y_tr_enc})
+      test_ds = Dataset.from_dict({'text': X_te_text})
+      
+      def tokenize_func(examples):
+          return tokenizer(examples['text'], padding="max_length", truncation=True, max_length=128)
+          
+      train_ds = train_ds.map(tokenize_func, batched=True)
+      test_ds = test_ds.map(tokenize_func, batched=True)
+      
+      training_args = TrainingArguments(
+          output_dir="./results",
+          num_train_epochs=int(EPOCHS),
+          learning_rate=float(LEARNING_RATE),
+          per_device_train_batch_size=8,
+          evaluation_strategy="no",
+          save_strategy="no",
+          disable_tqdm=False
+      )
+      
+      trainer = Trainer(
+          model=model_hf,
+          args=training_args,
+          train_dataset=train_ds
+      )
+      
+      print("Début du Fine-Tuning (attention, très lent sur CPU)...")
+      trainer.train()
+      
+      print("Inférence sur le set de test...")
+      predictions = trainer.predict(test_ds)
+      y_pred_idx = np.argmax(predictions.predictions, axis=1)
+      y_pred = np.array([id2label[i] for i in y_pred_idx])
+      
+      y_proba = torch.nn.functional.softmax(torch.tensor(predictions.predictions), dim=-1).numpy()
+      feature_importances = None
+      model = trainer
+      
+      if 'preprocessor' in locals() and preprocessor is not None:
+          try: from imblearn.pipeline import Pipeline
+          except: from sklearn.pipeline import Pipeline
+          full_pipeline = Pipeline(steps=preprocessor.steps + [('model', model)])
+      else:
+          full_pipeline = model
+          
+      training_history = {"status": "success", "fitted_on": len(X_train), "type": "hf_fine_tuned"}
+      task_type = "classification"
+      print("[MODEL] BERT entraîné et Pipeline exporté.")
+  else:
+      print("[ERREUR] Données introuvables ou packages manquants.")
+_metadata:
+  bloc: 3
+  section: "3_nlp_and_timeseries"

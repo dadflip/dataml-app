@@ -1,0 +1,53 @@
+id: "eval_actual_vs_predicted_kde"
+name: "Eval Plot: Actual vs Predicted KDE Distributions"
+description: "Compare la distribution (Kernel Density Estimate) des vraies valeurs par rapport aux prédictions."
+category: "Regression Visualizations"
+tags: ["eval", "plot", "regression", "distribution", "kde", "seaborn"]
+applies_to: ["Regression"]
+when_to_use: "Pour vérifier si le modèle arrive à reproduire la distribution globale (moments statistiques) de la variable cible."
+pros:
+  - "Montre bien si le modèle 'écrase' les valeurs extrêmes."
+cons:
+  - "Nécessite seaborn pour une belle visualisation."
+code_template: |
+  import os
+  import numpy as np
+  import matplotlib.pyplot as plt
+  try:
+      import seaborn as sns
+  except ImportError:
+      sns = None
+
+  evaluation_metrics = {}
+
+  if task_type == "regression" and 'y_test' in locals() and 'y_pred' in locals():
+      print("[EVAL] Génération du Actual vs Predicted KDE Plot...")
+      try:
+          os.makedirs("outputs/evaluation", exist_ok=True)
+          
+          fig, ax = plt.subplots(figsize=(10, 6))
+          
+          if sns is not None:
+              sns.kdeplot(y_test, color="blue", label="Valeurs Réelles", fill=True, ax=ax)
+              sns.kdeplot(y_pred, color="red", label="Valeurs Prédites", fill=True, alpha=0.6, ax=ax)
+          else:
+              # Fallback basique Matplotlib histogram
+              ax.hist(y_test, bins=50, alpha=0.5, color='blue', density=True, label="Valeurs Réelles")
+              ax.hist(y_pred, bins=50, alpha=0.5, color='red', density=True, label="Valeurs Prédites")
+              
+          ax.set_title('Distribution de Densité : Réel vs Prédit')
+          ax.set_xlabel('Valeur Cible')
+          ax.set_ylabel('Densité')
+          ax.legend()
+          
+          plot_path = "outputs/evaluation/actual_vs_predicted_kde.png"
+          fig.savefig(plot_path, dpi=300)
+          plt.close(fig)
+          
+          evaluation_metrics["actual_vs_predicted_kde_plot"] = plot_path
+          print(f"[EVAL] Plot sauvegardé sous {plot_path}")
+      except Exception as e:
+          print(f"[EVAL ERREUR] : {str(e)}")
+_metadata:
+  bloc: 4
+  section: "1_evaluation"

@@ -1,0 +1,30 @@
+id: "pipeline_housing_regression"
+name: "Recette : Housing Regression Diagnostics"
+description: "Prédiction de prix de l'immobilier avec ElasticNet et graphiques de diagnostic des résidus (Flask API)."
+category: "Tabular Regression"
+nodes:
+  - node_id: "load_housing"
+    block_id: "load_csv"
+    params:
+      FILE_PATH: "./data/raw/housing.csv"
+      TARGET_COL: "Price"
+
+  - node_id: "preprocess"
+    block_id: "transform_standard_scaler"
+    depends_on: ["load_housing"]
+
+  - node_id: "model_elasticnet"
+    block_id: "model_elastic_net"
+    depends_on: ["preprocess"]
+
+  - node_id: "eval_residuals"
+    block_id: "eval_residual_vs_leverage_plot"
+    depends_on: ["model_elasticnet"]
+
+  - node_id: "eval_rmse"
+    block_id: "eval_rmse"
+    depends_on: ["model_elasticnet"]
+
+  - node_id: "deploy_flask"
+    block_id: "deploy_flask_docker"
+    depends_on: ["eval_residuals", "eval_rmse"]

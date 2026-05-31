@@ -1,0 +1,23 @@
+# Contrat pour un fichier de Pipeline (Recette d'assemblage)
+#
+# Un fichier pipeline décrit comment instancier, relier et configurer
+# un groupe de blocs (du catalogue ETL) pour créer un workflow prêt à l'emploi.
+
+id: "pipeline_unique_name" # Identifiant unique (ex: pipeline_titanic)
+name: "Nom d'affichage"      # Nom humain lisible
+description: "Description courte de ce que fait ce pipeline."
+category: "Catégorie (ex: Computer Vision, Tabular)"
+
+# La liste des blocs (noeuds) à instancier sur le canevas
+nodes:
+  - node_id: "id_unique_du_noeud_dans_ce_pipeline"
+    block_id: "id_du_bloc_du_catalogue" # ex: extract_http, load_csv
+    
+    # [Optionnel] Liste des node_id qui doivent s'exécuter avant celui-ci.
+    # Ceci définit les "liens" (edges) dans le graphe visuel.
+    depends_on: ["id_noeud_parent"] 
+    
+    # [Optionnel] Paramètres qui écraseront les valeurs par défaut du block_id
+    params:
+      NOM_PARAM_1: "Valeur modifiée"
+      NOM_PARAM_2: 42

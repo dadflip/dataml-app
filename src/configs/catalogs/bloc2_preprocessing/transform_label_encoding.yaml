@@ -1,0 +1,48 @@
+id: "transform_label_encoding"
+name: "Transform: Ordinal/Label Encoding"
+description: "Ordinal Encoding des colonnes catégorielles."
+category: "4.1 Preprocessing"
+tags: ["transform", "encoding", "tabular", "sklearn", "pipeline"]
+applies_to: ["Tabulaire"]
+when_to_use: "Pour les arbres de décision."
+pros:
+  - "N'augmente pas les colonnes."
+cons:
+  - "Modèles linéaires peuvent mal interpréter."
+hyperparameters: {}
+code_template: |
+  import pandas as pd
+  from sklearn.preprocessing import OrdinalEncoder
+  from sklearn.compose import ColumnTransformer
+
+  print("[TRANSFORM] Ordinal Encoding...")
+  if 'df' in locals():
+      if 'pipeline_steps' not in locals(): pipeline_steps = {}
+      
+      cat_cols = df.select_dtypes(exclude=['number', 'datetime']).columns.tolist()
+      if 'target_name' in locals() and target_name in cat_cols:
+          cat_cols.remove(target_name)
+          
+      if len(cat_cols) > 0:
+          # On utilise OrdinalEncoder plutôt que LabelEncoder pour supporter plusieurs colonnes simultanément dans un Pipeline
+          oe = OrdinalEncoder(handle_unknown='use_encoded_value', unknown_value=-1)
+          
+          ct = ColumnTransformer(
+              [('oe', oe, cat_cols)],
+              remainder='passthrough', verbose_feature_names_out=False
+          )
+          try: ct.set_output(transform="pandas")
+          except: pass
+          
+          step_name = 'ordinal_encoding'
+          pipeline_steps[step_name] = (step_name, ct)
+          
+          df = pd.DataFrame(ct.fit_transform(df), columns=df.columns, index=df.index)
+          print(f"[TRANSFORM] Ordinal Encoding (Pipeline-safe) appliqué sur {len(cat_cols)} colonnes.")
+      else:
+          print("[TRANSFORM] Aucune variable.")
+  else:
+      print("[ERREUR] 'df' introuvable.")
+_metadata:
+  bloc: 2
+  section: "4_preprocessing"

@@ -1,0 +1,49 @@
+id: "load_torchvision"
+name: "Load: Torchvision Dataset"
+description: "Charge un dataset canonique d'imagerie (CIFAR, MNIST, ImageNet) via torchvision."
+category: "2. Load"
+tags: ["load", "torchvision", "pytorch", "images"]
+code_template: |
+  import time
+  import os
+
+  # [PARAM: DATASET_NAME | string]
+  DATASET_NAME = "CIFAR10"
+  # [/PARAM]
+  
+  # [PARAM: DATA_DIR | dir]
+  DATA_DIR = "./data/raw/torchvision"
+  # [/PARAM]
+
+  print(f"[LOAD] Téléchargement/Chargement du dataset Torchvision '{DATASET_NAME}'...")
+  os.makedirs(DATA_DIR, exist_ok=True)
+
+  try:
+      start_time = time.time()
+      import torchvision.datasets as dsets
+      
+      # Récupération dynamique de la classe du dataset
+      dataset_class = getattr(dsets, DATASET_NAME)
+      
+      # root et download sont les paramètres standards de torchvision
+      dataset = dataset_class(root=DATA_DIR, train=True, download=True)
+      
+      duration = time.time() - start_time
+      print(f"[LOAD] Succès Torchvision. {len(dataset)} éléments chargés en {duration:.2f}s.")
+  except AttributeError:
+      print(f"[ERREUR LOAD] Le dataset '{DATASET_NAME}' n'existe pas dans torchvision.datasets.")
+      raise
+  except ImportError:
+      print("[ERREUR LOAD] Le module 'torchvision' est requis.")
+      raise
+  except Exception as e:
+      print(f"[ERREUR LOAD] Erreur Torchvision : {str(e)}")
+      raise e
+
+  df = None
+  target_name = "target"
+  task_type = "computer_vision_classification"
+  meta = {"format": "torchvision", "dataset": DATASET_NAME, "size": len(dataset)}
+_metadata:
+  bloc: 1
+  section: "2_load"

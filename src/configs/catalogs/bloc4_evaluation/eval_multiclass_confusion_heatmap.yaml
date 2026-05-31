@@ -1,0 +1,109 @@
+id: "eval_multiclass_confusion_heatmap"
+name: "Eval: Matrice de Confusion Heatmap"
+description: "Affiche une matrice de confusion sous forme de heatmap Seaborn avec annotations (comptages et pourcentages). Adaptee pour la classification binaire et multiclasse."
+category: "Classification Diagnostics"
+tags: ["eval", "confusion_matrix", "heatmap", "classification", "seaborn", "plot", "matplotlib"]
+applies_to: ["Classification"]
+when_to_use: "Pour visualiser en detail les erreurs de classification par classe. La heatmap est plus lisible que la matrice brute, surtout avec de nombreuses classes."
+pros:
+  - "Visualisation claire des confusions inter-classes"
+  - "Annotations avec comptages et pourcentages pour une lecture complete"
+  - "Fonctionne en binaire et multiclasse"
+cons:
+  - "Necessite seaborn"
+  - "Peut devenir difficile a lire avec un tres grand nombre de classes (>20)"
+  - "Ne fonctionne qu'en classification"
+code_template: |
+  import numpy as np
+  import matplotlib
+  matplotlib.use("Agg")
+  import matplotlib.pyplot as plt
+
+  evaluation_metrics = {}
+
+  if task_type not in ("classification", "binary", "multiclass"):
+      print("[EVAL] Matrice de confusion heatmap: classification uniquement.")
+      evaluation_metrics["status"] = "skipped"
+      evaluation_metrics["reason"] = "task_type is not classification"
+  else:
+      try:
+          import seaborn as sns
+          from sklearn.metrics import confusion_matrix
+
+          y_true = np.array(y_test)
+          y_p = np.array(y_pred)
+
+          labels = np.unique(np.concatenate([y_true, y_p]))
+          labels.sort()
+          cm = confusion_matrix(y_true, y_p, labels=labels)
+
+          # Compute percentages
+          cm_pct = cm.astype(float) / cm.sum() * 100
+
+          # Create annotation strings with count + percentage
+          n_classes = len(labels)
+          annot = np.empty_like(cm, dtype=object)
+          for i in range(n_classes):
+              for j in range(n_classes):
+                  annot[i, j] = f"{cm[i, j]}\n({cm_pct[i, j]:.1f}%)"
+
+          # Dynamic figure size
+          fig_size = max(6, n_classes * 0.8)
+          fig, ax = plt.subplots(figsize=(fig_size, fig_size))
+
+          sns.heatmap(
+              cm,
+              annot=annot,
+              fmt="",
+              cmap="Blues",
+              xticklabels=labels,
+              yticklabels=labels,
+              square=True,
+              linewidths=0.5,
+              cbar_kws={"shrink": 0.7},
+              ax=ax
+          )
+          ax.set_xlabel("Classe Predite")
+          ax.set_ylabel("Classe Reelle")
+          ax.set_title("Matrice de Confusion (Heatmap)")
+
+          # Rotate labels if many classes
+          if n_classes > 5:
+              ax.set_xticklabels(ax.get_xticklabels(), rotation=45, ha="right")
+              ax.set_yticklabels(ax.get_yticklabels(), rotation=0)
+
+          plt.tight_layout()
+
+          fig_path = "confusion_heatmap.png"
+          fig.savefig(fig_path, dpi=150, bbox_inches="tight")
+          plt.close(fig)
+          print(f"[EVAL] Figure sauvegardee: {fig_path}")
+
+          # Per-class accuracy
+          per_class_acc = {}
+          for i, label in enumerate(labels):
+              total = cm[i, :].sum()
+              correct = cm[i, i]
+              acc = correct / total if total > 0 else 0.0
+              per_class_acc[str(label)] = float(round(acc, 4))
+
+          total_accuracy = float(round(np.trace(cm) / cm.sum(), 6))
+
+          evaluation_metrics["status"] = "success"
+          evaluation_metrics["figure_path"] = fig_path
+          evaluation_metrics["n_classes"] = int(n_classes)
+          evaluation_metrics["total_accuracy"] = total_accuracy
+          evaluation_metrics["per_class_accuracy"] = per_class_acc
+          print(f"[EVAL] {n_classes} classes, accuracy globale: {total_accuracy:.4f}")
+
+      except ImportError:
+          print("[EVAL] seaborn non installe. pip install seaborn")
+          evaluation_metrics["status"] = "skipped"
+          evaluation_metrics["reason"] = "seaborn not installed"
+      except Exception as e:
+          print(f"[EVAL] Erreur matrice de confusion heatmap: {e}")
+          evaluation_metrics["status"] = "error"
+          evaluation_metrics["error"] = str(e)
+_metadata:
+  bloc: 4
+  section: "1_evaluation"

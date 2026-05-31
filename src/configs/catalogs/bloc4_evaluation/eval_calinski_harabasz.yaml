@@ -1,0 +1,53 @@
+id: "eval_calinski_harabasz"
+name: "Eval: Calinski-Harabasz Index (Clustering)"
+description: "Calcule l'indice de Calinski-Harabasz (Variance Ratio Criterion). Rapport entre la dispersion inter-clusters et la dispersion intra-clusters. Plus la valeur est elevee, meilleur est le clustering."
+category: "Metriques de Clustering"
+tags: ["eval", "clustering", "calinski_harabasz", "variance_ratio", "sklearn", "unsupervised"]
+applies_to: ["Clustering"]
+when_to_use: "Pour comparer differentes configurations de clustering. Particulierement utile pour determiner le nombre optimal de clusters."
+pros:
+  - "Calcul rapide, adapte aux grands jeux de donnees."
+  - "Pas de borne superieure : permet des comparaisons relatives."
+cons:
+  - "Favorise les clusters convexes et denses."
+  - "Pas de plage normalisee, difficilement interpretable en valeur absolue."
+code_template: |
+  import numpy as np
+  from sklearn.metrics import calinski_harabasz_score
+
+  evaluation_metrics = {}
+
+  print("[EVAL] Calcul de l'indice de Calinski-Harabasz...")
+  try:
+      if y_pred is None:
+          raise ValueError("y_pred (labels de clusters) est None.")
+
+      n_labels = len(set(y_pred))
+      if n_labels < 2:
+          raise ValueError(f"L'indice necessite au minimum 2 clusters. Trouve: {n_labels}")
+
+      if 'X_test' not in dir() and 'X_test' not in locals():
+          raise NameError("X_test introuvable dans le scope (necessaire pour le calcul des variances).")
+
+      X_for_ch = X_test
+      try:
+          X_for_ch = np.array(X_for_ch, dtype=float)
+      except Exception:
+          pass
+
+      ch_score = calinski_harabasz_score(X_for_ch, y_pred)
+
+      evaluation_metrics["calinski_harabasz_score"] = float(ch_score)
+      evaluation_metrics["calinski_harabasz_n_clusters"] = n_labels
+      evaluation_metrics["calinski_harabasz_n_samples"] = len(y_pred)
+
+      print(f"[EVAL] Calinski-Harabasz Index: {ch_score:.4f}")
+      print(f"[EVAL] Nombre de clusters: {n_labels}")
+      print(f"[EVAL] Nombre d'echantillons: {len(y_pred)}")
+      print(f"[EVAL] Interpretation: plus la valeur est elevee, meilleur est le clustering.")
+  except Exception as e:
+      print(f"[EVAL][ERREUR] Calinski-Harabasz echoue: {e}")
+      evaluation_metrics["calinski_harabasz_error"] = str(e)
+_metadata:
+  bloc: 4
+  section: "1_evaluation"

@@ -1,0 +1,73 @@
+id: "deploy_flask"
+name: "Deploy: Flask Server Generation"
+description: "Génère un serveur API REST basique avec Flask."
+category: "API Generation"
+tags: ["deploy", "api", "flask", "rest", "python"]
+applies_to: ["Classification", "Regression"]
+when_to_use: "Pour des déploiements legacy ou des équipes familières avec Flask plutôt que FastAPI."
+pros:
+  - "Très mature, immense écosystème."
+cons:
+  - "Pas asynchrone par défaut, pas de documentation automatique (Swagger)."
+code_template: |
+  import os
+  import joblib
+
+  deployment_artifacts = {}
+
+  if 'full_pipeline' in locals():
+      print("[DEPLOY] Génération de l'API Flask...")
+      try:
+          os.makedirs("outputs/deployment", exist_ok=True)
+          
+          model_path = "outputs/deployment/model.joblib"
+          joblib.dump(full_pipeline, model_path)
+          deployment_artifacts["model_path"] = model_path
+          
+          flask_code = """import joblib
+  import pandas as pd
+  from flask import Flask, request, jsonify
+  
+  app = Flask(__name__)
+  model = joblib.load('model.joblib')
+  
+  @app.route('/', methods=['GET'])
+  def home():
+      return jsonify({"message": "Flask API is running."})
+  
+  @app.route('/predict', methods=['POST'])
+  def predict():
+      try:
+          data = request.get_json()
+          if 'data' not in data:
+              return jsonify({"error": "Missing 'data' key in JSON payload"}), 400
+              
+          df = pd.DataFrame([data['data']])
+          prediction = model.predict(df)
+          
+          response = {"prediction": prediction[0].item() if hasattr(prediction[0], 'item') else prediction[0]}
+          
+          if hasattr(model, 'predict_proba'):
+              proba = model.predict_proba(df)
+              response["probabilities"] = proba[0].tolist()
+              
+          return jsonify(response)
+      except Exception as e:
+          return jsonify({"error": str(e)}), 500
+  
+  if __name__ == '__main__':
+      app.run(host='0.0.0.0', port=5000, debug=True)
+  """
+          
+          api_script_path = "outputs/deployment/app.py"
+          with open(api_script_path, "w", encoding="utf-8") as f:
+              f.write(flask_code)
+              
+          deployment_artifacts["flask_script"] = api_script_path
+          print(f"[DEPLOY] API Flask générée sous {api_script_path}")
+          print(f"[DEPLOY] Pour lancer : cd outputs/deployment && python app.py")
+      except Exception as e:
+          print(f"[DEPLOY ERREUR] Flask : {str(e)}")
+_metadata:
+  bloc: 5
+  section: "2_api"

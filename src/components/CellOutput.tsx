@@ -133,7 +133,7 @@ function ImageDisplay({ mime, data }: { mime: string; data: string }) {
       </OutputBlock>
 
       <Dialog open={open} onOpenChange={setOpen}>
-        <DialogContent className="max-w-[95vw] gap-2 border-border bg-card p-3 sm:max-w-[95vw]">
+        <DialogContent className="w-[calc(100%-2rem)] sm:max-w-[95vw] gap-2 border-border bg-card p-3">
           <div className="flex items-center justify-between gap-2 pb-1">
             <span className="font-mono text-[10px] uppercase tracking-wider text-muted-foreground">
               {mime}

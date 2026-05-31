@@ -1,0 +1,23 @@
+id: "eda_pairplot"
+name: "EDA: Pairplot"
+description: "Trace les relations bivariées entre les premières variables numériques."
+category: "3. Exploratory Data Analysis"
+tags: ["eda", "pairplot", "tabular", "seaborn"]
+code_template: |
+  import pandas as pd
+  import numpy as np
+  import matplotlib.pyplot as plt
+  import seaborn as sns
+
+  cols = df.select_dtypes(include=[np.number]).columns.tolist()[:5]
+  hue_col = target_name if 'target_name' in locals() and target_name in df.columns else None
+  
+  if hue_col and hue_col not in cols:
+      cols.append(hue_col)
+      
+  print(f"[EDA] === PAIRPLOT sur {len(cols)} variables ===")
+  sns.pairplot(df[cols].dropna(), hue=hue_col, corner=True)
+  plt.show()
+_metadata:
+  bloc: 1
+  section: "3_eda"

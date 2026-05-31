@@ -1,0 +1,41 @@
+id: "eval_mse"
+name: "Eval: Mean Squared Error (MSE)"
+description: >
+  Calcule l'erreur quadratique moyenne (MSE) entre les valeurs reelles et les predictions.
+  La MSE penalise fortement les grandes erreurs en raison de la mise au carre des residus.
+  Plus la valeur est faible, meilleur est le modele. Unite : carre de l'unite de la cible.
+category: "Metriques de Regression"
+tags: ["eval", "regression", "mse", "erreur", "metrique"]
+applies_to: ["Regression"]
+when_to_use: >
+  Utiliser lorsque l'on souhaite mesurer la performance globale d'un modele de regression
+  en penalisant davantage les grandes erreurs de prediction.
+pros:
+  - "Differentiable, utilisable comme fonction de perte pour l'optimisation"
+  - "Penalise les grandes erreurs, ce qui est souhaitable dans de nombreux cas"
+  - "Standard et largement adopte dans la communaute ML"
+cons:
+  - "Sensible aux valeurs aberrantes (outliers)"
+  - "Unite en carre, difficile a interpreter directement"
+  - "Ne permet pas de comparer des modeles sur des echelles differentes"
+code_template: |
+  evaluation_metrics = {}
+  try:
+      from sklearn.metrics import mean_squared_error
+      import numpy as np
+
+      print("[EVAL] Calcul du Mean Squared Error (MSE)...")
+
+      mse_value = mean_squared_error(y_test, y_pred)
+
+      evaluation_metrics["mse"] = float(mse_value)
+
+      print(f"[EVAL] MSE = {mse_value:.6f}")
+
+  except Exception as e:
+      print(f"[EVAL] Erreur lors du calcul du MSE : {e}")
+      evaluation_metrics["mse"] = None
+      evaluation_metrics["error"] = str(e)
+_metadata:
+  bloc: 4
+  section: "1_evaluation"

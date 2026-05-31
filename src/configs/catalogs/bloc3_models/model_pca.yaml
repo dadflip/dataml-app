@@ -1,0 +1,53 @@
+id: "model_pca"
+name: "Model: Principal Component Analysis (PCA)"
+description: "Réduction de dimension linéaire. Transforme les données en composantes principales orthogonales."
+category: "Réduction de Dimension"
+tags: ["model", "dimensionality-reduction", "tabular", "sklearn", "pca"]
+applies_to: ["Tabulaire"]
+when_to_use: "Pour visualiser un dataset de grande dimension en 2D/3D ou supprimer la colinéarité avant un modèle lourd."
+pros:
+  - "Très rapide."
+  - "Préserve la variance globale."
+cons:
+  - "Linéaire uniquement."
+hyperparameters:
+  n_components: "Nombre de composantes à garder (ex: 2)."
+code_template: |
+  import pandas as pd
+  import numpy as np
+  from sklearn.decomposition import PCA
+
+  # [PARAM: N_COMPONENTS | number]
+  N_COMPONENTS = 2
+  # [/PARAM]
+
+  print(f"[MODEL] Exécution PCA (components={N_COMPONENTS})...")
+  if 'X_train' in locals() and 'X_test' in locals():
+      # Note: PCA est souvent utilisé comme Preprocessor, mais on peut l'utiliser ici pour générer y_pred comme coordonnées 2D
+      model = PCA(n_components=int(N_COMPONENTS), random_state=42)
+      model.fit(X_train)
+      
+      # y_pred sera les nouvelles coordonnées (matrice au lieu de vecteur)
+      y_pred = model.transform(X_test)
+      y_proba = None
+      
+      # La feature importance d'une PCA peut être vue comme la variance expliquée
+      feature_importances = pd.Series(model.explained_variance_ratio_, index=[f"PC{i+1}" for i in range(int(N_COMPONENTS))])
+      
+      if 'preprocessor' in locals() and preprocessor is not None:
+          try: from imblearn.pipeline import Pipeline
+          except: from sklearn.pipeline import Pipeline
+          full_pipeline = Pipeline(steps=preprocessor.steps + [('model', model)])
+      else:
+          try: from imblearn.pipeline import Pipeline
+          except: from sklearn.pipeline import Pipeline
+          full_pipeline = Pipeline(steps=[('model', model)])
+          
+      training_history = {"status": "success", "explained_variance": sum(model.explained_variance_ratio_)}
+      task_type = "dimensionality_reduction"
+      print("[MODEL] PCA exécutée avec succès.")
+  else:
+      print("[ERREUR] Données d'entraînement introuvables.")
+_metadata:
+  bloc: 3
+  section: "5_clustering_automl_and_nn"

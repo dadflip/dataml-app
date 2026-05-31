@@ -1,0 +1,35 @@
+id: "model_diffusers_image_gen"
+name: "Model: Stable Diffusion Image Gen"
+description: "Modèle génératif (Text-to-Image) via HuggingFace Diffusers."
+category: "Vision par Ordinateur (Pré-entraînés)"
+tags: ["model", "vision", "generative", "diffusers", "stable-diffusion"]
+applies_to: ["Texte"]
+when_to_use: "Pour générer des images à partir d'un prompt texte. Utile pour la data augmentation."
+pros:
+  - "Très puissant."
+cons:
+  - "Extrêmement lourd. Nécessite obligatoirement un bon GPU et beaucoup de VRAM."
+hyperparameters:
+  num_inference_steps: "Nombre d'étapes de diffusion (ex: 20)."
+code_template: |
+  import pandas as pd
+  import numpy as np
+  print("[MODEL] Dummy export pour Stable Diffusion.")
+  # Le téléchargement des poids de SD1.5/2.0 fait plusieurs Gigaoctets et fera crasher un CPU instantanément.
+  # Placeholder structurel fourni pour intégration sur machines adaptées.
+  
+  if 'X_test' in locals():
+      # X_test contient des prompts textes
+      y_pred = np.array(["Image Generated (Placeholder)"] * len(X_test))
+      y_proba = None
+      feature_importances = None
+      
+      full_pipeline = "Stable Diffusion Placeholder"
+      training_history = {"status": "placeholder"}
+      task_type = "image_generation"
+      print("[MODEL] Placeholder SD généré.")
+  else:
+      print("[ERREUR] Données introuvables.")
+_metadata:
+  bloc: 3
+  section: "4_vision_and_audio"

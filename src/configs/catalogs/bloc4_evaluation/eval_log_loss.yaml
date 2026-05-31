@@ -1,0 +1,52 @@
+id: "eval_log_loss"
+name: "Eval: Log Loss (Cross-Entropy)"
+description: "Calcule la Log Loss (entropie croisee). Penalise les predictions probabilistes confiantes mais erronees."
+category: "Metriques de Classification"
+tags: ["eval", "classification", "log_loss", "cross_entropy", "probabilites", "sklearn"]
+applies_to: ["Classification"]
+when_to_use: "Pour evaluer la calibration des probabilites predites. Indispensable lorsque les sorties probabilistes comptent."
+pros:
+  - "Penalise fortement les predictions confiantes mais fausses."
+  - "Evalue la qualite de la calibration des probabilites."
+cons:
+  - "Necessite des probabilites predites (y_proba)."
+  - "Moins intuitive qu'une metrique de taux (accuracy, F1)."
+code_template: |
+  import numpy as np
+  from sklearn.metrics import log_loss
+
+  evaluation_metrics = {}
+
+  print("[EVAL] Calcul de la Log Loss (Cross-Entropy)...")
+
+  if y_proba is None:
+      print("[EVAL][WARN] y_proba est None, impossible de calculer la Log Loss.")
+      evaluation_metrics["log_loss"] = None
+      evaluation_metrics["warning"] = "y_proba non disponible, Log Loss non calculable."
+  else:
+      try:
+          unique_classes = np.unique(y_test)
+
+          ll = log_loss(y_test, y_proba, labels=unique_classes)
+          evaluation_metrics["log_loss"] = float(np.round(ll, 6))
+          print(f"[EVAL] Log Loss : {ll:.6f}")
+
+          n_classes = len(unique_classes)
+          baseline_ll = -np.log(1.0 / n_classes)
+          evaluation_metrics["baseline_log_loss"] = float(np.round(baseline_ll, 6))
+          print(f"[EVAL] Log Loss baseline (aleatoire uniforme) : {baseline_ll:.6f}")
+
+          if baseline_ll > 0:
+              normalized_ll = ll / baseline_ll
+              evaluation_metrics["normalized_log_loss"] = float(np.round(normalized_ll, 6))
+              print(f"[EVAL] Log Loss normalisee (ratio vs baseline) : {normalized_ll:.4f}")
+
+          evaluation_metrics["n_classes"] = int(n_classes)
+          evaluation_metrics["n_samples"] = int(len(y_test))
+
+      except Exception as e:
+          print(f"[EVAL][ERREUR] Echec du calcul de la Log Loss : {e}")
+          evaluation_metrics["error"] = str(e)
+_metadata:
+  bloc: 4
+  section: "1_evaluation"

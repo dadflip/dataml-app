@@ -42,150 +42,93 @@ export interface CatalogBlock {
 export interface ParsedCatalog {
   bloc: number;
   blocName: string;
-  file: string;
+  folder: string;
   contract: IOContract;
   sections: { name: string; blocks: CatalogBlock[] }[];
 }
 
-const BLOC_FILES: { bloc: number; name: string; file: string }[] = [
-  { bloc: 1, name: "Datasets", file: "/configs/datasets_config.yaml" },
-  { bloc: 2, name: "EDA & Preprocessing", file: "/configs/eda_config.yaml" },
-  { bloc: 3, name: "Model Training", file: "/configs/model_config.yaml" },
-  { bloc: 4, name: "Evaluation", file: "/configs/evaluation_config.yaml" },
-  { bloc: 5, name: "Export & Report", file: "/configs/report_config.yaml" },
+const BLOC_FILES: { bloc: number; name: string; folder: string }[] = [
+  { bloc: -1, name: "Custom", folder: "bloc0_custom" },
+  { bloc: 1, name: "Datasets", folder: "bloc1_datasets" },
+  { bloc: 2, name: "Preprocessing", folder: "bloc2_preprocessing" },
+  { bloc: 3, name: "Modèles", folder: "bloc3_models" },
+  { bloc: 4, name: "Évaluation", folder: "bloc4_evaluation" },
+  { bloc: 5, name: "Déploiement & API", folder: "bloc5_deployment" },
 ];
 
 export async function loadAllCatalogs(): Promise<ParsedCatalog[]> {
   const results: ParsedCatalog[] = [];
+  
+  // Charge dynamiquement tous les fichiers YAML du dossier catalogs au moment du build
+  const catalogModules = import.meta.glob('../configs/catalogs/**/*.yaml', { query: '?raw', eager: true });
 
-  for (const { bloc, name, file } of BLOC_FILES) {
-    const res = await fetch(file);
-    const text = await res.text();
-    const data = yaml.load(text) as Record<string, unknown>;
-
-    // ─────────────────────────────────────────────
-    // Détection format datasets
-    // ─────────────────────────────────────────────
-    const isDatasets =
-      "pipeline_contracts" in data && "catalog" in data;
-
-    // ─────────────────────────────────────────────
-    // Contrat I/O
-    // ─────────────────────────────────────────────
-    let contract: IOContract;
-
-    if (isDatasets) {
-      const contracts = data.pipeline_contracts as Record<
-        string,
-        Record<string, unknown>
-      >;
-
-      const allOutputs: Record<string, string> = {};
-
-      for (const c of Object.values(contracts)) {
-        const outputs =
-          (c.output_variables as Record<string, string>) ?? {};
-
-        for (const [k, v] of Object.entries(outputs)) {
-          allOutputs[k] = String(v);
-        }
-      }
-
-      contract = {
-        bloc,
-        role: "Sources de données : tabular | vision | sequence",
-        input_variables: {},
-        output_variables: allOutputs,
-      };
-    } else {
-      contract = (data.pipeline_contract ?? {
+  for (const { bloc, name, folder } of BLOC_FILES) {
+    const data: Record<string, any> = {
+      pipeline_contract: {
         bloc,
         role: "",
         input_variables: {},
         output_variables: {},
-      }) as IOContract;
+      },
+      catalog: {}
+    };
+
+    for (const [path, module] of Object.entries(catalogModules)) {
+      if (!path.includes(`/${folder}/`)) continue;
+      
+      const text = (module as any).default;
+      const parsed = yaml.load(text) as Record<string, any>;
+      
+      const fileName = path.split('/').pop() || '';
+      
+      if (fileName === '_contract.yaml') {
+        if (parsed.pipeline_contract) {
+          data.pipeline_contract = parsed.pipeline_contract;
+        }
+        continue;
+      }
+      
+      const section = parsed._metadata?.section;
+      if (section) {
+        if (!data[section]) data[section] = [];
+        data[section].push(parsed);
+      }
     }
 
-    // ─────────────────────────────────────────────
-    // Sections & blocs
-    // ─────────────────────────────────────────────
+    const contract = data.pipeline_contract as IOContract;
+
     const sections: { name: string; blocks: CatalogBlock[] }[] = [];
 
-    if (isDatasets) {
-      const catalog = data.catalog as Record<
-        string,
-        Record<string, CatalogBlock[]>
-      >;
+    for (const [key, rawBlocks] of Object.entries(data)) {
+      if (key === "pipeline_contract" || key === "catalog") continue;
+      if (!Array.isArray(rawBlocks)) continue;
 
-      for (const [contractKey, subsections] of Object.entries(catalog)) {
-        if (!subsections || typeof subsections !== "object") continue;
+      const blocks: CatalogBlock[] = rawBlocks
+        .filter(
+          (b): b is CatalogBlock =>
+            !!b &&
+            typeof b === "object" &&
+            "id" in b &&
+            typeof b.id === "string"
+        )
+        .map((b) => ({
+          ...b,
+          bloc,
+          blocName: name,
+          section: key,
+        }));
 
-        for (const [subsectionKey, rawBlocks] of Object.entries(
-          subsections
-        )) {
-          if (!Array.isArray(rawBlocks)) continue;
-
-          const sectionLabel = `${contractKey} › ${subsectionKey}`;
-
-          const blocks: CatalogBlock[] = rawBlocks
-            .filter(
-              (b): b is CatalogBlock =>
-                !!b &&
-                typeof b === "object" &&
-                "id" in b &&
-                typeof b.id === "string"
-            )
-            .map((b) => ({
-              ...b,
-              bloc,
-              blocName: name,
-              section: sectionLabel,
-            }));
-
-          if (blocks.length) {
-            sections.push({
-              name: sectionLabel,
-              blocks,
-            });
-          }
-        }
-      }
-    } else {
-      for (const [key, value] of Object.entries(data)) {
-        if (key === "pipeline_contract") continue;
-
-        if (Array.isArray(value)) {
-          const blocks: CatalogBlock[] = value
-            .filter(
-              (b): b is CatalogBlock =>
-                !!b &&
-                typeof b === "object" &&
-                "id" in b &&
-                typeof b.id === "string"
-            )
-            .map((b) => ({
-              ...b,
-              bloc,
-              blocName: name,
-              section: key,
-            }));
-
-          if (blocks.length) {
-            sections.push({
-              name: key,
-              blocks,
-            });
-          }
-        }
+      if (blocks.length > 0) {
+        sections.push({ name: key, blocks });
       }
     }
 
     results.push({
       bloc,
       blocName: name,
-      file,
       contract,
       sections,
+      folder,
     });
   }
 
@@ -223,58 +166,7 @@ export interface ParamDef {
   kind: ParamKind;
 }
 
-const PARAM_RE =
-  /(^|\n)([A-Z][A-Z0-9_]{2,})[ \t]*=[ \t]*("""[\s\S]*?"""|'''[\s\S]*?'''|"(?:\\.|[^"\\\n])*"|'(?:\\.|[^'\\\n])*'|[^\n#]+?)[ \t]*(?:#[^\n]*)?(?=\n|$)/g;
-
-function detectKind(
-  name: string,
-  type: ParamDef["type"]
-): ParamKind {
-  if (type === "boolean") return "boolean";
-  if (type === "text") return "text";
-
-  if (
-    /(^|_)(FILE|PATH|CSV|JSON|PARQUET|URL)(_|$)/.test(name)
-  ) {
-    return "file";
-  }
-
-  if (/(^|_)(DIR|FOLDER)(_|$)/.test(name)) {
-    return "dir";
-  }
-
-  if (
-    /(^|_)(COL|COLS|COLUMN|TARGET|FEATURE|FEATURES|LABEL)(_|$)/.test(
-      name
-    )
-  ) {
-    return "column";
-  }
-
-  if (type === "number") {
-    if (
-      /(SIZE|RATIO|RATE|ALPHA|BETA|THRESHOLD|DROPOUT|MOMENTUM|GAMMA)/.test(
-        name
-      )
-    ) {
-      return "ratio";
-    }
-
-    if (
-      /(SEED|RANDOM_STATE|N_|MAX_|MIN_|DEPTH|EPOCHS|BATCH|STEPS|FOLDS|JOBS|TOP_K)/.test(
-        name
-      )
-    ) {
-      return "int";
-    }
-
-    return "number";
-  }
-
-  if (type === "string") return "string";
-
-  return "expr";
-}
+const PARAM_BLOCK_RE = /^[ \t]*# \[PARAM:\s*([A-Za-z0-9_]+)(?:\s*\|\s*([a-z]+))?\]\s*\n([ \t]*[A-Za-z0-9_]+\s*=\s*)([\s\S]*?)\n[ \t]*# \[\/PARAM\]/gm;
 
 export function extractParams(code: string): ParamDef[] {
   if (!code) return [];
@@ -283,15 +175,14 @@ export function extractParams(code: string): ParamDef[] {
   const out: ParamDef[] = [];
 
   let m: RegExpExecArray | null;
+  PARAM_BLOCK_RE.lastIndex = 0;
 
-  PARAM_RE.lastIndex = 0;
-
-  while ((m = PARAM_RE.exec(code))) {
-    const name = m[2];
-    const lit = m[3].trim();
+  while ((m = PARAM_BLOCK_RE.exec(code))) {
+    const name = m[1];
+    const declaredType = m[2]; // ex: int, ratio, boolean
+    const lit = m[4].trim();
 
     if (seen.has(name)) continue;
-
     seen.add(name);
 
     let type: ParamDef["type"] = "expr";
@@ -306,11 +197,21 @@ export function extractParams(code: string): ParamDef[] {
       type = "boolean";
     }
 
+    let kind: ParamKind = "expr";
+    if (declaredType) {
+       kind = declaredType as ParamKind;
+    } else {
+       if (type === "boolean") kind = "boolean";
+       else if (type === "text") kind = "text";
+       else if (type === "string") kind = "string";
+       else if (type === "number") kind = "number";
+    }
+
     out.push({
       name,
       defaultLiteral: lit,
       type,
-      kind: detectKind(name, type),
+      kind,
     });
   }
 
@@ -322,20 +223,30 @@ export function applyParamOverrides(
   overrides: Record<string, string>
 ): string {
   if (!code) return code;
-
-  return code.replace(
-    PARAM_RE,
-    (match, lead: string, name: string) => {
-      if (
-        overrides[name] !== undefined &&
-        overrides[name] !== ""
-      ) {
-        return `${lead}${name} = ${overrides[name]}`;
+  
+  return code.replace(PARAM_BLOCK_RE, (match, name, declaredType, lead, value) => {
+    if (overrides[name] !== undefined && overrides[name] !== "") {
+      const lit = value.trim();
+      let type = "expr";
+      if (/^("""|''')[\s\S]*\1$/.test(lit)) type = "text";
+      else if (/^["'][\s\S]*["']$/.test(lit)) type = "string";
+      else if (/^-?\d+(\.\d+)?$/.test(lit)) type = "number";
+      else if (/^(True|False)$/.test(lit)) type = "boolean";
+      
+      let overrideVal = overrides[name];
+      if (type === "string") {
+        if (!/^["'][\s\S]*["']$/.test(overrideVal)) {
+          overrideVal = JSON.stringify(overrideVal);
+        }
+      } else if (type === "text") {
+         if (!/^("""|''')[\s\S]*\1$/.test(overrideVal)) {
+            overrideVal = `"""\n${overrideVal}\n"""`;
+         }
       }
-
-      return match;
+      return match.replace(lead + value, lead + overrideVal);
     }
-  );
+    return match;
+  });
 }
 
 // ─────────────────────────────────────────────
@@ -480,7 +391,7 @@ export function validateNotebook(
       (v) => !available.has(v)
     );
 
-    const outOfOrder = cell.bloc < maxBloc;
+    const outOfOrder = cell.bloc !== -1 && cell.bloc < maxBloc;
 
     results.push({
       ok: missing.length === 0 && !outOfOrder,
@@ -496,7 +407,7 @@ export function validateNotebook(
       available.add(v);
     }
 
-    if (cell.bloc > maxBloc) {
+    if (cell.bloc !== -1 && cell.bloc > maxBloc) {
       maxBloc = cell.bloc;
     }
   }
@@ -736,4 +647,79 @@ export function parseNotebookJSON(jsonStr: string): NotebookCell[] {
   }
 
   return cells;
+}
+
+// ─────────────────────────────────────────────
+// Pipelines
+// ─────────────────────────────────────────────
+
+export interface PipelineNode {
+  node_id: string;
+  block_id: string;
+  depends_on?: string[];
+  params?: Record<string, any>;
+}
+
+export interface PipelineTemplate {
+  id: string;
+  name: string;
+  description?: string;
+  category?: string;
+  nodes: PipelineNode[];
+}
+
+export async function loadAllPipelines(): Promise<PipelineTemplate[]> {
+  const results: PipelineTemplate[] = [];
+  
+  // Charge dynamiquement tous les fichiers YAML du dossier pipelines au moment du build
+  const pipelineModules = import.meta.glob('../configs/pipelines/**/*.yaml', { query: '?raw', eager: true });
+
+  for (const [path, module] of Object.entries(pipelineModules)) {
+    const text = (module as any).default;
+    const parsed = yaml.load(text) as Record<string, any>;
+    
+    // Ignore le contrat
+    if (path.includes('_contract.yaml')) continue;
+    
+    if (parsed.id && parsed.nodes) {
+      results.push(parsed as PipelineTemplate);
+    }
+  }
+
+  return results;
+}
+
+export function buildPipelineYaml(
+  cells: NotebookCell[],
+  pipelineName = "Recette Custom",
+  pipelineDesc = "Généré depuis l'interface graphique."
+): string {
+  const nodes: PipelineNode[] = cells.map((c, i) => {
+    const node_id = `${c.blockId}_${i}`;
+    const depends_on = i > 0 ? [`${cells[i - 1].blockId}_${i - 1}`] : undefined;
+    
+    const node: any = {
+      node_id,
+      block_id: c.blockId,
+    };
+    if (depends_on) {
+      node.depends_on = depends_on;
+    }
+    if (c.overrides && Object.keys(c.overrides).length > 0) {
+      // Ensure values that look like numbers are kept as numbers if needed,
+      // but yaml.dump usually handles basic JS objects well.
+      node.params = { ...c.overrides };
+    }
+    return node as PipelineNode;
+  });
+
+  const pipeline = {
+    id: "pipeline_custom_" + Math.random().toString(36).slice(2, 8),
+    name: pipelineName,
+    description: pipelineDesc,
+    category: "Custom",
+    nodes
+  };
+
+  return yaml.dump(pipeline, { indent: 2 });
 }

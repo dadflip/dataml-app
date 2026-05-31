@@ -1,0 +1,66 @@
+id: "eval_feature_distribution_by_class"
+name: "Eval Plot: Feature Distribution by Class"
+description: "Affiche la distribution d'une feature clé, séparée par les classes prédites, pour voir comment la feature discrimine la sortie."
+category: "Explainability & Feature Importance"
+tags: ["eval", "plot", "explainability", "distribution", "kde"]
+applies_to: ["Classification"]
+when_to_use: "Pour vérifier visuellement si une feature spécifique est un bon discriminant pour le modèle."
+pros:
+  - "Simple, lisible, ne nécessite pas de SHAP/LIME."
+cons:
+  - "Uniquement univarié."
+code_template: |
+  import os
+  import numpy as np
+  import matplotlib.pyplot as plt
+  try:
+      import seaborn as sns
+  except ImportError:
+      sns = None
+
+  evaluation_metrics = {}
+
+  if task_type == "classification" and 'X_test' in locals() and 'y_pred' in locals():
+      print("[EVAL] Génération de la Distribution de Feature par Classe...")
+      try:
+          os.makedirs("outputs/evaluation", exist_ok=True)
+          
+          X_arr = np.array(X_test)
+          if len(X_arr.shape) > 2:
+              X_arr = X_arr.reshape(X_arr.shape[0], -1)
+              
+          # On prend la première feature arbitrairement (idéalement celle avec le plus d'importance)
+          feat_idx = 0
+          feature_data = X_arr[:, feat_idx]
+          
+          feat_name = "Feature 0"
+          if 'feature_names_out' in locals() and len(feature_names_out) > feat_idx:
+              feat_name = feature_names_out[feat_idx]
+              
+          classes = np.unique(y_pred)
+          
+          fig, ax = plt.subplots(figsize=(10, 6))
+          
+          if sns is not None:
+              for c in classes:
+                  sns.kdeplot(feature_data[y_pred == c], label=f'Class {c}', fill=True, ax=ax)
+          else:
+              for c in classes:
+                  ax.hist(feature_data[y_pred == c], bins=30, alpha=0.5, density=True, label=f'Class {c}')
+                  
+          ax.set_title(f'Distribution de {feat_name} selon les prédictions')
+          ax.set_xlabel(feat_name)
+          ax.set_ylabel('Densité')
+          ax.legend()
+          
+          plot_path = f"outputs/evaluation/feature_dist_{feat_idx}.png"
+          fig.savefig(plot_path, dpi=300)
+          plt.close(fig)
+          
+          evaluation_metrics["feature_dist_plot"] = plot_path
+          print(f"[EVAL] Plot sauvegardé sous {plot_path}")
+      except Exception as e:
+          print(f"[EVAL ERREUR] Feature Dist : {str(e)}")
+_metadata:
+  bloc: 4
+  section: "1_evaluation"

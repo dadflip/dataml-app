@@ -1,0 +1,43 @@
+id: "eval_theils_u_statistic"
+name: "Eval Metric: Theil's U Statistic"
+description: "Mesure de la précision des prévisions financières ou macro-économiques. Borne basse = 0 (parfait), 1 = aussi bon qu'un modèle naïf."
+category: "Time Series Metrics"
+tags: ["eval", "metric", "timeseries", "forecasting", "finance"]
+applies_to: ["Forecasting"]
+when_to_use: "Standards de facto en économétrie et en finance pour comparer des modèles de prévision."
+pros:
+  - "Très interprétable par les économistes."
+cons:
+  - "Sensible aux valeurs aberrantes de par la mise au carré."
+code_template: |
+  import numpy as np
+
+  evaluation_metrics = {}
+
+  if task_type in ["forecasting", "regression"] and 'y_test' in locals() and 'y_pred' in locals():
+      print("[EVAL] Calcul du Theil's U Statistic...")
+      try:
+          actual = np.array(y_test)
+          forecast = np.array(y_pred)
+          
+          if len(actual) > 1:
+              # Différences pour le modèle Naïf
+              diff_actual = np.diff(actual)
+              diff_forecast = forecast[1:] - actual[:-1]
+              
+              num = np.sqrt(np.mean((diff_actual - diff_forecast) ** 2))
+              den = np.sqrt(np.mean(diff_actual ** 2))
+              
+              if den > 0:
+                  theils_u = num / den
+                  evaluation_metrics["theils_u"] = float(theils_u)
+                  print(f"[EVAL] Theil's U1: {theils_u:.4f} (Doit être < 1 pour être meilleur que Naïf)")
+              else:
+                  print("[EVAL] Dénominateur Theil's U nul.")
+          else:
+              print("[EVAL] Pas assez de données.")
+      except Exception as e:
+          print(f"[EVAL ERREUR] Theil's U : {str(e)}")
+_metadata:
+  bloc: 4
+  section: "1_evaluation"

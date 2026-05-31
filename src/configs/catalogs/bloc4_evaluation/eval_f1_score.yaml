@@ -1,0 +1,48 @@
+id: "eval_f1_score"
+name: "Eval: F1 Score"
+description: "Calcule le F1 Score (moyenne harmonique de la precision et du recall) avec les moyennes macro, micro et weighted."
+category: "Metriques de Classification"
+tags: ["eval", "classification", "f1", "sklearn"]
+applies_to: ["Classification"]
+when_to_use: "Compromis ideal entre precision et recall, notamment sur des jeux de donnees desequilibres."
+pros:
+  - "Equilibre entre precision et recall en une seule metrique."
+  - "Plus informative que l'accuracy sur des classes desequilibrees."
+cons:
+  - "Moins intuitive que l'accuracy pour les non-specialistes."
+  - "Ne prend pas en compte les vrais negatifs."
+code_template: |
+  import numpy as np
+  from sklearn.metrics import f1_score
+
+  evaluation_metrics = {}
+
+  print("[EVAL] Calcul du F1 Score...")
+
+  try:
+      unique_classes = np.unique(y_test)
+      is_binary = len(unique_classes) <= 2
+
+      for avg in ["macro", "micro", "weighted"]:
+          f1 = f1_score(y_test, y_pred, average=avg, zero_division=0)
+          evaluation_metrics[f"f1_{avg}"] = float(np.round(f1, 6))
+          print(f"[EVAL] F1 ({avg}) : {f1:.4f}")
+
+      if is_binary:
+          f1_bin = f1_score(y_test, y_pred, average="binary", zero_division=0)
+          evaluation_metrics["f1_binary"] = float(np.round(f1_bin, 6))
+          print(f"[EVAL] F1 (binary) : {f1_bin:.4f}")
+
+      per_class = f1_score(y_test, y_pred, average=None, zero_division=0)
+      evaluation_metrics["f1_per_class"] = {
+          str(cls): float(np.round(val, 6))
+          for cls, val in zip(unique_classes, per_class)
+      }
+      print(f"[EVAL] F1 par classe calcule pour {len(unique_classes)} classes.")
+
+  except Exception as e:
+      print(f"[EVAL][ERREUR] Echec du calcul du F1 Score : {e}")
+      evaluation_metrics["error"] = str(e)
+_metadata:
+  bloc: 4
+  section: "1_evaluation"

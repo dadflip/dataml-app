@@ -1,0 +1,63 @@
+id: "deploy_bentoml"
+name: "Deploy: BentoML Service Generation"
+description: "Génère un script BentoML (service.py) pour packager le modèle de manière professionnelle (API + Docker)."
+category: "API Generation"
+tags: ["deploy", "bentoml", "api", "mlops"]
+applies_to: ["Classification", "Regression"]
+when_to_use: "Quand vous voulez un micro-service hautement optimisé (batching dynamique des requêtes)."
+pros:
+  - "Très hautes performances, supporte plusieurs modèles dans le même service."
+cons:
+  - "Ajoute la dépendance BentoML à l'architecture."
+code_template: |
+  import os
+  try:
+      import bentoml
+  except ImportError:
+      bentoml = None
+
+  deployment_artifacts = {}
+
+  if 'full_pipeline' in locals() and bentoml is not None:
+      print("[DEPLOY] Génération du service BentoML...")
+      try:
+          os.makedirs("outputs/deployment", exist_ok=True)
+          
+          # 1. Sauvegarde dans le Local Model Store de BentoML
+          saved_model = bentoml.sklearn.save_model("dataml_model", full_pipeline)
+          deployment_artifacts["bentoml_model_tag"] = str(saved_model.tag)
+          
+          # 2. Génération du fichier service.py
+          bento_code = f"""import bentoml
+  import pandas as pd
+  from bentoml.io import JSON
+  
+  # Chargement du modèle depuis le store local
+  runner = bentoml.sklearn.get("{str(saved_model.tag)}").to_runner()
+  
+  # Création du service
+  svc = bentoml.Service("dataml_service", runners=[runner])
+  
+  @svc.api(input=JSON(), output=JSON())
+  def predict(input_data: dict) -> dict:
+      df = pd.DataFrame([input_data])
+      # Appel asynchrone au runner
+      pred = runner.predict.run(df)
+      return {{"prediction": float(pred[0])}}
+  """
+          bento_script_path = "outputs/deployment/service.py"
+          with open(bento_script_path, "w", encoding="utf-8") as f:
+              f.write(bento_code)
+              
+          deployment_artifacts["bentoml_service_script"] = bento_script_path
+          
+          print(f"[DEPLOY] Modèle enregistré dans BentoML avec le tag : {saved_model.tag}")
+          print(f"[DEPLOY] Service généré sous {bento_script_path}")
+          print(f"[DEPLOY] Pour lancer : cd outputs/deployment && bentoml serve service:svc --reload")
+      except Exception as e:
+          print(f"[DEPLOY ERREUR] BentoML : {str(e)}")
+  elif bentoml is None:
+      print("[DEPLOY ERREUR] Le package 'bentoml' n'est pas installé.")
+_metadata:
+  bloc: 5
+  section: "2_api"

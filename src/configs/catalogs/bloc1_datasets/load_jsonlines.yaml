@@ -1,0 +1,38 @@
+id: "load_jsonlines"
+name: "Load: Fichier JSONL (JSON Lines)"
+description: "Charge un fichier contenant un objet JSON valide par ligne."
+category: "2. Load"
+tags: ["load", "jsonl", "streaming", "pandas"]
+code_template: |
+  import pandas as pd
+  import time
+  import os
+
+  # [PARAM: FILE_PATH | file]
+  FILE_PATH = "./data/raw/data.jsonl"
+  # [/PARAM]
+  
+  # [PARAM: TARGET_COL | string]
+  TARGET_COL = "target"
+  # [/PARAM]
+
+  print(f"[LOAD] Chargement du JSON Lines depuis {FILE_PATH}...")
+  if not os.path.exists(FILE_PATH):
+      raise FileNotFoundError(f"[ERREUR LOAD] Fichier JSONL introuvable : {FILE_PATH}")
+
+  try:
+      start_time = time.time()
+      df = pd.read_json(FILE_PATH, lines=True)
+      
+      duration = time.time() - start_time
+      print(f"[LOAD] Succès JSONL. {df.shape[0]} lignes chargées en {duration:.2f}s.")
+  except Exception as e:
+      print(f"[ERREUR LOAD] Erreur de parsing JSON Lines : {str(e)}")
+      raise e
+
+  target_name = TARGET_COL if TARGET_COL and TARGET_COL in df.columns else None
+  task_type = "unknown"
+  meta = {"format": "jsonl", "shape": df.shape}
+_metadata:
+  bloc: 1
+  section: "2_load"

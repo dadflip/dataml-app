@@ -1,0 +1,63 @@
+id: "load_adjacency_matrix"
+name: "Load: Matrice d'Adjacence (CSV)"
+description: "Charge un graphe défini par une matrice d'adjacence carrée dans un fichier CSV. Construit le df des noeuds et l'edge_index dans meta."
+category: "2. Load"
+tags: ["load", "graph", "adjacency", "matrix", "csv", "networkx"]
+code_template: |
+  import pandas as pd
+  import numpy as np
+  import time
+  try:
+      import networkx as nx
+  except ImportError:
+      nx = None
+      print("[ERREUR LOAD] 'networkx' n'est pas installé.")
+
+  # [PARAM: FILE_PATH | file]
+  FILE_PATH = "./data/raw/adjacency_matrix.csv"
+  # [/PARAM]
+
+  # [PARAM: NODE_FEATURES_PATH | string]
+  NODE_FEATURES_PATH = ""
+  # [/PARAM]
+
+  print(f"[LOAD] Chargement de la matrice d'adjacence depuis {FILE_PATH}...")
+
+  try:
+      if nx is not None:
+          start_time = time.time()
+          
+          adj_df = pd.read_csv(FILE_PATH, index_col=0)
+          adj_matrix = adj_df.values
+          
+          G = nx.from_numpy_array(adj_matrix)
+          
+          if NODE_FEATURES_PATH and NODE_FEATURES_PATH.strip():
+              df = pd.read_csv(NODE_FEATURES_PATH)
+          else:
+              df = pd.DataFrame({"node_id": list(range(G.number_of_nodes()))})
+          
+          node_list = list(G.nodes())
+          node2idx = {n: i for i, n in enumerate(node_list)}
+          src = [node2idx[u] for u, v in G.edges()]
+          dst = [node2idx[v] for u, v in G.edges()]
+          edge_index = np.array([src, dst], dtype=np.int64)
+          
+          duration = time.time() - start_time
+          print(f"[LOAD] Succès Adjacence. {G.number_of_nodes()} noeuds, {G.number_of_edges()} arêtes en {duration:.2f}s.")
+          
+          target_name = None
+          task_type = "graph_unsupervised"
+          meta = {"format": "adjacency_matrix", "shape": df.shape, "edge_index": edge_index, "node_list": node_list}
+      else:
+          df = None
+          target_name = None
+          task_type = "unknown"
+          meta = {}
+  except Exception as e:
+      print(f"[ERREUR LOAD] Échec du chargement de la matrice d'adjacence : {str(e)}")
+      raise e
+
+_metadata:
+  bloc: 1
+  section: "2_load"

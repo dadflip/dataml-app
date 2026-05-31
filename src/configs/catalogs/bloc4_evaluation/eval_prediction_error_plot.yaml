@@ -1,0 +1,66 @@
+id: "eval_prediction_error_plot"
+name: "Eval Plot: Prediction Error Plot (Regression)"
+description: "Visualisation comparant les valeurs prédites et réelles par rapport à la ligne d'identité (modèle parfait)."
+category: "Regression Visualizations"
+tags: ["eval", "plot", "regression", "prediction-error", "yellowbrick-like"]
+applies_to: ["Regression"]
+when_to_use: "Pour visualiser si la variance de l'erreur augmente avec la valeur cible (hétéroscédasticité) ou s'il y a un biais."
+pros:
+  - "Très intuitif : plus les points sont proches de la ligne diagonale, meilleur est le modèle."
+cons:
+  - "Illisible si on a des millions de points (nécessite un sous-échantillonnage)."
+code_template: |
+  import os
+  import numpy as np
+  import matplotlib.pyplot as plt
+  from sklearn.metrics import r2_score
+
+  evaluation_metrics = {}
+
+  if task_type == "regression" and 'y_test' in locals() and 'y_pred' in locals():
+      print("[EVAL] Génération du Prediction Error Plot...")
+      try:
+          os.makedirs("outputs/evaluation", exist_ok=True)
+          
+          # Sous-échantillonnage si trop grand
+          if len(y_test) > 5000:
+              idx = np.random.choice(len(y_test), 5000, replace=False)
+              yt = np.array(y_test)[idx]
+              yp = np.array(y_pred)[idx]
+          else:
+              yt = np.array(y_test)
+              yp = np.array(y_pred)
+              
+          r2 = r2_score(y_test, y_pred) # Sur l'ensemble entier
+          
+          fig, ax = plt.subplots(figsize=(8, 8))
+          
+          # Ligne d'identité (modèle parfait)
+          min_val = min(np.min(yt), np.min(yp))
+          max_val = max(np.max(yt), np.max(yp))
+          ax.plot([min_val, max_val], [min_val, max_val], 'k--', linewidth=2, label='Identity (R²=1)')
+          
+          # Nuage de points
+          ax.scatter(yt, yp, alpha=0.5, color='steelblue', label='Prédictions')
+          
+          # Droite de régression (Best Fit Line)
+          m, b = np.polyfit(yt, yp, 1)
+          ax.plot(yt, m*yt + b, 'r-', linewidth=2, label=f'Best Fit (R²={r2:.2f})')
+          
+          ax.set_title('Prediction Error Plot')
+          ax.set_xlabel('Valeur Réelle (y_test)')
+          ax.set_ylabel('Valeur Prédite (y_pred)')
+          ax.legend(loc='best')
+          ax.grid(True, alpha=0.3)
+          
+          plot_path = "outputs/evaluation/prediction_error_plot.png"
+          fig.savefig(plot_path, dpi=300)
+          plt.close(fig)
+          
+          evaluation_metrics["prediction_error_plot"] = plot_path
+          print(f"[EVAL] Plot sauvegardé sous {plot_path}")
+      except Exception as e:
+          print(f"[EVAL ERREUR] : {str(e)}")
+_metadata:
+  bloc: 4
+  section: "1_evaluation"

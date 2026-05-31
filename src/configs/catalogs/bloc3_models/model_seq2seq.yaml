@@ -1,0 +1,109 @@
+id: "model_seq2seq"
+name: "Model: Sequence-to-Sequence (Seq2Seq)"
+description: "Architecture Encodeur-Décodeur LSTM pour la traduction, le résumé ou la génération de texte."
+category: "Attention & Transformers"
+tags: ["model", "nlp", "generative", "pytorch", "seq2seq", "deep-learning"]
+applies_to: ["Séquences", "Texte"]
+when_to_use: "Pour traduire, résumer, ou répondre à des questions."
+pros:
+  - "Très flexible (taille d'entrée != taille de sortie)."
+cons:
+  - "Lent. Souffre sans mécanisme d'attention sur les longues phrases."
+hyperparameters:
+  hidden_size: "Taille de l'état caché (ex: 256)."
+  epochs: "Nombre d'époques (ex: 10)."
+code_template: |
+  import pandas as pd
+  import numpy as np
+  try:
+      import torch
+      import torch.nn as nn
+      import torch.optim as optim
+      from torch.utils.data import DataLoader, TensorDataset
+  except ImportError:
+      torch = None
+      print("[ERREUR] torch n'est pas installé.")
+
+  # [PARAM: HIDDEN_SIZE | number]
+  HIDDEN_SIZE = 256
+  # [/PARAM]
+
+  # [PARAM: EPOCHS | number]
+  EPOCHS = 10
+  # [/PARAM]
+
+  print(f"[MODEL] Entraînement Seq2Seq (LSTM Encoder-Decoder)...")
+  if 'X_train' in locals() and 'y_train' in locals() and 'X_test' in locals() and torch is not None:
+      X_tr_np = np.array(X_train, dtype=np.float32)
+      X_te_np = np.array(X_test, dtype=np.float32)
+      if len(X_tr_np.shape) == 2:
+          X_tr_np = X_tr_np.reshape((X_tr_np.shape[0], 1, X_tr_np.shape[1]))
+          X_te_np = X_te_np.reshape((X_te_np.shape[0], 1, X_te_np.shape[1]))
+      in_feat = X_tr_np.shape[2]
+      hs = int(HIDDEN_SIZE)
+
+      class Encoder(nn.Module):
+          def __init__(self, input_dim, hidden_dim):
+              super().__init__()
+              self.lstm = nn.LSTM(input_dim, hidden_dim, batch_first=True)
+          def forward(self, x):
+              _, (h, c) = self.lstm(x)
+              return h, c
+
+      class Decoder(nn.Module):
+          def __init__(self, output_dim, hidden_dim):
+              super().__init__()
+              self.lstm = nn.LSTM(output_dim, hidden_dim, batch_first=True)
+              self.fc = nn.Linear(hidden_dim, output_dim)
+          def forward(self, x, h, c):
+              out, (h, c) = self.lstm(x, (h, c))
+              return self.fc(out), h, c
+
+      class Seq2Seq(nn.Module):
+          def __init__(self, encoder, decoder):
+              super().__init__()
+              self.encoder = encoder
+              self.decoder = decoder
+          def forward(self, src, trg):
+              h, c = self.encoder(src)
+              out, _, _ = self.decoder(trg, h, c)
+              return out
+
+      encoder = Encoder(in_feat, hs)
+      decoder = Decoder(in_feat, hs)
+      model = Seq2Seq(encoder, decoder)
+      device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+      model = model.to(device)
+      optimizer = optim.Adam(model.parameters(), lr=0.001)
+      criterion = nn.MSELoss()
+      # Auto-encoding : on reconstruit l'entrée
+      dataset = TensorDataset(torch.tensor(X_tr_np), torch.tensor(X_tr_np))
+      loader = DataLoader(dataset, batch_size=32, shuffle=True)
+      model.train()
+      for epoch in range(int(EPOCHS)):
+          for bx, by in loader:
+              bx, by = bx.to(device), by.to(device)
+              optimizer.zero_grad()
+              loss = criterion(model(bx, by), by)
+              loss.backward()
+              optimizer.step()
+      model.eval()
+      with torch.no_grad():
+          xt = torch.tensor(X_te_np).to(device)
+          y_pred = model(xt, xt).cpu().numpy()
+      y_proba = None
+      feature_importances = None
+      if 'preprocessor' in locals() and preprocessor is not None:
+          try: from imblearn.pipeline import Pipeline
+          except: from sklearn.pipeline import Pipeline
+          full_pipeline = Pipeline(steps=preprocessor.steps + [('model', model)])
+      else:
+          full_pipeline = model
+      training_history = {"status": "success", "loss": float(loss)}
+      task_type = "generative"
+      print("[MODEL] Seq2Seq entraîné avec succès.")
+  else:
+      print("[ERREUR] Données ou torch manquants.")
+_metadata:
+  bloc: 3
+  section: "6_neural_networks"

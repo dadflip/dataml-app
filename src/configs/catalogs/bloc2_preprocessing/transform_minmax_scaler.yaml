@@ -1,0 +1,47 @@
+id: "transform_minmax_scaler"
+name: "Transform: MinMax Scaler"
+description: "Redimensionne les variables numériques dans [0, 1]."
+category: "4.1 Preprocessing"
+tags: ["transform", "scaling", "tabular", "sklearn", "pipeline"]
+applies_to: ["Tabulaire"]
+when_to_use: "Pour données non normales, réseaux de neurones."
+pros:
+  - "Préserve la forme originelle."
+cons:
+  - "Très sensible aux outliers."
+hyperparameters: {}
+code_template: |
+  import pandas as pd
+  import numpy as np
+  from sklearn.preprocessing import MinMaxScaler
+  from sklearn.compose import ColumnTransformer
+
+  print("[TRANSFORM] MinMaxScaler...")
+  if 'df' in locals():
+      if 'pipeline_steps' not in locals(): pipeline_steps = {}
+      
+      num_cols = df.select_dtypes(include=[np.number]).columns.tolist()
+      if 'target_name' in locals() and target_name in num_cols:
+          num_cols.remove(target_name)
+          
+      if len(num_cols) > 0:
+          scaler = MinMaxScaler()
+          ct = ColumnTransformer(
+              [('mm_scaler', scaler, num_cols)],
+              remainder='passthrough', verbose_feature_names_out=False
+          )
+          try: ct.set_output(transform="pandas")
+          except: pass
+          
+          step_name = 'minmax_scaler'
+          pipeline_steps[step_name] = (step_name, ct)
+          
+          df = pd.DataFrame(ct.fit_transform(df), columns=df.columns, index=df.index)
+          print(f"[TRANSFORM] MinMax Scaling appliqué et ajouté au pipeline.")
+      else:
+          print("[TRANSFORM] Aucune variable numérique.")
+  else:
+      print("[ERREUR] 'df' introuvable.")
+_metadata:
+  bloc: 2
+  section: "4_preprocessing"

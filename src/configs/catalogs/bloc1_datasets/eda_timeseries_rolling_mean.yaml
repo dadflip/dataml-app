@@ -1,0 +1,36 @@
+id: "eda_timeseries_rolling_mean"
+name: "EDA: Moyenne Mobile"
+description: "Lisse une série temporelle avec une moyenne et écart-type glissants."
+category: "3. Exploratory Data Analysis"
+tags: ["eda", "timeseries", "rolling", "pandas"]
+code_template: |
+  import pandas as pd
+  import matplotlib.pyplot as plt
+
+  # [PARAM: TIME_COL | string]
+  TIME_COL = "date"
+  # [/PARAM]
+
+  # [PARAM: WINDOW | number]
+  WINDOW = 12
+  # [/PARAM]
+
+  if TIME_COL in df.columns and 'target_name' in locals() and target_name:
+      temp_df = df.dropna(subset=[TIME_COL, target_name]).sort_values(TIME_COL).set_index(TIME_COL)
+      ts = temp_df[target_name]
+      
+      roll_mean = ts.rolling(window=WINDOW).mean()
+      roll_std = ts.rolling(window=WINDOW).std()
+      
+      plt.figure(figsize=(14, 6))
+      plt.plot(ts, color='blue', label='Original', alpha=0.5)
+      plt.plot(roll_mean, color='red', label=f'Rolling Mean ({WINDOW})')
+      plt.plot(roll_std, color='black', label=f'Rolling Std ({WINDOW})')
+      plt.legend(loc='best')
+      plt.title(f"Moyenne et Écart-type Glissants de {target_name}")
+      plt.show()
+  else:
+      print("[EDA] Colonnes temporelles manquantes.")
+_metadata:
+  bloc: 1
+  section: "3_eda"

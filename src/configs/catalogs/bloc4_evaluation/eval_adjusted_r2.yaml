@@ -1,0 +1,104 @@
+id: "eval_adjusted_r2"
+name: "Eval: Adjusted R-Squared (R2 Ajuste)"
+description: >
+  Calcule le R2 ajuste qui corrige le R2 classique en tenant compte du nombre de
+  variables explicatives. Contrairement au R2, le R2 ajuste penalise l'ajout de
+  variables non pertinentes et ne peut augmenter que si la nouvelle variable ameliore
+  reellement le modele. Le nombre de features est extrait du full_pipeline.
+category: "Metriques de Regression"
+tags: ["eval", "regression", "r2", "adjusted", "ajuste", "metrique"]
+applies_to: ["Regression"]
+when_to_use: >
+  Utiliser lorsque l'on compare des modeles avec un nombre different de variables
+  explicatives, ou pour verifier que l'ajout de nouvelles features ameliore reellement
+  le modele et ne cause pas de surajustement.
+pros:
+  - "Penalise l'ajout de variables non pertinentes"
+  - "Plus fiable que le R2 classique pour la selection de modeles"
+  - "Tient compte de la complexite du modele"
+cons:
+  - "Necessite de connaitre le nombre de features (via full_pipeline)"
+  - "Peut etre negatif si le modele est tres mauvais"
+  - "Interpretation moins intuitive que le R2 classique"
+code_template: |
+  evaluation_metrics = {}
+  try:
+      from sklearn.metrics import r2_score
+      import numpy as np
+
+      print("[EVAL] Calcul du Adjusted R-Squared (R2 Ajuste)...")
+
+      r2_value = r2_score(y_test, y_pred)
+      n = len(y_test)
+
+      # Extract the number of features from the pipeline
+      # Try multiple strategies to get feature count
+      p = None
+
+      # Strategy 1: try to get n_features_in_ from the last step
+      try:
+          last_step = full_pipeline[-1]
+          if hasattr(last_step, 'n_features_in_'):
+              p = int(last_step.n_features_in_)
+              print(f"[EVAL] Nombre de features detecte via last step n_features_in_: {p}")
+      except Exception:
+          pass
+
+      # Strategy 2: try coef_ shape
+      if p is None:
+          try:
+              last_step = full_pipeline[-1]
+              if hasattr(last_step, 'coef_'):
+                  coef = np.array(last_step.coef_)
+                  p = coef.shape[-1] if coef.ndim > 0 else 1
+                  print(f"[EVAL] Nombre de features detecte via coef_ shape: {p}")
+          except Exception:
+              pass
+
+      # Strategy 3: try feature_importances_
+      if p is None:
+          try:
+              last_step = full_pipeline[-1]
+              if hasattr(last_step, 'feature_importances_'):
+                  p = len(last_step.feature_importances_)
+                  print(f"[EVAL] Nombre de features detecte via feature_importances_: {p}")
+          except Exception:
+              pass
+
+      # Strategy 4: try n_features_in_ on the full pipeline
+      if p is None:
+          try:
+              if hasattr(full_pipeline, 'n_features_in_'):
+                  p = int(full_pipeline.n_features_in_)
+                  print(f"[EVAL] Nombre de features detecte via pipeline n_features_in_: {p}")
+          except Exception:
+              pass
+
+      if p is None:
+          print("[EVAL] Impossible de determiner le nombre de features. R2 ajuste non calcule.")
+          evaluation_metrics["r2_score"] = float(r2_value)
+          evaluation_metrics["adjusted_r2"] = None
+          evaluation_metrics["warning"] = "Nombre de features non determinable depuis le pipeline"
+      elif n - p - 1 <= 0:
+          print("[EVAL] Pas assez d'echantillons par rapport au nombre de features pour calculer le R2 ajuste.")
+          evaluation_metrics["r2_score"] = float(r2_value)
+          evaluation_metrics["adjusted_r2"] = None
+          evaluation_metrics["warning"] = "n - p - 1 <= 0, calcul impossible"
+      else:
+          adjusted_r2 = 1 - (1 - r2_value) * (n - 1) / (n - p - 1)
+
+          evaluation_metrics["r2_score"] = float(r2_value)
+          evaluation_metrics["adjusted_r2"] = float(adjusted_r2)
+          evaluation_metrics["n_samples"] = int(n)
+          evaluation_metrics["n_features"] = int(p)
+
+          print(f"[EVAL] R2 = {r2_value:.6f}")
+          print(f"[EVAL] R2 Ajuste = {adjusted_r2:.6f} (n={n}, p={p})")
+
+  except Exception as e:
+      print(f"[EVAL] Erreur lors du calcul du R2 Ajuste : {e}")
+      evaluation_metrics["adjusted_r2"] = None
+      evaluation_metrics["error"] = str(e)
+_metadata:
+  bloc: 4
+  section: "1_evaluation"

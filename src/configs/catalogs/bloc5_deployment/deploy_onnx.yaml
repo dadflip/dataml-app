@@ -1,0 +1,47 @@
+id: "deploy_onnx"
+name: "Deploy: Export to ONNX"
+description: "Convertit le pipeline Scikit-Learn au format ONNX (Open Neural Network Exchange)."
+category: "Serialization"
+tags: ["deploy", "onnx", "export", "cross-platform"]
+applies_to: ["Classification", "Regression"]
+when_to_use: "Pour inférer le modèle dans un autre langage (C++, C#, Java, JavaScript) ou sur des appareils embarqués (Edge AI)."
+pros:
+  - "Très rapide à l'inférence via ONNXRuntime, agnostique du langage de déploiement."
+cons:
+  - "La conversion peut échouer si le pipeline contient des custom transformers non supportés par skl2onnx."
+code_template: |
+  import os
+  import numpy as np
+  try:
+      from skl2onnx import convert_sklearn
+      from skl2onnx.common.data_types import FloatTensorType
+  except ImportError:
+      convert_sklearn = None
+
+  deployment_artifacts = {}
+
+  if 'full_pipeline' in locals() and 'X_train' in locals() and convert_sklearn is not None:
+      print("[DEPLOY] Exportation vers ONNX...")
+      try:
+          os.makedirs("outputs/deployment", exist_ok=True)
+          
+          # Déduction du type d'entrée initial
+          n_features = np.array(X_train).shape[1]
+          initial_type = [('float_input', FloatTensorType([None, n_features]))]
+          
+          # Conversion
+          onx = convert_sklearn(full_pipeline, initial_types=initial_type)
+          
+          model_path = "outputs/deployment/model.onnx"
+          with open(model_path, "wb") as f:
+              f.write(onx.SerializeToString())
+              
+          deployment_artifacts["onnx_model_path"] = model_path
+          print(f"[DEPLOY] Modèle exporté en ONNX sous {model_path}")
+      except Exception as e:
+          print(f"[DEPLOY ERREUR] ONNX : {str(e)}")
+  elif convert_sklearn is None:
+      print("[DEPLOY ERREUR] Le package 'skl2onnx' n'est pas installé. (pip install skl2onnx)")
+_metadata:
+  bloc: 5
+  section: "1_serialization"

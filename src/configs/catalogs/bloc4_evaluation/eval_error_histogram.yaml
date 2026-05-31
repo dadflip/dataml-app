@@ -1,0 +1,55 @@
+id: "eval_error_histogram"
+name: "Eval Plot: Error Histogram"
+description: "Histogramme des erreurs de prédiction (résidus). Une belle courbe en cloche centrée sur zéro est idéale."
+category: "Regression Visualizations"
+tags: ["eval", "plot", "regression", "residuals", "histogram"]
+applies_to: ["Regression"]
+when_to_use: "Pour vérifier l'hypothèse de normalité des résidus de la régression linéaire."
+pros:
+  - "Visualise la symétrie et l'aplatissement (kurtosis) de l'erreur."
+cons:
+  - "Très sensible au choix de la taille des 'bins'."
+code_template: |
+  import os
+  import numpy as np
+  import matplotlib.pyplot as plt
+
+  evaluation_metrics = {}
+
+  if task_type == "regression" and 'y_test' in locals() and 'y_pred' in locals():
+      print("[EVAL] Génération du Error Histogram Plot...")
+      try:
+          os.makedirs("outputs/evaluation", exist_ok=True)
+          errors = np.array(y_test) - np.array(y_pred)
+          
+          fig, ax = plt.subplots(figsize=(8, 6))
+          
+          # Histogram
+          ax.hist(errors, bins=50, color='teal', edgecolor='black', alpha=0.7)
+          
+          # Ligne pour l'erreur Zéro
+          ax.axvline(0, color='red', linestyle='dashed', linewidth=2, label='Zero Error')
+          
+          # Ligne pour la moyenne
+          mean_error = np.mean(errors)
+          ax.axvline(mean_error, color='yellow', linestyle='solid', linewidth=2, label=f'Mean Error: {mean_error:.3f}')
+          
+          ax.set_title('Histogramme des Erreurs de Prédiction')
+          ax.set_xlabel('Erreur (Réel - Prédit)')
+          ax.set_ylabel('Fréquence')
+          ax.legend()
+          ax.grid(axis='y', alpha=0.3)
+          
+          plot_path = "outputs/evaluation/error_histogram.png"
+          fig.savefig(plot_path, dpi=300)
+          plt.close(fig)
+          
+          evaluation_metrics["error_histogram_plot"] = plot_path
+          evaluation_metrics["mean_error"] = float(mean_error)
+          evaluation_metrics["std_error"] = float(np.std(errors))
+          print(f"[EVAL] Plot sauvegardé sous {plot_path}")
+      except Exception as e:
+          print(f"[EVAL ERREUR] : {str(e)}")
+_metadata:
+  bloc: 4
+  section: "1_evaluation"

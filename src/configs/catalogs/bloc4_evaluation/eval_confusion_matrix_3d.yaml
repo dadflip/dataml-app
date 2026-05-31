@@ -1,0 +1,65 @@
+id: "eval_confusion_matrix_3d"
+name: "Eval Plot: 3D Confusion Matrix"
+description: "Visualisation 3D de la matrice de confusion sous forme de barres en relief."
+category: "Classification Visualizations"
+tags: ["eval", "plot", "classification", "3d", "confusion-matrix"]
+applies_to: ["Classification"]
+when_to_use: "Pour une présentation visuelle percutante des résultats de classification multiclasses (souvent appréciée dans les dashboards)."
+pros:
+  - "Très esthétique."
+cons:
+  - "Moins lisible qu'une heatmap 2D classique."
+code_template: |
+  import os
+  import numpy as np
+  import matplotlib.pyplot as plt
+  from sklearn.metrics import confusion_matrix
+  from mpl_toolkits.mplot3d import Axes3D
+
+  evaluation_metrics = {}
+
+  if task_type == "classification" and 'y_test' in locals() and 'y_pred' in locals():
+      print("[EVAL] Génération de la Matrice de Confusion 3D...")
+      try:
+          os.makedirs("outputs/evaluation", exist_ok=True)
+          cm = confusion_matrix(y_test, y_pred)
+          classes = np.unique(np.concatenate([y_test, y_pred]))
+          
+          fig = plt.figure(figsize=(10, 8))
+          ax = fig.add_subplot(111, projection='3d')
+          
+          _x = np.arange(len(classes))
+          _y = np.arange(len(classes))
+          _xx, _yy = np.meshgrid(_x, _y)
+          x, y = _xx.ravel(), _yy.ravel()
+          
+          top = cm.ravel()
+          bottom = np.zeros_like(top)
+          width = depth = 0.5
+          
+          # Couleurs: vert pour diagonale (correct), rouge pour erreurs
+          colors = ['lightgreen' if x[i] == y[i] else 'salmon' for i in range(len(x))]
+          
+          ax.bar3d(x, y, bottom, width, depth, top, shade=True, color=colors)
+          
+          ax.set_title('3D Confusion Matrix')
+          ax.set_xlabel('Classe Prédite')
+          ax.set_ylabel('Classe Réelle')
+          ax.set_zlabel('Nombre')
+          
+          ax.set_xticks(np.arange(len(classes)) + 0.25)
+          ax.set_yticks(np.arange(len(classes)) + 0.25)
+          ax.set_xticklabels(classes, rotation=45)
+          ax.set_yticklabels(classes, rotation=45)
+          
+          plot_path = "outputs/evaluation/confusion_matrix_3d.png"
+          fig.savefig(plot_path, dpi=300)
+          plt.close(fig)
+          
+          evaluation_metrics["confusion_matrix_3d_plot"] = plot_path
+          print(f"[EVAL] Plot sauvegardé sous {plot_path}")
+      except Exception as e:
+          print(f"[EVAL ERREUR] : {str(e)}")
+_metadata:
+  bloc: 4
+  section: "1_evaluation"

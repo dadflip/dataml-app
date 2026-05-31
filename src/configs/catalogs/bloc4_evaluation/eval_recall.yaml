@@ -1,0 +1,48 @@
+id: "eval_recall"
+name: "Eval: Recall Score"
+description: "Calcule le recall (sensibilite / taux de vrais positifs) avec les moyennes macro, micro et weighted."
+category: "Metriques de Classification"
+tags: ["eval", "classification", "recall", "sensitivity", "sklearn"]
+applies_to: ["Classification"]
+when_to_use: "Lorsque le cout des faux negatifs est eleve (ex: detection de maladies, fraude)."
+pros:
+  - "Mesure la capacite du modele a detecter tous les positifs."
+  - "Essentiel lorsque manquer un cas positif a des consequences graves."
+cons:
+  - "Ne tient pas compte des faux positifs."
+  - "Peut etre maximise trivialement en predisant toujours la classe positive."
+code_template: |
+  import numpy as np
+  from sklearn.metrics import recall_score
+
+  evaluation_metrics = {}
+
+  print("[EVAL] Calcul du Recall Score...")
+
+  try:
+      unique_classes = np.unique(y_test)
+      is_binary = len(unique_classes) <= 2
+
+      for avg in ["macro", "micro", "weighted"]:
+          rec = recall_score(y_test, y_pred, average=avg, zero_division=0)
+          evaluation_metrics[f"recall_{avg}"] = float(np.round(rec, 6))
+          print(f"[EVAL] Recall ({avg}) : {rec:.4f}")
+
+      if is_binary:
+          rec_bin = recall_score(y_test, y_pred, average="binary", zero_division=0)
+          evaluation_metrics["recall_binary"] = float(np.round(rec_bin, 6))
+          print(f"[EVAL] Recall (binary) : {rec_bin:.4f}")
+
+      per_class = recall_score(y_test, y_pred, average=None, zero_division=0)
+      evaluation_metrics["recall_per_class"] = {
+          str(cls): float(np.round(val, 6))
+          for cls, val in zip(unique_classes, per_class)
+      }
+      print(f"[EVAL] Recall par classe calcule pour {len(unique_classes)} classes.")
+
+  except Exception as e:
+      print(f"[EVAL][ERREUR] Echec du calcul du recall : {e}")
+      evaluation_metrics["error"] = str(e)
+_metadata:
+  bloc: 4
+  section: "1_evaluation"

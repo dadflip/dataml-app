@@ -1,0 +1,50 @@
+id: "eval_shap_force_plot"
+name: "Eval Plot: SHAP Force Plot (Interactive HTML)"
+description: "Visualisation SHAP classique des forces agissant sur une prédiction, générée sous forme de page HTML interactive."
+category: "Explainability & Feature Importance"
+tags: ["eval", "plot", "explainability", "shap", "html", "force-plot"]
+applies_to: ["Classification", "Regression"]
+when_to_use: "Idéal pour intégrer une explication interactive dans un dashboard web."
+pros:
+  - "Interactif."
+cons:
+  - "Nécessite de charger un fichier HTML séparé."
+code_template: |
+  import os
+  import numpy as np
+  try:
+      import shap
+  except ImportError:
+      shap = None
+
+  evaluation_metrics = {}
+
+  if 'full_pipeline' in locals() and 'X_test' in locals() and shap is not None:
+      print("[EVAL] Génération du SHAP Force Plot HTML...")
+      try:
+          os.makedirs("outputs/evaluation", exist_ok=True)
+          
+          X_arr = np.array(X_test)
+          instance = X_arr[0]
+          background = X_arr[0:50] if len(X_arr) > 50 else X_arr
+              
+          model = full_pipeline.steps[-1][1] if hasattr(full_pipeline, 'steps') else full_pipeline
+          
+          explainer = shap.Explainer(model.predict, background)
+          shap_values = explainer(instance.reshape(1, -1))
+          
+          # Initialize JS pour l'export HTML
+          shap.initjs()
+          
+          force_plot = shap.plots.force(shap_values.base_values[0], shap_values.values[0], instance)
+          
+          html_path = "outputs/evaluation/shap_force_plot.html"
+          shap.save_html(html_path, force_plot)
+          
+          evaluation_metrics["shap_force_plot_html"] = html_path
+          print(f"[EVAL] Fichier HTML sauvegardé sous {html_path}")
+      except Exception as e:
+          print(f"[EVAL ERREUR] SHAP Force Plot : {str(e)}")
+_metadata:
+  bloc: 4
+  section: "1_evaluation"

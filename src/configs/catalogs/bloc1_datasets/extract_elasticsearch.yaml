@@ -1,0 +1,52 @@
+id: "extract_elasticsearch"
+name: "Extract: Elasticsearch"
+description: "Recherche et dump des documents depuis un index Elasticsearch (Scroll API)."
+category: "1. Extract"
+tags: ["extract", "elasticsearch", "search", "nosql"]
+code_template: |
+  from elasticsearch import Elasticsearch
+  from elasticsearch.helpers import scan
+  import json
+  import os
+  import time
+
+  # [PARAM: ES_URL | string]
+  ES_URL = "http://localhost:9200"
+  # [/PARAM]
+  
+  # [PARAM: INDEX_NAME | string]
+  INDEX_NAME = "logs-*"
+  # [/PARAM]
+  
+  # [PARAM: DEST_PATH | string]
+  DEST_PATH = "./data/raw/es_dump.jsonlines"
+  # [/PARAM]
+
+  print(f"[EXTRACT] Scan de l'index {INDEX_NAME} sur Elasticsearch ({ES_URL})...")
+  os.makedirs(os.path.dirname(DEST_PATH), exist_ok=True)
+
+  try:
+      start_time = time.time()
+      es = Elasticsearch(ES_URL)
+      
+      query = {"query": {"match_all": {}}}
+      count = 0
+      
+      with open(DEST_PATH, "w", encoding="utf-8") as f:
+          for doc in scan(es, query=query, index=INDEX_NAME):
+              f.write(json.dumps(doc["_source"]) + "\\n")
+              count += 1
+              
+      duration = time.time() - start_time
+      print(f"[EXTRACT] Succès Elasticsearch. {count} documents dumpés en {duration:.2f}s.")
+  except Exception as e:
+      print(f"[ERREUR EXTRACT] Échec Elasticsearch : {str(e)}")
+      raise e
+
+  df = None
+  target_name = None
+  task_type = "unknown"
+  meta = {"source": "elasticsearch", "path": DEST_PATH}
+_metadata:
+  bloc: 1
+  section: "1_extract"

@@ -1,0 +1,77 @@
+id: "eval_ks_statistic_plot"
+name: "Eval Plot: Kolmogorov-Smirnov (KS) Statistic"
+description: "Affiche la distance maximale entre les distributions cumulées des prédictions positives et négatives."
+category: "Classification Visualizations"
+tags: ["eval", "plot", "classification", "binary", "ks-stat"]
+applies_to: ["Classification Binaire"]
+when_to_use: "Pour évaluer la capacité d'un modèle de scoring (ex: risque de crédit) à séparer les deux classes."
+pros:
+  - "Très utilisé dans l'industrie bancaire et le scoring."
+cons:
+  - "Uniquement pour la classification binaire."
+code_template: |
+  import os
+  import numpy as np
+  import matplotlib.pyplot as plt
+
+  evaluation_metrics = {}
+
+  if task_type == "classification" and 'y_test' in locals() and 'y_proba' in locals() and y_proba is not None:
+      classes = np.unique(y_test)
+      if len(classes) == 2:
+          print("[EVAL] Génération du KS Statistic Plot...")
+          try:
+              os.makedirs("outputs/evaluation", exist_ok=True)
+              
+              # Prendre les probabilités de la classe positive
+              pos_idx = 1
+              probas = y_proba[:, pos_idx]
+              
+              # Binarisation des labels (0, 1)
+              y_true = (y_test == classes[pos_idx]).astype(int)
+              
+              # Tri
+              order = np.argsort(probas)
+              probas_sorted = probas[order]
+              y_true_sorted = y_true[order]
+              
+              # Distributions cumulées
+              total_pos = np.sum(y_true_sorted)
+              total_neg = len(y_true_sorted) - total_pos
+              
+              cum_pos = np.cumsum(y_true_sorted) / total_pos
+              cum_neg = np.cumsum(1 - y_true_sorted) / total_neg
+              
+              # Statistique KS
+              ks_diff = np.abs(cum_pos - cum_neg)
+              ks_stat = np.max(ks_diff)
+              ks_idx = np.argmax(ks_diff)
+              ks_threshold = probas_sorted[ks_idx]
+              
+              fig, ax = plt.subplots(figsize=(8, 6))
+              ax.plot(probas_sorted, cum_pos, label='Cumulative Positives (Class 1)', color='b')
+              ax.plot(probas_sorted, cum_neg, label='Cumulative Negatives (Class 0)', color='r')
+              
+              # Ligne verticale pour le KS
+              ax.axvline(ks_threshold, color='k', linestyle='--', label=f'KS Stat = {ks_stat:.3f} (thresh={ks_threshold:.2f})')
+              
+              ax.set_title('Kolmogorov-Smirnov (KS) Plot')
+              ax.set_xlabel('Probability Threshold')
+              ax.set_ylabel('Cumulative Ratio')
+              ax.legend()
+              ax.grid(True, alpha=0.3)
+              
+              plot_path = "outputs/evaluation/ks_statistic_plot.png"
+              fig.savefig(plot_path, dpi=300)
+              plt.close(fig)
+              
+              evaluation_metrics["ks_stat"] = float(ks_stat)
+              evaluation_metrics["ks_plot"] = plot_path
+              print(f"[EVAL] KS Stat = {ks_stat:.3f}. Plot sauvegardé sous {plot_path}")
+          except Exception as e:
+              print(f"[EVAL ERREUR] Impossible de générer le plot KS : {str(e)}")
+      else:
+          print("[EVAL] Le KS Plot n'est applicable qu'à la classification binaire.")
+_metadata:
+  bloc: 4
+  section: "1_evaluation"

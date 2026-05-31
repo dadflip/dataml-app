@@ -1,0 +1,50 @@
+id: "transform_smote"
+name: "Transform: SMOTE (Oversampling)"
+description: "Génère des exemples synthétiques pour balancer les classes. Requiert imblearn."
+category: "4.1 Preprocessing"
+tags: ["transform", "imbalance", "tabular", "imblearn", "pipeline"]
+applies_to: ["Tabulaire"]
+when_to_use: "Classes très déséquilibrées (ex: Fraude)."
+pros:
+  - "Évite le biais majoritaire."
+cons:
+  - "Lent."
+hyperparameters:
+  sampling_strategy: "auto"
+code_template: |
+  import pandas as pd
+  try:
+      from imblearn.over_sampling import SMOTE
+  except ImportError:
+      SMOTE = None
+      print("[ERREUR] Installez imbalanced-learn.")
+
+  print("[TRANSFORM] SMOTE...")
+  if 'df' in locals() and 'target_name' in locals() and target_name and SMOTE:
+      if 'pipeline_steps' not in locals(): pipeline_steps = {}
+      
+      if target_name in df.columns:
+          smote = SMOTE()
+          
+          # SMOTE est un sampler imblearn. Il s'applique à la fin sur X et y entiers
+          step_name = 'smote'
+          pipeline_steps[step_name] = (step_name, smote)
+          
+          X = df.drop(columns=[target_name])
+          y = df[target_name]
+          
+          # Application locale
+          # Note: Ne marche que si X ne contient plus de NaNs ou strings
+          try:
+              X_res, y_res = smote.fit_resample(X, y)
+              df = pd.concat([X_res, y_res], axis=1)
+              print(f"[TRANSFORM] SMOTE appliqué. Nouvelles lignes : {len(df)}")
+          except Exception as e:
+              print(f"[ERREUR] SMOTE a échoué (Avez-vous imputé/encodé vos données avant ?) : {e}")
+      else:
+          print("[ERREUR] Cible non trouvée.")
+  else:
+      print("[ERREUR] df, cible manquant ou module absent.")
+_metadata:
+  bloc: 2
+  section: "4_preprocessing"

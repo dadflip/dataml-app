@@ -1,0 +1,60 @@
+id: "eval_permutation_importance_boxplot"
+name: "Eval Plot: Permutation Importance Boxplot"
+description: "Affiche l'importance des variables par permutation avec un boxplot pour visualiser la variance de l'importance."
+category: "Explainability & Feature Importance"
+tags: ["eval", "plot", "explainability", "permutation", "boxplot"]
+applies_to: ["Classification", "Regression"]
+when_to_use: "Pour obtenir une importance des features agnostique du modèle, avec une notion d'intervalle de confiance via les répétitions."
+pros:
+  - "Fonctionne sur n'importe quel modèle (black-box)."
+cons:
+  - "Peut être lent si le modèle est lourd à inférer ou s'il y a beaucoup de variables."
+code_template: |
+  import os
+  import numpy as np
+  import matplotlib.pyplot as plt
+  from sklearn.inspection import permutation_importance
+
+  evaluation_metrics = {}
+
+  if 'full_pipeline' in locals() and 'X_test' in locals() and 'y_test' in locals():
+      print("[EVAL] Génération du Permutation Importance Boxplot...")
+      try:
+          os.makedirs("outputs/evaluation", exist_ok=True)
+          
+          # Paramètres de permutation
+          n_repeats = 5
+          result = permutation_importance(
+              full_pipeline, X_test, y_test, n_repeats=n_repeats, random_state=42, n_jobs=-1
+          )
+          
+          sorted_idx = result.importances_mean.argsort()
+          
+          if 'feature_names_out' in locals() and len(feature_names_out) == X_test.shape[1]:
+              labels = np.array(feature_names_out)[sorted_idx]
+          else:
+              labels = [f"Feature {i}" for i in sorted_idx]
+              
+          fig, ax = plt.subplots(figsize=(10, 8))
+          ax.boxplot(
+              result.importances[sorted_idx].T,
+              vert=False,
+              labels=labels
+          )
+          ax.set_title("Permutation Importances (Test Set)")
+          ax.set_xlabel("Decrease in accuracy / R2 score")
+          fig.tight_layout()
+          
+          plot_path = "outputs/evaluation/permutation_importance_boxplot.png"
+          fig.savefig(plot_path, dpi=300)
+          plt.close(fig)
+          
+          evaluation_metrics["permutation_importance_plot"] = plot_path
+          # Sauvegarde du top 1 feature
+          evaluation_metrics["top_permutation_feature"] = labels[-1]
+          print(f"[EVAL] Plot sauvegardé sous {plot_path}")
+      except Exception as e:
+          print(f"[EVAL ERREUR] Permutation Boxplot : {str(e)}")
+_metadata:
+  bloc: 4
+  section: "1_evaluation"

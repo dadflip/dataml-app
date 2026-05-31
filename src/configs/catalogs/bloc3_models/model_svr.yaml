@@ -1,0 +1,62 @@
+id: "model_svr"
+name: "Model: Support Vector Regressor (SVR)"
+description: "Régression à vecteurs de support. Utilise l'astuce du noyau pour des relations non-linéaires."
+category: "Modèles Basés sur la Distance / Marges"
+tags: ["model", "regression", "tabular", "sklearn", "svm"]
+applies_to: ["Tabulaire"]
+when_to_use: "Petits datasets non-linéaires où l'erreur est mesurée avec une tolérance (epsilon)."
+pros:
+  - "Très puissant en dimension modérée."
+cons:
+  - "Lent sur plus de 10 000 échantillons."
+hyperparameters:
+  kernel: "Noyau ('rbf', 'poly', 'linear', 'sigmoid')."
+  C: "Pénalité."
+  epsilon: "Marge de tolérance d'erreur (ex: 0.1)."
+code_template: |
+  import pandas as pd
+  import numpy as np
+  from sklearn.svm import SVR
+
+  # [PARAM: KERNEL | string]
+  KERNEL = "rbf"
+  # [/PARAM]
+
+  # [PARAM: C_PARAM | number]
+  C_PARAM = 1.0
+  # [/PARAM]
+
+  # [PARAM: EPSILON | number]
+  EPSILON = 0.1
+  # [/PARAM]
+
+  print(f"[MODEL] Entraînement SVR (kernel={KERNEL}, C={C_PARAM}, epsilon={EPSILON})...")
+  if 'X_train' in locals() and 'y_train' in locals() and 'X_test' in locals():
+      model = SVR(kernel=KERNEL, C=float(C_PARAM), epsilon=float(EPSILON))
+      model.fit(X_train, y_train)
+      
+      y_pred = model.predict(X_test)
+      y_proba = None
+      
+      feature_importances = None
+      if 'feature_names_out' in locals() and KERNEL == "linear":
+          if len(model.coef_[0]) == len(feature_names_out):
+              feature_importances = pd.Series(np.abs(model.coef_[0]), index=feature_names_out)
+              
+      if 'preprocessor' in locals() and preprocessor is not None:
+          try: from imblearn.pipeline import Pipeline
+          except: from sklearn.pipeline import Pipeline
+          full_pipeline = Pipeline(steps=preprocessor.steps + [('model', model)])
+      else:
+          try: from imblearn.pipeline import Pipeline
+          except: from sklearn.pipeline import Pipeline
+          full_pipeline = Pipeline(steps=[('model', model)])
+          
+      training_history = {"status": "success", "fitted_on": len(X_train)}
+      task_type = "regression"
+      print("[MODEL] Modèle entraîné et Full Pipeline compilé avec succès.")
+  else:
+      print("[ERREUR] Données d'entraînement introuvables.")
+_metadata:
+  bloc: 3
+  section: "2_regression_tabulaire"

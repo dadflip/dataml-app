@@ -1,0 +1,64 @@
+id: "model_arima"
+name: "Model: ARIMA Forecaster"
+description: "Autoregressive Integrated Moving Average. Modèle statistique classique pour les séries temporelles."
+category: "Modèles Séries Temporelles"
+tags: ["model", "time-series", "forecasting", "statsmodels", "arima"]
+applies_to: ["Séries Temporelles"]
+when_to_use: "Pour des séries temporelles univariées avec une dépendance linéaire forte dans le temps."
+pros:
+  - "Très interprétable."
+cons:
+  - "Nécessite que la série soit stationnaire."
+hyperparameters:
+  p: "Ordre Auto-Régressif (AR)."
+  d: "Ordre de Différenciation (I)."
+  q: "Ordre Moyenne Mobile (MA)."
+code_template: |
+  import pandas as pd
+  import numpy as np
+  try:
+      from statsmodels.tsa.arima.model import ARIMA
+  except ImportError:
+      ARIMA = None
+      print("[ERREUR] statsmodels n'est pas installé. Lancez : !pip install statsmodels")
+
+  # [PARAM: ORDER_P | number]
+  ORDER_P = 1
+  # [/PARAM]
+
+  # [PARAM: ORDER_D | number]
+  ORDER_D = 1
+  # [/PARAM]
+
+  # [PARAM: ORDER_Q | number]
+  ORDER_Q = 1
+  # [/PARAM]
+
+  print(f"[MODEL] Entraînement ARIMA (p={ORDER_P}, d={ORDER_D}, q={ORDER_Q})...")
+  if 'y_train' in locals() and 'X_test' in locals() and ARIMA is not None:
+      # ARIMA s'entraîne sur y_train uniquement (univarié classique)
+      y_tr = np.array(y_train)
+      
+      try:
+          model = ARIMA(y_tr, order=(int(ORDER_P), int(ORDER_D), int(ORDER_Q)))
+          model_fit = model.fit()
+          
+          # Inférence (on prédit autant d'étapes que la taille de X_test)
+          steps = len(X_test) if hasattr(X_test, '__len__') else 10
+          y_pred = model_fit.forecast(steps=steps)
+          
+          y_proba = None
+          feature_importances = None
+          
+          full_pipeline = model_fit
+              
+          training_history = {"status": "success", "aic": model_fit.aic}
+          task_type = "forecasting"
+          print("[MODEL] Modèle ARIMA entraîné avec succès.")
+      except Exception as e:
+          print(f"[ERREUR] ARIMA a échoué. Les données doivent être une série continue 1D. Détail: {e}")
+  else:
+      print("[ERREUR] y_train introuvable ou module statsmodels non installé.")
+_metadata:
+  bloc: 3
+  section: "3_nlp_and_timeseries"

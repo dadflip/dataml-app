@@ -1,0 +1,45 @@
+id: "extract_gdrive"
+name: "Extract: Google Drive"
+description: "Télécharge un fichier public depuis Google Drive."
+category: "1. Extract"
+tags: ["extract", "gdrive", "google"]
+code_template: |
+  import os
+  import time
+  import subprocess
+
+  # [PARAM: FILE_ID | string]
+  FILE_ID = "1A2B3C4D5E6F7G8H9I"
+  # [/PARAM]
+  
+  # [PARAM: DEST_PATH | string]
+  DEST_PATH = "./data/raw/gdrive_data.csv"
+  # [/PARAM]
+
+  print(f"[EXTRACT] Téléchargement depuis Google Drive (ID: {FILE_ID})...")
+  os.makedirs(os.path.dirname(DEST_PATH), exist_ok=True)
+
+  try:
+      start_time = time.time()
+      # gdown est très robuste pour les gros fichiers Drive
+      result = subprocess.run(
+          ["gdown", f"https://drive.google.com/uc?id={FILE_ID}", "-O", DEST_PATH],
+          capture_output=True, text=True
+      )
+      
+      if result.returncode != 0:
+          raise RuntimeError(result.stderr)
+          
+      duration = time.time() - start_time
+      print(f"[EXTRACT] Succès GDrive. Fichier rapatrié en {duration:.2f}s.")
+  except Exception as e:
+      print(f"[ERREUR EXTRACT] Erreur gdown (Lien privé ou module non installé) : {str(e)}")
+      raise e
+
+  df = None
+  target_name = None
+  task_type = "unknown"
+  meta = {"source": "gdrive", "path": DEST_PATH}
+_metadata:
+  bloc: 1
+  section: "1_extract"

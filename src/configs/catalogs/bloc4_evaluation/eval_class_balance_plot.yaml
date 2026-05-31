@@ -1,0 +1,58 @@
+id: "eval_class_balance_plot"
+name: "Eval Plot: Class Balance Comparison"
+description: "Compare sous forme d'histogramme la distribution des classes réelles par rapport aux classes prédites."
+category: "Classification Visualizations"
+tags: ["eval", "plot", "classification", "class-balance"]
+applies_to: ["Classification"]
+when_to_use: "Pour voir en un clin d'oeil si le modèle sous-prédit ou sur-prédit une classe spécifique."
+pros:
+  - "Très simple et intuitif."
+cons:
+  - "Ne remplace pas la matrice de confusion (qui montre QUI se trompe avec QUI)."
+code_template: |
+  import os
+  import numpy as np
+  import matplotlib.pyplot as plt
+
+  evaluation_metrics = {}
+
+  if task_type == "classification" and 'y_test' in locals() and 'y_pred' in locals():
+      print("[EVAL] Génération du Class Balance Plot...")
+      try:
+          os.makedirs("outputs/evaluation", exist_ok=True)
+          
+          # Comptage
+          classes, counts_true = np.unique(y_test, return_counts=True)
+          pred_classes, counts_pred = np.unique(y_pred, return_counts=True)
+          
+          # Mapping pour s'assurer que l'ordre est le même
+          dict_pred = dict(zip(pred_classes, counts_pred))
+          aligned_counts_pred = [dict_pred.get(c, 0) for c in classes]
+          
+          x = np.arange(len(classes))
+          width = 0.35
+          
+          fig, ax = plt.subplots(figsize=(10, 6))
+          rects1 = ax.bar(x - width/2, counts_true, width, label='Réel (y_test)', color='skyblue')
+          rects2 = ax.bar(x + width/2, aligned_counts_pred, width, label='Prédit (y_pred)', color='salmon')
+          
+          ax.set_ylabel('Nombre d\'instances')
+          ax.set_title('Distribution des classes : Réel vs Prédit')
+          ax.set_xticks(x)
+          ax.set_xticklabels([str(c) for c in classes], rotation=45 if len(classes)>5 else 0)
+          ax.legend()
+          ax.grid(axis='y', alpha=0.3)
+          
+          plt.tight_layout()
+          
+          plot_path = "outputs/evaluation/class_balance_plot.png"
+          fig.savefig(plot_path, dpi=300)
+          plt.close(fig)
+          
+          evaluation_metrics["class_balance_plot"] = plot_path
+          print(f"[EVAL] Plot sauvegardé sous {plot_path}")
+      except Exception as e:
+          print(f"[EVAL ERREUR] : {str(e)}")
+_metadata:
+  bloc: 4
+  section: "1_evaluation"

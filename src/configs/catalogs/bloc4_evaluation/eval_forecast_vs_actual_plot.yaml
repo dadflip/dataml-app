@@ -1,0 +1,52 @@
+id: "eval_forecast_vs_actual_plot"
+name: "Eval Plot: Forecast vs Actual Time Series"
+description: "Affiche la courbe des prédictions superposée à la série temporelle réelle."
+category: "Time Series Visualizations"
+tags: ["eval", "plot", "timeseries", "forecasting", "lineplot"]
+applies_to: ["Forecasting", "Regression"]
+when_to_use: "Absolument indispensable pour vérifier visuellement que le modèle suit la tendance et la saisonnalité."
+pros:
+  - "Intuitif et facile à interpréter."
+cons:
+  - "Nécessite que les données de test gardent un ordre chronologique (pas de shuffle)."
+code_template: |
+  import os
+  import numpy as np
+  import pandas as pd
+  import matplotlib.pyplot as plt
+
+  evaluation_metrics = {}
+
+  if task_type in ["forecasting", "regression"] and 'y_test' in locals() and 'y_pred' in locals():
+      print("[EVAL] Génération du Forecast vs Actual Plot...")
+      try:
+          os.makedirs("outputs/evaluation", exist_ok=True)
+          
+          fig, ax = plt.subplots(figsize=(12, 5))
+          
+          # Si y_test a un index temporel (Pandas)
+          if hasattr(y_test, 'index'):
+              x_axis = y_test.index
+          else:
+              x_axis = np.arange(len(y_test))
+              
+          ax.plot(x_axis, y_test, label='Actual (y_test)', color='black', alpha=0.7)
+          ax.plot(x_axis, y_pred, label='Forecast (y_pred)', color='blue', alpha=0.9, linestyle='--')
+          
+          ax.set_title('Time Series: Actual vs Forecast')
+          ax.set_xlabel('Time / Steps')
+          ax.set_ylabel('Target Value')
+          ax.legend()
+          ax.grid(True, alpha=0.3)
+          
+          plot_path = "outputs/evaluation/forecast_vs_actual.png"
+          fig.savefig(plot_path, dpi=300, bbox_inches='tight')
+          plt.close(fig)
+          
+          evaluation_metrics["forecast_vs_actual_plot"] = plot_path
+          print(f"[EVAL] Plot sauvegardé sous {plot_path}")
+      except Exception as e:
+          print(f"[EVAL ERREUR] Forecast Plot : {str(e)}")
+_metadata:
+  bloc: 4
+  section: "1_evaluation"

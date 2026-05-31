@@ -1,0 +1,67 @@
+id: "model_lda_topic"
+name: "Model: Latent Dirichlet Allocation (LDA)"
+description: "Modèle non-supervisé probabiliste pour la modélisation thématique (Topic Modeling)."
+category: "Modèles NLP (Entraînés)"
+tags: ["model", "nlp", "unsupervised", "topic-modeling", "sklearn", "lda"]
+applies_to: ["Texte"]
+when_to_use: "Quand vous voulez découvrir automatiquement les sujets (topics) cachés dans une grande collection de textes non labellisés."
+pros:
+  - "Totalement non-supervisé."
+  - "Interprétation probabiliste claire."
+cons:
+  - "Suppose que les documents sont des mélanges de topics."
+  - "Nécessite d'utiliser CountVectorizer en amont (les entiers sont requis, TF-IDF est sous-optimal)."
+hyperparameters:
+  n_components: "Nombre de topics à découvrir (ex: 10)."
+code_template: |
+  import pandas as pd
+  import numpy as np
+  from sklearn.decomposition import LatentDirichletAllocation
+
+  # [PARAM: N_COMPONENTS | number]
+  N_COMPONENTS = 10
+  # [/PARAM]
+
+  print(f"[MODEL] Entraînement LDA Topic Modeling (n_topics={N_COMPONENTS})...")
+  if 'X_train' in locals() and 'X_test' in locals():
+      # LDA s'attend à une matrice document-terme (idéalement CountVectorizer, venant du bloc Preprocessing)
+      # On va utiliser le preprocessor s'il a transformé les données, sinon on fait un vecteur local
+      
+      model = LatentDirichletAllocation(n_components=int(N_COMPONENTS), random_state=42)
+      
+      # Si on a du texte brut qui n'a pas été vectorisé, on le fait à la volée
+      X_tr_proc = X_train
+      X_te_proc = X_test
+      
+      if isinstance(X_train, pd.DataFrame) and 'text' in X_train.columns:
+          from sklearn.feature_extraction.text import CountVectorizer
+          cv = CountVectorizer(max_features=5000)
+          X_tr_proc = cv.fit_transform(X_train['text'].astype(str))
+          X_te_proc = cv.transform(X_test['text'].astype(str))
+          
+      model.fit(X_tr_proc)
+      
+      # En topic modeling, "predict" donne la distribution des topics pour chaque doc
+      topic_dist = model.transform(X_te_proc)
+      y_pred = np.argmax(topic_dist, axis=1) # Le topic dominant
+      y_proba = topic_dist # Probabilités d'appartenir à chaque topic
+      
+      feature_importances = None
+      
+      if 'preprocessor' in locals() and preprocessor is not None:
+          try: from imblearn.pipeline import Pipeline
+          except: from sklearn.pipeline import Pipeline
+          full_pipeline = Pipeline(steps=preprocessor.steps + [('model', model)])
+      else:
+          try: from imblearn.pipeline import Pipeline
+          except: from sklearn.pipeline import Pipeline
+          full_pipeline = Pipeline(steps=[('model', model)])
+          
+      training_history = {"status": "success", "perplexity": model.perplexity(X_te_proc)}
+      task_type = "clustering" # Topic modeling vu comme clustering doux
+      print("[MODEL] LDA entraîné avec succès.")
+  else:
+      print("[ERREUR] Données d'entraînement introuvables.")
+_metadata:
+  bloc: 3
+  section: "3_nlp_and_timeseries"

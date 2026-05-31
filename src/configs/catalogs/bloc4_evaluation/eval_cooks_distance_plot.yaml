@@ -1,0 +1,71 @@
+id: "eval_cooks_distance_plot"
+name: "Eval Plot: Cook's Distance"
+description: "Mesure l'influence de chaque point de donnée sur le modèle de régression. Plus la distance est grande, plus le point est un outlier influent."
+category: "Regression Visualizations"
+tags: ["eval", "plot", "regression", "outliers", "yellowbrick-like"]
+applies_to: ["Regression"]
+when_to_use: "Pour identifier les points de données aberrants qui 'tirent' la droite de régression vers eux de manière disproportionnée."
+pros:
+  - "Très puissant pour l'analyse d'erreurs (Debugging Data)."
+cons:
+  - "Généralement défini stricto sensu pour la régression linéaire (Ols), ici on l'approxime via le levier."
+code_template: |
+  import os
+  import numpy as np
+  import matplotlib.pyplot as plt
+  try:
+      from yellowbrick.regressor import CooksDistance
+  except ImportError:
+      CooksDistance = None
+
+  evaluation_metrics = {}
+
+  if task_type == "regression" and 'full_pipeline' in locals() and 'X_train' in locals() and 'y_train' in locals():
+      print("[EVAL] Génération du Cook's Distance Plot...")
+      try:
+          os.makedirs("outputs/evaluation", exist_ok=True)
+          
+          if CooksDistance is not None:
+              # Yellowbrick gère tout
+              fig, ax = plt.subplots(figsize=(10, 6))
+              visualizer = CooksDistance(full_pipeline, ax=ax)
+              visualizer.fit(X_train, y_train)
+              visualizer.finalize()
+              
+              plot_path = "outputs/evaluation/cooks_distance.png"
+              fig.savefig(plot_path, dpi=300)
+              plt.close(fig)
+              
+              evaluation_metrics["cooks_distance_plot"] = plot_path
+              print(f"[EVAL] Plot sauvegardé sous {plot_path} (via Yellowbrick)")
+          else:
+              print("[EVAL] 'yellowbrick' non installé. Approximation des outliers via Z-score des erreurs...")
+              # Fallback basique : plot des erreurs absolues standardisées
+              if 'y_test' in locals() and 'y_pred' in locals():
+                  errors = np.abs(np.array(y_test) - np.array(y_pred))
+                  z_scores = (errors - np.mean(errors)) / np.std(errors)
+                  
+                  fig, ax = plt.subplots(figsize=(10, 6))
+                  markerline, stemlines, baseline = ax.stem(range(len(z_scores)), z_scores, linefmt='b-', markerfmt='bo', basefmt='r-')
+                  plt.setp(stemlines, 'linewidth', 1)
+                  plt.setp(markerline, 'markersize', 4)
+                  
+                  ax.axhline(3, color='r', linestyle='--', label='Z-Score = 3 (Outlier Threshold)')
+                  ax.set_title('Approximated Outlier Influence (Error Z-Scores)')
+                  ax.set_xlabel('Instance Index')
+                  ax.set_ylabel('Standardized Absolute Error')
+                  ax.legend()
+                  
+                  plot_path = "outputs/evaluation/cooks_distance_fallback.png"
+                  fig.savefig(plot_path, dpi=300)
+                  plt.close(fig)
+                  
+                  evaluation_metrics["cooks_distance_plot"] = plot_path
+                  print(f"[EVAL] Fallback plot sauvegardé sous {plot_path}")
+              else:
+                  print("[EVAL ERREUR] y_test et y_pred manquants pour le fallback.")
+      except Exception as e:
+          print(f"[EVAL ERREUR] : {str(e)}")
+_metadata:
+  bloc: 4
+  section: "1_evaluation"

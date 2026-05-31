@@ -4,7 +4,8 @@ import { CatalogBrowser } from "@/components/CatalogBrowser";
 import { NotebookBuilder } from "@/components/NotebookBuilder";
 import { IntegrationsPanel } from "@/components/IntegrationsPanel";
 import { useCatalogs } from "@/lib/use-catalogs";
-import { makeCell, type CatalogBlock, type NotebookCell } from "@/lib/pipeline";
+import { usePipelines } from "@/lib/use-pipelines";
+import { makeCell, type CatalogBlock, type NotebookCell, type PipelineTemplate, allBlocks, applyParamOverrides, extractParams } from "@/lib/pipeline";
 import {
   loadIntegrationsCatalog,
   loadIntegrationsState,
@@ -31,7 +32,12 @@ export const Route = createFileRoute("/app")({
 type Tab = "catalog" | "notebook";
 
 function Index() {
-  const { catalogs, loading, error } = useCatalogs();
+  const { catalogs, loading: catLoading, error: catError } = useCatalogs();
+  const { pipelines, loading: pipeLoading, error: pipeError } = usePipelines();
+  
+  const loading = catLoading || pipeLoading;
+  const error = catError || pipeError;
+
   const [cells, setCells] = useState<NotebookCell[]>([]);
   const [tab, setTab] = useState<Tab>("catalog");
   const [integrationsCatalog, setIntegrationsCatalog] =
@@ -55,6 +61,35 @@ function Index() {
 
   const addBlock = (b: CatalogBlock) => {
     setCells((cs) => [...cs, makeCell(b)]);
+    setTab("notebook");
+  };
+
+  const addPipeline = (p: PipelineTemplate) => {
+    if (!catalogs) return;
+    const all = allBlocks(catalogs);
+    
+    // We instantiate nodes in the exact order they are listed in the YAML
+    const newCells = p.nodes.map(node => {
+      const blockDef = all.find(b => b.id === node.block_id);
+      if (!blockDef) throw new Error(`Block ${node.block_id} not found in catalog.`);
+      
+      const cell = makeCell(blockDef);
+      
+      // Override default parameters
+      if (node.params) {
+        for (const [k, v] of Object.entries(node.params)) {
+          cell.overrides[k] = String(v);
+        }
+        // Bake the overrides permanently into the code so the editor shows them properly
+        cell.code = applyParamOverrides(cell.code, cell.overrides);
+        cell.params = extractParams(cell.code);
+        cell.overrides = {};
+      }
+      return cell;
+    });
+
+    // Append to existing cells
+    setCells((cs) => [...cs, ...newCells]);
     setTab("notebook");
   };
 
@@ -165,11 +200,16 @@ function Index() {
         </div>
       )}
       {error && <div className="grid flex-1 place-items-center text-sm text-destructive">{error}</div>}
-      {catalogs && (
+      {catalogs && pipelines && (
         /* pb-16 on mobile to make room for bottom nav */
         <main className="min-h-0 flex-1 overflow-hidden pb-16 sm:pb-0">
           <div className={`h-full ${tab === "catalog" ? "block" : "hidden"}`}>
-            <CatalogBrowser catalogs={catalogs} onAdd={addBlock} />
+            <CatalogBrowser 
+              catalogs={catalogs} 
+              pipelines={pipelines} 
+              onAdd={addBlock} 
+              onAddPipeline={addPipeline} 
+            />
           </div>
           <div className={`h-full ${tab === "notebook" ? "block" : "hidden"}`}>
             <NotebookBuilder cells={cells} setCells={setCells} catalogs={catalogs} />

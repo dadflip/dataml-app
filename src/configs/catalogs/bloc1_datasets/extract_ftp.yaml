@@ -1,0 +1,47 @@
+id: "extract_ftp"
+name: "Extract: Serveur FTP"
+description: "Télécharge un fichier depuis un serveur FTP public ou privé."
+category: "1. Extract"
+tags: ["extract", "ftp", "server"]
+code_template: |
+  import ftplib
+  import os
+  import time
+
+  # [PARAM: FTP_HOST | string]
+  FTP_HOST = "ftp.example.com"
+  # [/PARAM]
+  
+  # [PARAM: FTP_PATH | string]
+  FTP_PATH = "/pub/data.csv"
+  # [/PARAM]
+  
+  # [PARAM: DEST_PATH | string]
+  DEST_PATH = "./data/raw/ftp_data.csv"
+  # [/PARAM]
+
+  print(f"[EXTRACT] Connexion FTP vers {FTP_HOST}...")
+  os.makedirs(os.path.dirname(DEST_PATH), exist_ok=True)
+
+  try:
+      start_time = time.time()
+      ftp = ftplib.FTP(FTP_HOST)
+      ftp.login() # Anonyme par défaut
+      
+      with open(DEST_PATH, 'wb') as local_file:
+          ftp.retrbinary(f"RETR {FTP_PATH}", local_file.write)
+          
+      ftp.quit()
+      duration = time.time() - start_time
+      print(f"[EXTRACT] Succès FTP. Fichier rapatrié en {duration:.2f}s.")
+  except Exception as e:
+      print(f"[ERREUR EXTRACT] Impossible de récupérer le fichier FTP : {str(e)}")
+      raise e
+
+  df = None
+  target_name = None
+  task_type = "unknown"
+  meta = {"source": "ftp", "path": DEST_PATH}
+_metadata:
+  bloc: 1
+  section: "1_extract"

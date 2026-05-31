@@ -1,0 +1,34 @@
+id: "deploy_pickle"
+name: "Deploy: Standard Pickle"
+description: "Sauvegarde le modèle en utilisant le standard Pickle de Python."
+category: "Serialization"
+tags: ["deploy", "export", "pickle", "python"]
+applies_to: ["Classification", "Regression", "Clustering"]
+when_to_use: "Pour des modèles non Scikit-Learn ou quand joblib n'est pas disponible."
+pros:
+  - "Standard natif Python, pas de dépendance externe requise."
+cons:
+  - "Problèmes potentiels de sécurité (exécution de code arbitraire au chargement) et de compatibilité de version."
+code_template: |
+  import os
+  import pickle
+
+  deployment_artifacts = {}
+
+  if 'full_pipeline' in locals():
+      print("[DEPLOY] Sauvegarde du modèle via Pickle...")
+      try:
+          os.makedirs("outputs/deployment", exist_ok=True)
+          
+          model_path = "outputs/deployment/model.pkl"
+          with open(model_path, "wb") as f:
+              pickle.dump(full_pipeline, f)
+          
+          deployment_artifacts["model_path"] = model_path
+          deployment_artifacts["format"] = "pickle"
+          print(f"[DEPLOY] Modèle sauvegardé avec succès sous {model_path}")
+      except Exception as e:
+          print(f"[DEPLOY ERREUR] Sauvegarde Pickle : {str(e)}")
+_metadata:
+  bloc: 5
+  section: "1_serialization"

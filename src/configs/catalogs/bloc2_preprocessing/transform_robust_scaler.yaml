@@ -1,0 +1,47 @@
+id: "transform_robust_scaler"
+name: "Transform: Robust Scaler"
+description: "Met à l'échelle via l'interquartile."
+category: "4.1 Preprocessing"
+tags: ["transform", "scaling", "tabular", "sklearn", "pipeline"]
+applies_to: ["Tabulaire"]
+when_to_use: "Quand il y a beaucoup d'outliers."
+pros:
+  - "Robuste."
+cons:
+  - "Ne borne pas strictement."
+hyperparameters: {}
+code_template: |
+  import pandas as pd
+  import numpy as np
+  from sklearn.preprocessing import RobustScaler
+  from sklearn.compose import ColumnTransformer
+
+  print("[TRANSFORM] RobustScaler...")
+  if 'df' in locals():
+      if 'pipeline_steps' not in locals(): pipeline_steps = {}
+      
+      num_cols = df.select_dtypes(include=[np.number]).columns.tolist()
+      if 'target_name' in locals() and target_name in num_cols:
+          num_cols.remove(target_name)
+          
+      if len(num_cols) > 0:
+          scaler = RobustScaler()
+          ct = ColumnTransformer(
+              [('rob_scaler', scaler, num_cols)],
+              remainder='passthrough', verbose_feature_names_out=False
+          )
+          try: ct.set_output(transform="pandas")
+          except: pass
+          
+          step_name = 'robust_scaler'
+          pipeline_steps[step_name] = (step_name, ct)
+          
+          df = pd.DataFrame(ct.fit_transform(df), columns=df.columns, index=df.index)
+          print(f"[TRANSFORM] Robust Scaling appliqué au pipeline.")
+      else:
+          print("[TRANSFORM] Aucune variable.")
+  else:
+      print("[ERREUR] 'df' introuvable.")
+_metadata:
+  bloc: 2
+  section: "4_preprocessing"

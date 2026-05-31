@@ -1,0 +1,64 @@
+id: "eval_regression_error_characteristic"
+name: "Eval Plot: Regression Error Characteristic (REC) Curve"
+description: "L'équivalent d'une courbe ROC pour la régression. Affiche le pourcentage de prédictions se situant en deçà d'une certaine marge d'erreur."
+category: "Regression Visualizations"
+tags: ["eval", "plot", "regression", "rec-curve", "tolerance"]
+applies_to: ["Regression"]
+when_to_use: "Lorsque le client métier demande : 'Dans quel % des cas mon modèle se trompe de moins de 10 euros ?'."
+pros:
+  - "Extrêmement orienté métier et facile à lire pour les non-techniques."
+cons:
+  - "Ne mesure que l'erreur absolue, pas sa direction."
+code_template: |
+  import os
+  import numpy as np
+  import matplotlib.pyplot as plt
+
+  evaluation_metrics = {}
+
+  if task_type == "regression" and 'y_test' in locals() and 'y_pred' in locals():
+      print("[EVAL] Génération de la Courbe REC...")
+      try:
+          os.makedirs("outputs/evaluation", exist_ok=True)
+          
+          # Erreur absolue
+          abs_errors = np.abs(np.array(y_test) - np.array(y_pred))
+          
+          # Tolérances (de 0 à max erreur)
+          tolerances = np.linspace(0, np.max(abs_errors), 100)
+          
+          # Pour chaque tolérance, % de prédictions avec erreur <= tolérance
+          accuracies = np.array([np.mean(abs_errors <= tol) for tol in tolerances])
+          
+          fig, ax = plt.subplots(figsize=(8, 6))
+          ax.plot(tolerances, accuracies * 100, color='darkorange', lw=2)
+          
+          # Marquer le point à 90% d'accuracy
+          idx_90 = np.argmax(accuracies >= 0.90)
+          if idx_90 > 0:
+              tol_90 = tolerances[idx_90]
+              ax.axhline(90, color='k', linestyle='--', alpha=0.5)
+              ax.axvline(tol_90, color='k', linestyle='--', alpha=0.5)
+              ax.plot(tol_90, 90, 'ro')
+              ax.annotate(f"90% within {tol_90:.2f} error", xy=(tol_90, 90), xytext=(tol_90, 80),
+                          arrowprops=dict(facecolor='black', shrink=0.05, width=1, headwidth=5))
+              evaluation_metrics["error_tolerance_90_pct"] = float(tol_90)
+              
+          ax.set_title('Regression Error Characteristic (REC) Curve')
+          ax.set_xlabel('Absolute Error Tolerance')
+          ax.set_ylabel('Percentage of Correct Predictions (%)')
+          ax.grid(True, alpha=0.3)
+          
+          plot_path = "outputs/evaluation/rec_curve.png"
+          fig.savefig(plot_path, dpi=300)
+          plt.close(fig)
+          
+          evaluation_metrics["rec_curve_plot"] = plot_path
+          # Calcul de l'Aire sur la courbe REC (AOC, plus bas c'est mieux) = erreur absolue moyenne
+          evaluation_metrics["rec_area_over_curve"] = float(np.mean(abs_errors))
+          print(f"[EVAL] Plot sauvegardé sous {plot_path}")
+      except Exception as e:
+          print(f"[EVAL ERREUR] : {str(e)}")
+_metadata:
+  bloc: 4
+  section: "1_evaluation"

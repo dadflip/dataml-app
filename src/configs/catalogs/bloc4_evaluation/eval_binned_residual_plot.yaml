@@ -1,0 +1,70 @@
+id: "eval_binned_residual_plot"
+name: "Eval Plot: Binned Residual Plot"
+description: "Divise les prédictions en 'bins' et affiche la moyenne des résidus pour chaque bin avec des intervalles de confiance."
+category: "Regression Visualizations"
+tags: ["eval", "plot", "regression", "residuals", "binned"]
+applies_to: ["Regression"]
+when_to_use: "Pour détecter des patterns non-linéaires non capturés par le modèle, particulièrement sur de gros datasets où le scatter plot est illisible."
+pros:
+  - "Très lisible même avec des millions de points."
+cons:
+  - "Perd le détail point par point."
+code_template: |
+  import os
+  import numpy as np
+  import pandas as pd
+  import matplotlib.pyplot as plt
+
+  evaluation_metrics = {}
+
+  if task_type == "regression" and 'y_test' in locals() and 'y_pred' in locals():
+      print("[EVAL] Génération du Binned Residual Plot...")
+      try:
+          os.makedirs("outputs/evaluation", exist_ok=True)
+          
+          residuals = np.array(y_test) - np.array(y_pred)
+          df = pd.DataFrame({'pred': np.array(y_pred), 'res': residuals})
+          
+          # Créer 20 bins basés sur les quantiles des prédictions
+          df['bin'] = pd.qcut(df['pred'], q=20, duplicates='drop')
+          
+          bin_stats = df.groupby('bin').agg(
+              mean_pred=('pred', 'mean'),
+              mean_res=('res', 'mean'),
+              std_res=('res', 'std'),
+              count=('res', 'count')
+          ).reset_index()
+          
+          # Intervalle de confiance approx 95% = 2 * (std / sqrt(n))
+          bin_stats['ci_95'] = 2 * (bin_stats['std_res'] / np.sqrt(bin_stats['count']))
+          
+          fig, ax = plt.subplots(figsize=(10, 6))
+          
+          ax.errorbar(bin_stats['mean_pred'], bin_stats['mean_res'], 
+                      yerr=bin_stats['ci_95'], fmt='o', color='darkblue', 
+                      ecolor='lightgray', elinewidth=2, capsize=4, label='Mean Residual per Bin')
+          
+          ax.axhline(0, color='r', linestyle='--', lw=2, label='Zero Error')
+          
+          # Ligne de confiance 95% globale
+          global_std = np.std(residuals)
+          ax.axhline(2*global_std, color='gray', linestyle=':', label='+2 Std Dev')
+          ax.axhline(-2*global_std, color='gray', linestyle=':')
+          
+          ax.set_title('Binned Residual Plot (20 Quantiles)')
+          ax.set_xlabel('Average Predicted Value')
+          ax.set_ylabel('Average Residual')
+          ax.legend()
+          ax.grid(True, alpha=0.3)
+          
+          plot_path = "outputs/evaluation/binned_residual_plot.png"
+          fig.savefig(plot_path, dpi=300)
+          plt.close(fig)
+          
+          evaluation_metrics["binned_residual_plot"] = plot_path
+          print(f"[EVAL] Plot sauvegardé sous {plot_path}")
+      except Exception as e:
+          print(f"[EVAL ERREUR] : {str(e)}")
+_metadata:
+  bloc: 4
+  section: "1_evaluation"

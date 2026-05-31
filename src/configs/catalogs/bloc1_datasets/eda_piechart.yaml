@@ -1,0 +1,22 @@
+id: "eda_piechart"
+name: "EDA: Diagramme Circulaire"
+description: "Affiche les proportions en camembert pour une variable catégorielle."
+category: "3. Exploratory Data Analysis"
+tags: ["eda", "piechart", "tabular", "matplotlib"]
+code_template: |
+  import matplotlib.pyplot as plt
+
+  if 'target_name' in locals() and target_name and target_name in df.columns:
+      counts = df[target_name].value_counts()
+      if len(counts) <= 10:
+          plt.figure(figsize=(8, 8))
+          plt.pie(counts, labels=counts.index, autopct='%1.1f%%', startangle=140)
+          plt.title(f"Proportions de {target_name}")
+          plt.show()
+      else:
+          print("[EDA] Trop de catégories pour un camembert lisible.")
+  else:
+      print("[EDA] Cible introuvable.")
+_metadata:
+  bloc: 1
+  section: "3_eda"

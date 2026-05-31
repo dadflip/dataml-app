@@ -1,0 +1,50 @@
+id: "load_dir_audio_classes"
+name: "Load: Dossier d'Audios par Classes"
+description: "Parcourt un dossier contenant des fichiers audios répartis en sous-dossiers (classes)."
+category: "2. Load"
+tags: ["load", "directory", "audio", "classification"]
+code_template: |
+  import os
+  import glob
+  import pandas as pd
+  import time
+
+  # [PARAM: ROOT_DIRECTORY | dir]
+  ROOT_DIRECTORY = "./data/extracted/audio_dataset"
+  # [/PARAM]
+
+  print(f"[LOAD] Parcours de la hiérarchie audio dans {ROOT_DIRECTORY}...")
+  if not os.path.exists(ROOT_DIRECTORY):
+      raise FileNotFoundError(f"[ERREUR LOAD] Le dossier racine n'existe pas : {ROOT_DIRECTORY}")
+
+  try:
+      start_time = time.time()
+      
+      data = []
+      classes = [d for d in os.listdir(ROOT_DIRECTORY) if os.path.isdir(os.path.join(ROOT_DIRECTORY, d))]
+      
+      for class_name in classes:
+          class_dir = os.path.join(ROOT_DIRECTORY, class_name)
+          files = glob.glob(os.path.join(class_dir, "*.*"))
+          valid_files = [f for f in files if f.lower().endswith(('.wav', '.mp3', '.flac', '.ogg'))]
+          
+          for filepath in valid_files:
+              data.append({
+                  "class_name": class_name,
+                  "absolute_path": os.path.abspath(filepath)
+              })
+              
+      df = pd.DataFrame(data)
+      
+      duration = time.time() - start_time
+      print(f"[LOAD] Succès Audio. {len(df)} fichiers audios (dans {len(classes)} classes) indexés en {duration:.2f}s.")
+  except Exception as e:
+      print(f"[ERREUR LOAD] Erreur lors du parcours du dossier audio : {str(e)}")
+      raise e
+
+  target_name = "class_name"
+  task_type = "audio_classification"
+  meta = {"format": "directory_audio_classes", "classes_found": len(classes), "audio_files_found": len(df)}
+_metadata:
+  bloc: 1
+  section: "2_load"

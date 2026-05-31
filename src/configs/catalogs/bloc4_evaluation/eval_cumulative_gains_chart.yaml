@@ -1,0 +1,114 @@
+id: "eval_cumulative_gains_chart"
+name: "Eval: Cumulative Gains Chart (Classification)"
+description: "Trace le graphique des gains cumulatifs. Montre la fraction de positifs captures en ciblant un pourcentage donne de la population, triee par probabilite predite decroissante."
+category: "Analyse Avancee"
+tags: ["eval", "classification", "cumulative_gains", "visualization", "matplotlib", "proba"]
+applies_to: ["Classification"]
+when_to_use: "Pour evaluer l'efficacite d'un modele de scoring/ranking. Utile en marketing (ciblage), detection de fraude, et credit scoring."
+pros:
+  - "Montre concretement le gain par rapport a un ciblage aleatoire."
+  - "Facile a interpreter pour des profils non techniques."
+cons:
+  - "Necessite des probabilites predites (y_proba)."
+  - "Plus pertinent pour la classification binaire."
+code_template: |
+  import numpy as np
+  import matplotlib
+  matplotlib.use("Agg")
+  import matplotlib.pyplot as plt
+  from sklearn.preprocessing import label_binarize
+  import os
+
+  evaluation_metrics = {}
+
+  print("[EVAL] Generation du Cumulative Gains Chart...")
+  try:
+      if y_proba is None:
+          raise ValueError("y_proba est None. Les probabilites predites sont necessaires pour ce graphique.")
+
+      y_test_arr = np.array(y_test).ravel()
+      classes = sorted(list(set(y_test_arr)))
+
+      if len(classes) == 2:
+          if y_proba.ndim == 2:
+              pos_proba = y_proba[:, 1]
+          else:
+              pos_proba = np.array(y_proba).ravel()
+
+          pos_label = classes[1]
+          y_binary = (y_test_arr == pos_label).astype(int)
+
+          sorted_indices = np.argsort(-pos_proba)
+          y_sorted = y_binary[sorted_indices]
+          cumulative_gains = np.cumsum(y_sorted) / y_sorted.sum()
+          population_pct = np.arange(1, len(y_sorted) + 1) / len(y_sorted)
+
+          cumulative_gains = np.insert(cumulative_gains, 0, 0.0)
+          population_pct = np.insert(population_pct, 0, 0.0)
+
+          fig, ax = plt.subplots(figsize=(8, 6))
+          ax.plot(population_pct, cumulative_gains, "b-", linewidth=2, label="Modele")
+          ax.plot([0, 1], [0, 1], "r--", linewidth=1.5, label="Aleatoire (baseline)")
+          ax.fill_between(population_pct, population_pct, cumulative_gains, alpha=0.15, color="blue")
+          ax.set_xlabel("Fraction de la population ciblee")
+          ax.set_ylabel("Fraction des positifs captures")
+          ax.set_title("Cumulative Gains Chart")
+          ax.legend(loc="lower right")
+          ax.grid(True, alpha=0.3)
+          ax.set_xlim([0, 1])
+          ax.set_ylim([0, 1.05])
+          plt.tight_layout()
+
+          gain_at_20 = float(np.interp(0.2, population_pct, cumulative_gains))
+          gain_at_50 = float(np.interp(0.5, population_pct, cumulative_gains))
+
+          evaluation_metrics["cumulative_gains_at_20pct"] = gain_at_20
+          evaluation_metrics["cumulative_gains_at_50pct"] = gain_at_50
+      else:
+          fig, ax = plt.subplots(figsize=(8, 6))
+          y_bin = label_binarize(y_test_arr, classes=classes)
+          for i, cls in enumerate(classes):
+              if y_proba.ndim == 2 and y_proba.shape[1] > i:
+                  cls_proba = y_proba[:, i]
+              else:
+                  continue
+              cls_binary = y_bin[:, i]
+              sorted_idx = np.argsort(-cls_proba)
+              y_sorted = cls_binary[sorted_idx]
+              if y_sorted.sum() == 0:
+                  continue
+              cum_gains = np.cumsum(y_sorted) / y_sorted.sum()
+              pop_pct = np.arange(1, len(y_sorted) + 1) / len(y_sorted)
+              cum_gains = np.insert(cum_gains, 0, 0.0)
+              pop_pct = np.insert(pop_pct, 0, 0.0)
+              ax.plot(pop_pct, cum_gains, linewidth=1.5, label=f"Classe {cls}")
+
+          ax.plot([0, 1], [0, 1], "r--", linewidth=1.5, label="Aleatoire")
+          ax.set_xlabel("Fraction de la population ciblee")
+          ax.set_ylabel("Fraction des positifs captures")
+          ax.set_title("Cumulative Gains Chart (Multiclass)")
+          ax.legend(loc="lower right", fontsize=8)
+          ax.grid(True, alpha=0.3)
+          ax.set_xlim([0, 1])
+          ax.set_ylim([0, 1.05])
+          plt.tight_layout()
+
+          evaluation_metrics["cumulative_gains_n_classes"] = len(classes)
+
+      save_dir = os.path.join(os.getcwd(), "outputs")
+      os.makedirs(save_dir, exist_ok=True)
+      fig_path = os.path.join(save_dir, "cumulative_gains_chart.png")
+      fig.savefig(fig_path, dpi=150, bbox_inches="tight")
+      plt.close(fig)
+
+      evaluation_metrics["cumulative_gains_figure_path"] = fig_path
+      print(f"[EVAL] Cumulative Gains Chart sauvegarde: {fig_path}")
+      if "cumulative_gains_at_20pct" in evaluation_metrics:
+          print(f"[EVAL] Gain a 20% de la population: {evaluation_metrics['cumulative_gains_at_20pct']:.4f}")
+          print(f"[EVAL] Gain a 50% de la population: {evaluation_metrics['cumulative_gains_at_50pct']:.4f}")
+  except Exception as e:
+      print(f"[EVAL][ERREUR] Cumulative Gains echoue: {e}")
+      evaluation_metrics["cumulative_gains_error"] = str(e)
+_metadata:
+  bloc: 4
+  section: "1_evaluation"

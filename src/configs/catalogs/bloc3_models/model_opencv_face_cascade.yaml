@@ -1,0 +1,74 @@
+id: "model_opencv_face_cascade"
+name: "Model: OpenCV Face Detection (Haar Cascade)"
+description: "Méthode de détection de visages classique basée sur Haar Cascades via OpenCV."
+category: "Vision par Ordinateur (Pré-entraînés)"
+tags: ["model", "vision", "object-detection", "opencv", "face", "cascade"]
+applies_to: ["Images"]
+when_to_use: "Pour détecter la présence de visages rapidement sur CPU sans réseaux de neurones complexes."
+pros:
+  - "Extrêmement rapide."
+  - "Ne demande aucun framework lourd (juste cv2)."
+cons:
+  - "Mauvais sur les visages de profil ou partiellement cachés."
+hyperparameters:
+  scale_factor: "Paramètre de mise à l'échelle (ex: 1.1)."
+  min_neighbors: "Nombre minimum de voisins (ex: 5)."
+code_template: |
+  import pandas as pd
+  import numpy as np
+  import json
+  try:
+      import cv2
+  except ImportError:
+      cv2 = None
+      print("[ERREUR] opencv n'est pas installé. Lancez : !pip install opencv-python")
+
+  # [PARAM: SCALE_FACTOR | number]
+  SCALE_FACTOR = 1.1
+  # [/PARAM]
+
+  # [PARAM: MIN_NEIGHBORS | number]
+  MIN_NEIGHBORS = 5
+  # [/PARAM]
+
+  print(f"[MODEL] Détection de visages OpenCV Haar Cascades...")
+  if 'X_test' in locals() and cv2 is not None:
+      images = list(X_test)
+      
+      # Chargement de la cascade de face
+      face_cascade = cv2.CascadeClassifier(cv2.data.haarcascades + 'haarcascade_frontalface_default.xml')
+      
+      all_preds = []
+      for img in images:
+          # On suppose img est un numpy array BGR ou RGB
+          if isinstance(img, str):
+              img_arr = cv2.imread(img)
+          else:
+              img_arr = img
+              
+          if img_arr is not None:
+              gray = cv2.cvtColor(img_arr.astype('uint8'), cv2.COLOR_BGR2GRAY) if len(img_arr.shape) == 3 else img_arr
+              faces = face_cascade.detectMultiScale(gray, scaleFactor=float(SCALE_FACTOR), minNeighbors=int(MIN_NEIGHBORS))
+              
+              # faces renvoie des listes [x, y, w, h]
+              faces_list = [{"box": [int(x), int(y), int(x+w), int(y+h)], "class": "face"} for (x, y, w, h) in faces]
+              all_preds.append(json.dumps(faces_list))
+          else:
+              all_preds.append("[]")
+              
+      y_pred = np.array(all_preds)
+      y_proba = None
+      feature_importances = None
+      
+      from sklearn.preprocessing import FunctionTransformer
+      model = FunctionTransformer(lambda X: y_pred)
+      full_pipeline = model
+          
+      training_history = {"status": "success", "type": "opencv_cascade"}
+      task_type = "object_detection"
+      print("[MODEL] Détection terminée.")
+  else:
+      print("[ERREUR] Données introuvables ou cv2 manquant.")
+_metadata:
+  bloc: 3
+  section: "4_vision_and_audio"

@@ -1,0 +1,58 @@
+id: "extract_scraper_selenium"
+name: "Extract: Web Scraping (Selenium)"
+description: "Pilote un navigateur Chrome headless pour extraire une page web dynamique (JavaScript)."
+category: "1. Extract"
+tags: ["extract", "scraping", "selenium", "dynamic"]
+code_template: |
+  from selenium import webdriver
+  from selenium.webdriver.chrome.options import Options
+  import os
+  import time
+
+  # [PARAM: TARGET_URL | string]
+  TARGET_URL = "https://example.com/dynamic"
+  # [/PARAM]
+  
+  # [PARAM: WAIT_SEC | string]
+  WAIT_SEC = "3"
+  # [/PARAM]
+  
+  # [PARAM: DEST_PATH | string]
+  DEST_PATH = "./data/raw/scraped_dynamic.html"
+  # [/PARAM]
+
+  print(f"[EXTRACT] Lancement de Selenium en mode Headless pour {TARGET_URL}...")
+  os.makedirs(os.path.dirname(DEST_PATH), exist_ok=True)
+
+  try:
+      start_time = time.time()
+      chrome_options = Options()
+      chrome_options.add_argument("--headless")
+      chrome_options.add_argument("--no-sandbox")
+      chrome_options.add_argument("--disable-dev-shm-usage")
+      
+      driver = webdriver.Chrome(options=chrome_options)
+      driver.get(TARGET_URL)
+      
+      print(f"[EXTRACT] Attente de {WAIT_SEC}s pour le chargement du JavaScript...")
+      time.sleep(int(WAIT_SEC))
+      
+      html_content = driver.page_source
+      driver.quit()
+      
+      with open(DEST_PATH, "w", encoding="utf-8") as f:
+          f.write(html_content)
+          
+      duration = time.time() - start_time
+      print(f"[EXTRACT] Succès Selenium. DOM sauvegardé en {duration:.2f}s.")
+  except Exception as e:
+      print(f"[ERREUR EXTRACT] Échec du scraping Selenium : {str(e)}")
+      raise e
+
+  df = None
+  target_name = None
+  task_type = "unknown"
+  meta = {"source": "scraping_selenium", "path": DEST_PATH}
+_metadata:
+  bloc: 1
+  section: "1_extract"

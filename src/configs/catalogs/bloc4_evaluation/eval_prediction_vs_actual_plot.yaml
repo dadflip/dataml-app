@@ -1,0 +1,83 @@
+id: "eval_prediction_vs_actual_plot"
+name: "Eval: Predicted vs Actual (Scatter Plot)"
+description: "Genere un graphique de dispersion comparant les valeurs predites aux valeurs reelles pour la regression. Inclut la ligne de prediction parfaite et les metriques R2 / RMSE."
+category: "Analyse Avancee"
+tags: ["eval", "regression", "visualization", "matplotlib", "scatter", "residuals"]
+applies_to: ["Regression"]
+when_to_use: "Pour visualiser la qualite des predictions en regression. Les points doivent etre alignes sur la diagonale pour un bon modele."
+pros:
+  - "Diagnostic visuel immediat de la qualite des predictions."
+  - "Revele les biais systematiques et les zones de sous-performance."
+cons:
+  - "Applicable uniquement a la regression."
+  - "Difficile a interpreter avec un tres grand nombre de points."
+code_template: |
+  import numpy as np
+  import matplotlib
+  matplotlib.use("Agg")
+  import matplotlib.pyplot as plt
+  from sklearn.metrics import r2_score, mean_squared_error
+  import os
+
+  evaluation_metrics = {}
+
+  print("[EVAL] Generation du graphique Predicted vs Actual...")
+  try:
+      if task_type != "regression":
+          print("[EVAL][AVERTISSEMENT] Ce graphique est concu pour la regression.")
+
+      y_test_arr = np.array(y_test, dtype=float).ravel()
+      y_pred_arr = np.array(y_pred, dtype=float).ravel()
+
+      r2 = r2_score(y_test_arr, y_pred_arr)
+      rmse = float(np.sqrt(mean_squared_error(y_test_arr, y_pred_arr)))
+      residuals = y_test_arr - y_pred_arr
+
+      fig, axes = plt.subplots(1, 2, figsize=(14, 6))
+
+      ax1 = axes[0]
+      ax1.scatter(y_test_arr, y_pred_arr, alpha=0.5, s=20, edgecolors="k", linewidths=0.3)
+      ref_min = min(y_test_arr.min(), y_pred_arr.min())
+      ref_max = max(y_test_arr.max(), y_pred_arr.max())
+      margin = (ref_max - ref_min) * 0.05
+      ax1.plot([ref_min - margin, ref_max + margin], [ref_min - margin, ref_max + margin],
+               "r--", linewidth=1.5, label="Prediction parfaite")
+      ax1.set_xlabel("Valeurs Reelles")
+      ax1.set_ylabel("Valeurs Predites")
+      ax1.set_title(f"Predicted vs Actual\nR2={r2:.4f} | RMSE={rmse:.4f}")
+      ax1.legend(loc="upper left")
+      ax1.grid(True, alpha=0.3)
+      ax1.set_aspect("equal", adjustable="datalim")
+
+      ax2 = axes[1]
+      ax2.scatter(y_pred_arr, residuals, alpha=0.5, s=20, edgecolors="k", linewidths=0.3)
+      ax2.axhline(y=0, color="r", linestyle="--", linewidth=1.5)
+      ax2.set_xlabel("Valeurs Predites")
+      ax2.set_ylabel("Residus (Reel - Predit)")
+      ax2.set_title("Graphique des Residus")
+      ax2.grid(True, alpha=0.3)
+
+      plt.tight_layout()
+
+      save_dir = os.path.join(os.getcwd(), "outputs")
+      os.makedirs(save_dir, exist_ok=True)
+      fig_path = os.path.join(save_dir, "prediction_vs_actual.png")
+      fig.savefig(fig_path, dpi=150, bbox_inches="tight")
+      plt.close(fig)
+
+      evaluation_metrics["pred_vs_actual_r2"] = float(r2)
+      evaluation_metrics["pred_vs_actual_rmse"] = rmse
+      evaluation_metrics["pred_vs_actual_residuals_mean"] = float(np.mean(residuals))
+      evaluation_metrics["pred_vs_actual_residuals_std"] = float(np.std(residuals))
+      evaluation_metrics["pred_vs_actual_figure_path"] = fig_path
+
+      print(f"[EVAL] R2 Score: {r2:.4f}")
+      print(f"[EVAL] RMSE: {rmse:.4f}")
+      print(f"[EVAL] Residus - Moyenne: {np.mean(residuals):.4f}, Ecart-type: {np.std(residuals):.4f}")
+      print(f"[EVAL] Figure sauvegardee: {fig_path}")
+  except Exception as e:
+      print(f"[EVAL][ERREUR] Predicted vs Actual echoue: {e}")
+      evaluation_metrics["pred_vs_actual_error"] = str(e)
+_metadata:
+  bloc: 4
+  section: "1_evaluation"

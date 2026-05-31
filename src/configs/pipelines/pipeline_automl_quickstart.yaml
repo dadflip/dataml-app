@@ -1,0 +1,23 @@
+id: "pipeline_automl_quickstart"
+name: "Recette : AutoML Quickstart (PyCaret)"
+description: "Le chemin le plus court vers un modèle performant : AutoML -> Model Card -> Export ONNX."
+category: "AutoML"
+nodes:
+  - node_id: "load_data"
+    block_id: "load_csv"
+    params:
+      FILE_PATH: "./data/raw/dataset.csv"
+      TARGET_COL: "target"
+
+  - node_id: "model_automl"
+    block_id: "model_pycaret_automl_classifier"
+    depends_on: ["load_data"]
+    # PyCaret gère son propre preprocessing en interne
+
+  - node_id: "eval_report"
+    block_id: "eval_model_card_generator"
+    depends_on: ["model_automl"]
+
+  - node_id: "deploy_onnx"
+    block_id: "deploy_onnx"
+    depends_on: ["eval_report"]

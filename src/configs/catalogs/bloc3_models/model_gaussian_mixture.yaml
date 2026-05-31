@@ -1,0 +1,49 @@
+id: "model_gaussian_mixture"
+name: "Model: Gaussian Mixture Model (GMM)"
+description: "Modèle probabiliste supposant que toutes les données sont générées à partir d'un mélange d'un nombre fini de distributions gaussiennes."
+category: "Clustering (Non-Supervisé)"
+tags: ["model", "clustering", "tabular", "sklearn", "gmm"]
+applies_to: ["Tabulaire"]
+when_to_use: "Quand vous voulez des probabilités d'appartenance douces (soft clustering) et que les clusters peuvent être elliptiques."
+pros:
+  - "Fournit des probabilités."
+  - "Très flexible sur la forme des clusters."
+cons:
+  - "Peut converger vers des minima locaux."
+hyperparameters:
+  n_components: "Nombre de gaussiennes / clusters (ex: 3)."
+code_template: |
+  import pandas as pd
+  import numpy as np
+  from sklearn.mixture import GaussianMixture
+
+  # [PARAM: N_COMPONENTS | number]
+  N_COMPONENTS = 3
+  # [/PARAM]
+
+  print(f"[MODEL] Entraînement Gaussian Mixture (components={N_COMPONENTS})...")
+  if 'X_train' in locals() and 'X_test' in locals():
+      model = GaussianMixture(n_components=int(N_COMPONENTS), random_state=42)
+      model.fit(X_train)
+      
+      y_pred = model.predict(X_test)
+      y_proba = model.predict_proba(X_test)
+      feature_importances = None
+      
+      if 'preprocessor' in locals() and preprocessor is not None:
+          try: from imblearn.pipeline import Pipeline
+          except: from sklearn.pipeline import Pipeline
+          full_pipeline = Pipeline(steps=preprocessor.steps + [('model', model)])
+      else:
+          try: from imblearn.pipeline import Pipeline
+          except: from sklearn.pipeline import Pipeline
+          full_pipeline = Pipeline(steps=[('model', model)])
+          
+      training_history = {"status": "success", "converged": model.converged_}
+      task_type = "clustering"
+      print("[MODEL] GMM entraîné avec succès.")
+  else:
+      print("[ERREUR] Données d'entraînement introuvables.")
+_metadata:
+  bloc: 3
+  section: "5_clustering_automl_and_nn"

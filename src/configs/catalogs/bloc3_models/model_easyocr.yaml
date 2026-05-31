@@ -1,0 +1,61 @@
+id: "model_easyocr"
+name: "Model: EasyOCR (Optical Character Recognition)"
+description: "Reconnaissance de texte dans des images via Deep Learning. Supporte +80 langues."
+category: "Vision par Ordinateur (OCR)"
+tags: ["model", "vision", "ocr", "easyocr", "deep-learning"]
+applies_to: ["Images"]
+when_to_use: "Pour extraire le texte d'images naturelles (photos de panneaux, cartes d'identité, documents scannés)."
+pros:
+  - "Très robuste sur du texte en conditions réelles (contrairement à Tesseract)."
+  - "Gère plusieurs langues en même temps."
+cons:
+  - "Assez lourd, GPU recommandé."
+hyperparameters:
+  lang_list: "Liste des langues séparées par des virgules (ex: 'fr, en')."
+code_template: |
+  import pandas as pd
+  import numpy as np
+  import json
+  try:
+      import easyocr
+  except ImportError:
+      easyocr = None
+      print("[ERREUR] easyocr n'est pas installé. Lancez : !pip install easyocr")
+
+  # [PARAM: LANG_LIST | string]
+  LANG_LIST = "fr,en"
+  # [/PARAM]
+
+  print(f"[MODEL] Extraction de texte avec EasyOCR ({LANG_LIST})...")
+  if 'X_test' in locals() and easyocr is not None:
+      # X_test contient des numpy arrays d'images ou des chemins
+      images = list(X_test)
+      langs = [l.strip() for l in LANG_LIST.split(',')]
+      
+      print("Chargement du reader EasyOCR...")
+      reader = easyocr.Reader(langs, gpu=True) # Tombe sur CPU automatiquement si pas de GPU
+      
+      print("Lecture des images en cours...")
+      all_preds = []
+      for img in images:
+          # result format: [(bbox, text, prob), ...]
+          results = reader.readtext(img)
+          
+          # On concatène tout le texte trouvé pour faire une prédiction de type string
+          full_text = " ".join([res[1] for res in results])
+          all_preds.append(full_text)
+          
+      y_pred = np.array(all_preds)
+      y_proba = None
+      feature_importances = None
+      
+      full_pipeline = reader
+          
+      training_history = {"status": "success", "type": "ocr_extraction"}
+      task_type = "information_extraction" # Ou OCR
+      print("[MODEL] Extraction EasyOCR terminée.")
+  else:
+      print("[ERREUR] Données ou module easyocr introuvables.")
+_metadata:
+  bloc: 3
+  section: "4_vision_and_audio"

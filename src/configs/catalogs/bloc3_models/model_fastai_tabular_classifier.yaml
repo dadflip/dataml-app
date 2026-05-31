@@ -1,0 +1,69 @@
+id: "model_fastai_tabular_classifier"
+name: "Model: FastAI Tabular Classifier"
+description: "Framework Deep Learning ultra-productif par-dessus PyTorch. Gère automatiquement les embeddings de catégories."
+category: "Réseaux de Neurones"
+tags: ["model", "classification", "tabular", "fastai", "pytorch", "deep-learning"]
+applies_to: ["Tabulaire"]
+when_to_use: "Quand vous voulez les perfs de PyTorch sur du Tabulaire sans écrire la boucle d'entraînement (et pour profiter des entity embeddings)."
+pros:
+  - "Très rapide à coder."
+  - "Gère nativement les embeddings de features catégorielles."
+cons:
+  - "L'API FastAI est très opiniâtre et parfois complexe à intégrer avec Scikit-Learn."
+hyperparameters:
+  epochs: "Nombre d'époques (ex: 5)."
+code_template: |
+  import pandas as pd
+  import numpy as np
+  try:
+      from fastai.tabular.all import TabularPandas, Categorify, FillMissing, Normalize, tabular_learner, accuracy
+  except ImportError:
+      tabular_learner = None
+      print("[ERREUR] fastai n'est pas installé. Lancez : !pip install fastai")
+
+  # [PARAM: EPOCHS | number]
+  EPOCHS = 5
+  # [/PARAM]
+
+  print(f"[MODEL] Entraînement FastAI Tabular (epochs={EPOCHS})...")
+  # Note: FastAI fait lui-même son Preprocessing. Idéalement on lui donne le DataFrame original
+  if 'X_train' in locals() and 'y_train' in locals() and 'X_test' in locals() and tabular_learner is not None:
+      df_train = pd.DataFrame(X_train) if not isinstance(X_train, pd.DataFrame) else X_train.copy()
+      df_test = pd.DataFrame(X_test) if not isinstance(X_test, pd.DataFrame) else X_test.copy()
+      
+      df_train['target'] = y_train
+      
+      cat_names = list(df_train.select_dtypes(include=['object', 'category']).columns)
+      cont_names = list(df_train.select_dtypes(exclude=['object', 'category']).columns)
+      if 'target' in cont_names: cont_names.remove('target')
+      
+      procs = [Categorify, FillMissing, Normalize]
+      
+      # Objet FastAI Tabular
+      to = TabularPandas(df_train, procs=procs, cat_names=cat_names, cont_names=cont_names, y_names='target', y_block=CategoryBlock())
+      dls = to.dataloaders(bs=64)
+      
+      learn = tabular_learner(dls, metrics=accuracy)
+      
+      print("FastAI entame le fit...")
+      learn.fit_one_cycle(int(EPOCHS))
+      
+      # Inférence
+      dl_test = learn.dls.test_dl(df_test)
+      preds, _ = learn.get_preds(dl=dl_test) # preds contient les probabilités
+      
+      preds_idx = np.argmax(preds.numpy(), axis=1)
+      y_pred = np.array([learn.dls.vocab[i] for i in preds_idx])
+      y_proba = preds.numpy()
+      feature_importances = None
+      
+      full_pipeline = learn
+          
+      training_history = {"status": "success"}
+      task_type = "classification"
+      print("[MODEL] FastAI Tabular entraîné avec succès.")
+  else:
+      print("[ERREUR] Données ou module fastai introuvables.")
+_metadata:
+  bloc: 3
+  section: "5_clustering_automl_and_nn"

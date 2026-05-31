@@ -1,0 +1,52 @@
+id: "transform_standard_scaler"
+name: "Transform: Standard Scaler"
+description: "Centre et réduit les variables numériques (Z-score)."
+category: "4.1 Preprocessing"
+tags: ["transform", "scaling", "tabular", "sklearn", "pipeline"]
+applies_to: ["Tabulaire"]
+when_to_use: "Pour modèles sensibles à l'échelle (Réseaux de Neurones, SVM)."
+pros:
+  - "Accélère la convergence."
+cons:
+  - "Sensible aux valeurs aberrantes."
+hyperparameters:
+  with_mean: "Centrer les données."
+code_template: |
+  import pandas as pd
+  import numpy as np
+  from sklearn.preprocessing import StandardScaler
+  from sklearn.compose import ColumnTransformer
+
+  # [PARAM: WITH_MEAN | boolean]
+  WITH_MEAN = True
+  # [/PARAM]
+
+  print("[TRANSFORM] StandardScaler...")
+  if 'df' in locals():
+      if 'pipeline_steps' not in locals(): pipeline_steps = {}
+      
+      num_cols = df.select_dtypes(include=[np.number]).columns.tolist()
+      if 'target_name' in locals() and target_name in num_cols:
+          num_cols.remove(target_name)
+          
+      if len(num_cols) > 0:
+          scaler = StandardScaler(with_mean=WITH_MEAN)
+          ct = ColumnTransformer(
+              [('std_scaler', scaler, num_cols)],
+              remainder='passthrough', verbose_feature_names_out=False
+          )
+          try: ct.set_output(transform="pandas")
+          except: pass
+          
+          step_name = 'standard_scaler'
+          pipeline_steps[step_name] = (step_name, ct)
+          
+          df = pd.DataFrame(ct.fit_transform(df), columns=df.columns, index=df.index)
+          print(f"[TRANSFORM] Standard Scaling appliqué et ajouté au pipeline.")
+      else:
+          print("[TRANSFORM] Aucune variable numérique.")
+  else:
+      print("[ERREUR] 'df' introuvable.")
+_metadata:
+  bloc: 2
+  section: "4_preprocessing"

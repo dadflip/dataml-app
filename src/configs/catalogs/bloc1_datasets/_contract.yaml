@@ -1,0 +1,9 @@
+pipeline_contract:
+  bloc: 1
+  role: "Extract Transform Load (Wrangling)"
+  input_variables: {}
+  output_variables:
+    df: "pd.DataFrame | None"
+    target_name: "str | None"
+    task_type: "str"
+    meta: "dict"

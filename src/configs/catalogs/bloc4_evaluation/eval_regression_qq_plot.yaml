@@ -1,0 +1,102 @@
+id: "eval_regression_qq_plot"
+name: "Eval: Q-Q Plot des Residus"
+description: "Trace le diagramme Q-Q (quantile-quantile) des residus de regression contre une distribution normale. Permet de verifier l'hypothese de normalite des erreurs."
+category: "Regression Diagnostics"
+tags: ["eval", "regression", "qqplot", "residuals", "normality", "plot", "matplotlib"]
+applies_to: ["Regression"]
+when_to_use: "Apres un modele de regression, pour verifier si les residus suivent une distribution normale. Hypothese sous-jacente de nombreux modeles lineaires et tests statistiques."
+pros:
+  - "Diagnostic visuel classique et bien compris"
+  - "Detecte les queues lourdes, l'asymetrie et les outliers"
+  - "Complete par le test de Shapiro-Wilk pour un resultat quantitatif"
+cons:
+  - "Ne fonctionne que pour la regression"
+  - "Le test de Shapiro-Wilk est sensible a la taille de l'echantillon"
+  - "La normalite des residus n'est pas toujours requise (grands echantillons)"
+code_template: |
+  import numpy as np
+  import matplotlib
+  matplotlib.use("Agg")
+  import matplotlib.pyplot as plt
+
+  evaluation_metrics = {}
+
+  if task_type in ("classification", "binary", "multiclass"):
+      print("[EVAL] Q-Q Plot: applicable uniquement en regression.")
+      evaluation_metrics["status"] = "skipped"
+      evaluation_metrics["reason"] = "task_type is classification"
+  else:
+      try:
+          residuals = np.array(y_test) - np.array(y_pred)
+
+          # Sort residuals and compute theoretical quantiles
+          sorted_residuals = np.sort(residuals)
+          n = len(sorted_residuals)
+
+          # Theoretical quantiles from standard normal
+          try:
+              from scipy import stats
+              theoretical_quantiles = stats.norm.ppf(
+                  (np.arange(1, n + 1) - 0.5) / n
+              )
+              has_scipy = True
+          except ImportError:
+              # Approximate without scipy using inverse probit approximation
+              p = (np.arange(1, n + 1) - 0.5) / n
+              # Rational approximation (Abramowitz & Stegun)
+              theoretical_quantiles = np.sign(p - 0.5) * np.sqrt(
+                  -2 * np.log(np.minimum(p, 1 - p))
+              )
+              has_scipy = False
+
+          # Standardize residuals
+          res_mean = np.mean(residuals)
+          res_std = np.std(residuals, ddof=1)
+          if res_std > 0:
+              standardized = (sorted_residuals - res_mean) / res_std
+          else:
+              standardized = sorted_residuals - res_mean
+
+          fig, ax = plt.subplots(figsize=(8, 6))
+          ax.scatter(theoretical_quantiles, standardized, alpha=0.6, s=15, color="steelblue")
+
+          # Reference line
+          q_min, q_max = theoretical_quantiles.min(), theoretical_quantiles.max()
+          ax.plot([q_min, q_max], [q_min, q_max], "r--", linewidth=1.5, label="Reference (y=x)")
+
+          ax.set_xlabel("Quantiles theoriques (Normale)")
+          ax.set_ylabel("Quantiles observes (Residus standardises)")
+          ax.set_title("Q-Q Plot des Residus de Regression")
+          ax.legend()
+          ax.grid(True, alpha=0.3)
+          plt.tight_layout()
+
+          fig_path = "regression_qq_plot.png"
+          fig.savefig(fig_path, dpi=150, bbox_inches="tight")
+          plt.close(fig)
+          print(f"[EVAL] Figure sauvegardee: {fig_path}")
+
+          evaluation_metrics["status"] = "success"
+          evaluation_metrics["figure_path"] = fig_path
+          evaluation_metrics["residuals_mean"] = float(round(res_mean, 6))
+          evaluation_metrics["residuals_std"] = float(round(res_std, 6))
+
+          # Shapiro-Wilk test if scipy available
+          if has_scipy:
+              # Shapiro-Wilk limited to 5000 samples
+              sample_for_test = residuals
+              if len(residuals) > 5000:
+                  sample_for_test = np.random.RandomState(42).choice(residuals, 5000, replace=False)
+              stat, p_value = stats.shapiro(sample_for_test)
+              evaluation_metrics["shapiro_wilk_stat"] = float(round(stat, 6))
+              evaluation_metrics["shapiro_wilk_pvalue"] = float(round(p_value, 6))
+              evaluation_metrics["normality_rejected_5pct"] = bool(p_value < 0.05)
+              print(f"[EVAL] Shapiro-Wilk: stat={stat:.4f}, p={p_value:.4f}")
+
+      except Exception as e:
+          print(f"[EVAL] Erreur Q-Q Plot: {e}")
+          evaluation_metrics["status"] = "error"
+          evaluation_metrics["error"] = str(e)
+_metadata:
+  bloc: 4
+  section: "1_evaluation"

@@ -1,0 +1,57 @@
+id: "deploy_azure_blob"
+name: "Deploy: Upload to Azure Blob Storage"
+description: "Sauvegarde le modèle et l'envoie sur un conteneur Azure Blob Storage."
+category: "Cloud Services"
+tags: ["deploy", "azure", "blob", "cloud"]
+applies_to: ["Classification", "Regression", "Clustering"]
+when_to_use: "Pour l'intégration avec l'écosystème Azure Machine Learning (AML)."
+pros:
+  - "Connexion native au cloud Microsoft."
+cons:
+  - "Nécessite azure-storage-blob."
+code_template: |
+  import os
+  import joblib
+  try:
+      from azure.storage.blob import BlobServiceClient
+  except ImportError:
+      BlobServiceClient = None
+
+  deployment_artifacts = {}
+
+  if 'full_pipeline' in locals() and BlobServiceClient is not None:
+      print("[DEPLOY] Upload du modèle vers Azure Blob Storage...")
+      try:
+          os.makedirs("outputs/deployment", exist_ok=True)
+          
+          # Sauvegarde locale d'abord
+          model_path = "outputs/deployment/model.joblib"
+          joblib.dump(full_pipeline, model_path)
+          
+          # [PARAM: AZURE_CONTAINER_NAME | string]
+          AZURE_CONTAINER_NAME = "ml-models"
+          # [/PARAM]
+          
+          # [PARAM: AZURE_BLOB_NAME | string]
+          AZURE_BLOB_NAME = "latest_model.joblib"
+          # [/PARAM]
+          
+          print(f"[DEPLOY] (Simulation) Azure Blob: Uploading {model_path} to {AZURE_CONTAINER_NAME}/{AZURE_BLOB_NAME}")
+          # Code réel décommenté pour l'upload :
+          # conn_str = os.getenv('AZURE_STORAGE_CONNECTION_STRING')
+          # if conn_str:
+          #     blob_service_client = BlobServiceClient.from_connection_string(conn_str)
+          #     blob_client = blob_service_client.get_blob_client(container=AZURE_CONTAINER_NAME, blob=AZURE_BLOB_NAME)
+          #     with open(model_path, "rb") as data:
+          #         blob_client.upload_blob(data, overwrite=True)
+          
+          deployment_artifacts["local_model_path"] = model_path
+          deployment_artifacts["azure_uri"] = f"azure://{AZURE_CONTAINER_NAME}/{AZURE_BLOB_NAME}"
+          print(f"[DEPLOY] Upload simulé réussi vers Azure.")
+      except Exception as e:
+          print(f"[DEPLOY ERREUR] Azure : {str(e)}")
+  elif BlobServiceClient is None:
+      print("[DEPLOY ERREUR] Le package 'azure-storage-blob' n'est pas installé.")
+_metadata:
+  bloc: 5
+  section: "5_cloud"

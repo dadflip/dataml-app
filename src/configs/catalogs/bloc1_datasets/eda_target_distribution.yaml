@@ -1,0 +1,30 @@
+id: "eda_target_distribution"
+name: "EDA: Distribution de la Target"
+description: "Analyse spécifique de la variable cible (Régression ou Classification)."
+category: "3. Exploratory Data Analysis"
+tags: ["eda", "target", "tabular", "seaborn"]
+code_template: |
+  import pandas as pd
+  import numpy as np
+  import matplotlib.pyplot as plt
+  import seaborn as sns
+
+  # target_name provient du bloc LOAD précédent
+  if 'target_name' in locals() and target_name and target_name in df.columns:
+      plt.figure(figsize=(8, 5))
+      if pd.api.types.is_numeric_dtype(df[target_name]) and df[target_name].nunique() > 20:
+          print(f"[EDA] Target '{target_name}' détectée comme CONTINUE (Régression).")
+          sns.histplot(df[target_name].dropna(), kde=True, color='purple')
+          plt.title(f"Distribution Continue de la cible : {target_name}")
+      else:
+          print(f"[EDA] Target '{target_name}' détectée comme CATÉGORIELLE (Classification).")
+          val_counts = df[target_name].value_counts(normalize=True) * 100
+          print("Répartition (%) :\n", val_counts)
+          sns.countplot(data=df, x=target_name, order=df[target_name].value_counts().index, palette='viridis')
+          plt.title(f"Distribution Catégorielle de la cible : {target_name}")
+      plt.show()
+  else:
+      print("[EDA] AVERTISSEMENT : target_name n'est pas définie ou introuvable dans df.")
+_metadata:
+  bloc: 1
+  section: "3_eda"

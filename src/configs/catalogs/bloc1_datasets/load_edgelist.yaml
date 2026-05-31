@@ -1,0 +1,70 @@
+id: "load_edgelist"
+name: "Load: Edge List (CSV/TSV)"
+description: "Charge un graphe défini par une liste d'arêtes (source, target) dans un fichier CSV ou TSV. Construit le df des noeuds et l'edge_index dans meta."
+category: "2. Load"
+tags: ["load", "graph", "edgelist", "csv", "networkx"]
+code_template: |
+  import pandas as pd
+  import numpy as np
+  import time
+  try:
+      import networkx as nx
+  except ImportError:
+      nx = None
+      print("[ERREUR LOAD] 'networkx' n'est pas installé.")
+
+  # [PARAM: FILE_PATH | file]
+  FILE_PATH = "./data/raw/edges.csv"
+  # [/PARAM]
+
+  # [PARAM: SEP | string]
+  SEP = ","
+  # [/PARAM]
+
+  # [PARAM: NODE_FEATURES_PATH | string]
+  NODE_FEATURES_PATH = ""
+  # [/PARAM]
+
+  print(f"[LOAD] Chargement de l'Edge List depuis {FILE_PATH}...")
+
+  try:
+      if nx is not None:
+          start_time = time.time()
+          
+          edges_df = pd.read_csv(FILE_PATH, sep=SEP, header=0)
+          src_col = edges_df.columns[0]
+          dst_col = edges_df.columns[1]
+          
+          G = nx.from_pandas_edgelist(edges_df, source=src_col, target=dst_col)
+          
+          # Si un fichier de features de noeuds est fourni, on le charge
+          if NODE_FEATURES_PATH and NODE_FEATURES_PATH.strip():
+              df = pd.read_csv(NODE_FEATURES_PATH, sep=SEP)
+          else:
+              # Sinon on génère un df basique avec les identifiants de noeuds
+              df = pd.DataFrame({"node_id": list(G.nodes())})
+          
+          node_list = list(G.nodes())
+          node2idx = {n: i for i, n in enumerate(node_list)}
+          src = [node2idx[u] for u, v in G.edges()]
+          dst = [node2idx[v] for u, v in G.edges()]
+          edge_index = np.array([src, dst], dtype=np.int64)
+          
+          duration = time.time() - start_time
+          print(f"[LOAD] Succès Edge List. {G.number_of_nodes()} noeuds, {G.number_of_edges()} arêtes en {duration:.2f}s.")
+          
+          target_name = None
+          task_type = "graph_unsupervised"
+          meta = {"format": "edgelist", "shape": df.shape, "edge_index": edge_index, "node_list": node_list}
+      else:
+          df = None
+          target_name = None
+          task_type = "unknown"
+          meta = {}
+  except Exception as e:
+      print(f"[ERREUR LOAD] Échec du chargement Edge List : {str(e)}")
+      raise e
+
+_metadata:
+  bloc: 1
+  section: "2_load"

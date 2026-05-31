@@ -1,0 +1,34 @@
+id: "model_unet_segmentation"
+name: "Model: U-Net Semantic Segmentation"
+description: "Réseau U-Net classique pour la segmentation d'images (pixel par pixel)."
+category: "Vision par Ordinateur (Modèles Entraînés)"
+tags: ["model", "vision", "segmentation", "pytorch", "unet", "deep-learning"]
+applies_to: ["Images"]
+when_to_use: "Pour isoler un objet du fond (ex: imagerie médicale, conduite autonome)."
+pros:
+  - "L'architecture reine pour la segmentation biomédicale."
+cons:
+  - "Nécessite des masques annotés pixel par pixel pour l'entraînement."
+hyperparameters: {}
+code_template: |
+  import pandas as pd
+  import numpy as np
+  print("[MODEL] Dummy export pour U-Net Segmentation.")
+  # Entraîner un U-Net from scratch nécessite beaucoup de code boilerplate pour les convolutions, downsampling, et upsampling.
+  # Ce fichier sert de placeholder structurel pour l'intégration de PyTorch Segmentation Models.
+  
+  if 'X_test' in locals():
+      # On retourne des masques vides en guise de prédiction
+      y_pred = np.zeros_like(X_test) 
+      y_proba = None
+      feature_importances = None
+      
+      full_pipeline = "UNet Placeholder"
+      training_history = {"status": "placeholder"}
+      task_type = "segmentation"
+      print("[MODEL] Placeholder U-Net généré.")
+  else:
+      print("[ERREUR] Données introuvables.")
+_metadata:
+  bloc: 3
+  section: "4_vision_and_audio"

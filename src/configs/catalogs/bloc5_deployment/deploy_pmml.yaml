@@ -1,0 +1,41 @@
+id: "deploy_pmml"
+name: "Deploy: PMML Export"
+description: "Convertit le modèle au format PMML (Predictive Model Markup Language)."
+category: "Serialization"
+tags: ["deploy", "pmml", "export", "java", "enterprise"]
+applies_to: ["Classification", "Regression"]
+when_to_use: "Quand le modèle doit être déployé dans des systèmes d'entreprise historiques (systèmes bancaires, CRM, bases de données Oracle/Teradata)."
+pros:
+  - "Standard de l'industrie très ancien, supporté par presque toutes les plateformes commerciales (SAS, SPSS, etc.)."
+cons:
+  - "Nécessite la librairie sklearn2pmml. Format XML très verbeux."
+code_template: |
+  import os
+  try:
+      from sklearn2pmml import sklearn2pmml, make_pmml_pipeline
+  except ImportError:
+      sklearn2pmml = None
+
+  deployment_artifacts = {}
+
+  if 'full_pipeline' in locals() and sklearn2pmml is not None:
+      print("[DEPLOY] Exportation vers PMML...")
+      try:
+          os.makedirs("outputs/deployment", exist_ok=True)
+          
+          # sklearn2pmml a besoin d'un PMMLPipeline
+          # Si c'est déjà un pipeline classique sklearn, on le wrappe
+          pmml_pipe = make_pmml_pipeline(full_pipeline)
+          
+          model_path = "outputs/deployment/model.pmml"
+          sklearn2pmml(pmml_pipe, model_path, with_repr=True)
+          
+          deployment_artifacts["pmml_model_path"] = model_path
+          print(f"[DEPLOY] Modèle exporté en PMML sous {model_path}")
+      except Exception as e:
+          print(f"[DEPLOY ERREUR] PMML : {str(e)}")
+  elif sklearn2pmml is None:
+      print("[DEPLOY ERREUR] La librairie 'sklearn2pmml' n'est pas installée. (pip install sklearn2pmml)")
+_metadata:
+  bloc: 5
+  section: "1_serialization"

@@ -1,0 +1,51 @@
+id: "model_knn_classifier"
+name: "Model: K-Nearest Neighbors Classifier"
+description: "Classification par la majorité des votes des K voisins les plus proches."
+category: "Modèles Basés sur la Distance / Marges"
+tags: ["model", "classification", "tabular", "sklearn", "distance"]
+applies_to: ["Tabulaire"]
+when_to_use: "En exploration, ou si les frontières de décision sont très irrégulières."
+pros:
+  - "Aucune hypothèse sur la distribution des données."
+  - "Entraînement quasi-instantané (lazy learning)."
+cons:
+  - "Inférence très lente sur les gros datasets."
+  - "Sensible à la malédiction de la dimensionnalité."
+hyperparameters:
+  n_neighbors: "Nombre de voisins K (ex: 5)."
+code_template: |
+  import pandas as pd
+  import numpy as np
+  from sklearn.neighbors import KNeighborsClassifier
+
+  # [PARAM: N_NEIGHBORS | number]
+  N_NEIGHBORS = 5
+  # [/PARAM]
+
+  print(f"[MODEL] Entraînement KNN Classifier (k={N_NEIGHBORS})...")
+  if 'X_train' in locals() and 'y_train' in locals() and 'X_test' in locals():
+      model = KNeighborsClassifier(n_neighbors=int(N_NEIGHBORS), n_jobs=-1)
+      model.fit(X_train, y_train)
+      
+      y_pred = model.predict(X_test)
+      y_proba = model.predict_proba(X_test) if hasattr(model, 'predict_proba') else None
+      
+      feature_importances = None
+              
+      if 'preprocessor' in locals() and preprocessor is not None:
+          try: from imblearn.pipeline import Pipeline
+          except: from sklearn.pipeline import Pipeline
+          full_pipeline = Pipeline(steps=preprocessor.steps + [('model', model)])
+      else:
+          try: from imblearn.pipeline import Pipeline
+          except: from sklearn.pipeline import Pipeline
+          full_pipeline = Pipeline(steps=[('model', model)])
+          
+      training_history = {"status": "success", "fitted_on": len(X_train)}
+      task_type = "classification"
+      print("[MODEL] Modèle entraîné et Full Pipeline compilé avec succès.")
+  else:
+      print("[ERREUR] Données d'entraînement introuvables.")
+_metadata:
+  bloc: 3
+  section: "1_classification_tabulaire"

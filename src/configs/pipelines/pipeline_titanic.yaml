@@ -1,0 +1,60 @@
+id: "pipeline_titanic_end2end"
+name: "Recette : Titanic End-to-End"
+description: "Pipeline complet de classification tabulaire : de l'extraction Kaggle jusqu'au dashboard Streamlit."
+category: "Tabular Classification"
+nodes:
+  # BLOC 1 : DATASETS
+  - node_id: "dl_kaggle"
+    block_id: "extract_kaggle"
+    params:
+      DATASET_ID: "c/titanic"
+      DEST_DIR: "./data/raw/titanic"
+
+  - node_id: "extract_zip"
+    block_id: "extract_unpack_archive"
+    depends_on: ["dl_kaggle"]
+    params:
+      ARCHIVE_PATH: "./data/raw/titanic/titanic.zip"
+      EXTRACT_DIR: "./data/extracted/titanic"
+
+  - node_id: "load_train"
+    block_id: "load_csv"
+    depends_on: ["extract_zip"]
+    params:
+      FILE_PATH: "./data/extracted/titanic/train.csv"
+      SEP: ","
+      TARGET_COL: "Survived"
+
+  # BLOC 2 : PREPROCESSING
+  - node_id: "preprocess_impute"
+    block_id: "transform_simple_imputer"
+    depends_on: ["load_train"]
+    params:
+      STRATEGY_NUM: "median"
+      STRATEGY_CAT: "most_frequent"
+
+  - node_id: "preprocess_tabular"
+    block_id: "transform_standard_scaler"
+    depends_on: ["preprocess_impute"]
+
+  # BLOC 3 : MODEL
+  - node_id: "model_rf"
+    block_id: "model_random_forest_classifier"
+    depends_on: ["preprocess_tabular"]
+    params:
+      N_ESTIMATORS: 100
+      MAX_DEPTH: 5
+
+  # BLOC 4 : EVALUATION
+  - node_id: "eval_accuracy"
+    block_id: "eval_accuracy"
+    depends_on: ["model_rf"]
+
+  - node_id: "eval_shap"
+    block_id: "eval_shap_summary"
+    depends_on: ["model_rf"]
+
+  # BLOC 5 : DEPLOYMENT
+  - node_id: "deploy_ui"
+    block_id: "deploy_streamlit"
+    depends_on: ["eval_accuracy", "eval_shap"]

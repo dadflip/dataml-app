@@ -1,0 +1,62 @@
+id: "model_video_frame_extractor"
+name: "Model: Video Frame Extractor (OpenCV)"
+description: "Pipeline qui extrait N frames réparties équitablement depuis une vidéo pour analyse."
+category: "Multimédia & Audio"
+tags: ["model", "video", "preprocessing", "opencv", "extraction"]
+applies_to: ["Vidéo"]
+when_to_use: "Étape préliminaire avant de passer une vidéo dans un classifieur d'images (ResNet, ViT)."
+pros:
+  - "Permet de traiter la vidéo comme une série d'images."
+cons:
+  - "Ne capture pas le mouvement continu (pas de convolutions 3D)."
+hyperparameters:
+  n_frames: "Nombre de frames à extraire (ex: 10)."
+code_template: |
+  import pandas as pd
+  import numpy as np
+  try:
+      import cv2
+  except ImportError:
+      cv2 = None
+      print("[ERREUR] opencv n'est pas installé. Lancez : !pip install opencv-python")
+
+  # [PARAM: N_FRAMES | number]
+  N_FRAMES = 10
+  # [/PARAM]
+
+  print(f"[MODEL] Extraction de frames vidéo (N={N_FRAMES})...")
+  if 'X_test' in locals() and cv2 is not None:
+      videos = list(X_test) # Liste de chemins vidéo
+      
+      all_preds = []
+      for vid in videos:
+          cap = cv2.VideoCapture(vid)
+          total_frames = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
+          if total_frames > 0:
+              step = max(1, total_frames // int(N_FRAMES))
+              extracted = []
+              for i in range(int(N_FRAMES)):
+                  cap.set(cv2.CAP_PROP_POS_FRAMES, i * step)
+                  ret, frame = cap.read()
+                  if ret: extracted.append(cv2.cvtColor(frame, cv2.COLOR_BGR2RGB))
+              all_preds.append(extracted) # Liste d'images pour cette vidéo
+          else:
+              all_preds.append([])
+          cap.release()
+              
+      y_pred = np.array(all_preds, dtype=object)
+      y_proba = None
+      feature_importances = None
+      
+      from sklearn.preprocessing import FunctionTransformer
+      model = FunctionTransformer(lambda X: y_pred)
+      full_pipeline = model
+          
+      training_history = {"status": "success"}
+      task_type = "video_processing"
+      print("[MODEL] Extraction terminée.")
+  else:
+      print("[ERREUR] Données introuvables ou cv2 manquant.")
+_metadata:
+  bloc: 3
+  section: "4_vision_and_audio"

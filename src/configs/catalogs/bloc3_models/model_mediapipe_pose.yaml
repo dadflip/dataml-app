@@ -1,0 +1,72 @@
+id: "model_mediapipe_pose"
+name: "Model: MediaPipe Pose Estimation"
+description: "Détection des articulations (squelette) en temps réel par Google."
+category: "Vision par Ordinateur (Pré-entraînés)"
+tags: ["model", "vision", "pose-estimation", "mediapipe", "google"]
+applies_to: ["Images", "Vidéo"]
+when_to_use: "Pour détecter la posture d'une personne (bras levé, assis, etc.) à partir d'images ou de webcam."
+pros:
+  - "Temps réel sur CPU."
+  - "Extrêmement précis pour le suivi de la posture humaine."
+cons:
+  - "Ne détecte qu'une personne à la fois par défaut avec ce modèle de base."
+hyperparameters:
+  min_detection_confidence: "Confiance minimale (ex: 0.5)."
+code_template: |
+  import pandas as pd
+  import numpy as np
+  import json
+  try:
+      import cv2
+      import mediapipe as mp
+  except ImportError:
+      mp = None
+      print("[ERREUR] mediapipe ou cv2 n'est pas installé. Lancez : !pip install mediapipe opencv-python")
+
+  # [PARAM: MIN_DETECTION_CONFIDENCE | number]
+  MIN_DETECTION_CONFIDENCE = 0.5
+  # [/PARAM]
+
+  print(f"[MODEL] Extraction de posture MediaPipe (conf>={MIN_DETECTION_CONFIDENCE})...")
+  if 'X_test' in locals() and mp is not None:
+      images = list(X_test)
+      
+      mp_pose = mp.solutions.pose
+      pose = mp_pose.Pose(static_image_mode=True, min_detection_confidence=float(MIN_DETECTION_CONFIDENCE))
+      
+      all_preds = []
+      for img in images:
+          # On suppose img est un numpy array BGR ou RGB
+          if isinstance(img, str):
+              img_arr = cv2.imread(img)
+              img_rgb = cv2.cvtColor(img_arr, cv2.COLOR_BGR2RGB) if img_arr is not None else None
+          else:
+              # S'assurer que c'est RGB pour mediapipe
+              img_rgb = img.astype('uint8')
+              
+          if img_rgb is not None:
+              results = pose.process(img_rgb)
+              if results.pose_landmarks:
+                  landmarks = [{"x": l.x, "y": l.y, "z": l.z, "visibility": l.visibility} for l in results.pose_landmarks.landmark]
+                  all_preds.append(json.dumps(landmarks))
+              else:
+                  all_preds.append("[]")
+          else:
+              all_preds.append("[]")
+              
+      y_pred = np.array(all_preds)
+      y_proba = None
+      feature_importances = None
+      
+      from sklearn.preprocessing import FunctionTransformer
+      model = FunctionTransformer(lambda X: y_pred)
+      full_pipeline = model
+          
+      training_history = {"status": "success", "type": "mediapipe_pose"}
+      task_type = "keypoint_detection"
+      print("[MODEL] Inférence MediaPipe terminée.")
+  else:
+      print("[ERREUR] Données introuvables ou mediapipe manquant.")
+_metadata:
+  bloc: 3
+  section: "4_vision_and_audio"

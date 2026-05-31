@@ -1,0 +1,53 @@
+id: "model_extra_trees_regressor"
+name: "Model: Extra Trees Regressor"
+description: "Extremely Randomized Trees pour la régression."
+category: "Modèles Basés sur les Arbres"
+tags: ["model", "regression", "tabular", "sklearn", "ensemble"]
+applies_to: ["Tabulaire"]
+when_to_use: "Comme alternative plus rapide et parfois plus lisse au Random Forest."
+pros:
+  - "Très rapide."
+  - "Plus de variance ajoutée, peut mieux généraliser."
+cons:
+  - "Toujours incapable d'extrapoler."
+hyperparameters:
+  n_estimators: "Nombre d'arbres (ex: 100)."
+code_template: |
+  import pandas as pd
+  import numpy as np
+  from sklearn.ensemble import ExtraTreesRegressor
+
+  # [PARAM: N_ESTIMATORS | number]
+  N_ESTIMATORS = 100
+  # [/PARAM]
+
+  print(f"[MODEL] Entraînement Extra Trees Regressor (n_estimators={N_ESTIMATORS})...")
+  if 'X_train' in locals() and 'y_train' in locals() and 'X_test' in locals():
+      model = ExtraTreesRegressor(n_estimators=int(N_ESTIMATORS), n_jobs=-1, random_state=42)
+      model.fit(X_train, y_train)
+      
+      y_pred = model.predict(X_test)
+      y_proba = None
+      
+      feature_importances = None
+      if 'feature_names_out' in locals() and hasattr(model, 'feature_importances_'):
+          if len(model.feature_importances_) == len(feature_names_out):
+              feature_importances = pd.Series(model.feature_importances_, index=feature_names_out)
+              
+      if 'preprocessor' in locals() and preprocessor is not None:
+          try: from imblearn.pipeline import Pipeline
+          except: from sklearn.pipeline import Pipeline
+          full_pipeline = Pipeline(steps=preprocessor.steps + [('model', model)])
+      else:
+          try: from imblearn.pipeline import Pipeline
+          except: from sklearn.pipeline import Pipeline
+          full_pipeline = Pipeline(steps=[('model', model)])
+          
+      training_history = {"status": "success", "fitted_on": len(X_train)}
+      task_type = "regression"
+      print("[MODEL] Modèle entraîné et Full Pipeline compilé avec succès.")
+  else:
+      print("[ERREUR] Données d'entraînement introuvables.")
+_metadata:
+  bloc: 3
+  section: "2_regression_tabulaire"

@@ -1,0 +1,99 @@
+id: "model_generative_adversarial_network"
+name: "Model: GAN (Generative Adversarial Network)"
+description: "Architecture générative faisant s'affronter un Générateur et un Discriminateur."
+category: "Génératif & Non-Supervisé"
+tags: ["model", "generative", "unsupervised", "pytorch", "gan", "deep-learning"]
+applies_to: ["Tabulaire", "Images"]
+when_to_use: "Pour générer de fausses données de haute qualité."
+pros:
+  - "Données générées nettes."
+cons:
+  - "Extrêmement instable à l'entraînement (Mode Collapse)."
+hyperparameters:
+  latent_dim: "Taille du vecteur de bruit (ex: 32)."
+  epochs: "Nombre d'époques (ex: 50)."
+code_template: |
+  import pandas as pd
+  import numpy as np
+  try:
+      import torch
+      import torch.nn as nn
+      import torch.optim as optim
+      from torch.utils.data import DataLoader, TensorDataset
+  except ImportError:
+      torch = None
+      print("[ERREUR] torch n'est pas installé.")
+
+  # [PARAM: LATENT_DIM | number]
+  LATENT_DIM = 32
+  # [/PARAM]
+
+  # [PARAM: EPOCHS | number]
+  EPOCHS = 50
+  # [/PARAM]
+
+  print(f"[MODEL] Entraînement GAN PyTorch...")
+  if 'X_train' in locals() and 'X_test' in locals() and torch is not None:
+      X_tr_np = np.array(X_train, dtype=np.float32)
+      X_te_np = np.array(X_test, dtype=np.float32)
+      dim = X_tr_np.shape[1]
+      ld = int(LATENT_DIM)
+      dataset = TensorDataset(torch.tensor(X_tr_np))
+      loader = DataLoader(dataset, batch_size=64, shuffle=True)
+
+      class Generator(nn.Module):
+          def __init__(self):
+              super().__init__()
+              self.net = nn.Sequential(nn.Linear(ld, 128), nn.ReLU(), nn.Linear(128, dim), nn.Tanh())
+          def forward(self, z):
+              return self.net(z)
+
+      class Discriminator(nn.Module):
+          def __init__(self):
+              super().__init__()
+              self.net = nn.Sequential(nn.Linear(dim, 128), nn.LeakyReLU(0.2), nn.Linear(128, 1), nn.Sigmoid())
+          def forward(self, x):
+              return self.net(x)
+
+      device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+      G = Generator().to(device)
+      D = Discriminator().to(device)
+      opt_G = optim.Adam(G.parameters(), lr=0.0002)
+      opt_D = optim.Adam(D.parameters(), lr=0.0002)
+      criterion = nn.BCELoss()
+
+      for epoch in range(int(EPOCHS)):
+          for (real,) in loader:
+              real = real.to(device)
+              bs = real.size(0)
+              # Train Discriminator
+              z = torch.randn(bs, ld).to(device)
+              fake = G(z)
+              loss_d = criterion(D(real), torch.ones(bs, 1).to(device)) + criterion(D(fake.detach()), torch.zeros(bs, 1).to(device))
+              opt_D.zero_grad(); loss_d.backward(); opt_D.step()
+              # Train Generator
+              z = torch.randn(bs, ld).to(device)
+              loss_g = criterion(D(G(z)), torch.ones(bs, 1).to(device))
+              opt_G.zero_grad(); loss_g.backward(); opt_G.step()
+
+      model = G # On expose le générateur
+      model.eval()
+      with torch.no_grad():
+          z = torch.randn(len(X_te_np), ld).to(device)
+          y_pred = model(z).cpu().numpy()
+      y_proba = None
+      feature_importances = None
+      if 'preprocessor' in locals() and preprocessor is not None:
+          try: from imblearn.pipeline import Pipeline
+          except: from sklearn.pipeline import Pipeline
+          full_pipeline = Pipeline(steps=preprocessor.steps + [('model', model)])
+      else:
+          full_pipeline = model
+      training_history = {"status": "success", "loss_g": float(loss_g), "loss_d": float(loss_d)}
+      task_type = "generative"
+      print("[MODEL] GAN entraîné avec succès.")
+  else:
+      print("[ERREUR] Données ou torch manquants.")
+_metadata:
+  bloc: 3
+  section: "6_neural_networks"

@@ -1,0 +1,122 @@
+id: "eval_lift_chart"
+name: "Eval: Lift Chart (Classification)"
+description: "Trace le graphique de lift. Montre combien de fois le modele est meilleur qu'un ciblage aleatoire a chaque decile de la population. Un lift > 1 indique une performance superieure au hasard."
+category: "Analyse Avancee"
+tags: ["eval", "classification", "lift", "visualization", "matplotlib", "proba", "ranking"]
+applies_to: ["Classification"]
+when_to_use: "Pour quantifier le gain multiplicatif du modele par rapport au hasard. Tres utilise en marketing, scoring credit et detection de fraude."
+pros:
+  - "Mesure directe du facteur multiplicatif vs. ciblage aleatoire."
+  - "Facilement interpretable par des decideurs metier."
+cons:
+  - "Necessite des probabilites predites (y_proba)."
+  - "Plus pertinent pour la classification binaire."
+code_template: |
+  import numpy as np
+  import matplotlib
+  matplotlib.use("Agg")
+  import matplotlib.pyplot as plt
+  import os
+
+  # [PARAM: N_BINS | number]
+  N_BINS = 10
+  # [/PARAM]
+
+  evaluation_metrics = {}
+
+  print(f"[EVAL] Generation du Lift Chart ({N_BINS} deciles)...")
+  try:
+      if y_proba is None:
+          raise ValueError("y_proba est None. Les probabilites predites sont necessaires pour le Lift Chart.")
+
+      y_test_arr = np.array(y_test).ravel()
+      classes = sorted(list(set(y_test_arr)))
+
+      if y_proba.ndim == 2:
+          pos_proba = y_proba[:, -1]
+      else:
+          pos_proba = np.array(y_proba).ravel()
+
+      if len(classes) == 2:
+          pos_label = classes[1]
+          y_binary = (y_test_arr == pos_label).astype(int)
+      else:
+          most_frequent = max(classes, key=lambda c: np.sum(y_test_arr == c))
+          y_binary = (y_test_arr == most_frequent).astype(int)
+          print(f"[EVAL] Multiclass detecte. Lift calcule pour la classe la plus frequente: {most_frequent}")
+
+      sorted_indices = np.argsort(-pos_proba)
+      y_sorted = y_binary[sorted_indices]
+
+      n = len(y_sorted)
+      n_bins = int(N_BINS)
+      bin_size = n // n_bins
+      overall_rate = y_binary.mean()
+
+      decile_lifts = []
+      cumulative_lifts = []
+      decile_labels = []
+
+      for i in range(n_bins):
+          start = i * bin_size
+          end = start + bin_size if i < n_bins - 1 else n
+          bin_data = y_sorted[start:end]
+          bin_rate = bin_data.mean()
+          lift = bin_rate / overall_rate if overall_rate > 0 else 0.0
+          decile_lifts.append(float(lift))
+
+          cum_data = y_sorted[:end]
+          cum_rate = cum_data.mean()
+          cum_lift = cum_rate / overall_rate if overall_rate > 0 else 0.0
+          cumulative_lifts.append(float(cum_lift))
+
+          decile_labels.append(f"{int((i + 1) * (100 / n_bins))}%")
+
+      fig, axes = plt.subplots(1, 2, figsize=(14, 6))
+
+      ax1 = axes[0]
+      colors = ["#2ecc71" if l > 1 else "#e74c3c" for l in decile_lifts]
+      ax1.bar(range(n_bins), decile_lifts, color=colors, edgecolor="k", linewidth=0.5)
+      ax1.axhline(y=1.0, color="r", linestyle="--", linewidth=1.5, label="Baseline (aleatoire)")
+      ax1.set_xticks(range(n_bins))
+      ax1.set_xticklabels(decile_labels)
+      ax1.set_xlabel("Decile (trie par probabilite decroissante)")
+      ax1.set_ylabel("Lift")
+      ax1.set_title("Lift par Decile")
+      ax1.legend()
+      ax1.grid(axis="y", alpha=0.3)
+
+      ax2 = axes[1]
+      x_pct = [(i + 1) * (100 / n_bins) for i in range(n_bins)]
+      ax2.plot(x_pct, cumulative_lifts, "bo-", linewidth=2, markersize=6)
+      ax2.axhline(y=1.0, color="r", linestyle="--", linewidth=1.5, label="Baseline (aleatoire)")
+      ax2.set_xlabel("% de la population ciblee")
+      ax2.set_ylabel("Lift cumulatif")
+      ax2.set_title("Lift Cumulatif")
+      ax2.legend()
+      ax2.grid(True, alpha=0.3)
+
+      plt.tight_layout()
+
+      save_dir = os.path.join(os.getcwd(), "outputs")
+      os.makedirs(save_dir, exist_ok=True)
+      fig_path = os.path.join(save_dir, "lift_chart.png")
+      fig.savefig(fig_path, dpi=150, bbox_inches="tight")
+      plt.close(fig)
+
+      evaluation_metrics["lift_decile_values"] = decile_lifts
+      evaluation_metrics["lift_cumulative_values"] = cumulative_lifts
+      evaluation_metrics["lift_top_decile"] = decile_lifts[0]
+      evaluation_metrics["lift_overall_positive_rate"] = float(overall_rate)
+      evaluation_metrics["lift_figure_path"] = fig_path
+
+      print(f"[EVAL] Lift au 1er decile: {decile_lifts[0]:.4f}")
+      print(f"[EVAL] Lift cumulatif au 1er decile: {cumulative_lifts[0]:.4f}")
+      print(f"[EVAL] Taux positif global: {overall_rate:.4f}")
+      print(f"[EVAL] Figure sauvegardee: {fig_path}")
+  except Exception as e:
+      print(f"[EVAL][ERREUR] Lift Chart echoue: {e}")
+      evaluation_metrics["lift_error"] = str(e)
+_metadata:
+  bloc: 4
+  section: "1_evaluation"

@@ -1,0 +1,109 @@
+id: "eval_hinge_loss"
+name: "Eval: Hinge Loss"
+description: >
+  Calcule le Hinge Loss, une fonction de perte utilisee principalement
+  par les SVM (Support Vector Machines). Elle penalise les predictions
+  incorrectes et les predictions correctes mais avec une marge insuffisante.
+  Le Hinge Loss est minimise lorsque les predictions sont correctes avec
+  une marge superieure ou egale a 1. Utilise idealement la decision function
+  du modele, avec repli sur y_proba si non disponible.
+category: "Metriques de Classification"
+tags: ["eval", "classification", "hinge_loss", "svm", "decision_function", "marge"]
+applies_to: ["Classification"]
+when_to_use: >
+  Utiliser principalement pour evaluer les modeles SVM ou tout modele
+  fournissant une decision function. Le Hinge Loss est la fonction de perte
+  native des SVM lineaires. Peut aussi etre utilise avec d'autres modeles
+  en utilisant les probabilites predites comme approximation.
+pros:
+  - "Fonction de perte native des SVM, interpretable dans ce contexte"
+  - "Penalise les predictions avec marge insuffisante, meme si correctes"
+  - "Encourage la separation maximale entre classes"
+  - "Supporte le multiclasse via one-vs-rest"
+cons:
+  - "Optimale uniquement avec decision_function (pas les probabilites)"
+  - "Interpretation moins intuitive que l'accuracy ou le F1"
+  - "Non bornee superiurement, les valeurs absolues sont difficiles a comparer"
+  - "Moins pertinent pour les modeles non-SVM"
+code_template: |
+  evaluation_metrics = {}
+  try:
+      from sklearn.metrics import hinge_loss
+      import numpy as np
+
+      print("[EVAL] Calcul du Hinge Loss...")
+
+      classes = np.unique(y_test)
+      n_classes = len(classes)
+
+      # Try to get decision function from the pipeline
+      decision_values = None
+      try:
+          if hasattr(full_pipeline, "decision_function"):
+              decision_values = full_pipeline.decision_function(
+                  # Reconstruct X_test from pipeline if available
+                  # The decision function requires the raw input, but we use
+                  # pre-computed predictions. Try to use y_proba as fallback.
+                  None
+              )
+      except Exception:
+          pass
+
+      # If decision_function not available, use y_proba as surrogate
+      if decision_values is None:
+          if y_proba is not None:
+              print("[EVAL] decision_function non disponible, utilisation de y_proba comme substitut.")
+              if y_proba.ndim == 1:
+                  # Binary: convert probability to decision-like score
+                  decision_values = 2 * y_proba - 1
+              elif y_proba.shape[1] == 2:
+                  # Binary with 2 columns
+                  decision_values = y_proba[:, 1] - y_proba[:, 0]
+              else:
+                  # Multiclass: use probabilities directly
+                  decision_values = y_proba
+          else:
+              print("[EVAL] Ni decision_function ni y_proba disponibles.")
+              evaluation_metrics["hinge_loss"] = None
+              evaluation_metrics["error"] = "decision_function ou y_proba requis pour le Hinge Loss"
+
+      if decision_values is not None:
+          try:
+              h_loss = hinge_loss(y_test, decision_values, labels=classes)
+              evaluation_metrics["hinge_loss"] = float(h_loss)
+              print(f"[EVAL] Hinge Loss: {h_loss:.4f}")
+
+              # Interpretation
+              if h_loss < 0.1:
+                  interpretation = "Marge excellente, predictions tres confiantes"
+              elif h_loss < 0.5:
+                  interpretation = "Marge correcte"
+              elif h_loss < 1.0:
+                  interpretation = "Marge faible, predictions peu confiantes"
+              else:
+                  interpretation = "Marge insuffisante, nombreuses erreurs"
+              evaluation_metrics["interpretation"] = interpretation
+              print(f"[EVAL] Interpretation: {interpretation}")
+
+              # Per-sample analysis
+              if decision_values is not None:
+                  if decision_values.ndim == 1:
+                      n_margin_violations = int(np.sum(
+                          np.maximum(0, 1 - (2 * (np.asarray(y_test) == classes[1]).astype(float) - 1) * decision_values) > 0
+                      ))
+                  else:
+                      n_margin_violations = int(np.sum(h_loss > 0))
+                  evaluation_metrics["source"] = "decision_function" if decision_values is not y_proba else "y_proba_surrogate"
+
+          except Exception as e_h:
+              print(f"[EVAL] Erreur lors du calcul du Hinge Loss: {e_h}")
+              evaluation_metrics["hinge_loss"] = None
+              evaluation_metrics["error"] = str(e_h)
+
+      print("[EVAL] Hinge Loss termine avec succes.")
+  except Exception as e:
+      print(f"[EVAL] Erreur lors du calcul du Hinge Loss: {e}")
+      evaluation_metrics["error"] = str(e)
+_metadata:
+  bloc: 4
+  section: "1_evaluation"

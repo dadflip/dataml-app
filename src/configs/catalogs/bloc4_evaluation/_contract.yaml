@@ -1,0 +1,11 @@
+pipeline_contract:
+  bloc: 4
+  role: "Évaluation"
+  input_variables:
+    full_pipeline: "sklearn.pipeline.Pipeline"
+    y_test: "pd.Series"
+    y_pred: "np.ndarray"
+    y_proba: "np.ndarray | None"
+    task_type: "str"
+  output_variables:
+    evaluation_metrics: "dict"

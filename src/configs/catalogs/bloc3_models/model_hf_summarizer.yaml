@@ -1,0 +1,68 @@
+id: "model_hf_summarizer"
+name: "Model: HuggingFace Text Summarizer"
+description: "Pipeline HuggingFace de résumé automatique de texte (BART ou T5)."
+category: "Modèles NLP (Pré-entraînés)"
+tags: ["model", "nlp", "summarization", "transformers", "huggingface", "zero-shot", "generative"]
+applies_to: ["Texte"]
+when_to_use: "Quand vous voulez résumer un bloc de texte long en une phrase ou un petit paragraphe."
+pros:
+  - "Très impressionnant, génération de texte fluide."
+cons:
+  - "Lent sur CPU. Modèle volumineux."
+hyperparameters:
+  max_length: "Longueur max du résumé (ex: 130)."
+  min_length: "Longueur min du résumé (ex: 30)."
+code_template: |
+  import pandas as pd
+  import numpy as np
+  try:
+      from transformers import pipeline
+  except ImportError:
+      pipeline = None
+      print("[ERREUR] transformers n'est pas installé. Lancez : !pip install transformers")
+
+  # [PARAM: MAX_LENGTH | number]
+  MAX_LENGTH = 130
+  # [/PARAM]
+
+  # [PARAM: MIN_LENGTH | number]
+  MIN_LENGTH = 30
+  # [/PARAM]
+
+  print(f"[MODEL] HuggingFace Summarizer (min={MIN_LENGTH}, max={MAX_LENGTH})...")
+  if 'X_test' in locals() and pipeline is not None:
+      texts = []
+      if isinstance(X_test, pd.DataFrame) and 'text' in X_test.columns:
+          texts = X_test['text'].astype(str).tolist()
+      elif isinstance(X_test, (pd.Series, np.ndarray, list)):
+          texts = [str(x) for x in X_test]
+          
+      if texts:
+          print("Chargement du modèle de résumé (distilbart-cnn-12-6)...")
+          summarizer = pipeline("summarization", model="sshleifer/distilbart-cnn-12-6")
+          
+          print("Génération des résumés (peut être très long)...")
+          # Tronquer si trop long pour BART (max 1024 tokens environ)
+          texts_trunc = [t[:3000] for t in texts] 
+          results = summarizer(texts_trunc, max_length=int(MAX_LENGTH), min_length=int(MIN_LENGTH), do_sample=False)
+          
+          y_pred = np.array([res['summary_text'] for res in results])
+          y_proba = None
+          feature_importances = None
+          model = summarizer
+          
+          if 'preprocessor' in locals() and preprocessor is not None:
+              try: from imblearn.pipeline import Pipeline
+              except: from sklearn.pipeline import Pipeline
+              full_pipeline = Pipeline(steps=preprocessor.steps + [('model', model)])
+          else:
+              full_pipeline = model
+              
+          training_history = {"status": "success", "type": "zero_shot_generative"}
+          task_type = "text_generation"
+          print("[MODEL] Génération de résumés terminée avec succès.")
+  else:
+      print("[ERREUR] Données introuvables ou transformers non installé.")
+_metadata:
+  bloc: 3
+  section: "3_nlp_and_timeseries"

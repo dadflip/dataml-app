@@ -1,0 +1,46 @@
+id: "load_csv"
+name: "Load: Fichier CSV"
+description: "Charge un fichier CSV plat dans un DataFrame Pandas avec détection d'encodage."
+category: "2. Load"
+tags: ["load", "csv", "tabular", "pandas"]
+code_template: |
+  import pandas as pd
+  import time
+  import os
+
+  # [PARAM: FILE_PATH | file]
+  FILE_PATH = "./data/raw/data.csv"
+  # [/PARAM]
+  
+  # [PARAM: SEP | string]
+  SEP = ","
+  # [/PARAM]
+  
+  # [PARAM: TARGET_COL | string]
+  TARGET_COL = "target"
+  # [/PARAM]
+
+  print(f"[LOAD] Chargement du CSV depuis {FILE_PATH}...")
+  if not os.path.exists(FILE_PATH):
+      raise FileNotFoundError(f"[ERREUR LOAD] Le fichier {FILE_PATH} est introuvable.")
+
+  try:
+      start_time = time.time()
+      # low_memory=False est robuste pour les gros CSV avec types mixtes
+      df = pd.read_csv(FILE_PATH, sep=SEP, low_memory=False)
+      
+      duration = time.time() - start_time
+      print(f"[LOAD] Succès CSV. {df.shape[0]} lignes, {df.shape[1]} colonnes chargées en {duration:.2f}s.")
+  except UnicodeDecodeError:
+      print("[LOAD] Erreur UTF-8. Tentative avec encodage ISO-8859-1...")
+      df = pd.read_csv(FILE_PATH, sep=SEP, encoding='ISO-8859-1', low_memory=False)
+  except Exception as e:
+      print(f"[ERREUR LOAD] Impossible de lire le CSV : {str(e)}")
+      raise e
+
+  target_name = TARGET_COL if TARGET_COL and TARGET_COL in df.columns else None
+  task_type = "classification" if target_name and df[target_name].nunique() < 20 else "regression"
+  meta = {"format": "csv", "separator": SEP, "shape": df.shape}
+_metadata:
+  bloc: 1
+  section: "2_load"

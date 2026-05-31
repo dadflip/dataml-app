@@ -1,0 +1,42 @@
+id: "load_orc"
+name: "Load: Fichier ORC"
+description: "Charge un fichier Apache ORC (Optimized Row Columnar), standard Hadoop."
+category: "2. Load"
+tags: ["load", "orc", "bigdata", "pandas"]
+code_template: |
+  import pandas as pd
+  import time
+  import os
+
+  # [PARAM: FILE_PATH | file]
+  FILE_PATH = "./data/raw/data.orc"
+  # [/PARAM]
+  
+  # [PARAM: TARGET_COL | string]
+  TARGET_COL = "target"
+  # [/PARAM]
+
+  print(f"[LOAD] Chargement du fichier ORC depuis {FILE_PATH}...")
+  if not os.path.exists(FILE_PATH):
+      raise FileNotFoundError(f"[ERREUR LOAD] Fichier ORC introuvable : {FILE_PATH}")
+
+  try:
+      start_time = time.time()
+      # Nécessite pyarrow
+      df = pd.read_orc(FILE_PATH)
+      
+      duration = time.time() - start_time
+      print(f"[LOAD] Succès ORC. {df.shape[0]} lignes chargées en {duration:.2f}s.")
+  except ImportError:
+      print("[ERREUR LOAD] Le module 'pyarrow' est requis.")
+      raise
+  except Exception as e:
+      print(f"[ERREUR LOAD] Impossible de lire le fichier ORC : {str(e)}")
+      raise e
+
+  target_name = TARGET_COL if TARGET_COL and TARGET_COL in df.columns else None
+  task_type = "unknown"
+  meta = {"format": "orc", "shape": df.shape}
+_metadata:
+  bloc: 1
+  section: "2_load"

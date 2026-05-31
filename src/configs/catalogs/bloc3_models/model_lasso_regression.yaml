@@ -1,0 +1,52 @@
+id: "model_lasso_regression"
+name: "Model: Lasso Regression"
+description: "Régression linéaire avec pénalisation L1. Agit comme un sélecteur de features."
+category: "Modèles Linéaires"
+tags: ["model", "regression", "tabular", "sklearn", "linear"]
+applies_to: ["Tabulaire"]
+when_to_use: "Quand vous soupçonnez qu'un grand nombre de features sont inutiles (parcimonie)."
+pros:
+  - "Met les coefficients des features inutiles exactement à zéro."
+cons:
+  - "S'il y a des variables très corrélées, il en choisit une arbitrairement et annule les autres."
+hyperparameters:
+  alpha: "Force de régularisation (ex: 1.0)."
+code_template: |
+  import pandas as pd
+  import numpy as np
+  from sklearn.linear_model import Lasso
+
+  # [PARAM: ALPHA | number]
+  ALPHA = 1.0
+  # [/PARAM]
+
+  print(f"[MODEL] Entraînement Lasso Regression (alpha={ALPHA})...")
+  if 'X_train' in locals() and 'y_train' in locals() and 'X_test' in locals():
+      model = Lasso(alpha=float(ALPHA), random_state=42)
+      model.fit(X_train, y_train)
+      
+      y_pred = model.predict(X_test)
+      y_proba = None
+      
+      feature_importances = None
+      if 'feature_names_out' in locals():
+          if len(model.coef_) == len(feature_names_out):
+              feature_importances = pd.Series(np.abs(model.coef_), index=feature_names_out)
+              
+      if 'preprocessor' in locals() and preprocessor is not None:
+          try: from imblearn.pipeline import Pipeline
+          except: from sklearn.pipeline import Pipeline
+          full_pipeline = Pipeline(steps=preprocessor.steps + [('model', model)])
+      else:
+          try: from imblearn.pipeline import Pipeline
+          except: from sklearn.pipeline import Pipeline
+          full_pipeline = Pipeline(steps=[('model', model)])
+          
+      training_history = {"status": "success", "fitted_on": len(X_train), "non_zero_coefs": int(np.sum(model.coef_ != 0))}
+      task_type = "regression"
+      print("[MODEL] Modèle entraîné et Full Pipeline compilé avec succès.")
+  else:
+      print("[ERREUR] Données d'entraînement introuvables.")
+_metadata:
+  bloc: 3
+  section: "2_regression_tabulaire"

@@ -1,0 +1,50 @@
+id: "eval_residual_autocorrelation_plot"
+name: "Eval Plot: Residual Autocorrelation (ACF)"
+description: "Trace l'autocorrélation des résidus pour vérifier s'il reste des motifs temporels non capturés."
+category: "Regression Visualizations"
+tags: ["eval", "plot", "regression", "timeseries", "acf", "residuals"]
+applies_to: ["Regression", "Séries Temporelles"]
+when_to_use: "Pour vérifier si vos résidus sont vraiment du 'bruit blanc' (indépendants) dans un contexte de séries temporelles."
+pros:
+  - "Indispensable pour la prévision (Forecasting)."
+cons:
+  - "Aucun sens si les données ne sont pas triées temporellement."
+code_template: |
+  import os
+  import numpy as np
+  import matplotlib.pyplot as plt
+  from statsmodels.graphics.tsaplots import plot_acf
+
+  evaluation_metrics = {}
+
+  if task_type in ["regression", "forecasting"] and 'y_test' in locals() and 'y_pred' in locals():
+      print("[EVAL] Génération de l'Autocorrelation des Résidus...")
+      try:
+          os.makedirs("outputs/evaluation", exist_ok=True)
+          
+          residuals = np.array(y_test) - np.array(y_pred)
+          
+          fig, ax = plt.subplots(figsize=(10, 5))
+          
+          # Par défaut, 40 lags max, ou len(residuals)/2
+          lags = min(40, len(residuals) // 2 - 1)
+          
+          plot_acf(residuals, lags=lags, ax=ax, alpha=0.05, title='Residuals Autocorrelation (ACF)')
+          
+          ax.set_xlabel('Lag')
+          ax.set_ylabel('Autocorrelation')
+          ax.grid(True, alpha=0.3)
+          
+          plot_path = "outputs/evaluation/residual_acf_plot.png"
+          fig.savefig(plot_path, dpi=300)
+          plt.close(fig)
+          
+          evaluation_metrics["residual_acf_plot"] = plot_path
+          print(f"[EVAL] Plot sauvegardé sous {plot_path}")
+      except ImportError:
+          print("[EVAL ERREUR] 'statsmodels' n'est pas installé. Nécessaire pour l'ACF.")
+      except Exception as e:
+          print(f"[EVAL ERREUR] : {str(e)}")
+_metadata:
+  bloc: 4
+  section: "1_evaluation"

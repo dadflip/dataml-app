@@ -1,0 +1,71 @@
+id: "eval_image_grid_predictions"
+name: "Eval Plot: Image Grid Predictions"
+description: "Affiche une grille d'images de test avec leur label réel et prédit (vert si correct, rouge sinon)."
+category: "Computer Vision Visualizations"
+tags: ["eval", "plot", "cv", "images", "grid"]
+applies_to: ["Classification"]
+when_to_use: "Pour vérifier visuellement sur quelles images spécifiques le modèle se trompe (ex: OCR, Image Classification)."
+pros:
+  - "Visualisation métier très forte pour le Computer Vision."
+cons:
+  - "Nécessite que X_test soit composé d'images ou que les chemins d'images soient reconstructibles."
+code_template: |
+  import os
+  import numpy as np
+  import matplotlib.pyplot as plt
+
+  evaluation_metrics = {}
+
+  if task_type == "classification" and 'X_test' in locals() and 'y_test' in locals() and 'y_pred' in locals():
+      print("[EVAL] Génération de la Grille de Prédiction d'Images...")
+      try:
+          # On suppose que X_test contient des vecteurs pixels "plats" et qu'on peut en déduire la taille carrée
+          X_arr = np.array(X_test)
+          if len(X_arr.shape) == 2:
+              # Tentative de reshape en carré (ex: 784 -> 28x28)
+              n_pixels = X_arr.shape[1]
+              side = int(np.sqrt(n_pixels))
+              if side * side == n_pixels:
+                  X_arr = X_arr.reshape(-1, side, side)
+                  
+          if len(X_arr.shape) >= 3:
+              os.makedirs("outputs/evaluation", exist_ok=True)
+              
+              fig, axes = plt.subplots(3, 3, figsize=(8, 8))
+              
+              # Prendre 9 indices aléatoires
+              n_samples = min(9, len(X_arr))
+              indices = np.random.choice(len(X_arr), n_samples, replace=False)
+              
+              for i, ax in enumerate(axes.flat):
+                  if i < len(indices):
+                      idx = indices[i]
+                      img = X_arr[idx]
+                      actual = y_test[idx] if isinstance(y_test, (list, np.ndarray)) else y_test.iloc[idx]
+                      pred = y_pred[idx]
+                      
+                      # Afficher l'image (en n/b si 2D, couleur si 3D)
+                      if len(img.shape) == 2:
+                          ax.imshow(img, cmap='gray')
+                      else:
+                          ax.imshow(img)
+                          
+                      color = 'green' if str(actual) == str(pred) else 'red'
+                      ax.set_title(f"True: {actual}\nPred: {pred}", color=color)
+                      
+                  ax.axis('off')
+                  
+              plt.tight_layout()
+              plot_path = "outputs/evaluation/image_grid_predictions.png"
+              fig.savefig(plot_path, dpi=300)
+              plt.close(fig)
+              
+              evaluation_metrics["image_grid_plot"] = plot_path
+              print(f"[EVAL] Plot sauvegardé sous {plot_path}")
+          else:
+              print("[EVAL] X_test n'est pas reconnu comme des données images.")
+      except Exception as e:
+          print(f"[EVAL ERREUR] Image Grid : {str(e)}")
+_metadata:
+  bloc: 4
+  section: "1_evaluation"

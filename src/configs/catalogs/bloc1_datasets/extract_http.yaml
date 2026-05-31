@@ -1,0 +1,42 @@
+id: "extract_http"
+name: "Extract: Fichier distant (HTTP/HTTPS)"
+description: "Télécharge un fichier brut depuis une URL publique."
+category: "1. Extract"
+tags: ["extract", "http", "download"]
+code_template: |
+  import urllib.request
+  import os
+  import time
+
+  # [PARAM: FILE_URL | string]
+  FILE_URL = "https://example.com/data.csv"
+  # [/PARAM]
+  
+  # [PARAM: DEST_PATH | string]
+  DEST_PATH = "./data/raw/data.csv"
+  # [/PARAM]
+
+  print(f"[EXTRACT] Téléchargement depuis {FILE_URL} vers {DEST_PATH}...")
+  os.makedirs(os.path.dirname(DEST_PATH), exist_ok=True)
+
+  try:
+      start_time = time.time()
+      # On simule un navigateur pour éviter certains blocages
+      req = urllib.request.Request(FILE_URL, headers={'User-Agent': 'Mozilla/5.0'})
+      with urllib.request.urlopen(req) as response, open(DEST_PATH, 'wb') as out_file:
+          out_file.write(response.read())
+          
+      duration = time.time() - start_time
+      size_mb = os.path.getsize(DEST_PATH) / (1024 * 1024)
+      print(f"[EXTRACT] Succès. Fichier ({size_mb:.2f} MB) téléchargé en {duration:.2f}s.")
+  except Exception as e:
+      print(f"[ERREUR EXTRACT] Échec du téléchargement : {str(e)}")
+      raise e
+
+  df = None
+  target_name = None
+  task_type = "unknown"
+  meta = {"source": "http", "path": DEST_PATH}
+_metadata:
+  bloc: 1
+  section: "1_extract"

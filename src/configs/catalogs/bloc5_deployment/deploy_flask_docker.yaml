@@ -1,0 +1,68 @@
+id: "deploy_flask_docker"
+name: "Deploy: Flask + Docker Full Stack"
+description: "Génère l'API Flask et son Dockerfile en une seule passe."
+category: "Containerization"
+tags: ["deploy", "api", "docker", "flask", "python"]
+applies_to: ["Classification", "Regression"]
+when_to_use: "Si vous préférez Gunicorn+Flask pour le déploiement sur les plateformes Cloud (AWS Elastic Beanstalk)."
+pros:
+  - "Génère le Gunicorn web server prêt pour la prod."
+cons:
+  - "Un peu vieux par rapport à FastAPI/Uvicorn."
+code_template: |
+  import os
+  import joblib
+
+  deployment_artifacts = {}
+
+  if 'full_pipeline' in locals():
+      print("[DEPLOY] Génération du Full Stack Flask + Docker...")
+      try:
+          os.makedirs("outputs/deployment", exist_ok=True)
+          
+          # 1. Sauvegarde du modèle
+          model_path = "outputs/deployment/model.joblib"
+          joblib.dump(full_pipeline, model_path)
+          deployment_artifacts["model_path"] = model_path
+          
+          # 2. Génération Flask (app.py)
+          flask_code = """import joblib
+  import pandas as pd
+  from flask import Flask, request, jsonify
+  
+  app = Flask(__name__)
+  model = joblib.load('model.joblib')
+  
+  @app.route('/predict', methods=['POST'])
+  def predict():
+      try:
+          data = request.get_json()['data']
+          df = pd.DataFrame([data])
+          pred = model.predict(df)[0]
+          return jsonify({"prediction": pred.item() if hasattr(pred, 'item') else pred})
+      except Exception as e:
+          return jsonify({"error": str(e)}), 400
+  """
+          api_script_path = "outputs/deployment/app.py"
+          with open(api_script_path, "w", encoding="utf-8") as f:
+              f.write(flask_code)
+          deployment_artifacts["flask_script"] = api_script_path
+          
+          # 3. Génération Dockerfile
+          dockerfile = """FROM python:3.9-slim
+  WORKDIR /app
+  RUN pip install flask gunicorn scikit-learn pandas joblib
+  COPY . .
+  CMD ["gunicorn", "--bind", "0.0.0.0:5000", "app:app"]
+  """
+          docker_path = "outputs/deployment/Dockerfile"
+          with open(docker_path, "w", encoding="utf-8") as f:
+              f.write(dockerfile)
+          deployment_artifacts["dockerfile"] = docker_path
+          
+          print(f"[DEPLOY] API Flask et Dockerfile (Gunicorn) générés avec succès.")
+      except Exception as e:
+          print(f"[DEPLOY ERREUR] Flask Docker : {str(e)}")
+_metadata:
+  bloc: 5
+  section: "4_container"

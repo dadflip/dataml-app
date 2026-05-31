@@ -1,0 +1,31 @@
+id: "eda_boxplots_by_target"
+name: "EDA: Boxplots vs Target"
+description: "Boîtes à moustaches des features numériques séparées par classe cible."
+category: "3. Exploratory Data Analysis"
+tags: ["eda", "boxplot", "tabular", "classification"]
+code_template: |
+  import pandas as pd
+  import numpy as np
+  import matplotlib.pyplot as plt
+  import seaborn as sns
+
+  if 'target_name' in locals() and target_name and target_name in df.columns:
+      num_cols = df.select_dtypes(include=[np.number]).columns.tolist()
+      if target_name in num_cols:
+          num_cols.remove(target_name)
+      if len(num_cols) > 12:
+          num_cols = num_cols[:12]
+          
+      print(f"[EDA] === BOXPLOTS by {target_name} ===")
+      plt.figure(figsize=(15, 4 * ((len(num_cols) + 2) // 3)))
+      for i, col in enumerate(num_cols):
+          plt.subplot(((len(num_cols) + 2) // 3), 3, i + 1)
+          sns.boxplot(data=df, x=target_name, y=col)
+          plt.title(f"{col} by {target_name}")
+      plt.tight_layout()
+      plt.show()
+  else:
+      print("[EDA] Cible (target_name) introuvable ou non définie.")
+_metadata:
+  bloc: 1
+  section: "3_eda"

@@ -1,0 +1,44 @@
+id: "load_midi"
+name: "Load: Fichier MIDI"
+description: "Parse un fichier musical MIDI et extrait ses événements."
+category: "2. Load"
+tags: ["load", "midi", "music", "audio"]
+code_template: |
+  import time
+  import os
+
+  # [PARAM: FILE_PATH | file]
+  FILE_PATH = "./data/raw/music.mid"
+  # [/PARAM]
+
+  print(f"[LOAD] Parsing du fichier MIDI : {FILE_PATH}...")
+  if not os.path.exists(FILE_PATH):
+      raise FileNotFoundError(f"[ERREUR LOAD] Fichier MIDI introuvable : {FILE_PATH}")
+
+  try:
+      start_time = time.time()
+      import mido
+      
+      mid = mido.MidiFile(FILE_PATH)
+      messages = []
+      
+      for i, track in enumerate(mid.tracks):
+          for msg in track:
+              messages.append(msg)
+              
+      duration = time.time() - start_time
+      print(f"[LOAD] Succès MIDI. {len(mid.tracks)} pistes et {len(messages)} événements lus en {duration:.2f}s.")
+  except ImportError:
+      print("[ERREUR LOAD] Le module 'mido' est requis (pip install mido).")
+      raise
+  except Exception as e:
+      print(f"[ERREUR LOAD] Erreur de parsing MIDI : {str(e)}")
+      raise e
+
+  df = None
+  target_name = None
+  task_type = "audio_midi"
+  meta = {"format": "midi", "tracks": len(mid.tracks), "events": len(messages)}
+_metadata:
+  bloc: 1
+  section: "2_load"

@@ -1,0 +1,49 @@
+id: "model_multinomial_nb"
+name: "Model: Multinomial Naive Bayes"
+description: "Idéal pour la classification de texte (avec TF-IDF ou CountVectorizer)."
+category: "Modèles Probabilistes"
+tags: ["model", "classification", "tabular", "nlp", "sklearn", "bayes"]
+applies_to: ["Tabulaire", "Texte"]
+when_to_use: "Variables représentant des comptages ou des fréquences discrètes."
+pros:
+  - "Très rapide, fonctionne bien sur le texte."
+cons:
+  - "Incompatible avec les features négatives."
+hyperparameters:
+  alpha: "Paramètre de lissage de Laplace (ex: 1.0)."
+code_template: |
+  import pandas as pd
+  import numpy as np
+  from sklearn.naive_bayes import MultinomialNB
+
+  # [PARAM: ALPHA | number]
+  ALPHA = 1.0
+  # [/PARAM]
+
+  print(f"[MODEL] Entraînement Multinomial Naive Bayes (alpha={ALPHA})...")
+  if 'X_train' in locals() and 'y_train' in locals() and 'X_test' in locals():
+      model = MultinomialNB(alpha=float(ALPHA))
+      model.fit(X_train, y_train)
+      
+      y_pred = model.predict(X_test)
+      y_proba = model.predict_proba(X_test) if hasattr(model, 'predict_proba') else None
+      
+      feature_importances = None
+              
+      if 'preprocessor' in locals() and preprocessor is not None:
+          try: from imblearn.pipeline import Pipeline
+          except: from sklearn.pipeline import Pipeline
+          full_pipeline = Pipeline(steps=preprocessor.steps + [('model', model)])
+      else:
+          try: from imblearn.pipeline import Pipeline
+          except: from sklearn.pipeline import Pipeline
+          full_pipeline = Pipeline(steps=[('model', model)])
+          
+      training_history = {"status": "success", "fitted_on": len(X_train)}
+      task_type = "classification"
+      print("[MODEL] Modèle entraîné et Full Pipeline compilé avec succès.")
+  else:
+      print("[ERREUR] Données d'entraînement introuvables.")
+_metadata:
+  bloc: 3
+  section: "1_classification_tabulaire"

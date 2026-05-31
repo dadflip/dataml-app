@@ -1,0 +1,60 @@
+id: "transform_simple_imputer"
+name: "Transform: Simple Imputer"
+description: "Impute les valeurs manquantes via la moyenne/médiane. Ajouté au preprocessor."
+category: "4.1 Preprocessing"
+tags: ["transform", "imputation", "tabular", "sklearn", "pipeline"]
+applies_to: ["Tabulaire"]
+when_to_use: "Dès que des valeurs numériques ou catégorielles manquent."
+pros:
+  - "Très exportable et robuste en production."
+cons:
+  - "Peut biaiser la distribution."
+hyperparameters:
+  strategy_num: "mean, median"
+  strategy_cat: "most_frequent, constant"
+code_template: |
+  import pandas as pd
+  import numpy as np
+  from sklearn.impute import SimpleImputer
+  from sklearn.compose import ColumnTransformer
+
+  # [PARAM: STRATEGY_NUM | string]
+  STRATEGY_NUM = "median"
+  # [/PARAM]
+
+  # [PARAM: STRATEGY_CAT | string]
+  STRATEGY_CAT = "most_frequent"
+  # [/PARAM]
+
+  print("[TRANSFORM] SimpleImputer...")
+  if 'df' in locals():
+      if 'pipeline_steps' not in locals(): pipeline_steps = {}
+      
+      num_cols = df.select_dtypes(include=[np.number]).columns.tolist()
+      cat_cols = df.select_dtypes(exclude=[np.number]).columns.tolist()
+      
+      transformers = []
+      if len(num_cols) > 0:
+          transformers.append(('num_imp', SimpleImputer(strategy=STRATEGY_NUM), num_cols))
+      if len(cat_cols) > 0:
+          transformers.append(('cat_imp', SimpleImputer(strategy=STRATEGY_CAT), cat_cols))
+          
+      if transformers:
+          # On utilise set_output pandas si dispo
+          ct = ColumnTransformer(transformers, remainder='passthrough', verbose_feature_names_out=False)
+          try: ct.set_output(transform="pandas")
+          except: pass # fallback pour sklearn < 1.2
+          
+          step_name = 'simple_imputer'
+          pipeline_steps[step_name] = (step_name, ct)
+          
+          # Application locale pour MAJ df
+          df = pd.DataFrame(ct.fit_transform(df), columns=df.columns, index=df.index)
+          print(f"[TRANSFORM] Imputation appliquée et ajoutée au pipeline. NaNs restants : {df.isnull().sum().sum()}")
+      else:
+          print("[TRANSFORM] Aucune colonne à imputer.")
+  else:
+      print("[ERREUR] 'df' introuvable.")
+_metadata:
+  bloc: 2
+  section: "4_preprocessing"

@@ -1,0 +1,112 @@
+id: "eval_precision_recall_curve"
+name: "Eval: Precision-Recall Curve Plot"
+description: >
+  Genere et sauvegarde la courbe Precision-Recall (PR) pour chaque classe.
+  Cette courbe illustre le compromis entre precision et rappel a differents
+  seuils de decision. L'aire sous la courbe PR (AP) est egalement calculee.
+  Particulierement utile pour les problemes de classification desequilibres
+  ou la courbe ROC peut etre trop optimiste. Necessite y_proba.
+category: "Visualisation d'Evaluation"
+tags: ["eval", "classification", "precision_recall", "courbe", "visualisation", "probabilites"]
+applies_to: ["Classification"]
+when_to_use: >
+  Utiliser pour visualiser le compromis precision/rappel, surtout lorsque
+  les classes sont desequilibrees. La courbe PR est plus informative que la
+  courbe ROC lorsque la classe positive est rare. Necessite que y_proba soit
+  disponible.
+pros:
+  - "Plus informative que la courbe ROC pour les classes desequilibrees"
+  - "Visualise le compromis precision/rappel a tous les seuils"
+  - "Permet de choisir un seuil optimal selon le besoin metier"
+  - "L'AP (Average Precision) resume la courbe en un seul chiffre"
+cons:
+  - "Necessite les probabilites predites (y_proba)"
+  - "L'interpretation peut etre complexe en multiclasse"
+  - "Necessite matplotlib pour la generation du graphique"
+  - "La courbe peut etre bruitee avec peu d'echantillons"
+code_template: |
+  evaluation_metrics = {}
+  try:
+      from sklearn.metrics import precision_recall_curve, average_precision_score
+      from sklearn.preprocessing import label_binarize
+      import numpy as np
+      import matplotlib
+      matplotlib.use("Agg")
+      import matplotlib.pyplot as plt
+      import os
+
+      print("[EVAL] Generation de la courbe Precision-Recall...")
+
+      if y_proba is None:
+          print("[EVAL] y_proba est None, courbe PR impossible a generer.")
+          evaluation_metrics["precision_recall_curve"] = None
+          evaluation_metrics["error"] = "y_proba requis pour la courbe PR"
+      else:
+          classes = np.unique(y_test)
+          n_classes = len(classes)
+
+          fig, ax = plt.subplots(figsize=(10, 7))
+
+          if n_classes == 2:
+              # Binary classification
+              if y_proba.ndim > 1:
+                  proba_positive = y_proba[:, 1]
+              else:
+                  proba_positive = y_proba
+
+              precision, recall, thresholds = precision_recall_curve(y_test, proba_positive, pos_label=classes[1])
+              ap = average_precision_score(y_test, proba_positive, pos_label=classes[1])
+
+              ax.plot(recall, precision, lw=2, label=f"PR curve (AP = {ap:.3f})")
+              evaluation_metrics["average_precision"] = float(ap)
+              print(f"[EVAL] Average Precision (binary): {ap:.4f}")
+          else:
+              # Multiclass: one-vs-rest PR curves
+              y_test_bin = label_binarize(y_test, classes=classes)
+              ap_scores = {}
+
+              for i, cls in enumerate(classes):
+                  if y_proba.ndim > 1 and i < y_proba.shape[1]:
+                      precision, recall, _ = precision_recall_curve(y_test_bin[:, i], y_proba[:, i])
+                      ap = average_precision_score(y_test_bin[:, i], y_proba[:, i])
+                      ax.plot(recall, precision, lw=1.5, label=f"Classe {cls} (AP = {ap:.3f})")
+                      ap_scores[str(cls)] = float(ap)
+                      print(f"[EVAL] Classe {cls} - AP: {ap:.4f}")
+
+              # Macro average
+              if ap_scores:
+                  macro_ap = float(np.mean(list(ap_scores.values())))
+                  evaluation_metrics["average_precision_per_class"] = ap_scores
+                  evaluation_metrics["macro_average_precision"] = macro_ap
+                  print(f"[EVAL] Macro Average Precision: {macro_ap:.4f}")
+
+          # Baseline (random classifier)
+          positive_rate = np.mean(label_binarize(y_test, classes=classes)) if n_classes == 2 else 1.0 / n_classes
+          ax.axhline(y=positive_rate, color="gray", linestyle="--", alpha=0.5, label=f"Baseline ({positive_rate:.2f})")
+
+          ax.set_xlabel("Recall", fontsize=12)
+          ax.set_ylabel("Precision", fontsize=12)
+          ax.set_title("Courbe Precision-Recall", fontsize=14)
+          ax.legend(loc="best", fontsize=9)
+          ax.set_xlim([0.0, 1.0])
+          ax.set_ylim([0.0, 1.05])
+          ax.grid(True, alpha=0.3)
+          plt.tight_layout()
+
+          # Save figure
+          output_dir = os.path.join(os.getcwd(), "outputs", "evaluation")
+          os.makedirs(output_dir, exist_ok=True)
+          fig_path = os.path.join(output_dir, "precision_recall_curve.png")
+          fig.savefig(fig_path, dpi=150, bbox_inches="tight")
+          plt.close(fig)
+
+          evaluation_metrics["figure_path"] = fig_path
+          print(f"[EVAL] Courbe PR sauvegardee: {fig_path}")
+
+          print("[EVAL] Courbe Precision-Recall terminee avec succes.")
+  except Exception as e:
+      print(f"[EVAL] Erreur lors de la generation de la courbe PR: {e}")
+      evaluation_metrics["error"] = str(e)
+_metadata:
+  bloc: 4
+  section: "1_evaluation"

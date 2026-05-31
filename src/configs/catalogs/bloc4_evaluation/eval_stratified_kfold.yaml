@@ -1,0 +1,63 @@
+id: "eval_stratified_kfold"
+name: "Eval: Stratified K-Fold Cross Validation"
+description: "Validation croisee stratifiee qui preserve la distribution des classes dans chaque pli. Recommande pour les jeux de donnees desequilibres."
+category: "Validation Croisee"
+tags: ["eval", "cross_validation", "stratified", "kfold", "classification", "sklearn"]
+applies_to: ["Classification"]
+when_to_use: "Pour la classification, surtout avec des classes desequilibrees, afin de garantir que chaque pli contient une proportion representant de chaque classe."
+pros:
+  - "Preserve la distribution des classes dans chaque pli."
+  - "Plus fiable que le K-Fold standard pour des classes desequilibrees."
+cons:
+  - "Applicable uniquement a la classification."
+  - "Necessite X_train et y_train dans le scope."
+code_template: |
+  import numpy as np
+  from sklearn.model_selection import StratifiedKFold, cross_val_score
+
+  # [PARAM: N_FOLDS | number]
+  N_FOLDS = 5
+  # [/PARAM]
+
+  # [PARAM: SCORING | string]
+  SCORING = "accuracy"
+  # [/PARAM]
+
+  evaluation_metrics = {}
+
+  print(f"[EVAL] Stratified K-Fold Cross Validation (K={N_FOLDS})...")
+  try:
+      if 'full_pipeline' not in dir() and 'full_pipeline' not in locals():
+          raise NameError("full_pipeline introuvable dans le scope.")
+      if 'X_train' not in dir() and 'X_train' not in locals():
+          raise NameError("X_train introuvable dans le scope.")
+      if 'y_train' not in dir() and 'y_train' not in locals():
+          raise NameError("y_train introuvable dans le scope.")
+
+      if task_type != "classification":
+          print("[EVAL][AVERTISSEMENT] Stratified K-Fold est concu pour la classification. Execution tout de meme.")
+
+      skf = StratifiedKFold(n_splits=int(N_FOLDS), shuffle=True, random_state=42)
+
+      scores = cross_val_score(
+          full_pipeline, X_train, y_train,
+          cv=skf, scoring=SCORING, n_jobs=-1
+      )
+
+      evaluation_metrics["stratified_cv_scoring"] = SCORING
+      evaluation_metrics["stratified_cv_n_folds"] = int(N_FOLDS)
+      evaluation_metrics["stratified_cv_scores"] = scores.tolist()
+      evaluation_metrics["stratified_cv_mean_score"] = float(np.mean(scores))
+      evaluation_metrics["stratified_cv_std_score"] = float(np.std(scores))
+      evaluation_metrics["stratified_cv_min_score"] = float(np.min(scores))
+      evaluation_metrics["stratified_cv_max_score"] = float(np.max(scores))
+
+      print(f"[EVAL] Scoring: {SCORING}")
+      print(f"[EVAL] Scores par pli: {np.round(scores, 4)}")
+      print(f"[EVAL] Moyenne: {np.mean(scores):.4f} (+/- {np.std(scores):.4f})")
+  except Exception as e:
+      print(f"[EVAL][ERREUR] Stratified K-Fold echouee: {e}")
+      evaluation_metrics["stratified_cv_error"] = str(e)
+_metadata:
+  bloc: 4
+  section: "1_evaluation"

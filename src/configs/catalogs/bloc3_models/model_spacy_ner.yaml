@@ -1,0 +1,81 @@
+id: "model_spacy_ner"
+name: "Model: SpaCy Named Entity Recognition (NER)"
+description: "Pipeline NLP pour l'extraction d'entités nommées (Personnes, Lieux, Organisations) à partir de texte libre."
+category: "Modèles NLP (Pré-entraînés)"
+tags: ["model", "nlp", "ner", "spacy", "pretrained"]
+applies_to: ["Texte"]
+when_to_use: "Pour extraire dynamiquement de l'information (ex: extraire les noms de villes d'un corpus de tweets)."
+pros:
+  - "Extrêmement robuste et rapide (Zero-Shot inference)."
+cons:
+  - "Nécessite le modèle linguistique adéquat (en, fr, etc.)."
+hyperparameters:
+  spacy_model: "Nom du modèle spaCy (ex: 'en_core_web_md')."
+code_template: |
+  import pandas as pd
+  import numpy as np
+  import json
+  try:
+      import spacy
+  except ImportError:
+      spacy = None
+      print("[ERREUR] spacy n'est pas installé. Lancez : !pip install spacy")
+
+  # [PARAM: SPACY_MODEL | string]
+  SPACY_MODEL = "en_core_web_md"
+  # [/PARAM]
+
+  print(f"[MODEL] Extraction d'Entités Nommées avec {SPACY_MODEL}...")
+  if 'X_test' in locals() and spacy is not None:
+      if not spacy.util.is_package(SPACY_MODEL):
+          print(f"Téléchargement du modèle {SPACY_MODEL}...")
+          spacy.cli.download(SPACY_MODEL)
+      
+      nlp = spacy.load(SPACY_MODEL)
+      
+      texts = []
+      if isinstance(X_test, pd.DataFrame) and 'text' in X_test.columns:
+          texts = X_test['text'].astype(str).tolist()
+      elif isinstance(X_test, (pd.Series, np.ndarray, list)):
+          texts = [str(x) for x in X_test]
+          
+      if texts:
+          print("Inférence NER en cours...")
+          all_entities = []
+          for doc in nlp.pipe(texts, disable=["tagger", "parser", "attribute_ruler", "lemmatizer"]):
+              # Format JSON pour chaque document: [{"text": "Apple", "label": "ORG"}, ...]
+              ents = [{"text": ent.text, "label": ent.label_} for ent in doc.ents]
+              all_entities.append(json.dumps(ents))
+              
+          # Le résultat prédictif n'est pas une "classe" classique mais une chaîne JSON contenant les entités
+          y_pred = np.array(all_entities)
+          y_proba = None
+          feature_importances = None
+          
+          # Wrapper custom pour l'export
+          from sklearn.preprocessing import FunctionTransformer
+          def ner_infer(X):
+              if isinstance(X, pd.DataFrame) and 'text' in X.columns: txts = X['text'].astype(str).tolist()
+              else: txts = [str(x) for x in X]
+              res = []
+              for doc in nlp.pipe(txts, disable=["tagger", "parser", "attribute_ruler", "lemmatizer"]):
+                  res.append(json.dumps([{"text": e.text, "label": e.label_} for e in doc.ents]))
+              return np.array(res)
+              
+          model = FunctionTransformer(ner_infer)
+          
+          if 'preprocessor' in locals() and preprocessor is not None:
+              try: from imblearn.pipeline import Pipeline
+              except: from sklearn.pipeline import Pipeline
+              full_pipeline = Pipeline(steps=preprocessor.steps + [('model', model)])
+          else:
+              full_pipeline = model
+              
+          training_history = {"status": "success", "type": "pretrained_ner"}
+          task_type = "information_extraction"
+          print("[MODEL] Inférence NER terminée avec succès.")
+  else:
+      print("[ERREUR] Données introuvables ou spacy non installé.")
+_metadata:
+  bloc: 3
+  section: "3_nlp_and_timeseries"

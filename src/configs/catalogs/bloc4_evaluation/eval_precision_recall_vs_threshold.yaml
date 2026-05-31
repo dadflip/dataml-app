@@ -1,0 +1,59 @@
+id: "eval_precision_recall_vs_threshold"
+name: "Eval Plot: Precision/Recall vs Threshold"
+description: "Affiche l'évolution de la Précision et du Rappel en fonction du seuil de probabilité."
+category: "Classification Visualizations"
+tags: ["eval", "plot", "classification", "binary", "threshold", "precision-recall"]
+applies_to: ["Classification Binaire"]
+when_to_use: "Pour choisir le seuil optimal de classification selon les contraintes métier (ex: maximiser le rappel)."
+pros:
+  - "Visualisation claire du compromis direct entre Précision et Rappel."
+cons:
+  - "Applicable uniquement en binaire."
+code_template: |
+  import os
+  import numpy as np
+  import matplotlib.pyplot as plt
+  from sklearn.metrics import precision_recall_curve
+
+  evaluation_metrics = {}
+
+  if task_type == "classification" and 'y_test' in locals() and 'y_proba' in locals() and y_proba is not None:
+      classes = np.unique(y_test)
+      if len(classes) == 2:
+          print("[EVAL] Génération du Precision/Recall vs Threshold Plot...")
+          try:
+              os.makedirs("outputs/evaluation", exist_ok=True)
+              
+              y_true = (y_test == classes[1]).astype(int)
+              probas = y_proba[:, 1]
+              
+              precisions, recalls, thresholds = precision_recall_curve(y_true, probas)
+              
+              fig, ax = plt.subplots(figsize=(8, 6))
+              # On retire la dernière valeur de precisions/recalls qui n'a pas de threshold correspondant
+              ax.plot(thresholds, precisions[:-1], 'b--', label='Precision')
+              ax.plot(thresholds, recalls[:-1], 'g-', label='Recall')
+              
+              # Point d'intersection
+              intersection_idx = np.argmin(np.abs(precisions[:-1] - recalls[:-1]))
+              opt_threshold = thresholds[intersection_idx]
+              ax.axvline(opt_threshold, color='k', linestyle=':', label=f'Intersection (thresh={opt_threshold:.2f})')
+              
+              ax.set_title('Precision and Recall vs Decision Threshold')
+              ax.set_xlabel('Threshold')
+              ax.set_ylabel('Score')
+              ax.legend(loc='best')
+              ax.grid(True, alpha=0.3)
+              
+              plot_path = "outputs/evaluation/pr_vs_threshold.png"
+              fig.savefig(plot_path, dpi=300)
+              plt.close(fig)
+              
+              evaluation_metrics["pr_vs_threshold_plot"] = plot_path
+              evaluation_metrics["intersection_threshold"] = float(opt_threshold)
+              print(f"[EVAL] Plot sauvegardé sous {plot_path}")
+          except Exception as e:
+              print(f"[EVAL ERREUR] : {str(e)}")
+_metadata:
+  bloc: 4
+  section: "1_evaluation"

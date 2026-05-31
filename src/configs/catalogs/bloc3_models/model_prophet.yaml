@@ -1,0 +1,63 @@
+id: "model_prophet"
+name: "Model: Meta Prophet (Time Series Forecaster)"
+description: "Modèle de prévision de séries temporelles développé par Meta (Facebook), robuste aux données manquantes et variations saisonnières."
+category: "Modèles Séries Temporelles"
+tags: ["model", "time-series", "forecasting", "prophet"]
+applies_to: ["Séries Temporelles"]
+when_to_use: "Pour des prédictions (forecasting) temporelles avec de fortes composantes saisonnières."
+pros:
+  - "Très robuste, s'ajuste tout seul."
+  - "Gère les jours fériés."
+cons:
+  - "Nécessite la bibliothèque fbprophet / prophet."
+  - "Attends impérativement un DataFrame avec des colonnes 'ds' (dates) et 'y' (valeurs)."
+hyperparameters:
+  seasonality_mode: "Mode de saisonnalité ('additive' ou 'multiplicative')."
+code_template: |
+  import pandas as pd
+  import numpy as np
+  try:
+      from prophet import Prophet
+  except ImportError:
+      Prophet = None
+      print("[ERREUR] prophet n'est pas installé. Lancez : !pip install prophet")
+
+  # [PARAM: SEASONALITY_MODE | string]
+  SEASONALITY_MODE = "additive"
+  # [/PARAM]
+
+  print(f"[MODEL] Entraînement Prophet Forecaster (mode={SEASONALITY_MODE})...")
+  # Prophet exige que X_train possède une colonne 'ds' (date) et qu'on lui passe 'y' directement dans le DataFrame.
+  if 'X_train' in locals() and 'y_train' in locals() and 'X_test' in locals() and Prophet is not None:
+      df_train = pd.DataFrame(X_train) if not isinstance(X_train, pd.DataFrame) else X_train.copy()
+      df_test = pd.DataFrame(X_test) if not isinstance(X_test, pd.DataFrame) else X_test.copy()
+      
+      # Si pas de 'ds', on tente d'utiliser l'index
+      if 'ds' not in df_train.columns:
+          df_train['ds'] = df_train.index
+          df_test['ds'] = df_test.index
+          
+      df_train['y'] = np.array(y_train)
+      
+      try:
+          model = Prophet(seasonality_mode=SEASONALITY_MODE)
+          model.fit(df_train)
+          
+          # Inférence sur le test set
+          forecast = model.predict(df_test[['ds']])
+          y_pred = forecast['yhat'].values
+          y_proba = None
+          feature_importances = None
+          
+          full_pipeline = model
+              
+          training_history = {"status": "success", "fitted_on": len(df_train)}
+          task_type = "forecasting"
+          print("[MODEL] Modèle Prophet entraîné avec succès.")
+      except Exception as e:
+          print(f"[ERREUR] Prophet a échoué. Assurez-vous que la colonne 'ds' est au format Date. Détail: {e}")
+  else:
+      print("[ERREUR] Données d'entraînement ou module prophet introuvables.")
+_metadata:
+  bloc: 3
+  section: "3_nlp_and_timeseries"

@@ -1,0 +1,51 @@
+id: "eval_seasonal_error_plot"
+name: "Eval Plot: Seasonal Error Plot"
+description: "Trace les erreurs moyennes par période cyclique (par mois, jour de la semaine, etc.)"
+category: "Time Series Visualizations"
+tags: ["eval", "plot", "timeseries", "seasonality", "errors"]
+applies_to: ["Forecasting"]
+when_to_use: "Pour vérifier si le modèle a du mal avec un mois ou un jour particulier de la semaine."
+pros:
+  - "Donne des pistes claires pour ajouter de nouvelles features (ex: Is_Weekend)."
+cons:
+  - "Nécessite que l'index de y_test soit de type DateTime."
+code_template: |
+  import os
+  import numpy as np
+  import pandas as pd
+  import matplotlib.pyplot as plt
+
+  evaluation_metrics = {}
+
+  if task_type in ["forecasting", "regression"] and 'y_test' in locals() and 'y_pred' in locals():
+      print("[EVAL] Génération du Seasonal Error Plot...")
+      try:
+          if hasattr(y_test, 'index') and isinstance(y_test.index, pd.DatetimeIndex):
+              os.makedirs("outputs/evaluation", exist_ok=True)
+              
+              errors = np.abs(np.array(y_test) - np.array(y_pred))
+              df = pd.DataFrame({'error': errors}, index=y_test.index)
+              
+              # Groupby Month
+              monthly_errors = df.groupby(df.index.month)['error'].mean()
+              
+              fig, ax = plt.subplots(figsize=(8, 5))
+              monthly_errors.plot(kind='bar', color='purple', ax=ax)
+              ax.set_title('Mean Absolute Error by Month')
+              ax.set_xlabel('Month (1-12)')
+              ax.set_ylabel('Mean Absolute Error')
+              ax.grid(axis='y', alpha=0.3)
+              
+              plot_path = "outputs/evaluation/seasonal_errors.png"
+              fig.savefig(plot_path, dpi=300)
+              plt.close(fig)
+              
+              evaluation_metrics["seasonal_error_plot"] = plot_path
+              print(f"[EVAL] Plot sauvegardé sous {plot_path}")
+          else:
+              print("[EVAL] L'index de y_test n'est pas un DatetimeIndex. Ignoré.")
+      except Exception as e:
+          print(f"[EVAL ERREUR] Seasonal Error : {str(e)}")
+_metadata:
+  bloc: 4
+  section: "1_evaluation"

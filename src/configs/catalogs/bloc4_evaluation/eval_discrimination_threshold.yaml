@@ -1,0 +1,67 @@
+id: "eval_discrimination_threshold"
+name: "Eval Plot: Discrimination Threshold"
+description: "Affiche F1, Précision, Rappel et Queue Rate selon le seuil de décision sur un même graphe."
+category: "Classification Visualizations"
+tags: ["eval", "plot", "classification", "binary", "threshold", "yellowbrick-like"]
+applies_to: ["Classification Binaire"]
+when_to_use: "Pour avoir une vue complète de l'impact métier d'un changement de seuil (incluant la proportion de la population ciblée)."
+pros:
+  - "Vue d'ensemble complète pour la classification binaire."
+cons:
+  - "Binaire uniquement."
+code_template: |
+  import os
+  import numpy as np
+  import matplotlib.pyplot as plt
+  from sklearn.metrics import precision_recall_curve
+
+  evaluation_metrics = {}
+
+  if task_type == "classification" and 'y_test' in locals() and 'y_proba' in locals() and y_proba is not None:
+      classes = np.unique(y_test)
+      if len(classes) == 2:
+          print("[EVAL] Génération du Discrimination Threshold Plot...")
+          try:
+              os.makedirs("outputs/evaluation", exist_ok=True)
+              y_true = (y_test == classes[1]).astype(int)
+              probas = y_proba[:, 1]
+              
+              precisions, recalls, thresholds = precision_recall_curve(y_true, probas)
+              f1_scores = 2 * (precisions * recalls) / (precisions + recalls + 1e-10)
+              
+              # Calcul du Queue Rate (% de données prédites positives pour chaque seuil)
+              queue_rate = np.array([np.mean(probas >= t) for t in thresholds])
+              
+              # On coupe la dernière valeur de prec/rec/f1 qui n'a pas de threshold
+              precisions = precisions[:-1]
+              recalls = recalls[:-1]
+              f1_scores = f1_scores[:-1]
+              
+              fig, ax = plt.subplots(figsize=(10, 6))
+              ax.plot(thresholds, precisions, label='Precision', color='g', linestyle='--')
+              ax.plot(thresholds, recalls, label='Recall', color='r', linestyle='-.')
+              ax.plot(thresholds, f1_scores, label='F1 Score', color='b', linewidth=2)
+              ax.plot(thresholds, queue_rate, label='Queue Rate', color='orange', linestyle=':')
+              
+              # Trouver max F1
+              best_idx = np.argmax(f1_scores)
+              best_thresh = thresholds[best_idx]
+              ax.axvline(best_thresh, color='k', alpha=0.3, label=f'Optimal Thresh ({best_thresh:.2f})')
+              
+              ax.set_title('Discrimination Threshold Plot')
+              ax.set_xlabel('Probability Threshold')
+              ax.set_ylabel('Score / Ratio')
+              ax.legend(loc='best')
+              ax.grid(True, alpha=0.3)
+              
+              plot_path = "outputs/evaluation/discrimination_threshold.png"
+              fig.savefig(plot_path, dpi=300)
+              plt.close(fig)
+              
+              evaluation_metrics["discrimination_threshold_plot"] = plot_path
+              print(f"[EVAL] Plot sauvegardé sous {plot_path}")
+          except Exception as e:
+              print(f"[EVAL ERREUR] : {str(e)}")
+_metadata:
+  bloc: 4
+  section: "1_evaluation"

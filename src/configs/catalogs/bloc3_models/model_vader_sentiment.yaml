@@ -1,0 +1,72 @@
+id: "model_vader_sentiment"
+name: "Model: VADER Sentiment Analyzer"
+description: "Modèle NLP pré-entraîné basé sur des règles lexicographiques, optimisé pour les sentiments sur les réseaux sociaux."
+category: "Modèles NLP (Pré-entraînés)"
+tags: ["model", "nlp", "sentiment", "nltk", "pretrained"]
+applies_to: ["Texte"]
+when_to_use: "Pour obtenir un score de sentiment (-1 à 1) instantané sans aucune donnée d'entraînement."
+pros:
+  - "Aucun entraînement requis (Zero-Shot)."
+  - "Très rapide et gère les émojis, majuscules et ponctuations."
+cons:
+  - "Principalement conçu pour l'anglais."
+hyperparameters:
+  text_col: "Nom de la colonne contenant le texte brut (si DataFrame en entrée)."
+code_template: |
+  import pandas as pd
+  import numpy as np
+  try:
+      import nltk
+      from nltk.sentiment.vader import SentimentIntensityAnalyzer
+  except ImportError:
+      nltk = None
+      print("[ERREUR] nltk n'est pas installé. Lancez : !pip install nltk")
+
+  # [PARAM: TEXT_COL | string]
+  TEXT_COL = "text"
+  # [/PARAM]
+
+  print(f"[MODEL] Inférence VADER Sentiment Analysis (colonne '{TEXT_COL}')...")
+  if 'X_test' in locals() and nltk is not None:
+      # Téléchargement silencieux du lexique
+      try: nltk.data.find('sentiment/vader_lexicon')
+      except LookupError: nltk.download('vader_lexicon', quiet=True)
+      
+      model = SentimentIntensityAnalyzer()
+      
+      # Extraction des textes
+      texts = []
+      if isinstance(X_test, pd.DataFrame) and TEXT_COL in X_test.columns:
+          texts = X_test[TEXT_COL].astype(str).tolist()
+      elif isinstance(X_test, (pd.Series, np.ndarray, list)):
+          texts = [str(x) for x in X_test]
+      else:
+          print("[ERREUR] Format d'entrée non supporté ou colonne texte introuvable.")
+          texts = []
+          
+      if texts:
+          # VADER renvoie dict: {'neg': 0.0, 'neu': 1.0, 'pos': 0.0, 'compound': 0.0}
+          scores = [model.polarity_scores(t)['compound'] for t in texts]
+          
+          # Seuil standard : < -0.05 (Negatif), > 0.05 (Positif), entre les deux (Neutre)
+          # On mappe sur des classes 0, 1, 2 pour compatibilité avec y_pred classique
+          y_pred = np.array([2 if s > 0.05 else 0 if s < -0.05 else 1 for s in scores])
+          y_proba = None
+          feature_importances = None
+          
+          # VADER ne s'entraîne pas. Le modèle est l'instance pré-entraînée.
+          if 'preprocessor' in locals() and preprocessor is not None:
+              try: from imblearn.pipeline import Pipeline
+              except: from sklearn.pipeline import Pipeline
+              full_pipeline = Pipeline(steps=preprocessor.steps + [('vader', model)])
+          else:
+              full_pipeline = model
+              
+          training_history = {"status": "success", "fitted_on": 0, "type": "pretrained_zero_shot"}
+          task_type = "classification"
+          print("[MODEL] Inférence Zero-Shot VADER terminée avec succès.")
+  else:
+      print("[ERREUR] Données de test ou module nltk introuvables.")
+_metadata:
+  bloc: 3
+  section: "3_nlp_and_timeseries"

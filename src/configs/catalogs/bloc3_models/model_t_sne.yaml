@@ -1,0 +1,63 @@
+id: "model_t_sne"
+name: "Model: t-SNE"
+description: "T-distributed Stochastic Neighbor Embedding. Réduction de dimension non-linéaire excellente pour la visualisation 2D."
+category: "Réduction de Dimension"
+tags: ["model", "dimensionality-reduction", "tabular", "sklearn", "tsne", "visualization"]
+applies_to: ["Tabulaire"]
+when_to_use: "Pour visualiser des clusters cachés dans un dataset haute dimension."
+pros:
+  - "Visualisations magnifiques."
+cons:
+  - "Très lent."
+  - "Transductif (impossible d'appliquer sur de nouvelles données test)."
+hyperparameters:
+  n_components: "Nombre de dimensions (ex: 2)."
+  perplexity: "Densité locale vs globale (ex: 30)."
+code_template: |
+  import pandas as pd
+  import numpy as np
+  from sklearn.manifold import TSNE
+
+  # [PARAM: N_COMPONENTS | number]
+  N_COMPONENTS = 2
+  # [/PARAM]
+
+  # [PARAM: PERPLEXITY | number]
+  PERPLEXITY = 30
+  # [/PARAM]
+
+  print(f"[MODEL] Exécution t-SNE (components={N_COMPONENTS}, perplexity={PERPLEXITY})...")
+  if 'X_test' in locals():
+      # t-SNE s'applique directement sur ce qu'on veut visualiser (X_test ici, souvent on sample)
+      # Attention si X_test est trop grand ça peut être très lent
+      if len(X_test) > 5000:
+          print("Attention: t-SNE peut être lent sur plus de 5000 lignes.")
+          
+      model = TSNE(n_components=int(N_COMPONENTS), perplexity=float(PERPLEXITY), random_state=42)
+      
+      # fit_transform direct
+      y_pred = model.fit_transform(X_test)
+      y_proba = None
+      feature_importances = None
+      
+      # Pas de pipeline exportable pour t-SNE
+      from sklearn.preprocessing import FunctionTransformer
+      wrapped = FunctionTransformer(lambda X: model.fit_transform(X))
+      
+      if 'preprocessor' in locals() and preprocessor is not None:
+          try: from imblearn.pipeline import Pipeline
+          except: from sklearn.pipeline import Pipeline
+          full_pipeline = Pipeline(steps=preprocessor.steps + [('model', wrapped)])
+      else:
+          try: from imblearn.pipeline import Pipeline
+          except: from sklearn.pipeline import Pipeline
+          full_pipeline = Pipeline(steps=[('model', wrapped)])
+          
+      training_history = {"status": "success"}
+      task_type = "dimensionality_reduction"
+      print("[MODEL] t-SNE exécuté avec succès.")
+  else:
+      print("[ERREUR] Données de test introuvables.")
+_metadata:
+  bloc: 3
+  section: "5_clustering_automl_and_nn"

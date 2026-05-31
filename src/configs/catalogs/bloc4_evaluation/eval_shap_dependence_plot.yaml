@@ -1,0 +1,57 @@
+id: "eval_shap_dependence_plot"
+name: "Eval Plot: SHAP Dependence"
+description: "Montre comment la valeur d'une feature affecte la sortie SHAP du modèle, en colorant par une seconde feature pour révéler les interactions."
+category: "Explainability & Feature Importance"
+tags: ["eval", "plot", "explainability", "shap", "dependence"]
+applies_to: ["Classification", "Regression"]
+when_to_use: "Pour comprendre l'effet global d'une feature et découvrir ses interactions avec d'autres."
+pros:
+  - "Très rigoureux mathématiquement (valeurs de Shapley)."
+cons:
+  - "Extrêmement lent sur des réseaux de neurones ou pipelines complexes (nécessite le KernelExplainer ou TreeExplainer)."
+code_template: |
+  import os
+  import numpy as np
+  import matplotlib.pyplot as plt
+  try:
+      import shap
+  except ImportError:
+      shap = None
+
+  evaluation_metrics = {}
+
+  if 'full_pipeline' in locals() and 'X_test' in locals() and shap is not None:
+      print("[EVAL] Génération du SHAP Dependence Plot...")
+      try:
+          os.makedirs("outputs/evaluation", exist_ok=True)
+          
+          X_arr = np.array(X_test)
+          if len(X_arr) > 200:
+              idx = np.random.choice(len(X_arr), 200, replace=False)
+              X_sample = X_arr[idx]
+          else:
+              X_sample = X_arr
+              
+          model = full_pipeline.steps[-1][1] if hasattr(full_pipeline, 'steps') else full_pipeline
+          
+          # Tentative d'utilisation de l'explainer générique
+          explainer = shap.Explainer(model.predict, X_sample)
+          shap_values = explainer(X_sample)
+          
+          fig, ax = plt.subplots(figsize=(8, 6))
+          # Plot sur la première feature
+          shap.plots.scatter(shap_values[:, 0], color=shap_values, show=False)
+          
+          plot_path = "outputs/evaluation/shap_dependence.png"
+          fig.savefig(plot_path, dpi=300, bbox_inches='tight')
+          plt.close(fig)
+          
+          evaluation_metrics["shap_dependence_plot"] = plot_path
+          print(f"[EVAL] Plot sauvegardé sous {plot_path}")
+      except Exception as e:
+          print(f"[EVAL ERREUR] SHAP Dependence : {str(e)}")
+  elif shap is None:
+      print("[EVAL ERREUR] SHAP n'est pas installé. Lancez : pip install shap")
+_metadata:
+  bloc: 4
+  section: "1_evaluation"

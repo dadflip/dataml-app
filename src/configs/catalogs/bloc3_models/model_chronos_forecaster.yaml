@@ -1,0 +1,60 @@
+id: "model_chronos_forecaster"
+name: "Model: Chronos Zero-Shot Forecaster (Amazon)"
+description: "Modèle de prédiction Time Series basé sur une architecture LLM (HuggingFace). Tokenise les valeurs numériques !"
+category: "Modèles Séries Temporelles"
+tags: ["model", "time-series", "forecasting", "transformers", "huggingface", "zero-shot"]
+applies_to: ["Séries Temporelles"]
+when_to_use: "Quand vous voulez prédire une série temporelle sans aucun entraînement, via un LLM pré-entraîné."
+pros:
+  - "Zéro-Shot. Aucune phase d'entraînement locale."
+cons:
+  - "Lent (c'est un LLM). Requiert PyTorch."
+hyperparameters:
+  prediction_length: "Horizon de prédiction (ex: 12)."
+code_template: |
+  import pandas as pd
+  import numpy as np
+  try:
+      import torch
+      from chronos import ChronosPipeline # Nécessite pip install git+https://github.com/amazon-science/chronos-forecasting.git
+  except ImportError:
+      ChronosPipeline = None
+      print("[ERREUR] chronos n'est pas installé. Lancez : !pip install git+https://github.com/amazon-science/chronos-forecasting.git")
+
+  # [PARAM: PREDICTION_LENGTH | number]
+  PREDICTION_LENGTH = 12
+  # [/PARAM]
+
+  print(f"[MODEL] Inférence Chronos Forecaster (horizon={PREDICTION_LENGTH})...")
+  if 'y_train' in locals() and ChronosPipeline is not None:
+      # y_train sert de contexte historique (context_length)
+      context = torch.tensor(np.array(y_train), dtype=torch.float32)
+      
+      print("Chargement de amazon/chronos-t5-tiny...")
+      pipeline = ChronosPipeline.from_pretrained(
+          "amazon/chronos-t5-tiny",
+          device_map="auto",
+          torch_dtype=torch.bfloat16,
+      )
+      
+      print("Inférence (génération des trajectoires)...")
+      # forecast shape: [1, num_samples, prediction_length]
+      forecast = pipeline.predict(context.unsqueeze(0), int(PREDICTION_LENGTH))
+      
+      # On prend la médiane des trajectoires
+      median_forecast = np.quantile(forecast[0].numpy(), 0.5, axis=0)
+      
+      y_pred = median_forecast
+      y_proba = None
+      feature_importances = None
+      
+      full_pipeline = pipeline
+          
+      training_history = {"status": "success", "type": "zero_shot_llm_timeseries"}
+      task_type = "forecasting"
+      print("[MODEL] Inférence Chronos terminée.")
+  else:
+      print("[ERREUR] y_train introuvable ou module chronos non installé.")
+_metadata:
+  bloc: 3
+  section: "3_nlp_and_timeseries"

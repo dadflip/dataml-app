@@ -1,0 +1,45 @@
+id: "load_tfrecords"
+name: "Load: TensorFlow Records"
+description: "Charge un dataset stocké sous forme de fichiers .tfrecord (standard TensorFlow)."
+category: "2. Load"
+tags: ["load", "tfrecords", "tensorflow", "bigdata"]
+code_template: |
+  import glob
+  import os
+  import time
+
+  # [PARAM: DIRECTORY_PATH | dir]
+  DIRECTORY_PATH = "./data/extracted/tfrecords"
+  # [/PARAM]
+
+  print(f"[LOAD] Initialisation du dataset TensorFlow Records depuis {DIRECTORY_PATH}...")
+  if not os.path.exists(DIRECTORY_PATH):
+      raise FileNotFoundError(f"[ERREUR LOAD] Le dossier n'existe pas : {DIRECTORY_PATH}")
+
+  try:
+      start_time = time.time()
+      import tensorflow as tf
+      
+      tfrecord_files = glob.glob(os.path.join(DIRECTORY_PATH, "*.tfrecord"))
+      if not tfrecord_files:
+          raise ValueError(f"Aucun fichier .tfrecord trouvé dans {DIRECTORY_PATH}")
+          
+      # Création du TFRecordDataset sans parser les features (le parsing se fera dans un Transform)
+      raw_dataset = tf.data.TFRecordDataset(tfrecord_files)
+      
+      duration = time.time() - start_time
+      print(f"[LOAD] Succès TFRecords. Dataset lié à {len(tfrecord_files)} fichiers en {duration:.2f}s.")
+  except ImportError:
+      print("[ERREUR LOAD] Le module 'tensorflow' est requis.")
+      raise
+  except Exception as e:
+      print(f"[ERREUR LOAD] Erreur TFRecords : {str(e)}")
+      raise e
+
+  df = None
+  target_name = None
+  task_type = "unknown"
+  meta = {"format": "tfrecords", "files": len(tfrecord_files)}
+_metadata:
+  bloc: 1
+  section: "2_load"

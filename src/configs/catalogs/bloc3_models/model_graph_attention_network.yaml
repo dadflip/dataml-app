@@ -1,0 +1,82 @@
+id: "model_graph_attention_network"
+name: "Model: Graph Attention Network (GAT)"
+description: "GNN avec mécanisme d'attention pour pondérer l'importance de chaque voisin dans le graphe."
+category: "Graphes & Réseaux"
+tags: ["model", "graph", "pytorch-geometric", "gat", "attention", "deep-learning"]
+applies_to: ["Graphes"]
+when_to_use: "Quand tous les voisins d'un noeud ne sont pas aussi informatifs les uns que les autres."
+pros:
+  - "L'attention permet de capturer des relations hétérogènes."
+cons:
+  - "Plus lourd que le GCN."
+hyperparameters:
+  hidden_channels: "Taille cachée (ex: 8)."
+  heads: "Nombre de têtes d'attention (ex: 8)."
+  epochs: "Nombre d'époques (ex: 100)."
+code_template: |
+  import pandas as pd
+  import numpy as np
+  try:
+      import torch
+      import torch.nn.functional as F
+      from torch_geometric.nn import GATConv
+  except ImportError:
+      GATConv = None
+      print("[ERREUR] torch_geometric n'est pas installé.")
+
+  # [PARAM: HIDDEN_CHANNELS | number]
+  HIDDEN_CHANNELS = 8
+  # [/PARAM]
+
+  # [PARAM: HEADS | number]
+  HEADS = 8
+  # [/PARAM]
+
+  # [PARAM: EPOCHS | number]
+  EPOCHS = 100
+  # [/PARAM]
+
+  print(f"[MODEL] Entraînement GAT PyTorch Geometric...")
+  if 'X_train' in locals() and 'y_train' in locals() and 'global_edge_index' in dir() and GATConv is not None:
+      X_t = torch.tensor(np.array(X_train, dtype=np.float32))
+      y_t = torch.tensor(np.array(y_train, dtype=np.int64))
+      edge_index = torch.tensor(global_edge_index, dtype=torch.long)
+      num_classes = len(np.unique(y_train))
+      hid = int(HIDDEN_CHANNELS)
+      heads = int(HEADS)
+
+      class GAT(torch.nn.Module):
+          def __init__(self, in_ch, hid, heads, out):
+              super().__init__()
+              self.conv1 = GATConv(in_ch, hid, heads=heads, dropout=0.6)
+              self.conv2 = GATConv(hid * heads, out, heads=1, concat=False, dropout=0.6)
+          def forward(self, x, ei):
+              x = F.dropout(x, p=0.6, training=self.training)
+              x = F.elu(self.conv1(x, ei))
+              x = F.dropout(x, p=0.6, training=self.training)
+              return self.conv2(x, ei)
+
+      model = GAT(X_t.shape[1], hid, heads, num_classes)
+      optimizer = torch.optim.Adam(model.parameters(), lr=0.005, weight_decay=5e-4)
+      criterion = torch.nn.CrossEntropyLoss()
+      model.train()
+      for epoch in range(int(EPOCHS)):
+          optimizer.zero_grad()
+          loss = criterion(model(X_t, edge_index), y_t)
+          loss.backward()
+          optimizer.step()
+      model.eval()
+      with torch.no_grad():
+          out = model(X_t, edge_index)
+          y_pred = out.argmax(dim=1).cpu().numpy()
+          y_proba = F.softmax(out, dim=1).cpu().numpy()
+      feature_importances = None
+      full_pipeline = model
+      training_history = {"status": "success"}
+      task_type = "node_classification"
+      print("[MODEL] GAT entraîné avec succès.")
+  else:
+      print("[ERREUR] Données, torch_geometric ou 'global_edge_index' manquants.")
+_metadata:
+  bloc: 3
+  section: "6_neural_networks"

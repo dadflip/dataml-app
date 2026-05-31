@@ -1,0 +1,29 @@
+id: "eda_correlation_matrix"
+name: "EDA: Matrice de Corrélation"
+description: "Affiche une heatmap des corrélations de Pearson."
+category: "3. Exploratory Data Analysis"
+tags: ["eda", "correlation", "tabular", "seaborn"]
+code_template: |
+  import pandas as pd
+  import numpy as np
+  import matplotlib.pyplot as plt
+  import seaborn as sns
+
+  # [PARAM: CMAP | string]
+  CMAP = "coolwarm"
+  # [/PARAM]
+  
+  num_df = df.select_dtypes(include=[np.number])
+  if len(num_df.columns) < 2:
+      print("[EDA] Pas assez de colonnes numériques pour une corrélation.")
+  else:
+      corr = num_df.corr()
+      mask = np.triu(np.ones_like(corr, dtype=bool))
+      plt.figure(figsize=(12, 10))
+      sns.heatmap(corr, mask=mask, annot=False, cmap=CMAP, center=0, 
+                  square=True, linewidths=.5, cbar_kws={"shrink": .5})
+      plt.title("Matrice de Corrélation Linéaire")
+      plt.show()
+_metadata:
+  bloc: 1
+  section: "3_eda"

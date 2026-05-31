@@ -1,0 +1,70 @@
+id: "deploy_docker_compose"
+name: "Deploy: Docker Compose (FastAPI + Streamlit)"
+description: "Génère l'infrastructure complète avec `docker-compose.yml` pour lancer à la fois une API backend (FastAPI) et un frontend (Streamlit)."
+category: "Containerization"
+tags: ["deploy", "docker-compose", "fastapi", "streamlit", "full-stack"]
+applies_to: ["Classification", "Regression"]
+when_to_use: "Pour déployer une application Machine Learning complète (Backend + UI) d'une seule commande."
+pros:
+  - "Sépare proprement le backend d'inférence du frontend utilisateur."
+cons:
+  - "Légèrement plus complexe à maintenir (nécessite de générer les deux scripts en amont)."
+code_template: |
+  import os
+
+  deployment_artifacts = {}
+
+  print("[DEPLOY] Génération du fichier Docker Compose...")
+  try:
+      os.makedirs("outputs/deployment", exist_ok=True)
+      
+      compose_yaml = """version: '3.8'
+  
+  services:
+    api:
+      build:
+        context: .
+        dockerfile: Dockerfile.api
+      ports:
+        - "8000:8000"
+      networks:
+        - dataml_network
+  
+    ui:
+      build:
+        context: .
+        dockerfile: Dockerfile.ui
+      ports:
+        - "8501:8501"
+      environment:
+        - API_URL=http://api:8000
+      depends_on:
+        - api
+      networks:
+        - dataml_network
+  
+  networks:
+    dataml_network:
+      driver: bridge
+  """
+      
+      compose_path = "outputs/deployment/docker-compose.yml"
+      with open(compose_path, "w") as f:
+          f.write(compose_yaml)
+          
+      # Création des dockerfiles manquants si besoin (simulés ici)
+      with open("outputs/deployment/Dockerfile.api", "w") as f:
+          f.write("FROM python:3.9-slim\\nWORKDIR /app\\nCOPY requirements.txt .\\nRUN pip install -r requirements.txt\\nCOPY server.py model.joblib ./\\nCMD [\\"uvicorn\\", \\"server:app\\", \\"--host\\", \\"0.0.0.0\\", \\"--port\\", \\"8000\\"]")
+          
+      with open("outputs/deployment/Dockerfile.ui", "w") as f:
+          f.write("FROM python:3.9-slim\\nWORKDIR /app\\nCOPY requirements.txt .\\nRUN pip install -r requirements.txt streamlit\\nCOPY app.py ./\\nCMD [\\"streamlit\\", \\"run\\", \\"app.py\\"]")
+  
+      deployment_artifacts["docker_compose"] = compose_path
+      
+      print(f"[DEPLOY] Fichiers Docker Compose générés.")
+      print(f"[DEPLOY] Pour lancer tout le stack : cd outputs/deployment && docker-compose up --build")
+  except Exception as e:
+      print(f"[DEPLOY ERREUR] Docker Compose : {str(e)}")
+_metadata:
+  bloc: 5
+  section: "4_container"

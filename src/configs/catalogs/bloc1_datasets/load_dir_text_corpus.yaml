@@ -1,0 +1,49 @@
+id: "load_dir_text_corpus"
+name: "Load: Dossier de Textes (Corpus)"
+description: "Parcourt un dossier et lit tous les fichiers textes bruts (.txt) dans un DataFrame."
+category: "2. Load"
+tags: ["load", "directory", "text", "nlp"]
+code_template: |
+  import os
+  import glob
+  import pandas as pd
+  import time
+
+  # [PARAM: DIRECTORY_PATH | dir]
+  DIRECTORY_PATH = "./data/extracted/text_corpus"
+  # [/PARAM]
+
+  print(f"[LOAD] Lecture des fichiers texte dans {DIRECTORY_PATH}...")
+  if not os.path.exists(DIRECTORY_PATH):
+      raise FileNotFoundError(f"[ERREUR LOAD] Le dossier n'existe pas : {DIRECTORY_PATH}")
+
+  try:
+      start_time = time.time()
+      
+      txt_files = glob.glob(os.path.join(DIRECTORY_PATH, "*.txt"))
+      if not txt_files:
+          raise ValueError(f"Aucun fichier .txt trouvé dans {DIRECTORY_PATH}")
+          
+      data = []
+      for file in txt_files:
+          with open(file, 'r', encoding='utf-8') as f:
+              content = f.read()
+              data.append({
+                  "filename": os.path.basename(file),
+                  "text": content
+              })
+              
+      df = pd.DataFrame(data)
+      
+      duration = time.time() - start_time
+      print(f"[LOAD] Succès Corpus NLP. {len(txt_files)} textes lus en {duration:.2f}s.")
+  except Exception as e:
+      print(f"[ERREUR LOAD] Erreur lors de la lecture du corpus : {str(e)}")
+      raise e
+
+  target_name = None
+  task_type = "nlp"
+  meta = {"format": "directory_text", "documents": len(df)}
+_metadata:
+  bloc: 1
+  section: "2_load"

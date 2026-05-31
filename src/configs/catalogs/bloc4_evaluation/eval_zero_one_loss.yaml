@@ -1,0 +1,95 @@
+id: "eval_zero_one_loss"
+name: "Eval: Zero-One Loss"
+description: >
+  Calcule le Zero-One Loss, qui mesure la fraction (ou le nombre) de
+  predictions qui ne correspondent pas exactement aux vraies etiquettes.
+  En classification standard, c'est le complement de l'accuracy (1 - accuracy).
+  En multilabel, un echantillon est considere comme une erreur si au moins
+  une de ses etiquettes est mal predite. Plus le Zero-One Loss est bas,
+  meilleur est le modele.
+category: "Metriques de Classification"
+tags: ["eval", "classification", "zero_one_loss", "loss", "erreur"]
+applies_to: ["Classification"]
+when_to_use: >
+  Utiliser comme mesure brute du taux d'erreur de classification. Utile pour
+  avoir une vision claire du nombre d'echantillons mal classes. En multilabel,
+  plus strict que le Hamming Loss car exige que toutes les etiquettes soient
+  correctes.
+pros:
+  - "Interpretation directe : taux d'erreur exact"
+  - "Disponible en mode normalise (fraction) ou absolu (nombre d'erreurs)"
+  - "Plus strict que le Hamming Loss en multilabel"
+  - "Applicable en binaire, multiclasse et multilabel"
+cons:
+  - "En multiclasse standard, simplement 1 - accuracy"
+  - "Trop strict en multilabel (une seule erreur penalise tout l'echantillon)"
+  - "Ne donne pas d'information sur quelles classes sont mal predites"
+  - "Ne prend pas en compte les probabilites predites"
+code_template: |
+  evaluation_metrics = {}
+  try:
+      from sklearn.metrics import zero_one_loss
+      import numpy as np
+
+      print("[EVAL] Calcul du Zero-One Loss...")
+
+      # Normalized (fraction)
+      zo_loss = zero_one_loss(y_test, y_pred, normalize=True)
+      evaluation_metrics["zero_one_loss"] = float(zo_loss)
+      print(f"[EVAL] Zero-One Loss (fraction): {zo_loss:.4f}")
+
+      # Absolute (number of misclassified samples)
+      zo_loss_abs = zero_one_loss(y_test, y_pred, normalize=False)
+      evaluation_metrics["zero_one_loss_count"] = int(zo_loss_abs)
+      evaluation_metrics["total_samples"] = int(len(y_test))
+      print(f"[EVAL] Echantillons mal classes: {int(zo_loss_abs)} / {len(y_test)}")
+
+      # Complement: exact match ratio
+      exact_match = 1.0 - zo_loss
+      evaluation_metrics["exact_match_ratio"] = float(exact_match)
+      print(f"[EVAL] Exact Match Ratio (1 - loss): {exact_match:.4f}")
+
+      # Per-class error analysis
+      try:
+          classes = np.unique(y_test)
+          y_test_arr = np.asarray(y_test)
+          y_pred_arr = np.asarray(y_pred)
+
+          if y_test_arr.ndim == 1:
+              error_per_class = {}
+              for cls in classes:
+                  mask = y_test_arr == cls
+                  n_cls = int(np.sum(mask))
+                  n_errors = int(np.sum(y_pred_arr[mask] != cls))
+                  error_rate = float(n_errors / n_cls) if n_cls > 0 else 0.0
+                  error_per_class[str(cls)] = {
+                      "n_samples": n_cls,
+                      "n_errors": n_errors,
+                      "error_rate": error_rate
+                  }
+              evaluation_metrics["error_per_class"] = error_per_class
+              print(f"[EVAL] Analyse d'erreur par classe calculee pour {len(classes)} classes.")
+      except Exception as e_cls:
+          print(f"[EVAL] Analyse par classe non disponible: {e_cls}")
+
+      # Interpretation
+      if zo_loss == 0.0:
+          interpretation = "Aucune erreur de classification"
+      elif zo_loss < 0.05:
+          interpretation = "Taux d'erreur tres faible"
+      elif zo_loss < 0.15:
+          interpretation = "Taux d'erreur acceptable"
+      elif zo_loss < 0.30:
+          interpretation = "Taux d'erreur modere"
+      else:
+          interpretation = "Taux d'erreur eleve"
+      evaluation_metrics["interpretation"] = interpretation
+      print(f"[EVAL] Interpretation: {interpretation}")
+
+      print("[EVAL] Zero-One Loss termine avec succes.")
+  except Exception as e:
+      print(f"[EVAL] Erreur lors du calcul du Zero-One Loss: {e}")
+      evaluation_metrics["error"] = str(e)
+_metadata:
+  bloc: 4
+  section: "1_evaluation"

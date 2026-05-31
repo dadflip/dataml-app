@@ -1,0 +1,49 @@
+id: "transform_drop_outliers"
+name: "Transform: Z-Score Outliers"
+description: "Supprime les lignes aberrantes. Suivi dans le pipeline."
+category: "4.1 Preprocessing"
+tags: ["transform", "cleaning", "outliers", "tabular", "pipeline"]
+applies_to: ["Tabulaire"]
+when_to_use: "Pour éliminer les valeurs aberrantes."
+pros:
+  - "Nettoie les erreurs de mesure."
+cons:
+  - "Le drop dans un pipeline est risqué pour l'inférence. À utiliser avec précaution."
+hyperparameters:
+  z_thresh: "Seuil du Z-Score (souvent 3.0)."
+code_template: |
+  import pandas as pd
+  import numpy as np
+  from scipy import stats
+  from sklearn.preprocessing import FunctionTransformer
+
+  # [PARAM: Z_THRESH | number]
+  Z_THRESH = 3.0
+  # [/PARAM]
+
+  print(f"[TRANSFORM] Détection et suppression outliers (Z > {Z_THRESH})...")
+  if 'df' in locals():
+      if 'pipeline_steps' not in locals(): pipeline_steps = {}
+      
+      def drop_outliers_func(X):
+          X_df = pd.DataFrame(X) if not isinstance(X, pd.DataFrame) else X
+          num_cols = X_df.select_dtypes(include=[np.number]).columns
+          if len(num_cols) > 0:
+              z_scores = np.abs(stats.zscore(X_df[num_cols], nan_policy='omit'))
+              mask = (z_scores < Z_THRESH) | np.isnan(z_scores)
+              return X_df[mask.all(axis=1)]
+          return X_df
+
+      transformer = FunctionTransformer(drop_outliers_func)
+      
+      step_name = 'drop_outliers'
+      pipeline_steps[step_name] = (step_name, transformer)
+      
+      initial_len = len(df)
+      df = transformer.transform(df)
+      print(f"[TRANSFORM] {initial_len - len(df)} outliers supprimés.")
+  else:
+      print("[ERREUR] 'df' introuvable.")
+_metadata:
+  bloc: 2
+  section: "4_preprocessing"

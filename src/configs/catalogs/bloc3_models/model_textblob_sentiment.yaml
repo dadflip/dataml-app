@@ -1,0 +1,66 @@
+id: "model_textblob_sentiment"
+name: "Model: TextBlob Sentiment Analyzer"
+description: "Modèle NLP pré-entraîné simple pour extraire la polarité et la subjectivité d'un texte."
+category: "Modèles NLP (Pré-entraînés)"
+tags: ["model", "nlp", "sentiment", "textblob", "pretrained"]
+applies_to: ["Texte"]
+when_to_use: "Pour une analyse de sentiment Zero-Shot rapide et robuste."
+pros:
+  - "Zéro entraînement, très simple d'utilisation."
+cons:
+  - "Moins précis que les modèles Transformer (BERT)."
+hyperparameters:
+  text_col: "Colonne de texte cible."
+code_template: |
+  import pandas as pd
+  import numpy as np
+  try:
+      from textblob import TextBlob
+  except ImportError:
+      TextBlob = None
+      print("[ERREUR] textblob n'est pas installé. Lancez : !pip install textblob")
+
+  # [PARAM: TEXT_COL | string]
+  TEXT_COL = "text"
+  # [/PARAM]
+
+  print(f"[MODEL] Inférence TextBlob Sentiment Analysis...")
+  if 'X_test' in locals() and TextBlob is not None:
+      texts = []
+      if isinstance(X_test, pd.DataFrame) and TEXT_COL in X_test.columns:
+          texts = X_test[TEXT_COL].astype(str).tolist()
+      elif isinstance(X_test, (pd.Series, np.ndarray, list)):
+          texts = [str(x) for x in X_test]
+          
+      if texts:
+          # polarité entre -1.0 (négatif) et 1.0 (positif)
+          polarities = [TextBlob(t).sentiment.polarity for t in texts]
+          
+          y_pred = np.array([1 if p > 0 else 0 for p in polarities])
+          y_proba = None
+          feature_importances = None
+          
+          # Wrap simple function as model for export
+          from sklearn.preprocessing import FunctionTransformer
+          def textblob_predict(X):
+              if isinstance(X, pd.DataFrame) and TEXT_COL in X.columns: txts = X[TEXT_COL].astype(str).tolist()
+              else: txts = [str(x) for x in X]
+              return np.array([1 if TextBlob(t).sentiment.polarity > 0 else 0 for t in txts])
+              
+          model = FunctionTransformer(textblob_predict)
+          
+          if 'preprocessor' in locals() and preprocessor is not None:
+              try: from imblearn.pipeline import Pipeline
+              except: from sklearn.pipeline import Pipeline
+              full_pipeline = Pipeline(steps=preprocessor.steps + [('model', model)])
+          else:
+              full_pipeline = model
+              
+          training_history = {"status": "success", "type": "pretrained_zero_shot"}
+          task_type = "classification"
+          print("[MODEL] Inférence Zero-Shot TextBlob terminée.")
+  else:
+      print("[ERREUR] Données introuvables ou textblob non installé.")
+_metadata:
+  bloc: 3
+  section: "3_nlp_and_timeseries"

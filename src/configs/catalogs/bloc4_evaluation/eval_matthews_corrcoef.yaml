@@ -1,0 +1,60 @@
+id: "eval_matthews_corrcoef"
+name: "Eval: Matthews Correlation Coefficient (MCC)"
+description: "Calcule le coefficient de correlation de Matthews. Metrique equilibree qui tient compte des TP, TN, FP et FN, meme sur des classes desequilibrees."
+category: "Metriques de Classification"
+tags: ["eval", "classification", "mcc", "matthews", "sklearn"]
+applies_to: ["Classification"]
+when_to_use: "Pour obtenir une metrique fiable et equilibree, notamment sur des jeux de donnees desequilibres ou l'accuracy est trompeuse."
+pros:
+  - "Considere les quatre categories de la matrice de confusion."
+  - "Robuste face aux desequilibres de classes."
+  - "Renvoie un score entre -1 et +1 (0 = aleatoire)."
+cons:
+  - "Moins connue et moins intuitive que l'accuracy ou le F1."
+  - "Interpretation moins directe pour les non-specialistes."
+code_template: |
+  import numpy as np
+  from sklearn.metrics import matthews_corrcoef, confusion_matrix
+
+  evaluation_metrics = {}
+
+  print("[EVAL] Calcul du Matthews Correlation Coefficient (MCC)...")
+
+  try:
+      mcc = matthews_corrcoef(y_test, y_pred)
+      evaluation_metrics["matthews_corrcoef"] = float(np.round(mcc, 6))
+      print(f"[EVAL] MCC : {mcc:.4f}")
+
+      if mcc > 0.7:
+          interpretation = "Excellente correlation entre predictions et verite terrain."
+      elif mcc > 0.4:
+          interpretation = "Bonne correlation. Le modele a un pouvoir discriminant significatif."
+      elif mcc > 0.1:
+          interpretation = "Correlation faible. Le modele a un pouvoir discriminant limite."
+      elif mcc > -0.1:
+          interpretation = "Quasi aleatoire. Le modele ne discrimine pas les classes."
+      else:
+          interpretation = "Correlation negative. Le modele predit systematiquement a l'inverse."
+
+      evaluation_metrics["interpretation"] = interpretation
+      print(f"[EVAL] Interpretation : {interpretation}")
+
+      unique_classes = np.unique(y_test)
+      cm = confusion_matrix(y_test, y_pred, labels=unique_classes)
+      n_total = int(cm.sum())
+      evaluation_metrics["n_total"] = n_total
+      evaluation_metrics["n_classes"] = int(len(unique_classes))
+
+      if len(unique_classes) == 2:
+          tn, fp, fn, tp = cm.ravel()
+          evaluation_metrics["tp"] = int(tp)
+          evaluation_metrics["tn"] = int(tn)
+          evaluation_metrics["fp"] = int(fp)
+          evaluation_metrics["fn"] = int(fn)
+
+  except Exception as e:
+      print(f"[EVAL][ERREUR] Echec du calcul du MCC : {e}")
+      evaluation_metrics["error"] = str(e)
+_metadata:
+  bloc: 4
+  section: "1_evaluation"

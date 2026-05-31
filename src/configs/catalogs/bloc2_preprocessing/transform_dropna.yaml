@@ -1,0 +1,49 @@
+id: "transform_dropna"
+name: "Transform: Drop NaNs"
+description: "Supprime les lignes contenant des valeurs manquantes. Suivi dans le pipeline via FunctionTransformer."
+category: "4.1 Preprocessing"
+tags: ["transform", "cleaning", "tabular", "pandas", "pipeline"]
+applies_to: ["Tabulaire"]
+when_to_use: "Lorsqu'il y a très peu de valeurs manquantes."
+pros:
+  - "Très rapide et simple."
+cons:
+  - "Le drop dans un pipeline sklearn est souvent déconseillé pour l'inférence (il vaut mieux imputer)."
+hyperparameters:
+  subset: "Colonnes spécifiques à vérifier (vide = toutes)."
+code_template: |
+  import pandas as pd
+  from sklearn.preprocessing import FunctionTransformer
+
+  # [PARAM: SUBSET_COLS | string]
+  SUBSET_COLS = ""
+  # [/PARAM]
+
+  print("[TRANSFORM] Suppression des lignes avec NaNs...")
+  if 'df' in locals():
+      if 'pipeline_steps' not in locals(): pipeline_steps = {}
+      
+      def drop_nans_func(X):
+          # On vérifie si X est un DataFrame, car dans le pipeline ce sera X_train
+          X_df = pd.DataFrame(X) if not isinstance(X, pd.DataFrame) else X
+          if SUBSET_COLS.strip():
+              cols = [c.strip() for c in SUBSET_COLS.split(',')]
+              valid = [c for c in cols if c in X_df.columns]
+              return X_df.dropna(subset=valid)
+          return X_df.dropna()
+
+      transformer = FunctionTransformer(drop_nans_func)
+      
+      # Enregistrement dans la pipeline (sans ColumnTransformer car on touche les lignes)
+      step_name = 'drop_nans'
+      pipeline_steps[step_name] = (step_name, transformer)
+      
+      # Application locale
+      initial_len = len(df)
+      df = transformer.transform(df)
+      print(f"[TRANSFORM] {initial_len - len(df)} lignes supprimées. Nouvelle taille: {df.shape}")
+  else:
+      print("[ERREUR] 'df' introuvable.")
+_metadata:
+  bloc: 2
+  section: "4_preprocessing"

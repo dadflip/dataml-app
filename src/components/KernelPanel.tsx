@@ -211,8 +211,8 @@ function SetupHelp({ origin }: { origin: string }) {
         </button>
       </DialogTrigger>
 
-      <DialogContent className="max-w-2xl max-h-[92vh] overflow-y-auto">
-        <DialogHeader>
+      <DialogContent className="w-[calc(100%-1rem)] sm:max-w-2xl p-4 sm:p-6 max-h-[95vh] flex flex-col">
+        <DialogHeader className="shrink-0">
           <DialogTitle className="text-base">Connecter un kernel Python</DialogTitle>
           <p className="text-xs text-muted-foreground mt-1">
             DataML s'appuie sur <strong>Jupyter Kernel Gateway</strong> pour exécuter le code Python de votre pipeline en temps réel.
@@ -241,7 +241,7 @@ function SetupHelp({ origin }: { origin: string }) {
           ))}
         </div>
 
-        <div className="space-y-4 text-sm mt-2">
+        <div className="flex-1 overflow-y-auto pr-2 space-y-4 mt-2 min-h-0">
 
           {/* STEP 1 — always shown (except Colab/Kaggle) */}
           {!["colab", "kaggle"].includes(mode) && (
@@ -330,7 +330,7 @@ function SetupHelp({ origin }: { origin: string }) {
                 "Paramètres → Réseau → Wi-Fi → (votre réseau) → Adresse IP",
                 "# → ex : 192.168.1.55",
                 "",
-                "# ⚠ Ne pas utiliser `hostname -I` dans le terminal Linux :",
+                "#  Ne pas utiliser `hostname -I` dans le terminal Linux :",
                 "# il retourne l'IP du conteneur (100.115.92.x), pas l'IP WiFi.",
               ]} />
 
@@ -527,7 +527,7 @@ function Label({ children, className = "" }: { children: React.ReactNode; classN
 function Code({ lines }: { lines: string[] }) {
   return (
     <pre
-      className="overflow-auto rounded-xl p-3 font-mono text-[11px] leading-relaxed text-foreground/90"
+      className="overflow-x-auto rounded-xl p-3 font-mono text-[11px] leading-relaxed text-foreground/90 whitespace-pre"
       style={{ background: "oklch(0.09 0.008 260)", border: "1px solid oklch(0.20 0.012 260)" }}
     >
       {lines.join("\n")}

@@ -1,0 +1,65 @@
+id: "eval_silhouette_score"
+name: "Eval: Silhouette Score (Clustering)"
+description: "Calcule le score de silhouette pour evaluer la qualite d'un clustering. Un score proche de 1 indique des clusters denses et bien separes, proche de 0 des clusters qui se chevauchent."
+category: "Metriques de Clustering"
+tags: ["eval", "clustering", "silhouette", "sklearn", "unsupervised"]
+applies_to: ["Clustering"]
+when_to_use: "Pour evaluer la qualite d'un clustering sans labels de reference. Comparer differents nombres de clusters ou algorithmes."
+pros:
+  - "Interpretable : plage de -1 a +1 avec une semantique claire."
+  - "Ne necessite pas de labels de reference (evaluation interne)."
+cons:
+  - "Cout O(n^2) en memoire et en calcul pour les grands jeux de donnees."
+  - "Favorise les clusters convexes et spheriques."
+code_template: |
+  import numpy as np
+  from sklearn.metrics import silhouette_score, silhouette_samples
+
+  evaluation_metrics = {}
+
+  print("[EVAL] Calcul du Silhouette Score...")
+  try:
+      if y_pred is None:
+          raise ValueError("y_pred (labels de clusters) est None.")
+
+      n_labels = len(set(y_pred))
+      if n_labels < 2:
+          raise ValueError(f"Le Silhouette Score necessite au minimum 2 clusters. Trouve: {n_labels}")
+
+      if 'X_test' not in dir() and 'X_test' not in locals():
+          raise NameError("X_test introuvable dans le scope (necessaire pour le calcul des distances).")
+
+      X_for_silhouette = X_test
+      try:
+          X_for_silhouette = np.array(X_for_silhouette, dtype=float)
+      except Exception:
+          pass
+
+      score = silhouette_score(X_for_silhouette, y_pred, metric="euclidean")
+      sample_scores = silhouette_samples(X_for_silhouette, y_pred, metric="euclidean")
+
+      evaluation_metrics["silhouette_score"] = float(score)
+      evaluation_metrics["silhouette_n_clusters"] = n_labels
+      evaluation_metrics["silhouette_min_sample"] = float(np.min(sample_scores))
+      evaluation_metrics["silhouette_max_sample"] = float(np.max(sample_scores))
+      evaluation_metrics["silhouette_negative_pct"] = float(np.mean(sample_scores < 0) * 100)
+
+      per_cluster = {}
+      for label in sorted(set(y_pred)):
+          mask = np.array(y_pred) == label
+          cluster_scores = sample_scores[mask]
+          per_cluster[str(label)] = {
+              "mean": float(np.mean(cluster_scores)),
+              "size": int(np.sum(mask))
+          }
+      evaluation_metrics["silhouette_per_cluster"] = per_cluster
+
+      print(f"[EVAL] Silhouette Score global: {score:.4f}")
+      print(f"[EVAL] Nombre de clusters: {n_labels}")
+      print(f"[EVAL] Echantillons avec score negatif: {evaluation_metrics['silhouette_negative_pct']:.1f}%")
+  except Exception as e:
+      print(f"[EVAL][ERREUR] Silhouette Score echoue: {e}")
+      evaluation_metrics["silhouette_error"] = str(e)
+_metadata:
+  bloc: 4
+  section: "1_evaluation"

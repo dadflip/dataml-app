@@ -1,0 +1,49 @@
+id: "model_gaussian_nb"
+name: "Model: Gaussian Naive Bayes"
+description: "Méthode probabiliste basée sur le théorème de Bayes, supposant une distribution gaussienne des features."
+category: "Modèles Probabilistes"
+tags: ["model", "classification", "tabular", "sklearn", "bayes"]
+applies_to: ["Tabulaire"]
+when_to_use: "Features continues et indépendantes."
+pros:
+  - "Très rapide."
+  - "Peu de paramètres."
+cons:
+  - "L'hypothèse d'indépendance des features est souvent fausse."
+hyperparameters: {}
+code_template: |
+  import pandas as pd
+  import numpy as np
+  from sklearn.naive_bayes import GaussianNB
+
+  print(f"[MODEL] Entraînement Gaussian Naive Bayes...")
+  if 'X_train' in locals() and 'y_train' in locals() and 'X_test' in locals():
+      model = GaussianNB()
+      # NB nécessite du dense matrix
+      X_train_dense = X_train.toarray() if hasattr(X_train, 'toarray') else X_train
+      X_test_dense = X_test.toarray() if hasattr(X_test, 'toarray') else X_test
+      
+      model.fit(X_train_dense, y_train)
+      
+      y_pred = model.predict(X_test_dense)
+      y_proba = model.predict_proba(X_test_dense) if hasattr(model, 'predict_proba') else None
+      
+      feature_importances = None
+              
+      if 'preprocessor' in locals() and preprocessor is not None:
+          try: from imblearn.pipeline import Pipeline
+          except: from sklearn.pipeline import Pipeline
+          full_pipeline = Pipeline(steps=preprocessor.steps + [('model', model)])
+      else:
+          try: from imblearn.pipeline import Pipeline
+          except: from sklearn.pipeline import Pipeline
+          full_pipeline = Pipeline(steps=[('model', model)])
+          
+      training_history = {"status": "success", "fitted_on": len(X_train)}
+      task_type = "classification"
+      print("[MODEL] Modèle entraîné et Full Pipeline compilé avec succès.")
+  else:
+      print("[ERREUR] Données d'entraînement introuvables.")
+_metadata:
+  bloc: 3
+  section: "1_classification_tabulaire"

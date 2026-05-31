@@ -1,0 +1,88 @@
+id: "eval_hamming_loss"
+name: "Eval: Hamming Loss"
+description: >
+  Calcule le Hamming Loss, qui mesure la fraction d'etiquettes incorrectement
+  predites. En classification multiclasse standard, le Hamming Loss est
+  equivalent a 1 - accuracy. En classification multilabel, il mesure la
+  fraction de paires (echantillon, etiquette) mal predites. Plus le Hamming
+  Loss est bas (proche de 0), meilleur est le modele.
+category: "Metriques de Classification"
+tags: ["eval", "classification", "multilabel", "hamming", "loss"]
+applies_to: ["Classification"]
+when_to_use: >
+  Utiliser principalement pour les problemes de classification multilabel ou
+  chaque echantillon peut avoir plusieurs etiquettes. Egalement applicable en
+  multiclasse comme alternative a l'accuracy. Le Hamming Loss penalise chaque
+  etiquette incorrecte individuellement.
+pros:
+  - "Metrique standard pour la classification multilabel"
+  - "Penalise chaque erreur d'etiquette de maniere egale"
+  - "Simple a interpreter (fraction d'etiquettes incorrectes)"
+  - "Varie entre 0 (parfait) et 1 (tout faux)"
+cons:
+  - "En multiclasse standard, equivalent a 1 - accuracy"
+  - "Ne distingue pas les types d'erreurs (faux positifs vs faux negatifs)"
+  - "Peut etre faible meme avec un modele mediocre si peu d'etiquettes actives"
+  - "Ne prend pas en compte les probabilites predites"
+code_template: |
+  evaluation_metrics = {}
+  try:
+      from sklearn.metrics import hamming_loss, accuracy_score
+      import numpy as np
+
+      print("[EVAL] Calcul du Hamming Loss...")
+
+      h_loss = hamming_loss(y_test, y_pred)
+      evaluation_metrics["hamming_loss"] = float(h_loss)
+      print(f"[EVAL] Hamming Loss: {h_loss:.4f}")
+
+      # Complement: fraction of correct labels
+      evaluation_metrics["hamming_accuracy"] = float(1.0 - h_loss)
+      print(f"[EVAL] Hamming Accuracy (1 - loss): {1.0 - h_loss:.4f}")
+
+      # Check if multilabel (2D array)
+      y_test_arr = np.asarray(y_test)
+      y_pred_arr = np.asarray(y_pred)
+
+      if y_test_arr.ndim > 1 and y_test_arr.shape[1] > 1:
+          n_labels = y_test_arr.shape[1]
+          evaluation_metrics["n_labels"] = int(n_labels)
+          print(f"[EVAL] Probleme multilabel detecte ({n_labels} etiquettes)")
+
+          # Per-label Hamming Loss
+          per_label_loss = {}
+          for j in range(n_labels):
+              lbl_loss = hamming_loss(y_test_arr[:, j], y_pred_arr[:, j])
+              per_label_loss[f"label_{j}"] = float(lbl_loss)
+          evaluation_metrics["hamming_loss_per_label"] = per_label_loss
+          print(f"[EVAL] Hamming Loss par etiquette calcule pour {n_labels} etiquettes.")
+      else:
+          # Multiclass: compare with standard accuracy
+          try:
+              acc = accuracy_score(y_test, y_pred)
+              evaluation_metrics["accuracy_check"] = float(acc)
+              print(f"[EVAL] Verification accuracy (1 - hamming): {acc:.4f}")
+          except Exception:
+              pass
+
+      # Interpretation
+      if h_loss == 0.0:
+          interpretation = "Predictions parfaites"
+      elif h_loss < 0.05:
+          interpretation = "Tres faible taux d'erreur"
+      elif h_loss < 0.15:
+          interpretation = "Taux d'erreur acceptable"
+      elif h_loss < 0.30:
+          interpretation = "Taux d'erreur modere"
+      else:
+          interpretation = "Taux d'erreur eleve"
+      evaluation_metrics["interpretation"] = interpretation
+      print(f"[EVAL] Interpretation: {interpretation}")
+
+      print("[EVAL] Hamming Loss termine avec succes.")
+  except Exception as e:
+      print(f"[EVAL] Erreur lors du calcul du Hamming Loss: {e}")
+      evaluation_metrics["error"] = str(e)
+_metadata:
+  bloc: 4
+  section: "1_evaluation"

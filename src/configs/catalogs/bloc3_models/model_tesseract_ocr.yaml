@@ -1,0 +1,65 @@
+id: "model_tesseract_ocr"
+name: "Model: Tesseract OCR (Pytesseract)"
+description: "Moteur OCR open-source classique de Google. Extrait le texte d'images propres."
+category: "Vision par Ordinateur (OCR)"
+tags: ["model", "vision", "ocr", "tesseract", "pytesseract"]
+applies_to: ["Images"]
+when_to_use: "Pour numériser des documents scannés très propres, des factures ou des PDF avec fond blanc."
+pros:
+  - "Très rapide sur CPU."
+  - "Excellent sur documents scannés propres."
+cons:
+  - "Mauvais sur images naturelles ou floues."
+  - "Nécessite d'installer le binaire système Tesseract-OCR."
+hyperparameters:
+  lang: "Langue principale (ex: 'fra' pour français, 'eng' pour anglais)."
+code_template: |
+  import pandas as pd
+  import numpy as np
+  try:
+      import pytesseract
+      from PIL import Image
+  except ImportError:
+      pytesseract = None
+      print("[ERREUR] pytesseract n'est pas installé. Lancez : !pip install pytesseract pillow")
+
+  # [PARAM: LANG | string]
+  LANG = "fra"
+  # [/PARAM]
+
+  print(f"[MODEL] Extraction de texte avec Tesseract OCR (lang={LANG})...")
+  if 'X_test' in locals() and pytesseract is not None:
+      images = list(X_test)
+      
+      all_preds = []
+      print("Passage de Tesseract sur les images...")
+      for img in images:
+          try:
+              # pytesseract prend un array numpy ou PIL Image
+              if isinstance(img, str):
+                  pil_img = Image.open(img)
+              else:
+                  pil_img = Image.fromarray(img.astype('uint8')) if hasattr(img, 'astype') else img
+                  
+              text = pytesseract.image_to_string(pil_img, lang=LANG)
+              all_preds.append(text.strip())
+          except Exception as e:
+              all_preds.append(f"[ERREUR_OCR: {e}]")
+              
+      y_pred = np.array(all_preds)
+      y_proba = None
+      feature_importances = None
+      
+      # Dummy wrapper
+      from sklearn.preprocessing import FunctionTransformer
+      model = FunctionTransformer(lambda X: [pytesseract.image_to_string(i) for i in X])
+      full_pipeline = model
+          
+      training_history = {"status": "success", "type": "tesseract_ocr"}
+      task_type = "information_extraction"
+      print("[MODEL] Tesseract OCR terminé.")
+  else:
+      print("[ERREUR] Données introuvables ou pytesseract manquant.")
+_metadata:
+  bloc: 3
+  section: "4_vision_and_audio"

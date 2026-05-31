@@ -1,0 +1,49 @@
+id: "model_knn_regressor"
+name: "Model: K-Nearest Neighbors Regressor"
+description: "Régression par la moyenne des valeurs de la cible des K voisins les plus proches."
+category: "Modèles Basés sur la Distance / Marges"
+tags: ["model", "regression", "tabular", "sklearn", "distance"]
+applies_to: ["Tabulaire"]
+when_to_use: "Modèle non-paramétrique de base, utile pour capturer des patterns très locaux."
+pros:
+  - "Très simple, entraînement quasi-immédiat."
+cons:
+  - "Inférence lente, très sensible aux variables non scalées."
+hyperparameters:
+  n_neighbors: "Nombre de voisins K (ex: 5)."
+code_template: |
+  import pandas as pd
+  import numpy as np
+  from sklearn.neighbors import KNeighborsRegressor
+
+  # [PARAM: N_NEIGHBORS | number]
+  N_NEIGHBORS = 5
+  # [/PARAM]
+
+  print(f"[MODEL] Entraînement KNN Regressor (k={N_NEIGHBORS})...")
+  if 'X_train' in locals() and 'y_train' in locals() and 'X_test' in locals():
+      model = KNeighborsRegressor(n_neighbors=int(N_NEIGHBORS), n_jobs=-1)
+      model.fit(X_train, y_train)
+      
+      y_pred = model.predict(X_test)
+      y_proba = None
+      
+      feature_importances = None
+              
+      if 'preprocessor' in locals() and preprocessor is not None:
+          try: from imblearn.pipeline import Pipeline
+          except: from sklearn.pipeline import Pipeline
+          full_pipeline = Pipeline(steps=preprocessor.steps + [('model', model)])
+      else:
+          try: from imblearn.pipeline import Pipeline
+          except: from sklearn.pipeline import Pipeline
+          full_pipeline = Pipeline(steps=[('model', model)])
+          
+      training_history = {"status": "success", "fitted_on": len(X_train)}
+      task_type = "regression"
+      print("[MODEL] Modèle entraîné et Full Pipeline compilé avec succès.")
+  else:
+      print("[ERREUR] Données d'entraînement introuvables.")
+_metadata:
+  bloc: 3
+  section: "2_regression_tabulaire"

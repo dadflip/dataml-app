@@ -1,0 +1,52 @@
+id: "eval_davies_bouldin"
+name: "Eval: Davies-Bouldin Index (Clustering)"
+description: "Calcule l'indice de Davies-Bouldin qui mesure la similarite moyenne entre chaque cluster et son plus proche voisin. Un score plus bas (proche de 0) indique un meilleur clustering."
+category: "Metriques de Clustering"
+tags: ["eval", "clustering", "davies_bouldin", "sklearn", "unsupervised"]
+applies_to: ["Clustering"]
+when_to_use: "Pour evaluer la separation et la compacite des clusters. Utile pour comparer differents algorithmes ou parametres de clustering."
+pros:
+  - "Calcul rapide et simple a interpreter (plus bas = meilleur)."
+  - "Borne inferieure a 0, ce qui facilite l'interpretation."
+cons:
+  - "Favorise les clusters convexes et isotropes."
+  - "Sensible aux outliers dans les clusters."
+code_template: |
+  import numpy as np
+  from sklearn.metrics import davies_bouldin_score
+
+  evaluation_metrics = {}
+
+  print("[EVAL] Calcul de l'indice de Davies-Bouldin...")
+  try:
+      if y_pred is None:
+          raise ValueError("y_pred (labels de clusters) est None.")
+
+      n_labels = len(set(y_pred))
+      if n_labels < 2:
+          raise ValueError(f"L'indice necessite au minimum 2 clusters. Trouve: {n_labels}")
+
+      if 'X_test' not in dir() and 'X_test' not in locals():
+          raise NameError("X_test introuvable dans le scope (necessaire pour le calcul des distances).")
+
+      X_for_db = X_test
+      try:
+          X_for_db = np.array(X_for_db, dtype=float)
+      except Exception:
+          pass
+
+      db_score = davies_bouldin_score(X_for_db, y_pred)
+
+      evaluation_metrics["davies_bouldin_score"] = float(db_score)
+      evaluation_metrics["davies_bouldin_n_clusters"] = n_labels
+      evaluation_metrics["davies_bouldin_n_samples"] = len(y_pred)
+
+      print(f"[EVAL] Davies-Bouldin Index: {db_score:.4f}")
+      print(f"[EVAL] Nombre de clusters: {n_labels}")
+      print(f"[EVAL] Interpretation: plus la valeur est basse (proche de 0), meilleur est le clustering.")
+  except Exception as e:
+      print(f"[EVAL][ERREUR] Davies-Bouldin echoue: {e}")
+      evaluation_metrics["davies_bouldin_error"] = str(e)
+_metadata:
+  bloc: 4
+  section: "1_evaluation"

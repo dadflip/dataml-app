@@ -1,0 +1,93 @@
+id: "deploy_gradio"
+name: "Deploy: Gradio Web UI"
+description: "Génère une interface Gradio pour tester le modèle rapidement dans le navigateur."
+category: "UI Generation"
+tags: ["deploy", "ui", "gradio", "python", "dashboard"]
+applies_to: ["Classification", "Regression", "NLP Generation", "Computer Vision"]
+when_to_use: "Excellent pour les modèles de Deep Learning (images, textes) grâce aux inputs natifs drag-and-drop."
+pros:
+  - "Moins de code que Streamlit pour des inputs complexes (image, audio)."
+cons:
+  - "Moins personnalisable visuellement que Streamlit."
+code_template: |
+  import os
+  import joblib
+
+  deployment_artifacts = {}
+
+  if 'full_pipeline' in locals():
+      print("[DEPLOY] Génération de l'application Gradio...")
+      try:
+          os.makedirs("outputs/deployment", exist_ok=True)
+          
+          model_path = "outputs/deployment/model.joblib"
+          joblib.dump(full_pipeline, model_path)
+          deployment_artifacts["model_path"] = model_path
+          
+          # Extraction dynamique basique des features si dispo
+          feature_inputs_str = "inputs = gr.Textbox(lines=5, label='Saisie JSON', value='{\"feature1\": 0}')"
+          parse_code = "data_dict = json.loads(inputs_data)\\n    df = pd.DataFrame([data_dict])"
+          
+          if hasattr(full_pipeline, 'feature_names_in_'):
+              feat_names = full_pipeline.feature_names_in_
+              inputs_list = [f"gr.Number(label='{f}')" for f in feat_names]
+              feature_inputs_str = f"inputs = [{', '.join(inputs_list)}]"
+              parse_code = f"data_dict = dict(zip({feat_names.tolist()}, inputs_data))\\n    df = pd.DataFrame([data_dict])"
+              
+          gradio_code = f"""import gradio as gr
+  import joblib
+  import pandas as pd
+  import json
+  
+  model = joblib.load('model.joblib')
+  
+  def predict_func(*inputs_data):
+      try:
+          if len(inputs_data) == 1 and isinstance(inputs_data[0], str):
+              data_dict = json.loads(inputs_data[0])
+              df = pd.DataFrame([data_dict])
+          else:
+              {parse_code}
+              
+          prediction = model.predict(df)[0]
+          
+          if hasattr(model, 'predict_proba'):
+              proba = model.predict_proba(df)[0]
+              classes = getattr(model, "classes_", range(len(proba)))
+              prob_dict = {{str(c): float(p) for c, p in zip(classes, proba)}}
+              return str(prediction), prob_dict
+          return str(prediction), None
+      except Exception as e:
+          return str(e), None
+  
+  if hasattr(model, 'predict_proba'):
+      outputs = [gr.Textbox(label="Prediction"), gr.Label(label="Probabilities")]
+  else:
+      outputs = gr.Textbox(label="Prediction")
+      
+  {feature_inputs_str}
+  
+  app = gr.Interface(
+      fn=predict_func,
+      inputs=inputs,
+      outputs=outputs,
+      title="DataML App - Gradio Interface",
+      description="Testez votre modèle facilement."
+  )
+  
+  if __name__ == "__main__":
+      app.launch(server_name="0.0.0.0", server_port=7860)
+  """
+          
+          ui_script_path = "outputs/deployment/gradio_app.py"
+          with open(ui_script_path, "w", encoding="utf-8") as f:
+              f.write(gradio_code)
+              
+          deployment_artifacts["gradio_script"] = ui_script_path
+          print(f"[DEPLOY] Application Gradio générée sous {ui_script_path}")
+          print(f"[DEPLOY] Pour lancer : cd outputs/deployment && python gradio_app.py")
+      except Exception as e:
+          print(f"[DEPLOY ERREUR] Gradio : {str(e)}")
+_metadata:
+  bloc: 5
+  section: "3_ui"

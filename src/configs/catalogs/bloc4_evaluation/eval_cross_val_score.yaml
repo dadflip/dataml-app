@@ -1,0 +1,59 @@
+id: "eval_cross_val_score"
+name: "Eval: K-Fold Cross Validation Score"
+description: "Effectue une validation croisee K-Fold pour estimer la performance generalisee du modele. Calcule la moyenne et l'ecart-type des scores sur K plis."
+category: "Validation Croisee"
+tags: ["eval", "cross_validation", "kfold", "sklearn", "generalization"]
+applies_to: ["Classification", "Regression"]
+when_to_use: "Pour obtenir une estimation fiable de la performance du modele en evitant le sur-apprentissage lie a un seul split train/test."
+pros:
+  - "Estimation plus robuste que le simple train/test split."
+  - "Utilise toutes les donnees pour l'entrainement et la validation."
+cons:
+  - "Cout computationnel eleve (K entrainements complets)."
+  - "Necessite X_train et y_train dans le scope."
+code_template: |
+  import numpy as np
+  from sklearn.model_selection import cross_val_score
+
+  # [PARAM: N_FOLDS | number]
+  N_FOLDS = 5
+  # [/PARAM]
+
+  evaluation_metrics = {}
+
+  print(f"[EVAL] K-Fold Cross Validation (K={N_FOLDS})...")
+  try:
+      if 'full_pipeline' not in dir() and 'full_pipeline' not in locals():
+          raise NameError("full_pipeline introuvable dans le scope.")
+      if 'X_train' not in dir() and 'X_train' not in locals():
+          raise NameError("X_train introuvable dans le scope.")
+      if 'y_train' not in dir() and 'y_train' not in locals():
+          raise NameError("y_train introuvable dans le scope.")
+
+      if task_type == "classification":
+          scoring = "accuracy"
+      else:
+          scoring = "r2"
+
+      scores = cross_val_score(
+          full_pipeline, X_train, y_train,
+          cv=int(N_FOLDS), scoring=scoring, n_jobs=-1
+      )
+
+      evaluation_metrics["cv_scoring"] = scoring
+      evaluation_metrics["cv_n_folds"] = int(N_FOLDS)
+      evaluation_metrics["cv_scores"] = scores.tolist()
+      evaluation_metrics["cv_mean_score"] = float(np.mean(scores))
+      evaluation_metrics["cv_std_score"] = float(np.std(scores))
+      evaluation_metrics["cv_min_score"] = float(np.min(scores))
+      evaluation_metrics["cv_max_score"] = float(np.max(scores))
+
+      print(f"[EVAL] Scoring: {scoring}")
+      print(f"[EVAL] Scores par pli: {np.round(scores, 4)}")
+      print(f"[EVAL] Moyenne: {np.mean(scores):.4f} (+/- {np.std(scores):.4f})")
+  except Exception as e:
+      print(f"[EVAL][ERREUR] Cross Validation echouee: {e}")
+      evaluation_metrics["cv_error"] = str(e)
+_metadata:
+  bloc: 4
+  section: "1_evaluation"

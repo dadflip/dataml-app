@@ -1,0 +1,31 @@
+id: "eda_countplots"
+name: "EDA: Fréquences Catégorielles"
+description: "Trace des diagrammes en barres pour la fréquence des modalités des variables qualitatives."
+category: "3. Exploratory Data Analysis"
+tags: ["eda", "countplot", "tabular", "seaborn"]
+code_template: |
+  import pandas as pd
+  import matplotlib.pyplot as plt
+  import seaborn as sns
+
+  # [PARAM: TOP_N | number]
+  TOP_N = 10
+  # [/PARAM]
+  
+  cols = df.select_dtypes(exclude=['number', 'datetime']).columns.tolist()
+  print(f"[EDA] === COUNTPLOTS ({len(cols)} variables) ===")
+  
+  if len(cols) > 20:
+      cols = cols[:20]
+      
+  plt.figure(figsize=(15, 4 * ((len(cols) + 1) // 2)))
+  for i, col in enumerate(cols):
+      plt.subplot(((len(cols) + 1) // 2), 2, i + 1)
+      order = df[col].value_counts().iloc[:TOP_N].index
+      sns.countplot(data=df, y=col, order=order)
+      plt.title(f"Fréquence de {col}")
+  plt.tight_layout()
+  plt.show()
+_metadata:
+  bloc: 1
+  section: "3_eda"

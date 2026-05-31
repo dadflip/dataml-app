@@ -1,0 +1,46 @@
+id: "extract_pytorch_geometric"
+name: "Extract: PyTorch Geometric (Graphs)"
+description: "Télécharge un dataset de graphes de référence (ex: Cora, CiteSeer, PubMed) vers le dossier local."
+category: "1. Extract"
+tags: ["extract", "graph", "pytorch-geometric", "gnn"]
+code_template: |
+  import os
+  import time
+  try:
+      from torch_geometric.datasets import Planetoid
+  except ImportError:
+      Planetoid = None
+      print("[ERREUR EXTRACT] 'torch_geometric' n'est pas installé. Lancez : !pip install torch_geometric")
+
+  # [PARAM: DATASET_NAME | string]
+  DATASET_NAME = "Cora"
+  # [/PARAM]
+
+  # [PARAM: DEST_DIR | string]
+  DEST_DIR = "./data/raw/graphs"
+  # [/PARAM]
+
+  print(f"[EXTRACT] Téléchargement du Graphe '{DATASET_NAME}'...")
+  os.makedirs(DEST_DIR, exist_ok=True)
+
+  try:
+      if Planetoid is not None:
+          start_time = time.time()
+          
+          # Planetoid télécharge automatiquement et met en cache dans le dossier fourni
+          dataset = Planetoid(root=DEST_DIR, name=DATASET_NAME)
+          
+          duration = time.time() - start_time
+          print(f"[EXTRACT] Succès Graphe. {dataset.num_classes} classes trouvées. Sauvegardé dans {DEST_DIR} en {duration:.2f}s.")
+          
+          df = None
+          target_name = None
+          task_type = "node_classification"
+          meta = {"source": "pytorch_geometric", "dataset_name": DATASET_NAME, "path": DEST_DIR}
+  except Exception as e:
+      print(f"[ERREUR EXTRACT] Échec de l'extraction du graphe : {str(e)}")
+      raise e
+
+_metadata:
+  bloc: 1
+  section: "1_extract"

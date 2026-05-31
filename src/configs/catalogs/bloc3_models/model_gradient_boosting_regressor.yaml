@@ -1,0 +1,57 @@
+id: "model_gradient_boosting_regressor"
+name: "Model: Gradient Boosting Regressor"
+description: "Booste une série d'arbres faibles de manière séquentielle pour minimiser l'erreur résiduelle."
+category: "Modèles Basés sur les Arbres"
+tags: ["model", "regression", "tabular", "sklearn", "ensemble", "boosting"]
+applies_to: ["Tabulaire"]
+when_to_use: "Jeux de données tabulaires classiques quand la précision prime sur le temps d'entraînement."
+pros:
+  - "Précision redoutable."
+cons:
+  - "Lent (séquentiel)."
+hyperparameters:
+  n_estimators: "Nombre d'étapes de boosting (ex: 100)."
+  learning_rate: "Taux d'apprentissage (ex: 0.1)."
+code_template: |
+  import pandas as pd
+  import numpy as np
+  from sklearn.ensemble import GradientBoostingRegressor
+
+  # [PARAM: N_ESTIMATORS | number]
+  N_ESTIMATORS = 100
+  # [/PARAM]
+
+  # [PARAM: LEARNING_RATE | number]
+  LEARNING_RATE = 0.1
+  # [/PARAM]
+
+  print(f"[MODEL] Entraînement Gradient Boosting Regressor (n={N_ESTIMATORS}, lr={LEARNING_RATE})...")
+  if 'X_train' in locals() and 'y_train' in locals() and 'X_test' in locals():
+      model = GradientBoostingRegressor(n_estimators=int(N_ESTIMATORS), learning_rate=float(LEARNING_RATE), random_state=42)
+      model.fit(X_train, y_train)
+      
+      y_pred = model.predict(X_test)
+      y_proba = None
+      
+      feature_importances = None
+      if 'feature_names_out' in locals() and hasattr(model, 'feature_importances_'):
+          if len(model.feature_importances_) == len(feature_names_out):
+              feature_importances = pd.Series(model.feature_importances_, index=feature_names_out)
+              
+      if 'preprocessor' in locals() and preprocessor is not None:
+          try: from imblearn.pipeline import Pipeline
+          except: from sklearn.pipeline import Pipeline
+          full_pipeline = Pipeline(steps=preprocessor.steps + [('model', model)])
+      else:
+          try: from imblearn.pipeline import Pipeline
+          except: from sklearn.pipeline import Pipeline
+          full_pipeline = Pipeline(steps=[('model', model)])
+          
+      training_history = {"status": "success", "fitted_on": len(X_train)}
+      task_type = "regression"
+      print("[MODEL] Modèle entraîné et Full Pipeline compilé avec succès.")
+  else:
+      print("[ERREUR] Données d'entraînement introuvables.")
+_metadata:
+  bloc: 3
+  section: "2_regression_tabulaire"

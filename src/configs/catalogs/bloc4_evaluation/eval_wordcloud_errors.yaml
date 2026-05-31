@@ -1,0 +1,74 @@
+id: "eval_wordcloud_errors"
+name: "Eval Plot: Wordcloud of Misclassified Text"
+description: "Génère un nuage de mots pour les textes que le modèle a mal classifiés."
+category: "NLP Visualizations"
+tags: ["eval", "plot", "nlp", "text", "wordcloud", "errors"]
+applies_to: ["Classification"]
+when_to_use: "Pour comprendre quels mots spécifiques trompent votre modèle de NLP (ex: analyse de sentiments)."
+pros:
+  - "Identification rapide des biais de vocabulaire."
+cons:
+  - "Nécessite que X_test contienne du texte brut et la librairie wordcloud."
+code_template: |
+  import os
+  import numpy as np
+  import matplotlib.pyplot as plt
+  try:
+      from wordcloud import WordCloud
+  except ImportError:
+      WordCloud = None
+
+  evaluation_metrics = {}
+
+  if task_type == "classification" and 'X_test' in locals() and 'y_test' in locals() and 'y_pred' in locals():
+      print("[EVAL] Génération du Nuage de mots des erreurs...")
+      try:
+          if WordCloud is None:
+              print("[EVAL ERREUR] La librairie 'wordcloud' n'est pas installée.")
+          else:
+              # Vérifier si X_test contient du texte
+              is_text = False
+              if isinstance(X_test, (list, np.ndarray)) and len(X_test) > 0 and isinstance(X_test[0], str):
+                  is_text = True
+              elif hasattr(X_test, 'iloc') and isinstance(X_test.iloc[0], str):
+                  is_text = True
+                  
+              if is_text:
+                  os.makedirs("outputs/evaluation", exist_ok=True)
+                  
+                  # Isoler les erreurs
+                  y_t = np.array(y_test)
+                  y_p = np.array(y_pred)
+                  errors_idx = y_t != y_p
+                  
+                  if hasattr(X_test, 'iloc'):
+                      error_texts = X_test.iloc[errors_idx].astype(str)
+                  else:
+                      error_texts = np.array(X_test)[errors_idx].astype(str)
+                      
+                  if len(error_texts) > 0:
+                      text_joined = " ".join(error_texts)
+                      
+                      wordcloud = WordCloud(width=800, height=400, background_color='white', 
+                                            max_words=100, colormap='Reds').generate(text_joined)
+                                            
+                      fig, ax = plt.subplots(figsize=(10, 5))
+                      ax.imshow(wordcloud, interpolation='bilinear')
+                      ax.axis('off')
+                      ax.set_title('Mots fréquents dans les erreurs de classification')
+                      
+                      plot_path = "outputs/evaluation/wordcloud_errors.png"
+                      fig.savefig(plot_path, dpi=300)
+                      plt.close(fig)
+                      
+                      evaluation_metrics["wordcloud_errors_plot"] = plot_path
+                      print(f"[EVAL] Plot sauvegardé sous {plot_path}")
+                  else:
+                      print("[EVAL] Aucune erreur à analyser !")
+              else:
+                  print("[EVAL] X_test ne semble pas contenir du texte brut.")
+      except Exception as e:
+          print(f"[EVAL ERREUR] Wordcloud : {str(e)}")
+_metadata:
+  bloc: 4
+  section: "1_evaluation"

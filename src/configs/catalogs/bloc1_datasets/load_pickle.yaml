@@ -1,0 +1,41 @@
+id: "load_pickle"
+name: "Load: Python Pickle (.pkl)"
+description: "Désérialise un objet Python binaire natif (ex: DataFrame, Modèle, Dictionnaire)."
+category: "2. Load"
+tags: ["load", "pickle", "python", "binary"]
+code_template: |
+  import time
+  import os
+
+  # [PARAM: FILE_PATH | file]
+  FILE_PATH = "./data/raw/data.pkl"
+  # [/PARAM]
+
+  print(f"[LOAD] Désérialisation du fichier Pickle : {FILE_PATH}...")
+  if not os.path.exists(FILE_PATH):
+      raise FileNotFoundError(f"[ERREUR LOAD] Fichier Pickle introuvable : {FILE_PATH}")
+
+  try:
+      start_time = time.time()
+      import pickle
+      import pandas as pd
+      
+      with open(FILE_PATH, 'rb') as f:
+          data = pickle.load(f)
+          
+      duration = time.time() - start_time
+      
+      # Tente de l'exposer comme un DataFrame si applicable
+      df = data if isinstance(data, pd.DataFrame) else None
+      
+      print(f"[LOAD] Succès Pickle. Objet de type '{type(data).__name__}' chargé en {duration:.2f}s.")
+  except Exception as e:
+      print(f"[ERREUR LOAD] Impossible de charger le fichier .pkl : {str(e)}")
+      raise e
+
+  target_name = None
+  task_type = "unknown"
+  meta = {"format": "pickle", "object_type": type(data).__name__}
+_metadata:
+  bloc: 1
+  section: "2_load"

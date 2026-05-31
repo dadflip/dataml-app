@@ -1,0 +1,61 @@
+id: "load_video"
+name: "Load: Vidéo (MP4, AVI)"
+description: "Ouvre un flux vidéo et charge la première frame (ou X frames) avec OpenCV."
+category: "2. Load"
+tags: ["load", "video", "cv2", "media"]
+code_template: |
+  import cv2
+  import numpy as np
+  import time
+  import os
+
+  # [PARAM: FILE_PATH | file]
+  FILE_PATH = "./data/raw/clip.mp4"
+  # [/PARAM]
+  
+  # [PARAM: MAX_FRAMES | string]
+  MAX_FRAMES = "10"
+  # [/PARAM]
+
+  print(f"[LOAD] Lecture de la vidéo : {FILE_PATH}...")
+  if not os.path.exists(FILE_PATH):
+      raise FileNotFoundError(f"[ERREUR LOAD] Fichier Vidéo introuvable : {FILE_PATH}")
+
+  try:
+      start_time = time.time()
+      
+      cap = cv2.VideoCapture(FILE_PATH)
+      if not cap.isOpened():
+          raise ValueError("Le fichier n'est pas une vidéo valide ou est corrompu.")
+          
+      frames = []
+      limit = int(MAX_FRAMES)
+      count = 0
+      
+      while cap.isOpened() and count < limit:
+          ret, frame = cap.read()
+          if not ret:
+              break
+          # Conversion BGR -> RGB
+          frame_rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+          frames.append(frame_rgb)
+          count += 1
+          
+      cap.release()
+      
+      duration = time.time() - start_time
+      print(f"[LOAD] Succès Vidéo. {count} frames extraites en {duration:.2f}s.")
+  except ImportError:
+      print("[ERREUR LOAD] Le module 'opencv-python' (cv2) est requis.")
+      raise
+  except Exception as e:
+      print(f"[ERREUR LOAD] Impossible de charger la vidéo : {str(e)}")
+      raise e
+
+  df = None
+  target_name = None
+  task_type = "computer_vision_video"
+  meta = {"format": "video", "extracted_frames": count}
+_metadata:
+  bloc: 1
+  section: "2_load"

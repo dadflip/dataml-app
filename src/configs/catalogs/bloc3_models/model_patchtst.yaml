@@ -1,0 +1,36 @@
+id: "model_patchtst"
+name: "Model: PatchTST (Transformers Time Series)"
+description: "Time Series Transformer basé sur des 'patchs'. Modèle SOTA de HuggingFace pour le forecasting long terme."
+category: "Modèles Séries Temporelles"
+tags: ["model", "time-series", "forecasting", "transformers", "huggingface", "deep-learning"]
+applies_to: ["Séries Temporelles"]
+when_to_use: "Séries temporelles complexes, longues, avec de multiples signaux."
+pros:
+  - "Surpasse souvent les LSTM et Prophet sur des fenêtres de temps très longues."
+cons:
+  - "Demande beaucoup de réglages de tenseurs en PyTorch pour l'entraînement."
+hyperparameters: {}
+code_template: |
+  import pandas as pd
+  import numpy as np
+  print("[MODEL] Dummy export pour PatchTST. Le code d'entraînement complet nécessite l'API HF GluonTS/Trainer.")
+  # Modèle très avancé nécessitant des dataloaders spécifiques (GluonTS).
+  # Nous retournons une baseline simple (Répétition de la dernière valeur) en guise de placeholder.
+  
+  if 'X_test' in locals() and 'y_train' in locals():
+      last_val = np.array(y_train)[-1]
+      steps = len(X_test) if hasattr(X_test, '__len__') else 10
+      y_pred = np.full(shape=(steps,), fill_value=last_val)
+      y_proba = None
+      feature_importances = None
+      model = "PatchTST Placeholder (Naive Forecast)"
+      full_pipeline = model
+      
+      training_history = {"status": "placeholder"}
+      task_type = "forecasting"
+      print("[MODEL] Placeholder généré.")
+  else:
+      print("[ERREUR] Données introuvables.")
+_metadata:
+  bloc: 3
+  section: "3_nlp_and_timeseries"

@@ -1,0 +1,81 @@
+id: "eval_jaccard_score"
+name: "Eval: Jaccard Similarity Score"
+description: >
+  Calcule le score de similarite de Jaccard (Intersection over Union, IoU)
+  entre les predictions et les vraies etiquettes. En classification, il
+  mesure le ratio entre les predictions correctes et l'union des predictions
+  et des vraies valeurs. Varie entre 0 (aucun accord) et 1 (accord parfait).
+  Applicable en binaire, multiclasse et multilabel.
+category: "Metriques de Classification"
+tags: ["eval", "classification", "jaccard", "iou", "similarite"]
+applies_to: ["Classification"]
+when_to_use: >
+  Utiliser pour mesurer le chevauchement entre predictions et verite terrain,
+  en particulier en classification multilabel ou en segmentation. Le Jaccard
+  Score est equivalent a l'IoU (Intersection over Union) utilise en vision
+  par ordinateur.
+pros:
+  - "Mesure intuitive de chevauchement (IoU)"
+  - "Applicable en binaire, multiclasse et multilabel"
+  - "Standard en vision par ordinateur et segmentation"
+  - "Supporte les moyennes micro, macro et weighted"
+cons:
+  - "Plus penalisant que l'accuracy pour les erreurs"
+  - "Sensible aux classes rares en mode macro"
+  - "Moins courant que le F1-score en NLP et classification tabulaire"
+  - "Ne prend pas en compte les probabilites predites"
+code_template: |
+  evaluation_metrics = {}
+  try:
+      from sklearn.metrics import jaccard_score
+      import numpy as np
+
+      print("[EVAL] Calcul du Jaccard Similarity Score...")
+
+      classes = np.unique(y_test)
+      n_classes = len(classes)
+
+      if n_classes == 2:
+          # Binary classification
+          j_score = jaccard_score(y_test, y_pred, pos_label=classes[1])
+          evaluation_metrics["jaccard_score"] = float(j_score)
+          print(f"[EVAL] Jaccard Score (binary): {j_score:.4f}")
+      else:
+          # Multiclass: compute per-class and aggregated
+          # Per-class
+          j_per_class = jaccard_score(y_test, y_pred, average=None, labels=classes)
+          per_class_dict = {}
+          for cls, j_val in zip(classes, j_per_class):
+              per_class_dict[str(cls)] = float(j_val)
+              print(f"[EVAL] Classe {cls} - Jaccard: {j_val:.4f}")
+          evaluation_metrics["jaccard_per_class"] = per_class_dict
+
+      # Aggregated scores (all averaging strategies)
+      for avg in ["micro", "macro", "weighted"]:
+          try:
+              j_avg = jaccard_score(y_test, y_pred, average=avg)
+              evaluation_metrics[f"jaccard_{avg}"] = float(j_avg)
+              print(f"[EVAL] Jaccard Score ({avg}): {j_avg:.4f}")
+          except Exception as e_avg:
+              print(f"[EVAL] Jaccard {avg} non disponible: {e_avg}")
+
+      # Relation with F1: Jaccard = F1 / (2 - F1)
+      try:
+          from sklearn.metrics import f1_score
+          if n_classes == 2:
+              f1 = f1_score(y_test, y_pred, pos_label=classes[1])
+          else:
+              f1 = f1_score(y_test, y_pred, average="macro")
+          jaccard_from_f1 = f1 / (2.0 - f1) if f1 < 2.0 else 1.0
+          evaluation_metrics["jaccard_from_f1_check"] = float(jaccard_from_f1)
+          print(f"[EVAL] Verification Jaccard depuis F1: {jaccard_from_f1:.4f}")
+      except Exception:
+          pass
+
+      print("[EVAL] Jaccard Similarity Score termine avec succes.")
+  except Exception as e:
+      print(f"[EVAL] Erreur lors du calcul du Jaccard Score: {e}")
+      evaluation_metrics["error"] = str(e)
+_metadata:
+  bloc: 4
+  section: "1_evaluation"

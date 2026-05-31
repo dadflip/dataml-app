@@ -1,0 +1,54 @@
+id: "transform_tensor_reshape"
+name: "Transform: Reshape to 3D Tensor (RNN/LSTM)"
+description: "Redimensionne un DataFrame 2D (N_samples, N_features) en 3D (N_samples, Time_steps, Features) pour les réseaux récurrents."
+category: "4.1 Preprocessing"
+tags: ["transform", "reshape", "timeseries", "rnn"]
+applies_to: ["Tabulaire", "Séries Temporelles"]
+when_to_use: "Quand vous voulez injecter des données tabulaires plates dans un LSTM/GRU/RNN."
+pros:
+  - "Rend compatible les séries tabulaires avec les LSTM."
+cons:
+  - "Nécessite que (Time_steps * Features) soit un multiple du nombre de colonnes actuel."
+hyperparameters:
+  time_steps: "Nombre de pas de temps (ex: 1 si chaque feature est un pas de temps de dimension 1, ou N_features si 1 pas temporel)."
+code_template: |
+  import pandas as pd
+  import numpy as np
+  from sklearn.preprocessing import FunctionTransformer
+
+  # [PARAM: TIME_STEPS | number]
+  TIME_STEPS = 1
+  # [/PARAM]
+
+  print(f"[TRANSFORM] Reshape Tensor (Time_steps={TIME_STEPS})...")
+  if 'df' in locals():
+      if 'pipeline_steps' not in locals(): pipeline_steps = {}
+      
+      def reshape_3d(X):
+          X_arr = np.array(X)
+          n_samples = X_arr.shape[0]
+          n_cols = X_arr.shape[1]
+          t_steps = int(TIME_STEPS)
+          
+          if n_cols % t_steps != 0:
+              raise ValueError(f"Le nombre de colonnes ({n_cols}) n'est pas divisible par {t_steps}.")
+              
+          n_features = n_cols // t_steps
+          X_reshaped = X_arr.reshape((n_samples, t_steps, n_features))
+          
+          # Return un Numpy array plutôt qu'un DataFrame car on passe en 3D
+          return X_reshaped
+
+      transformer = FunctionTransformer(reshape_3d)
+      
+      step_name = 'tensor_reshape'
+      pipeline_steps[step_name] = (step_name, transformer)
+      
+      # Transforme le DataFrame en Numpy Array 3D !
+      df = transformer.transform(df)
+      print(f"[TRANSFORM] Reshape terminé. Nouvelle dimension: {df.shape}")
+  else:
+      print("[ERREUR] 'df' introuvable.")
+_metadata:
+  bloc: 2
+  section: "4_preprocessing"

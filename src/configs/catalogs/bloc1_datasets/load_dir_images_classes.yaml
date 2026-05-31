@@ -1,0 +1,51 @@
+id: "load_dir_images_classes"
+name: "Load: Dossier d'Images par Classes"
+description: "Parcourt une hiérarchie où chaque sous-dossier correspond à une étiquette de classe (ex: ImageNet)."
+category: "2. Load"
+tags: ["load", "directory", "images", "classification"]
+code_template: |
+  import os
+  import glob
+  import pandas as pd
+  import time
+
+  # [PARAM: ROOT_DIRECTORY | dir]
+  ROOT_DIRECTORY = "./data/extracted/dataset"
+  # [/PARAM]
+
+  print(f"[LOAD] Parcours de la hiérarchie de classes dans {ROOT_DIRECTORY}...")
+  if not os.path.exists(ROOT_DIRECTORY):
+      raise FileNotFoundError(f"[ERREUR LOAD] Le dossier racine n'existe pas : {ROOT_DIRECTORY}")
+
+  try:
+      start_time = time.time()
+      
+      data = []
+      classes = [d for d in os.listdir(ROOT_DIRECTORY) if os.path.isdir(os.path.join(ROOT_DIRECTORY, d))]
+      
+      for class_name in classes:
+          class_dir = os.path.join(ROOT_DIRECTORY, class_name)
+          # Récupère tous les fichiers classiques (png, jpg, jpeg)
+          files = glob.glob(os.path.join(class_dir, "*.*"))
+          valid_files = [f for f in files if f.lower().endswith(('.png', '.jpg', '.jpeg'))]
+          
+          for filepath in valid_files:
+              data.append({
+                  "class_name": class_name,
+                  "absolute_path": os.path.abspath(filepath)
+              })
+              
+      df = pd.DataFrame(data)
+      
+      duration = time.time() - start_time
+      print(f"[LOAD] Succès. {len(df)} images réparties dans {len(classes)} classes indexées en {duration:.2f}s.")
+  except Exception as e:
+      print(f"[ERREUR LOAD] Erreur lors du parcours du dataset : {str(e)}")
+      raise e
+
+  target_name = "class_name"
+  task_type = "computer_vision_classification"
+  meta = {"format": "directory_classes", "classes_found": len(classes), "images_found": len(df)}
+_metadata:
+  bloc: 1
+  section: "2_load"

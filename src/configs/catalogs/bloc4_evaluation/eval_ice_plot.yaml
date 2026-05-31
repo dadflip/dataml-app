@@ -1,0 +1,53 @@
+id: "eval_ice_plot"
+name: "Eval Plot: Individual Conditional Expectation (ICE)"
+description: "Similaire au PDP, mais trace une ligne pour chaque instance individuelle au lieu d'une moyenne globale."
+category: "Explainability & Feature Importance"
+tags: ["eval", "plot", "explainability", "ice", "sklearn"]
+applies_to: ["Classification", "Regression"]
+when_to_use: "Pour vérifier s'il existe des interactions hétérogènes (des individus réagissent différemment au changement de la feature)."
+pros:
+  - "Révèle les interactions cachées que le PDP moyen occulte."
+cons:
+  - "Devient vite un plat de spaghettis illisible sur de très gros datasets."
+code_template: |
+  import os
+  import numpy as np
+  import matplotlib.pyplot as plt
+  from sklearn.inspection import PartialDependenceDisplay
+
+  evaluation_metrics = {}
+
+  if 'full_pipeline' in locals() and 'X_test' in locals():
+      print("[EVAL] Génération du ICE Plot...")
+      try:
+          os.makedirs("outputs/evaluation", exist_ok=True)
+          
+          # Sous-échantillonner pour éviter le "spaghetti plot"
+          X_arr = np.array(X_test)
+          if len(X_arr) > 100:
+              idx = np.random.choice(len(X_arr), 100, replace=False)
+              X_sample = X_arr[idx]
+          else:
+              X_sample = X_arr
+              
+          features_to_plot = [0] # On prend la feature 0 pour l'exemple
+          
+          fig, ax = plt.subplots(figsize=(8, 6))
+          
+          display = PartialDependenceDisplay.from_estimator(
+              full_pipeline, X_sample, features_to_plot, kind='both', ax=ax
+          )
+          
+          ax.set_title('Individual Conditional Expectation (ICE)')
+          
+          plot_path = "outputs/evaluation/ice_plot.png"
+          fig.savefig(plot_path, dpi=300)
+          plt.close(fig)
+          
+          evaluation_metrics["ice_plot"] = plot_path
+          print(f"[EVAL] Plot sauvegardé sous {plot_path}")
+      except Exception as e:
+          print(f"[EVAL ERREUR] ICE Plot : {str(e)}")
+_metadata:
+  bloc: 4
+  section: "1_evaluation"

@@ -1,0 +1,99 @@
+id: "eval_roc_curve_plot"
+name: "Eval: Courbe ROC (Plot)"
+description: "Trace et sauvegarde la courbe ROC avec l'AUC. Supporte les cas binaires (une courbe) et multi-classes (une courbe par classe, One-vs-Rest)."
+category: "Visualisation d'Evaluation"
+tags: ["eval", "classification", "roc", "plot", "visualisation", "sklearn", "matplotlib"]
+applies_to: ["Classification"]
+when_to_use: "Pour visualiser graphiquement la capacite discriminante du modele a differents seuils de decision."
+pros:
+  - "Representation visuelle intuitive du compromis sensibilite/specificite."
+  - "Permet de comparer visuellement plusieurs modeles."
+cons:
+  - "Necessite des probabilites predites (y_proba)."
+  - "Peut etre encombree avec un grand nombre de classes."
+code_template: |
+  import numpy as np
+  import os
+
+  evaluation_metrics = {}
+
+  print("[EVAL] Generation de la courbe ROC...")
+
+  if y_proba is None:
+      print("[EVAL][WARN] y_proba est None, impossible de tracer la courbe ROC.")
+      evaluation_metrics["roc_curve_path"] = None
+      evaluation_metrics["warning"] = "y_proba non disponible, courbe ROC non generee."
+  else:
+      try:
+          import matplotlib
+          matplotlib.use("Agg")
+          import matplotlib.pyplot as plt
+          from sklearn.metrics import roc_curve, auc
+          from sklearn.preprocessing import label_binarize
+
+          unique_classes = np.unique(y_test)
+          n_classes = len(unique_classes)
+
+          fig, ax = plt.subplots(1, 1, figsize=(8, 6))
+
+          if n_classes == 2:
+              if y_proba.ndim == 2 and y_proba.shape[1] == 2:
+                  proba_positive = y_proba[:, 1]
+              elif y_proba.ndim == 1:
+                  proba_positive = y_proba
+              else:
+                  proba_positive = y_proba[:, 1]
+
+              fpr, tpr, thresholds = roc_curve(y_test, proba_positive)
+              roc_auc = auc(fpr, tpr)
+
+              ax.plot(fpr, tpr, color="darkorange", lw=2,
+                      label=f"ROC (AUC = {roc_auc:.4f})")
+              evaluation_metrics["roc_auc"] = float(np.round(roc_auc, 6))
+              evaluation_metrics["fpr"] = fpr.tolist()
+              evaluation_metrics["tpr"] = tpr.tolist()
+
+          else:
+              y_test_bin = label_binarize(y_test, classes=unique_classes)
+              colors = plt.cm.tab10(np.linspace(0, 1, n_classes))
+
+              auc_per_class = {}
+              for i, (cls, color) in enumerate(zip(unique_classes, colors)):
+                  if y_proba.ndim == 2 and y_proba.shape[1] == n_classes:
+                      fpr_i, tpr_i, _ = roc_curve(y_test_bin[:, i], y_proba[:, i])
+                      roc_auc_i = auc(fpr_i, tpr_i)
+                      ax.plot(fpr_i, tpr_i, color=color, lw=1.5,
+                              label=f"Classe {cls} (AUC = {roc_auc_i:.3f})")
+                      auc_per_class[str(cls)] = float(np.round(roc_auc_i, 6))
+
+              evaluation_metrics["roc_auc_per_class"] = auc_per_class
+
+          ax.plot([0, 1], [0, 1], color="grey", lw=1, linestyle="--", label="Aleatoire")
+          ax.set_xlim([0.0, 1.0])
+          ax.set_ylim([0.0, 1.05])
+          ax.set_xlabel("Taux de Faux Positifs (FPR)")
+          ax.set_ylabel("Taux de Vrais Positifs (TPR)")
+          ax.set_title("Courbe ROC")
+          ax.legend(loc="lower right", fontsize=8)
+          ax.grid(True, alpha=0.3)
+          plt.tight_layout()
+
+          save_dir = os.path.join(os.getcwd(), "outputs", "evaluation")
+          os.makedirs(save_dir, exist_ok=True)
+          save_path = os.path.join(save_dir, "roc_curve.png")
+          fig.savefig(save_path, dpi=150, bbox_inches="tight")
+          plt.close(fig)
+
+          evaluation_metrics["roc_curve_path"] = save_path
+          print(f"[EVAL] Courbe ROC sauvegardee : {save_path}")
+
+      except Exception as e:
+          print(f"[EVAL][ERREUR] Echec de la generation de la courbe ROC : {e}")
+          evaluation_metrics["error"] = str(e)
+          try:
+              plt.close(fig)
+          except Exception:
+              pass
+_metadata:
+  bloc: 4
+  section: "1_evaluation"

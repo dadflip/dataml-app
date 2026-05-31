@@ -1,0 +1,22 @@
+id: "eda_pandas_profiling"
+name: "EDA: YData Profiling"
+description: "Génère un rapport HTML interactif exhaustif (distributions, corrélations, warnings)."
+category: "3. Exploratory Data Analysis"
+tags: ["eda", "profiling", "tabular", "ydata"]
+code_template: |
+  import pandas as pd
+  # Note: ydata_profiling doit être installé
+  from ydata_profiling import ProfileReport
+
+  # [PARAM: MINIMAL_MODE | boolean]
+  MINIMAL_MODE = True
+  # [/PARAM]
+  
+  print("[EDA] Génération du rapport de profiling... Cela peut prendre un moment.")
+  profile = ProfileReport(df, title="Pandas Profiling Report", minimal=MINIMAL_MODE, explorative=True)
+  
+  # Affichage dans un notebook
+  profile.to_notebook_iframe()
+_metadata:
+  bloc: 1
+  section: "3_eda"

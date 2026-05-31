@@ -1,0 +1,47 @@
+id: "extract_hdfs"
+name: "Extract: Hadoop HDFS"
+description: "Télécharge un fichier depuis un cluster Hadoop."
+category: "1. Extract"
+tags: ["extract", "hdfs", "hadoop", "bigdata"]
+code_template: |
+  from hdfs import InsecureClient
+  import os
+  import time
+
+  # [PARAM: HDFS_URL | string]
+  HDFS_URL = "http://namenode:50070"
+  # [/PARAM]
+  
+  # [PARAM: HDFS_USER | string]
+  HDFS_USER = "hadoop"
+  # [/PARAM]
+  
+  # [PARAM: REMOTE_PATH | string]
+  REMOTE_PATH = "/user/hadoop/data.csv"
+  # [/PARAM]
+  
+  # [PARAM: DEST_PATH | string]
+  DEST_PATH = "./data/raw/hdfs_data.csv"
+  # [/PARAM]
+
+  print(f"[EXTRACT] Connexion HDFS ({HDFS_URL})...")
+  os.makedirs(os.path.dirname(DEST_PATH), exist_ok=True)
+
+  try:
+      start_time = time.time()
+      client = InsecureClient(HDFS_URL, user=HDFS_USER)
+      client.download(REMOTE_PATH, DEST_PATH, overwrite=True)
+      
+      duration = time.time() - start_time
+      print(f"[EXTRACT] Succès HDFS. Fichier téléchargé en {duration:.2f}s.")
+  except Exception as e:
+      print(f"[ERREUR EXTRACT] Échec HDFS : {str(e)}")
+      raise e
+
+  df = None
+  target_name = None
+  task_type = "unknown"
+  meta = {"source": "hdfs", "path": DEST_PATH}
+_metadata:
+  bloc: 1
+  section: "1_extract"

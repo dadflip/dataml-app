@@ -1,0 +1,27 @@
+id: "eda_audio_waveform"
+name: "EDA: Waveform (Audio)"
+description: "Affiche le signal temporel d'un audio."
+category: "3. Exploratory Data Analysis"
+tags: ["eda", "audio", "multimedia", "matplotlib"]
+code_template: |
+  import matplotlib.pyplot as plt
+
+  # On suppose un 'waveform' chargé par torchaudio dans le scope
+  if 'waveform' in locals():
+      plt.figure(figsize=(10, 4))
+      if waveform.shape[0] == 1:
+          plt.plot(waveform[0].numpy())
+          plt.title("Waveform - Mono")
+      else:
+          plt.plot(waveform[0].numpy(), label="Left")
+          plt.plot(waveform[1].numpy(), alpha=0.5, label="Right")
+          plt.title("Waveform - Stéréo")
+          plt.legend()
+      plt.ylabel("Amplitude")
+      plt.xlabel("Frames")
+      plt.show()
+  else:
+      print("[EDA] Aucun Tensor 'waveform' trouvé dans le scope local.")
+_metadata:
+  bloc: 1
+  section: "3_eda"

@@ -1,0 +1,58 @@
+id: "model_umap"
+name: "Model: UMAP"
+description: "Uniform Manifold Approximation and Projection. Surpasse t-SNE en vitesse et préserve mieux la structure globale."
+category: "Réduction de Dimension"
+tags: ["model", "dimensionality-reduction", "tabular", "umap", "visualization"]
+applies_to: ["Tabulaire"]
+when_to_use: "La méthode moderne de choix pour visualiser des clusters en 2D ou 3D."
+pros:
+  - "Beaucoup plus rapide que t-SNE."
+  - "Peut transformer de nouvelles données (predict existant)."
+cons:
+  - "Nécessite d'installer umap-learn."
+hyperparameters:
+  n_components: "Nombre de dimensions (ex: 2)."
+  n_neighbors: "Taille du voisinage (ex: 15)."
+code_template: |
+  import pandas as pd
+  import numpy as np
+  try:
+      import umap
+  except ImportError:
+      umap = None
+      print("[ERREUR] umap-learn n'est pas installé. Lancez : !pip install umap-learn")
+
+  # [PARAM: N_COMPONENTS | number]
+  N_COMPONENTS = 2
+  # [/PARAM]
+
+  # [PARAM: N_NEIGHBORS | number]
+  N_NEIGHBORS = 15
+  # [/PARAM]
+
+  print(f"[MODEL] Entraînement UMAP (components={N_COMPONENTS}, n_neighbors={N_NEIGHBORS})...")
+  if 'X_train' in locals() and 'X_test' in locals() and umap is not None:
+      model = umap.UMAP(n_components=int(N_COMPONENTS), n_neighbors=int(N_NEIGHBORS), random_state=42)
+      model.fit(X_train)
+      
+      y_pred = model.transform(X_test)
+      y_proba = None
+      feature_importances = None
+      
+      if 'preprocessor' in locals() and preprocessor is not None:
+          try: from imblearn.pipeline import Pipeline
+          except: from sklearn.pipeline import Pipeline
+          full_pipeline = Pipeline(steps=preprocessor.steps + [('model', model)])
+      else:
+          try: from imblearn.pipeline import Pipeline
+          except: from sklearn.pipeline import Pipeline
+          full_pipeline = Pipeline(steps=[('model', model)])
+          
+      training_history = {"status": "success"}
+      task_type = "dimensionality_reduction"
+      print("[MODEL] UMAP entraîné avec succès.")
+  else:
+      print("[ERREUR] Données d'entraînement introuvables ou umap-learn manquant.")
+_metadata:
+  bloc: 3
+  section: "5_clustering_automl_and_nn"

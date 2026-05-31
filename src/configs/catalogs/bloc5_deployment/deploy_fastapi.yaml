@@ -1,0 +1,89 @@
+id: "deploy_fastapi"
+name: "Deploy: FastAPI Server Generation"
+description: "Génère un script serveur FastAPI complet (server.py) pour servir le modèle via une API REST."
+category: "API Generation"
+tags: ["deploy", "api", "fastapi", "rest", "python"]
+applies_to: ["Classification", "Regression"]
+when_to_use: "Quand vous voulez déployer le modèle en tant que micro-service interrogeable par requêtes HTTP (Swagger UI inclus)."
+pros:
+  - "Très rapide, moderne, asynchrone, génère la documentation automatiquement."
+cons:
+  - "Génère le code, mais ne lance pas le serveur (l'utilisateur doit lancer `uvicorn`)."
+code_template: |
+  import os
+  import joblib
+
+  deployment_artifacts = {}
+
+  if 'full_pipeline' in locals():
+      print("[DEPLOY] Génération de l'API FastAPI...")
+      try:
+          os.makedirs("outputs/deployment", exist_ok=True)
+          
+          # D'abord, on sauvegarde le modèle
+          model_path = "outputs/deployment/model.joblib"
+          joblib.dump(full_pipeline, model_path)
+          deployment_artifacts["model_path"] = model_path
+          
+          # On tente de récupérer le nom des colonnes (features) si possible
+          features_code = "features: dict"
+          try:
+              if hasattr(full_pipeline, 'feature_names_in_'):
+                  feat_names = full_pipeline.feature_names_in_
+                  features_code = "\\n".join([f"    {f}: float" for f in feat_names])
+          except:
+              pass
+              
+          fastapi_code = f"""import joblib
+  import pandas as pd
+  from fastapi import FastAPI, HTTPException
+  from pydantic import BaseModel
+  import uvicorn
+  
+  # Chargement du modèle
+  model = joblib.load('model.joblib')
+  
+  app = FastAPI(title="DataML App Model API", version="1.0")
+  
+  # Définition dynamique du format d'entrée (basique)
+  class PredictionInput(BaseModel):
+      data: dict # Dictionnaire de features, ex: {{"feature1": 1.0, "feature2": 2.0}}
+  
+  @app.get("/")
+  def root():
+      return {{"message": "API is running. Go to /docs for documentation."}}
+  
+  @app.post("/predict")
+  def predict(payload: PredictionInput):
+      try:
+          # Conversion en DataFrame (le pipeline s'attend souvent à un DataFrame)
+          df = pd.DataFrame([payload.data])
+          prediction = model.predict(df)
+          
+          # Gérer les probabilités si dispo
+          response = {{"prediction": prediction[0].item() if hasattr(prediction[0], 'item') else prediction[0]}}
+          
+          if hasattr(model, 'predict_proba'):
+              proba = model.predict_proba(df)
+              response["probabilities"] = proba[0].tolist()
+              
+          return response
+      except Exception as e:
+          raise HTTPException(status_code=400, detail=str(e))
+  
+  if __name__ == "__main__":
+      uvicorn.run("server:app", host="0.0.0.0", port=8000, reload=True)
+  """
+          
+          api_script_path = "outputs/deployment/server.py"
+          with open(api_script_path, "w", encoding="utf-8") as f:
+              f.write(fastapi_code)
+              
+          deployment_artifacts["fastapi_script"] = api_script_path
+          print(f"[DEPLOY] API FastAPI générée sous {api_script_path}")
+          print(f"[DEPLOY] Pour lancer : cd outputs/deployment && uvicorn server:app --reload")
+      except Exception as e:
+          print(f"[DEPLOY ERREUR] FastAPI : {str(e)}")
+_metadata:
+  bloc: 5
+  section: "2_api"

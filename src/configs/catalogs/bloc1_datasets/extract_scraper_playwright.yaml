@@ -1,0 +1,52 @@
+id: "extract_scraper_playwright"
+name: "Extract: Web Scraping (Playwright)"
+description: "Pilote Chromium via Playwright pour scrapper une SPA (React, Vue, Angular)."
+category: "1. Extract"
+tags: ["extract", "scraping", "playwright", "spa"]
+code_template: |
+  import asyncio
+  from playwright.async_api import async_playwright
+  import os
+  import time
+
+  # [PARAM: TARGET_URL | string]
+  TARGET_URL = "https://example.com/spa"
+  # [/PARAM]
+  
+  # [PARAM: DEST_PATH | string]
+  DEST_PATH = "./data/raw/scraped_spa.html"
+  # [/PARAM]
+
+  print(f"[EXTRACT] Lancement de Playwright pour {TARGET_URL}...")
+  os.makedirs(os.path.dirname(DEST_PATH), exist_ok=True)
+
+  async def run_playwright():
+      async with async_playwright() as p:
+          browser = await p.chromium.launch(headless=True)
+          page = await browser.new_page()
+          # Attend que le reseau soit inactif (fin des fetch() de la SPA)
+          await page.goto(TARGET_URL, wait_until='networkidle')
+          html = await page.content()
+          await browser.close()
+          return html
+
+  try:
+      start_time = time.time()
+      html_content = asyncio.run(run_playwright())
+      
+      with open(DEST_PATH, "w", encoding="utf-8") as f:
+          f.write(html_content)
+          
+      duration = time.time() - start_time
+      print(f"[EXTRACT] Succès Playwright. DOM SPA sauvegardé en {duration:.2f}s.")
+  except Exception as e:
+      print(f"[ERREUR EXTRACT] Échec du scraping Playwright : {str(e)}")
+      raise e
+
+  df = None
+  target_name = None
+  task_type = "unknown"
+  meta = {"source": "scraping_playwright", "path": DEST_PATH}
+_metadata:
+  bloc: 1
+  section: "1_extract"

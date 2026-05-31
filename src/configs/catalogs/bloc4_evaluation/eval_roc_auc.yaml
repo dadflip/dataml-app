@@ -1,0 +1,75 @@
+id: "eval_roc_auc"
+name: "Eval: ROC AUC Score"
+description: "Calcule l'aire sous la courbe ROC (AUC). Mesure la capacite du modele a discriminer les classes via les probabilites predites."
+category: "Metriques de Classification"
+tags: ["eval", "classification", "roc", "auc", "probabilites", "sklearn"]
+applies_to: ["Classification"]
+when_to_use: "Pour evaluer la qualite du ranking des predictions probabilistes, independamment du seuil de decision."
+pros:
+  - "Invariant au seuil de decision."
+  - "Performant pour comparer des modeles sur des donnees desequilibrees."
+cons:
+  - "Necessite des probabilites predites (y_proba)."
+  - "Peut etre optimiste si les classes sont tres desequilibrees (utiliser PR AUC en complement)."
+code_template: |
+  import numpy as np
+  from sklearn.metrics import roc_auc_score
+
+  evaluation_metrics = {}
+
+  print("[EVAL] Calcul du ROC AUC Score...")
+
+  if y_proba is None:
+      print("[EVAL][WARN] y_proba est None, impossible de calculer le ROC AUC.")
+      evaluation_metrics["roc_auc"] = None
+      evaluation_metrics["warning"] = "y_proba non disponible, ROC AUC non calculable."
+  else:
+      try:
+          unique_classes = np.unique(y_test)
+          n_classes = len(unique_classes)
+
+          if n_classes == 2:
+              if y_proba.ndim == 2 and y_proba.shape[1] == 2:
+                  proba_positive = y_proba[:, 1]
+              elif y_proba.ndim == 1:
+                  proba_positive = y_proba
+              else:
+                  proba_positive = y_proba[:, 1]
+
+              auc_val = roc_auc_score(y_test, proba_positive)
+              evaluation_metrics["roc_auc"] = float(np.round(auc_val, 6))
+              print(f"[EVAL] ROC AUC (binary) : {auc_val:.4f}")
+
+          else:
+              for strategy in ["ovr", "ovo"]:
+                  try:
+                      auc_val = roc_auc_score(
+                          y_test, y_proba,
+                          multi_class=strategy,
+                          average="weighted"
+                      )
+                      evaluation_metrics[f"roc_auc_{strategy}_weighted"] = float(np.round(auc_val, 6))
+                      print(f"[EVAL] ROC AUC ({strategy}, weighted) : {auc_val:.4f}")
+                  except Exception as e_mc:
+                      print(f"[EVAL][WARN] ROC AUC {strategy} echoue : {e_mc}")
+                      evaluation_metrics[f"roc_auc_{strategy}_weighted"] = None
+
+              try:
+                  auc_macro = roc_auc_score(
+                      y_test, y_proba,
+                      multi_class="ovr",
+                      average="macro"
+                  )
+                  evaluation_metrics["roc_auc_ovr_macro"] = float(np.round(auc_macro, 6))
+                  print(f"[EVAL] ROC AUC (ovr, macro) : {auc_macro:.4f}")
+              except Exception:
+                  pass
+
+          evaluation_metrics["n_classes"] = int(n_classes)
+
+      except Exception as e:
+          print(f"[EVAL][ERREUR] Echec du calcul du ROC AUC : {e}")
+          evaluation_metrics["error"] = str(e)
+_metadata:
+  bloc: 4
+  section: "1_evaluation"

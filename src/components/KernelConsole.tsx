@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -27,8 +27,13 @@ export function KernelConsole({ cfg, kernelId }: { cfg: KernelConfig; kernelId: 
   const [history, setHistory] = useState<string[]>([]);
   const [historyIdx, setHistoryIdx] = useState(-1);
   const [running, setRunning] = useState(false);
-  const [result, setResult] = useState<ExecResult | null>(null);
-  
+  type ExecutionBlock = {
+    id: number;
+    command: string;
+    result: ExecResult | null;
+  };
+  const [blocks, setBlocks] = useState<ExecutionBlock[]>([]);
+
   const [search, setSearch] = useState("");
   const [activeCategory, setActiveCategory] = useState<PackageCategory | "All">("All");
   const [catalog, setCatalog] = useState<PackageMeta[]>([]);
@@ -36,6 +41,14 @@ export function KernelConsole({ cfg, kernelId }: { cfg: KernelConfig; kernelId: 
   useEffect(() => {
     loadPackagesCatalog().then(c => setCatalog(c.packages));
   }, []);
+
+  // Auto-scroll to bottom of console when new output arrives
+  const consoleEndRef = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    if (activeTab === "console" && consoleEndRef.current) {
+      consoleEndRef.current.scrollIntoView({ behavior: "smooth" });
+    }
+  }, [blocks, activeTab]);
 
   const runCmdStr = async (codeStr: string) => {
     if (!kernelId || !codeStr.trim() || running) return;
@@ -49,17 +62,29 @@ export function KernelConsole({ cfg, kernelId }: { cfg: KernelConfig; kernelId: 
     setHistoryIdx(-1);
 
     setRunning(true);
-    setResult({ status: "running", stdout: "", stderr: "", displays: [] });
+    const blockId = Date.now();
+    
+    setBlocks(prev => [...prev, { 
+      id: blockId, 
+      command: code, 
+      result: { status: "running", stdout: "", stderr: "", displays: [] } 
+    }]);
 
-    const { promise } = executeCode(cfg, kernelId, code, (r) => setResult(r));
+    const { promise } = executeCode(cfg, kernelId, code, (r) => {
+      setBlocks(prev => prev.map(b => b.id === blockId ? { ...b, result: r } : b));
+    });
+    
     try {
       await promise;
     } catch (e) {
-      setResult((prev) => ({
-        ...(prev || { status: "error", stdout: "", stderr: "", displays: [] }),
-        status: "error",
-        stderr: (prev?.stderr || "") + "\n" + (e as Error).message
-      }));
+      setBlocks(prev => prev.map(b => b.id === blockId ? {
+        ...b,
+        result: {
+          ...(b.result || { status: "error", stdout: "", stderr: "", displays: [] }),
+          status: "error",
+          stderr: (b.result?.stderr || "") + "\n" + (e as Error).message
+        }
+      } : b));
     } finally {
       setRunning(false);
     }
@@ -116,7 +141,7 @@ export function KernelConsole({ cfg, kernelId }: { cfg: KernelConfig; kernelId: 
           <span className="hidden sm:inline">Console</span>
         </Button>
       </DialogTrigger>
-      <DialogContent className="max-w-[750px] flex flex-col max-h-[85vh]">
+      <DialogContent className="w-[calc(100%-2rem)] sm:max-w-[750px] flex flex-col max-h-[85vh]">
         <DialogHeader className="shrink-0">
           <DialogTitle className="flex items-center gap-2 text-base">
             <Terminal className="h-4 w-4" /> Console et Paquets Distants
@@ -138,12 +163,24 @@ export function KernelConsole({ cfg, kernelId }: { cfg: KernelConfig; kernelId: 
             </div>
 
             <div className="flex-1 rounded-lg bg-black/90 border border-border p-3 overflow-y-auto font-mono text-[11px] text-zinc-300 flex flex-col">
-              {result ? (
+              {blocks.length > 0 ? (
                 <>
-                  <div className="text-zinc-500 mb-2">$ {result.status === "running" ? "Exécution en cours..." : "Terminé"}</div>
-                  {result.stdout && <pre className="whitespace-pre-wrap text-green-400 font-mono flex-1">{result.stdout}</pre>}
-                  {result.stderr && <pre className="whitespace-pre-wrap text-red-400 font-mono flex-1 mt-2">{result.stderr}</pre>}
-                  {(!result.stdout && !result.stderr && result.status !== "running") && <div className="text-zinc-500 italic mt-auto">Aucune sortie</div>}
+                  {blocks.map(b => (
+                    <div key={b.id} className="mb-4 last:mb-0">
+                      <div className="text-zinc-400 mb-1 flex items-center gap-2">
+                        <span className="text-[color:var(--color-primary)] font-bold"></span> {b.command}
+                        {b.result?.status === "running" && <span className="text-xs text-zinc-500 animate-pulse ml-2">(En cours...)</span>}
+                      </div>
+                      {b.result && (
+                        <div className="pl-3 border-l-2 border-zinc-800">
+                          {b.result.stdout && <pre className="whitespace-pre-wrap text-zinc-300 font-mono mt-1">{b.result.stdout}</pre>}
+                          {b.result.stderr && <pre className="whitespace-pre-wrap text-red-400 font-mono mt-1">{b.result.stderr}</pre>}
+                          {(!b.result.stdout && !b.result.stderr && b.result.status !== "running") && <div className="text-zinc-600 italic mt-1">Aucune sortie</div>}
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                  <div ref={consoleEndRef} />
                 </>
               ) : (
                 <div className="text-zinc-500 italic">Prêt. Tapez une commande (ex: pip install xgboost). Vous pouvez utiliser les flèches du clavier pour naviguer dans l'historique.</div>

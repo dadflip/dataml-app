@@ -1,0 +1,50 @@
+id: "eval_max_error"
+name: "Eval: Max Error (Erreur Maximale)"
+description: >
+  Calcule l'erreur maximale absolue entre les valeurs reelles et les predictions.
+  Cette metrique identifie le pire cas de prediction du modele. Utile pour les
+  applications ou les erreurs extremes sont inacceptables.
+category: "Metriques de Regression"
+tags: ["eval", "regression", "max", "erreur", "pire_cas", "metrique"]
+applies_to: ["Regression"]
+when_to_use: >
+  Utiliser lorsque l'on souhaite identifier l'erreur de prediction la plus importante,
+  notamment dans les domaines critiques ou la pire erreur doit rester sous un seuil defini.
+pros:
+  - "Identifie le pire cas de prediction"
+  - "Metrique de securite pour les applications critiques"
+  - "Simple et interpretable"
+cons:
+  - "Extremement sensible a un seul point aberrant"
+  - "Ne donne aucune information sur la distribution globale des erreurs"
+  - "Peut etre trompeuse si un seul echantillon est mal predit"
+code_template: |
+  evaluation_metrics = {}
+  try:
+      from sklearn.metrics import max_error
+      import numpy as np
+
+      print("[EVAL] Calcul du Max Error...")
+
+      max_err_value = max_error(y_test, y_pred)
+
+      # Find the index of the worst prediction
+      residuals = np.abs(np.array(y_test) - np.array(y_pred))
+      worst_idx = int(np.argmax(residuals))
+
+      evaluation_metrics["max_error"] = float(max_err_value)
+      evaluation_metrics["worst_prediction_index"] = worst_idx
+      evaluation_metrics["worst_actual_value"] = float(np.array(y_test)[worst_idx])
+      evaluation_metrics["worst_predicted_value"] = float(np.array(y_pred)[worst_idx])
+
+      print(f"[EVAL] Max Error = {max_err_value:.6f}")
+      print(f"[EVAL] Pire prediction a l'index {worst_idx}: "
+            f"reel={np.array(y_test)[worst_idx]:.4f}, predit={np.array(y_pred)[worst_idx]:.4f}")
+
+  except Exception as e:
+      print(f"[EVAL] Erreur lors du calcul du Max Error : {e}")
+      evaluation_metrics["max_error"] = None
+      evaluation_metrics["error"] = str(e)
+_metadata:
+  bloc: 4
+  section: "1_evaluation"

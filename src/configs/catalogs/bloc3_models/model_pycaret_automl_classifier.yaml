@@ -1,0 +1,72 @@
+id: "model_pycaret_automl_classifier"
+name: "Model: PyCaret AutoML (Classification)"
+description: "Recherche automatique du meilleur modèle de classification parmi des dizaines d'algorithmes (RandomForest, LightGBM, SVM...)."
+category: "AutoML"
+tags: ["model", "automl", "classification", "tabular", "pycaret"]
+applies_to: ["Tabulaire"]
+when_to_use: "Quand vous voulez une baseline solide très rapidement sans écrire une ligne de code."
+pros:
+  - "Teste plusieurs modèles automatiquement."
+  - "Très simple à utiliser."
+cons:
+  - "Peut être très lent si le dataset est gros."
+  - "PyCaret réécrit son propre pipeline en interne."
+hyperparameters:
+  sort: "Métrique à optimiser ('Accuracy', 'AUC', 'F1', 'Precision', 'Recall')."
+code_template: |
+  import pandas as pd
+  import numpy as np
+  try:
+      from pycaret.classification import setup, compare_models, pull, predict_model
+  except ImportError:
+      setup = None
+      print("[ERREUR] pycaret n'est pas installé. Lancez : !pip install pycaret")
+
+  # [PARAM: SORT_METRIC | string]
+  SORT_METRIC = "Accuracy"
+  # [/PARAM]
+
+  print(f"[MODEL] AutoML PyCaret Classification (optimisant {SORT_METRIC})...")
+  if 'X_train' in locals() and 'y_train' in locals() and 'X_test' in locals() and setup is not None:
+      # PyCaret a besoin d'un DataFrame unique avec X et y
+      train_data = pd.DataFrame(X_train) if not isinstance(X_train, pd.DataFrame) else X_train.copy()
+      train_data['target_col'] = y_train
+      
+      # Initialisation de l'environnement PyCaret (silencieuse)
+      setup(data=train_data, target='target_col', html=False, verbose=False, session_id=42)
+      
+      print("Comparaison des modèles en cours (cela peut prendre du temps)...")
+      # On cherche le meilleur modèle selon la métrique demandée
+      best_model = compare_models(sort=SORT_METRIC, n_select=1, verbose=False)
+      
+      # Leaderboard
+      leaderboard = pull()
+      print("Meilleur modèle trouvé :", leaderboard.index[0])
+      
+      # Inférence
+      X_te_df = pd.DataFrame(X_test) if not isinstance(X_test, pd.DataFrame) else X_test.copy()
+      predictions = predict_model(best_model, data=X_te_df)
+      
+      # PyCaret 3.x ajoute les colonnes 'prediction_label' et 'prediction_score'
+      y_pred = predictions['prediction_label'].values if 'prediction_label' in predictions.columns else predictions['Label'].values
+      y_proba = predictions['prediction_score'].values if 'prediction_score' in predictions.columns else None
+      
+      feature_importances = None
+      if hasattr(best_model, 'feature_importances_'):
+          feature_importances = best_model.feature_importances_
+          
+      if 'preprocessor' in locals() and preprocessor is not None:
+          try: from imblearn.pipeline import Pipeline
+          except: from sklearn.pipeline import Pipeline
+          full_pipeline = Pipeline(steps=preprocessor.steps + [('model', best_model)])
+      else:
+          full_pipeline = best_model
+          
+      training_history = {"status": "success", "best_model": str(type(best_model).__name__)}
+      task_type = "classification"
+      print("[MODEL] PyCaret AutoML terminé avec succès.")
+  else:
+      print("[ERREUR] Données d'entraînement ou module pycaret introuvables.")
+_metadata:
+  bloc: 3
+  section: "5_clustering_automl_and_nn"

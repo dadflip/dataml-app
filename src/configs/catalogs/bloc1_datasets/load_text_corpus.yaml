@@ -1,0 +1,66 @@
+id: "load_text_corpus"
+name: "Load: Text Corpus (Flat Files)"
+description: "Charge des fichiers textes plats en tant que lignes d'un DataFrame."
+category: "2. Load"
+tags: ["load", "text", "nlp", "corpus"]
+code_template: |
+  import pandas as pd
+  import os
+  import glob
+  import time
+
+  # [PARAM: TEXT_DIR | string]
+  TEXT_DIR = "./data/raw/text_corpus"
+  # [/PARAM]
+
+  # [PARAM: SPLIT_BY_LINE | boolean]
+  SPLIT_BY_LINE = True
+  # [/PARAM]
+
+  print(f"[LOAD] Chargement du corpus texte depuis {TEXT_DIR}...")
+
+  try:
+      start_time = time.time()
+      texts = []
+      labels = []
+      
+      if os.path.exists(TEXT_DIR):
+          if os.path.isfile(TEXT_DIR):
+              files = [TEXT_DIR]
+          else:
+              files = glob.glob(os.path.join(TEXT_DIR, "*.txt"))
+              
+          for fpath in files:
+              # On peut imaginer que le nom du fichier est un label, ou non. On laisse vide ici.
+              label = os.path.basename(fpath).replace('.txt', '')
+              with open(fpath, 'r', encoding='utf-8', errors='ignore') as f:
+                  if SPLIT_BY_LINE:
+                      for line in f:
+                          if line.strip():
+                              texts.append(line.strip())
+                              labels.append(label)
+                  else:
+                      texts.append(f.read().strip())
+                      labels.append(label)
+                      
+          df = pd.DataFrame({'text_content': texts, 'file_source': labels})
+          
+          duration = time.time() - start_time
+          print(f"[LOAD] Succès. {len(texts)} séquences texte chargées en {duration:.2f}s.")
+          
+          target_name = "file_source" # Peut être modifié
+          task_type = "nlp_unsupervised"
+          meta = {"format": "text_corpus", "shape": df.shape}
+      else:
+          print(f"[ERREUR LOAD] Le chemin {TEXT_DIR} est introuvable.")
+          df = None
+          target_name = None
+          task_type = "unknown"
+          meta = {}
+  except Exception as e:
+      print(f"[ERREUR LOAD] Échec du chargement du texte : {str(e)}")
+      raise e
+
+_metadata:
+  bloc: 1
+  section: "2_load"

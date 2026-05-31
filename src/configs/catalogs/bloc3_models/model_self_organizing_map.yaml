@@ -1,0 +1,54 @@
+id: "model_self_organizing_map"
+name: "Model: Self-Organizing Map (SOM / Kohonen)"
+description: "Réseau de neurones non-supervisé produisant une carte 2D préservant la topologie des données."
+category: "Génératif & Non-Supervisé"
+tags: ["model", "unsupervised", "clustering", "som", "neural-network"]
+applies_to: ["Tabulaire"]
+when_to_use: "Pour le clustering topologique ou la visualisation 2D."
+pros:
+  - "Préserve la topologie des données."
+cons:
+  - "Lent. Nécessite MiniSom."
+hyperparameters:
+  x_size: "Largeur de la carte (ex: 10)."
+  y_size: "Hauteur de la carte (ex: 10)."
+code_template: |
+  import pandas as pd
+  import numpy as np
+  try:
+      from minisom import MiniSom
+  except ImportError:
+      MiniSom = None
+      print("[ERREUR] minisom n'est pas installé. Lancez : !pip install MiniSom")
+
+  # [PARAM: X_SIZE | number]
+  X_SIZE = 10
+  # [/PARAM]
+
+  # [PARAM: Y_SIZE | number]
+  Y_SIZE = 10
+  # [/PARAM]
+
+  print(f"[MODEL] Entraînement SOM ({X_SIZE}x{Y_SIZE})...")
+  if 'X_train' in locals() and 'X_test' in locals() and MiniSom is not None:
+      X_tr_np = np.array(X_train, dtype=np.float32)
+      X_te_np = np.array(X_test, dtype=np.float32)
+      som = MiniSom(x=int(X_SIZE), y=int(Y_SIZE), input_len=X_tr_np.shape[1], sigma=1.0, learning_rate=0.5)
+      som.random_weights_init(X_tr_np)
+      som.train_random(data=X_tr_np, num_iteration=100)
+      preds = []
+      for x in X_te_np:
+          w = som.winner(x)
+          preds.append(f"{w[0]}_{w[1]}")
+      y_pred = np.array(preds)
+      y_proba = None
+      feature_importances = None
+      full_pipeline = som
+      training_history = {"status": "success"}
+      task_type = "clustering"
+      print("[MODEL] SOM entraîné avec succès.")
+  else:
+      print("[ERREUR] Données ou minisom manquants.")
+_metadata:
+  bloc: 3
+  section: "6_neural_networks"

@@ -1,0 +1,27 @@
+id: "eda_timeseries_lineplot"
+name: "EDA: Série Temporelle"
+description: "Trace l'évolution temporelle globale."
+category: "3. Exploratory Data Analysis"
+tags: ["eda", "timeseries", "tabular", "lineplot"]
+code_template: |
+  import pandas as pd
+  import matplotlib.pyplot as plt
+  import seaborn as sns
+
+  # [PARAM: TIME_COL | string]
+  TIME_COL = "date"
+  # [/PARAM]
+
+  if TIME_COL in df.columns and 'target_name' in locals() and target_name:
+      time_series = pd.to_datetime(df[TIME_COL], errors='coerce')
+      plt.figure(figsize=(15, 5))
+      sns.lineplot(x=time_series, y=df[target_name])
+      plt.title(f"Évolution de {target_name} au cours du temps ({TIME_COL})")
+      plt.xticks(rotation=45)
+      plt.tight_layout()
+      plt.show()
+  else:
+      print("[EDA] TIME_COL ou target_name introuvable.")
+_metadata:
+  bloc: 1
+  section: "3_eda"

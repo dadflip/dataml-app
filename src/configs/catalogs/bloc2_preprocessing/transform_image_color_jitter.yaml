@@ -1,0 +1,53 @@
+id: "transform_image_color_jitter"
+name: "Transform: Image Color Jitter"
+description: "Data Augmentation couleur."
+category: "4.1 Preprocessing"
+tags: ["transform", "image", "multimedia", "torchvision", "pipeline"]
+applies_to: ["Images"]
+when_to_use: "Robustesse éclairage."
+pros:
+  - "Généralise bien."
+cons:
+  - "Peut détruire info."
+hyperparameters:
+  img_col: "Colonne images"
+  jitter_factor: "Facteur"
+code_template: |
+  import pandas as pd
+  import torchvision.transforms as T
+  from PIL import Image
+  from sklearn.preprocessing import FunctionTransformer
+
+  # [PARAM: IMG_COL | string]
+  IMG_COL = "image"
+  # [/PARAM]
+
+  # [PARAM: JITTER_FACTOR | number]
+  JITTER_FACTOR = 0.2
+  # [/PARAM]
+
+  print(f"[TRANSFORM] Image Jitter sur '{IMG_COL}'...")
+  if 'df' in locals():
+      if 'pipeline_steps' not in locals(): pipeline_steps = {}
+      
+      if IMG_COL in df.columns:
+          def jitter_func(X):
+              X_df = pd.DataFrame(X) if not isinstance(X, pd.DataFrame) else X
+              tf = T.ColorJitter(brightness=JITTER_FACTOR, contrast=JITTER_FACTOR, saturation=JITTER_FACTOR)
+              X_df[IMG_COL] = X_df[IMG_COL].apply(lambda x: tf(x) if isinstance(x, Image.Image) else x)
+              return X_df
+
+          transformer = FunctionTransformer(jitter_func)
+          
+          step_name = 'image_jitter'
+          pipeline_steps[step_name] = (step_name, transformer)
+          
+          df = transformer.transform(df)
+          print("[TRANSFORM] Jitter appliqué.")
+      else:
+          print("[ERREUR] Colonne introuvable.")
+  else:
+      print("[ERREUR] 'df' introuvable.")
+_metadata:
+  bloc: 2
+  section: "4_preprocessing"

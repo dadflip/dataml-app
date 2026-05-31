@@ -1,0 +1,86 @@
+id: "pipeline_102flowers"
+name: "Recette : 102 Flowers (CNN & KNN)"
+description: "Classification de fleurs avec ResNet18 (Deep Learning) et KNN (sur matrice de distances Oxford). Démontre l'usage du Bloc 0 (Custom)."
+category: "Computer Vision"
+nodes:
+  # BLOC 1 : EXTRACTION / TELECHARGEMENT
+  - node_id: "dl_flowers"
+    block_id: "extract_http"
+    params:
+      FILE_URL: "https://www.robots.ox.ac.uk/~vgg/data/flowers/102/102flowers.tgz"
+      DEST_PATH: "./data/raw/102flowers/102flowers.tgz"
+
+  - node_id: "dl_labels"
+    block_id: "extract_http"
+    params:
+      FILE_URL: "https://www.robots.ox.ac.uk/~vgg/data/flowers/102/imagelabels.mat"
+      DEST_PATH: "./data/raw/102flowers/imagelabels.mat"
+      
+  - node_id: "dl_distances"
+    block_id: "extract_http"
+    params:
+      FILE_URL: "https://www.robots.ox.ac.uk/~vgg/data/flowers/102/distancematrices102.mat"
+      DEST_PATH: "./data/raw/102flowers/distancematrices102.mat"
+
+  - node_id: "extract_tgz"
+    block_id: "extract_unpack_archive"
+    depends_on: ["dl_flowers"]
+    params:
+      ARCHIVE_PATH: "./data/raw/102flowers/102flowers.tgz"
+      EXTRACT_DIR: "./data/extracted/102flowers"
+
+  # BLOC 0 : CUSTOM LOAD
+  - node_id: "load_images"
+    block_id: "load_102flowers_custom"
+    depends_on: ["extract_tgz", "dl_labels", "dl_distances"]
+    params:
+      IMAGES_DIR: "./data/extracted/102flowers/jpg"
+      LABELS_MAT: "./data/raw/102flowers/imagelabels.mat"
+      DISTANCES_MAT: "./data/raw/102flowers/distancematrices102.mat"
+
+  - node_id: "eda_grid"
+    block_id: "eda_custom_flowers_grid"
+    depends_on: ["load_images"]
+
+  # BLOC 2 : PREPROCESSING
+  - node_id: "preprocess_images"
+    block_id: "transform_image_to_tensor_paths"
+    depends_on: ["eda_grid"]
+    params:
+      RESIZE: 224
+
+  - node_id: "split_data"
+    block_id: "transform_train_test_split"
+    depends_on: ["preprocess_images"]
+    params:
+      TEST_SIZE: 0.2
+
+  # BLOC 3 : MODELS (BRANCHE 1 - RESNET CNN)
+  - node_id: "model_resnet"
+    block_id: "model_resnet18_classifier"
+    depends_on: ["split_data"]
+    params:
+      EPOCHS: 2
+      LEARNING_RATE: 0.001
+      
+  # BLOC 4 : EVALUATIONS (BRANCHE 1)
+  - node_id: "eval_acc_cnn"
+    block_id: "eval_accuracy"
+    depends_on: ["model_resnet"]
+    
+  - node_id: "eval_conf_cnn"
+    block_id: "eval_confusion_matrix"
+    depends_on: ["model_resnet"]
+
+  # BLOC 3 : MODELS (BRANCHE 2 - KNN PRECOMPUTED)
+  - node_id: "model_knn"
+    block_id: "model_knn_precomputed"
+    depends_on: ["split_data"]
+    params:
+      N_NEIGHBORS: 5
+      DISTANCE_KEY: "D_hsv"
+      
+  # BLOC 4 : EVALUATIONS (BRANCHE 2)
+  - node_id: "eval_acc_knn"
+    block_id: "eval_accuracy"
+    depends_on: ["model_knn"]

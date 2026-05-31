@@ -1,0 +1,57 @@
+id: "eval_equal_opportunity_score"
+name: "Eval Fairness: Equal Opportunity Score"
+description: "Mesure l'équité en vérifiant si le taux de Vrais Positifs (Recall) est le même entre un groupe privilégié et un non privilégié."
+category: "Fairness & Bias Metrics"
+tags: ["eval", "metric", "fairness", "bias", "classification"]
+applies_to: ["Classification Binaire"]
+when_to_use: "Quand il est crucial que les personnes qui MÉRITENT le résultat positif l'obtiennent de manière égale (ex: admission universitaire)."
+pros:
+  - "Métrique d'équité très reconnue académiquement."
+cons:
+  - "Ne regarde que les Vrais Positifs."
+code_template: |
+  import numpy as np
+  from sklearn.metrics import recall_score
+
+  evaluation_metrics = {}
+
+  if task_type == "classification" and 'X_test' in locals() and 'y_test' in locals() and 'y_pred' in locals():
+      print("[EVAL] Calcul du Equal Opportunity Score...")
+      try:
+          # [PARAM: SENSITIVE_COLUMN_INDEX | number]
+          SENSITIVE_COLUMN_INDEX = 0
+          # [/PARAM]
+          
+          # [PARAM: PRIVILEGED_VALUE | number/string]
+          PRIVILEGED_VALUE = 1
+          # [/PARAM]
+          
+          X_arr = np.array(X_test)
+          if len(X_arr.shape) > 1 and X_arr.shape[1] > SENSITIVE_COLUMN_INDEX:
+              sensitive_attr = X_arr[:, int(SENSITIVE_COLUMN_INDEX)]
+              
+              preds = np.array(y_pred)
+              actuals = np.array(y_test)
+              
+              idx_priv = (sensitive_attr == PRIVILEGED_VALUE)
+              idx_unpriv = (sensitive_attr != PRIVILEGED_VALUE)
+              
+              if sum(idx_priv) > 0 and sum(idx_unpriv) > 0:
+                  # Le rappel (recall) est le True Positive Rate
+                  tpr_priv = recall_score(actuals[idx_priv], preds[idx_priv], pos_label=1, zero_division=0)
+                  tpr_unpriv = recall_score(actuals[idx_unpriv], preds[idx_unpriv], pos_label=1, zero_division=0)
+                  
+                  eq_opp_diff = tpr_priv - tpr_unpriv
+                  
+                  evaluation_metrics["equal_opportunity_difference"] = float(eq_opp_diff)
+                  evaluation_metrics["tpr_privileged"] = float(tpr_priv)
+                  evaluation_metrics["tpr_unprivileged"] = float(tpr_unpriv)
+                  
+                  print(f"[EVAL] Equal Opportunity Diff: {eq_opp_diff:.3f} (Idéalement 0)")
+              else:
+                  print("[EVAL] Impossible de diviser les groupes privilégiés/non-privilégiés.")
+      except Exception as e:
+          print(f"[EVAL ERREUR] Fairness : {str(e)}")
+_metadata:
+  bloc: 4
+  section: "1_evaluation"

@@ -1,0 +1,56 @@
+id: "transform_log_transform"
+name: "Transform: Log Transform (log1p)"
+description: "Applique log(1+x)."
+category: "4.1 Preprocessing"
+tags: ["transform", "scaling", "tabular", "numpy", "pipeline"]
+applies_to: ["Tabulaire"]
+when_to_use: "Distribution très asymétrique."
+pros:
+  - "Rapproche de la loi normale."
+cons:
+  - "Ne marche que sur variables >= 0."
+hyperparameters:
+  columns: "Colonnes à transformer (séparées par virgule)."
+code_template: |
+  import pandas as pd
+  import numpy as np
+  from sklearn.preprocessing import FunctionTransformer
+  from sklearn.compose import ColumnTransformer
+
+  # [PARAM: COLUMNS | string]
+  COLUMNS = ""
+  # [/PARAM]
+
+  print("[TRANSFORM] Log Transform (log1p)...")
+  if 'df' in locals():
+      if 'pipeline_steps' not in locals(): pipeline_steps = {}
+      
+      num_cols = df.select_dtypes(include=[np.number]).columns.tolist()
+      if 'target_name' in locals() and target_name in num_cols:
+          num_cols.remove(target_name)
+          
+      if COLUMNS.strip():
+          req_cols = [c.strip() for c in COLUMNS.split(',')]
+          num_cols = [c for c in req_cols if c in num_cols]
+          
+      if len(num_cols) > 0:
+          log_transformer = FunctionTransformer(np.log1p, validate=True)
+          ct = ColumnTransformer(
+              [('log1p', log_transformer, num_cols)],
+              remainder='passthrough', verbose_feature_names_out=False
+          )
+          try: ct.set_output(transform="pandas")
+          except: pass
+          
+          step_name = 'log_transform'
+          pipeline_steps[step_name] = (step_name, ct)
+          
+          df = pd.DataFrame(ct.fit_transform(df), columns=df.columns, index=df.index)
+          print(f"[TRANSFORM] Log1p appliqué au pipeline sur {len(num_cols)} colonnes.")
+      else:
+          print("[TRANSFORM] Aucune colonne valide pour le log.")
+  else:
+      print("[ERREUR] 'df' introuvable.")
+_metadata:
+  bloc: 2
+  section: "4_preprocessing"

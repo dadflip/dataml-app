@@ -1,0 +1,80 @@
+id: "model_word2vec_svm"
+name: "Model: Word2Vec + SVM (Spacy)"
+description: "Utilise les embeddings Word2Vec pré-entraînés via Spacy, puis classifie avec un SVM linéaire."
+category: "Modèles NLP (Entraînés)"
+tags: ["model", "nlp", "classification", "spacy", "word2vec", "embeddings", "svm"]
+applies_to: ["Texte"]
+when_to_use: "Quand le sens sémantique global du texte est plus important que la fréquence exacte des mots (TF-IDF)."
+pros:
+  - "Capture le contexte et la sémantique (via l'embedding)."
+cons:
+  - "Nécessite le modèle 'en_core_web_md' ou 'fr_core_news_md' de Spacy."
+hyperparameters:
+  spacy_model: "Nom du modèle spaCy (ex: 'en_core_web_md')."
+code_template: |
+  import pandas as pd
+  import numpy as np
+  try:
+      import spacy
+  except ImportError:
+      spacy = None
+      print("[ERREUR] spacy n'est pas installé. Lancez : !pip install spacy")
+
+  from sklearn.svm import LinearSVC
+
+  # [PARAM: SPACY_MODEL | string]
+  SPACY_MODEL = "en_core_web_md"
+  # [/PARAM]
+
+  print(f"[MODEL] Extraction Word2Vec ({SPACY_MODEL}) + LinearSVC...")
+  if 'X_train' in locals() and 'y_train' in locals() and 'X_test' in locals() and spacy is not None:
+      # Téléchargement auto si absent
+      if not spacy.util.is_package(SPACY_MODEL):
+          print(f"Téléchargement du modèle {SPACY_MODEL}...")
+          spacy.cli.download(SPACY_MODEL)
+      
+      nlp = spacy.load(SPACY_MODEL)
+      
+      X_tr_text = X_train['text'] if (isinstance(X_train, pd.DataFrame) and 'text' in X_train.columns) else X_train
+      X_te_text = X_test['text'] if (isinstance(X_test, pd.DataFrame) and 'text' in X_test.columns) else X_test
+      if isinstance(X_tr_text, pd.DataFrame): X_tr_text = X_tr_text.apply(lambda row: ' '.join(row.values.astype(str)), axis=1)
+      if isinstance(X_te_text, pd.DataFrame): X_te_text = X_te_text.apply(lambda row: ' '.join(row.values.astype(str)), axis=1)
+      
+      # Vectorisation Word2Vec Mean (document vector)
+      print("Calcul des vecteurs documents (cela peut prendre du temps)...")
+      X_train_vec = np.array([nlp(str(text)).vector for text in X_tr_text])
+      X_test_vec = np.array([nlp(str(text)).vector for text in X_te_text])
+      
+      model = LinearSVC(random_state=42, dual=False)
+      model.fit(X_train_vec, y_train)
+      
+      y_pred = model.predict(X_test_vec)
+      y_proba = None
+      feature_importances = None
+      
+      # Export custom
+      from sklearn.preprocessing import FunctionTransformer
+      try: from imblearn.pipeline import Pipeline
+      except: from sklearn.pipeline import Pipeline
+      
+      def spacy_embedder(X):
+          return np.array([nlp(str(t)).vector for t in X])
+      
+      custom_model_pipeline = Pipeline([
+          ('embedder', FunctionTransformer(spacy_embedder)),
+          ('svc', model)
+      ])
+      
+      if 'preprocessor' in locals() and preprocessor is not None:
+          full_pipeline = Pipeline(steps=preprocessor.steps + [('model', custom_model_pipeline)])
+      else:
+          full_pipeline = custom_model_pipeline
+          
+      training_history = {"status": "success"}
+      task_type = "classification"
+      print("[MODEL] Modèle entraîné et Pipeline exporté avec succès.")
+  else:
+      print("[ERREUR] Données introuvables ou spacy manquant.")
+_metadata:
+  bloc: 3
+  section: "3_nlp_and_timeseries"

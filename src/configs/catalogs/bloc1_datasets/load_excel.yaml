@@ -1,0 +1,46 @@
+id: "load_excel"
+name: "Load: Fichier Excel"
+description: "Charge une feuille de calcul spécifique depuis un fichier Excel (.xls, .xlsx)."
+category: "2. Load"
+tags: ["load", "excel", "spreadsheet", "pandas"]
+code_template: |
+  import pandas as pd
+  import time
+  import os
+
+  # [PARAM: FILE_PATH | file]
+  FILE_PATH = "./data/raw/data.xlsx"
+  # [/PARAM]
+  
+  # [PARAM: SHEET_NAME | string]
+  SHEET_NAME = "Sheet1"
+  # [/PARAM]
+  
+  # [PARAM: TARGET_COL | string]
+  TARGET_COL = "target"
+  # [/PARAM]
+
+  print(f"[LOAD] Lecture de la feuille '{SHEET_NAME}' depuis {FILE_PATH}...")
+  if not os.path.exists(FILE_PATH):
+      raise FileNotFoundError(f"[ERREUR LOAD] Fichier Excel introuvable : {FILE_PATH}")
+
+  try:
+      start_time = time.time()
+      # openpyxl ou xlrd doit être installé selon l'extension
+      df = pd.read_excel(FILE_PATH, sheet_name=SHEET_NAME)
+      
+      duration = time.time() - start_time
+      print(f"[LOAD] Succès Excel. {df.shape[0]} lignes chargées en {duration:.2f}s.")
+  except ImportError:
+      print("[ERREUR LOAD] Modules manquants. Essayez : pip install openpyxl xlrd")
+      raise
+  except Exception as e:
+      print(f"[ERREUR LOAD] Erreur de lecture Excel : {str(e)}")
+      raise e
+
+  target_name = TARGET_COL if TARGET_COL and TARGET_COL in df.columns else None
+  task_type = "unknown"
+  meta = {"format": "excel", "sheet": SHEET_NAME, "shape": df.shape}
+_metadata:
+  bloc: 1
+  section: "2_load"

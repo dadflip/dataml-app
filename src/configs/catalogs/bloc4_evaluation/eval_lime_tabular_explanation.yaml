@@ -1,0 +1,65 @@
+id: "eval_lime_tabular_explanation"
+name: "Eval Plot: LIME Tabular Explanation (HTML)"
+description: "Explication locale par LIME (Local Interpretable Model-agnostic Explanations) générée sous forme de rapport HTML."
+category: "Explainability & Feature Importance"
+tags: ["eval", "explainability", "lime", "html", "local"]
+applies_to: ["Classification", "Regression"]
+when_to_use: "Comme alternative à SHAP pour l'explication d'instances individuelles, particulièrement sur données tabulaires."
+pros:
+  - "Plus rapide que SHAP Exact, fournit une explication visuelle sous forme de règles."
+cons:
+  - "Nécessite l'installation du package 'lime'."
+code_template: |
+  import os
+  import numpy as np
+  try:
+      import lime
+      import lime.lime_tabular
+  except ImportError:
+      lime = None
+
+  evaluation_metrics = {}
+
+  if 'full_pipeline' in locals() and 'X_train' in locals() and 'X_test' in locals() and lime is not None:
+      print("[EVAL] Génération de l'explication LIME...")
+      try:
+          os.makedirs("outputs/evaluation", exist_ok=True)
+          
+          X_train_arr = np.array(X_train)
+          X_test_arr = np.array(X_test)
+          
+          if 'feature_names_out' in locals() and len(feature_names_out) == X_train_arr.shape[1]:
+              feat_names = feature_names_out
+          else:
+              feat_names = [f"F_{i}" for i in range(X_train_arr.shape[1])]
+              
+          mode = 'classification' if task_type == 'classification' else 'regression'
+          
+          explainer = lime.lime_tabular.LimeTabularExplainer(
+              X_train_arr, feature_names=feat_names,
+              class_names=np.unique(y_test) if mode == 'classification' else ['Target'],
+              mode=mode
+          )
+          
+          # On explique la première instance
+          instance = X_test_arr[0]
+          
+          if mode == 'classification':
+              predict_fn = full_pipeline.predict_proba
+          else:
+              predict_fn = full_pipeline.predict
+              
+          exp = explainer.explain_instance(instance, predict_fn, num_features=5)
+          
+          html_path = "outputs/evaluation/lime_explanation.html"
+          exp.save_to_file(html_path)
+          
+          evaluation_metrics["lime_explanation_html"] = html_path
+          print(f"[EVAL] Rapport LIME sauvegardé sous {html_path}")
+      except Exception as e:
+          print(f"[EVAL ERREUR] LIME : {str(e)}")
+  elif lime is None:
+      print("[EVAL ERREUR] LIME n'est pas installé. Lancez : pip install lime")
+_metadata:
+  bloc: 4
+  section: "1_evaluation"

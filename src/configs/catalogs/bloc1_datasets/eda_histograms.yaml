@@ -1,0 +1,33 @@
+id: "eda_histograms"
+name: "EDA: Histogrammes Numériques"
+description: "Trace la distribution (Histogramme + KDE) des variables numériques du dataset."
+category: "3. Exploratory Data Analysis"
+tags: ["eda", "histogram", "tabular", "seaborn"]
+code_template: |
+  import pandas as pd
+  import numpy as np
+  import matplotlib.pyplot as plt
+  import seaborn as sns
+
+  # [PARAM: NUM_BINS | number]
+  NUM_BINS = 30
+  # [/PARAM]
+  
+  cols = df.select_dtypes(include=[np.number]).columns.tolist()
+  print(f"[EDA] === HISTOGRAMMES ({len(cols)} variables) ===")
+  
+  # Limiter à 20 pour éviter de bloquer l'affichage
+  if len(cols) > 20:
+      print("Trop de colonnes, affichage limité aux 20 premières.")
+      cols = cols[:20]
+      
+  plt.figure(figsize=(15, 4 * ((len(cols) + 2) // 3)))
+  for i, col in enumerate(cols):
+      plt.subplot(((len(cols) + 2) // 3), 3, i + 1)
+      sns.histplot(df[col].dropna(), bins=NUM_BINS, kde=True)
+      plt.title(f"Distribution de {col}")
+  plt.tight_layout()
+  plt.show()
+_metadata:
+  bloc: 1
+  section: "3_eda"

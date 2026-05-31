@@ -1,0 +1,27 @@
+id: "pipeline_unsupervised_clustering"
+name: "Recette : Customer Segmentation (Clustering)"
+description: "Segmentation non supervisée de clients (KMeans), score de silhouette et sauvegarde basique (Joblib)."
+category: "Clustering"
+nodes:
+  - node_id: "load_customers"
+    block_id: "load_csv"
+    params:
+      FILE_PATH: "./data/raw/customers.csv"
+
+  - node_id: "preprocess_scale"
+    block_id: "transform_standard_scaler"
+    depends_on: ["load_customers"]
+
+  - node_id: "model_kmeans"
+    block_id: "model_kmeans"
+    depends_on: ["preprocess_scale"]
+    params:
+      N_CLUSTERS: 5
+
+  - node_id: "eval_silhouette"
+    block_id: "eval_silhouette_score"
+    depends_on: ["model_kmeans"]
+
+  - node_id: "deploy_joblib"
+    block_id: "deploy_joblib"
+    depends_on: ["eval_silhouette"]

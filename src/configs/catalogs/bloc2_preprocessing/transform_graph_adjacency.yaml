@@ -1,0 +1,42 @@
+id: "transform_graph_adjacency"
+name: "Transform: Graph Edge Index Injector"
+description: "Rend l'edge_index du graphe (stocké dans 'meta') globalement accessible pour le Bloc 3 (GNN)."
+category: "4.1 Preprocessing"
+tags: ["transform", "graph", "pytorch-geometric", "gnn"]
+applies_to: ["Graphes"]
+when_to_use: "Indispensable pour lier le DataFrame (nœuds) à la matrice d'adjacence avant un GCN/GAT."
+pros:
+  - "Respecte le contrat de flux de données DataML."
+cons:
+  - "Techniquement, ne modifie pas le dataframe."
+hyperparameters:
+  none: "Aucun."
+code_template: |
+  import pandas as pd
+  from sklearn.preprocessing import FunctionTransformer
+
+  print(f"[TRANSFORM] Injection de l'Edge Index...")
+  if 'df' in locals() and 'meta' in locals():
+      if 'pipeline_steps' not in locals(): pipeline_steps = {}
+      
+      if 'edge_index' in meta:
+          # On injecte la variable dans le scope global pour que le modèle du Bloc 3 y ait accès
+          global global_edge_index
+          global_edge_index = meta['edge_index']
+          
+          def identity_transform(X):
+              return X
+
+          transformer = FunctionTransformer(identity_transform)
+          
+          step_name = 'graph_edge_index_injector'
+          pipeline_steps[step_name] = (step_name, transformer)
+          
+          print("[TRANSFORM] Edge index extrait de 'meta' et injecté globalement.")
+      else:
+          print("[ERREUR] 'edge_index' non trouvé dans 'meta'. Avez-vous utilisé le bon DataLoader ?")
+  else:
+      print("[ERREUR] 'df' ou 'meta' introuvables.")
+_metadata:
+  bloc: 2
+  section: "4_preprocessing"

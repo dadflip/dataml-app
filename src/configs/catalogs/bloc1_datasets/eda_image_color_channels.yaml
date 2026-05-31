@@ -1,0 +1,38 @@
+id: "eda_image_color_channels"
+name: "EDA: Canaux RGB Séparés"
+description: "Affiche séparément les canaux Rouge, Vert, Bleu d'une image."
+category: "3. Exploratory Data Analysis"
+tags: ["eda", "images", "multimedia", "rgb"]
+code_template: |
+  import matplotlib.pyplot as plt
+  import torch
+  import torchvision.transforms as T
+
+  if 'dataset' in locals() and len(dataset) > 0:
+      sample = dataset[0][0]
+      img = sample if isinstance(sample, torch.Tensor) else T.ToTensor()(sample)
+          
+      if img.shape[0] == 3:
+          fig, axes = plt.subplots(1, 4, figsize=(16, 4))
+          
+          axes[0].imshow(img.permute(1,2,0).numpy())
+          axes[0].set_title("Originale")
+          axes[0].axis('off')
+          
+          cmaps = ['Reds', 'Greens', 'Blues']
+          titles = ['Canal Rouge', 'Canal Vert', 'Canal Bleu']
+          
+          for i in range(3):
+              axes[i+1].imshow(img[i].numpy(), cmap=cmaps[i])
+              axes[i+1].set_title(titles[i])
+              axes[i+1].axis('off')
+              
+          plt.tight_layout()
+          plt.show()
+      else:
+          print("[EDA] L'image n'est pas RGB (3 canaux).")
+  else:
+      print("[EDA] Dataset non trouvé ou vide.")
+_metadata:
+  bloc: 1
+  section: "3_eda"

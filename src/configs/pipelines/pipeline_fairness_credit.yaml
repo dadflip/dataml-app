@@ -1,0 +1,30 @@
+id: "pipeline_fairness_credit"
+name: "Recette : Credit Scoring & Fairness"
+description: "Modèle de scoring de crédit (XGBoost) audité pour les biais démographiques et déployé via BentoML."
+category: "Tabular Classification"
+nodes:
+  - node_id: "load_credit"
+    block_id: "load_csv"
+    params:
+      FILE_PATH: "./data/raw/credit_data.csv"
+      TARGET_COL: "Default"
+
+  - node_id: "preprocess_data"
+    block_id: "transform_standard_scaler"
+    depends_on: ["load_credit"]
+
+  - node_id: "model_xgb"
+    block_id: "model_xgboost_classifier"
+    depends_on: ["preprocess_data"]
+
+  - node_id: "eval_disparate_impact"
+    block_id: "eval_disparate_impact_ratio"
+    depends_on: ["model_xgb"]
+
+  - node_id: "eval_demographic_parity"
+    block_id: "eval_demographic_parity"
+    depends_on: ["model_xgb"]
+
+  - node_id: "deploy_bentoml"
+    block_id: "deploy_bentoml"
+    depends_on: ["eval_disparate_impact", "eval_demographic_parity"]

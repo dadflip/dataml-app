@@ -1,0 +1,72 @@
+id: "eval_mape_vs_target_plot"
+name: "Eval Plot: Error vs Target (MAPE)"
+description: "Scatter plot de l'erreur absolue en pourcentage (MAPE) par rapport à la valeur cible."
+category: "Regression Visualizations"
+tags: ["eval", "plot", "regression", "mape", "error-analysis"]
+applies_to: ["Regression"]
+when_to_use: "Pour voir si le modèle a plus de mal à prédire (en proportion) les petites valeurs ou les grandes."
+pros:
+  - "Très utile pour le pricing ou la prévision de demande."
+cons:
+  - "Explose quand la valeur cible est proche de zéro."
+code_template: |
+  import os
+  import numpy as np
+  import matplotlib.pyplot as plt
+
+  evaluation_metrics = {}
+
+  if task_type == "regression" and 'y_test' in locals() and 'y_pred' in locals():
+      print("[EVAL] Génération du MAPE vs Target Plot...")
+      try:
+          os.makedirs("outputs/evaluation", exist_ok=True)
+          
+          yt = np.array(y_test)
+          yp = np.array(y_pred)
+          
+          # Filtrer les zéros pour éviter la division par zéro
+          non_zero = yt != 0
+          if not np.any(non_zero):
+              print("[EVAL ERREUR] Toutes les cibles sont nulles.")
+          else:
+              yt = yt[non_zero]
+              yp = yp[non_zero]
+              
+              percentage_errors = np.abs((yt - yp) / yt) * 100
+              
+              # Filtrer les erreurs aberrantes > 500% pour la lisibilité
+              valid = percentage_errors <= 500
+              yt_plot = yt[valid]
+              pe_plot = percentage_errors[valid]
+              
+              fig, ax = plt.subplots(figsize=(8, 6))
+              scatter = ax.scatter(yt_plot, pe_plot, alpha=0.5, c=pe_plot, cmap='viridis')
+              plt.colorbar(scatter, label='Absolute Percentage Error (%)')
+              
+              # Ligne de tendance lisse (moyenne glissante simple)
+              if len(yt_plot) > 10:
+                  sort_idx = np.argsort(yt_plot)
+                  yt_sorted = yt_plot[sort_idx]
+                  pe_sorted = pe_plot[sort_idx]
+                  
+                  window = max(len(yt_plot) // 20, 1)
+                  rolling_mean = np.convolve(pe_sorted, np.ones(window)/window, mode='valid')
+                  ax.plot(yt_sorted[window-1:], rolling_mean, 'r-', lw=2, label='Moving Average Error')
+                  
+              ax.set_title('Absolute Percentage Error vs Target Value')
+              ax.set_xlabel('True Target Value')
+              ax.set_ylabel('Absolute Percentage Error (%)')
+              ax.legend()
+              ax.grid(True, alpha=0.3)
+              
+              plot_path = "outputs/evaluation/mape_vs_target_plot.png"
+              fig.savefig(plot_path, dpi=300)
+              plt.close(fig)
+              
+              evaluation_metrics["mape_vs_target_plot"] = plot_path
+              print(f"[EVAL] Plot sauvegardé sous {plot_path}")
+      except Exception as e:
+          print(f"[EVAL ERREUR] : {str(e)}")
+_metadata:
+  bloc: 4
+  section: "1_evaluation"

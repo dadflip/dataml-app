@@ -1,0 +1,59 @@
+id: "eval_scale_location_plot"
+name: "Eval Plot: Scale-Location Plot (Hétéroscédasticité)"
+description: "Trace la racine carrée des résidus standardisés absolue en fonction des prédictions."
+category: "Regression Visualizations"
+tags: ["eval", "plot", "regression", "residuals", "scale-location"]
+applies_to: ["Regression"]
+when_to_use: "Aussi appelé Spread-Location plot, utilisé pour vérifier si la variance des résidus est constante (homoscédasticité)."
+pros:
+  - "Excellent pour voir si le modèle gère moins bien les grandes valeurs que les petites."
+cons:
+  - "Interprétation visuelle uniquement."
+code_template: |
+  import os
+  import numpy as np
+  import matplotlib.pyplot as plt
+
+  evaluation_metrics = {}
+
+  if task_type == "regression" and 'y_test' in locals() and 'y_pred' in locals():
+      print("[EVAL] Génération du Scale-Location Plot...")
+      try:
+          os.makedirs("outputs/evaluation", exist_ok=True)
+          
+          # Résidus
+          residuals = np.array(y_test) - np.array(y_pred)
+          
+          # Standardisation des résidus
+          std_res = (residuals - np.mean(residuals)) / np.std(residuals)
+          
+          # Racine carrée de la valeur absolue
+          sqrt_abs_res = np.sqrt(np.abs(std_res))
+          
+          fig, ax = plt.subplots(figsize=(8, 6))
+          
+          # Scatter plot
+          ax.scatter(y_pred, sqrt_abs_res, alpha=0.5, color='dodgerblue')
+          
+          # Ligne de tendance (LOWESS ou polyfit simple)
+          z = np.polyfit(y_pred, sqrt_abs_res, 1)
+          p = np.poly1d(z)
+          ax.plot(y_pred, p(y_pred), "r-", linewidth=2, label="Trend line")
+          
+          ax.set_title('Scale-Location Plot')
+          ax.set_xlabel('Valeur Prédite')
+          ax.set_ylabel(r'$\sqrt{|Standardized\ Residuals|}$')
+          ax.legend()
+          ax.grid(True, alpha=0.3)
+          
+          plot_path = "outputs/evaluation/scale_location_plot.png"
+          fig.savefig(plot_path, dpi=300)
+          plt.close(fig)
+          
+          evaluation_metrics["scale_location_plot"] = plot_path
+          print(f"[EVAL] Plot sauvegardé sous {plot_path}")
+      except Exception as e:
+          print(f"[EVAL ERREUR] : {str(e)}")
+_metadata:
+  bloc: 4
+  section: "1_evaluation"

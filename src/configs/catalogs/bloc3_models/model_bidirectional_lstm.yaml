@@ -1,0 +1,97 @@
+id: "model_bidirectional_lstm"
+name: "Model: Bi-Directional LSTM"
+description: "LSTM qui lit la séquence dans les deux sens (avant et arrière) pour mieux capturer le contexte global."
+category: "Réseaux Séquentiels (RNN)"
+tags: ["model", "classification", "timeseries", "nlp", "pytorch", "bi-lstm", "deep-learning"]
+applies_to: ["Séquences", "Texte"]
+when_to_use: "Classification de texte ou analyse de sentiment avec des ressources limitées."
+pros:
+  - "Contexte riche (passé et futur)."
+cons:
+  - "Plus lourd en mémoire qu'un LSTM classique."
+hyperparameters:
+  hidden_size: "Taille de l'état caché (ex: 64)."
+  num_layers: "Nombre de couches (ex: 2)."
+  epochs: "Nombre d'époques (ex: 10)."
+code_template: |
+  import pandas as pd
+  import numpy as np
+  try:
+      import torch
+      import torch.nn as nn
+      import torch.optim as optim
+      from torch.utils.data import DataLoader, TensorDataset
+  except ImportError:
+      torch = None
+      print("[ERREUR] torch n'est pas installé.")
+
+  # [PARAM: HIDDEN_SIZE | number]
+  HIDDEN_SIZE = 64
+  # [/PARAM]
+
+  # [PARAM: NUM_LAYERS | number]
+  NUM_LAYERS = 2
+  # [/PARAM]
+
+  # [PARAM: EPOCHS | number]
+  EPOCHS = 10
+  # [/PARAM]
+
+  print(f"[MODEL] Entraînement Bi-LSTM PyTorch...")
+  if 'X_train' in locals() and 'y_train' in locals() and 'X_test' in locals() and torch is not None:
+      X_tr_np = np.array(X_train)
+      X_te_np = np.array(X_test)
+      if len(X_tr_np.shape) == 2:
+          X_tr_np = X_tr_np.reshape((X_tr_np.shape[0], 1, X_tr_np.shape[1]))
+          X_te_np = X_te_np.reshape((X_te_np.shape[0], 1, X_te_np.shape[1]))
+      classes = np.unique(y_train)
+      num_classes = len(classes)
+      label2id = {c: i for i, c in enumerate(classes)}
+      id2label = {i: c for i, c in enumerate(classes)}
+      y_tr_enc = np.array([label2id[y] for y in y_train])
+      dataset = TensorDataset(torch.tensor(X_tr_np, dtype=torch.float32), torch.tensor(y_tr_enc, dtype=torch.long))
+      loader = DataLoader(dataset, batch_size=32, shuffle=True)
+
+      class BiLSTMClassifier(nn.Module):
+          def __init__(self, input_dim, hidden_dim, num_layers, num_classes):
+              super().__init__()
+              self.lstm = nn.LSTM(input_dim, hidden_dim, num_layers, batch_first=True, bidirectional=True, dropout=0.2 if num_layers>1 else 0)
+              self.fc = nn.Linear(hidden_dim * 2, num_classes)
+          def forward(self, x):
+              out, _ = self.lstm(x)
+              return self.fc(out[:, -1, :])
+
+      model = BiLSTMClassifier(X_tr_np.shape[2], int(HIDDEN_SIZE), int(NUM_LAYERS), num_classes)
+      device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+      model = model.to(device)
+      criterion = nn.CrossEntropyLoss()
+      optimizer = optim.Adam(model.parameters(), lr=0.001)
+      model.train()
+      for epoch in range(int(EPOCHS)):
+          for batch_X, batch_y in loader:
+              batch_X, batch_y = batch_X.to(device), batch_y.to(device)
+              optimizer.zero_grad()
+              loss = criterion(model(batch_X), batch_y)
+              loss.backward()
+              optimizer.step()
+      model.eval()
+      with torch.no_grad():
+          logits = model(torch.tensor(X_te_np, dtype=torch.float32).to(device))
+          preds_idx = torch.argmax(logits, dim=1).cpu().numpy()
+          y_pred = np.array([id2label[i] for i in preds_idx])
+          y_proba = torch.nn.functional.softmax(logits, dim=-1).cpu().numpy()
+      feature_importances = None
+      if 'preprocessor' in locals() and preprocessor is not None:
+          try: from imblearn.pipeline import Pipeline
+          except: from sklearn.pipeline import Pipeline
+          full_pipeline = Pipeline(steps=preprocessor.steps + [('model', model)])
+      else:
+          full_pipeline = model
+      training_history = {"status": "success", "loss": float(loss)}
+      task_type = "classification"
+      print("[MODEL] Bi-LSTM entraîné avec succès.")
+  else:
+      print("[ERREUR] Données ou torch manquants.")
+_metadata:
+  bloc: 3
+  section: "6_neural_networks"

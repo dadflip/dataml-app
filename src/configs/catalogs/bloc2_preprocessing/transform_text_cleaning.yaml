@@ -1,0 +1,53 @@
+id: "transform_text_cleaning"
+name: "Transform: Clean Text"
+description: "Nettoie le texte. Intégré au pipeline."
+category: "4.1 Preprocessing"
+tags: ["transform", "nlp", "text", "pandas", "pipeline"]
+applies_to: ["Texte"]
+when_to_use: "Avant vectorisation."
+pros:
+  - "Harmonise la casse."
+cons:
+  - "Peut supprimer info utile."
+hyperparameters:
+  text_col: "Colonne de texte"
+code_template: |
+  import pandas as pd
+  import re
+  from sklearn.preprocessing import FunctionTransformer
+  from sklearn.compose import ColumnTransformer
+
+  # [PARAM: TEXT_COL | string]
+  TEXT_COL = "text"
+  # [/PARAM]
+
+  print(f"[TRANSFORM] Text Cleaning sur '{TEXT_COL}'...")
+  if 'df' in locals():
+      if 'pipeline_steps' not in locals(): pipeline_steps = {}
+      
+      if TEXT_COL in df.columns:
+          def clean_func(X):
+              X_df = pd.DataFrame(X) if not isinstance(X, pd.DataFrame) else X
+              def _clean(t):
+                  t = str(t).lower()
+                  t = re.sub(r'[^a-z0-9\s]', '', t)
+                  return t.strip()
+              X_df[TEXT_COL] = X_df[TEXT_COL].apply(_clean)
+              return X_df
+
+          transformer = FunctionTransformer(clean_func)
+          
+          # On l'applique globalement (modifier la colonne in-place dans un clone Pandas)
+          # Cela remplace la colonne sans la supprimer du dataset (ce que ferait un CT sans passthrough)
+          step_name = 'text_cleaning'
+          pipeline_steps[step_name] = (step_name, transformer)
+          
+          df = transformer.transform(df)
+          print("[TRANSFORM] Texte nettoyé ajouté au pipeline.")
+      else:
+          print("[ERREUR] Colonne non trouvée.")
+  else:
+      print("[ERREUR] 'df' introuvable.")
+_metadata:
+  bloc: 2
+  section: "4_preprocessing"

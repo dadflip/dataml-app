@@ -1,0 +1,89 @@
+id: "model_cnn_2d"
+name: "Model: 2D CNN Custom (Vision)"
+description: "Réseau Convolutif 2D from scratch pour classifier des images (façon LeNet/VGG)."
+category: "Réseaux Convolutifs (CNN)"
+tags: ["model", "vision", "classification", "pytorch", "cnn", "deep-learning"]
+applies_to: ["Images"]
+when_to_use: "Pour classifier de petites images (MNIST, CIFAR) sans ResNet pré-entraîné."
+pros:
+  - "Léger et transparent."
+cons:
+  - "Surchauffe (overfit) rapidement sur des datasets complexes."
+hyperparameters:
+  epochs: "Nombre d'époques (ex: 5)."
+code_template: |
+  import pandas as pd
+  import numpy as np
+  try:
+      import torch
+      import torch.nn as nn
+      import torch.optim as optim
+      from torch.utils.data import DataLoader, TensorDataset
+  except ImportError:
+      torch = None
+      print("[ERREUR] torch n'est pas installé.")
+
+  # [PARAM: EPOCHS | number]
+  EPOCHS = 5
+  # [/PARAM]
+
+  print(f"[MODEL] Entraînement CNN 2D Custom...")
+  if 'X_train' in locals() and 'y_train' in locals() and 'X_test' in locals() and torch is not None:
+      X_tr_np = np.array(X_train)
+      X_te_np = np.array(X_test)
+      if len(X_tr_np.shape) == 2:
+          side = int(np.sqrt(X_tr_np.shape[1]))
+          X_tr_np = X_tr_np.reshape(-1, 1, side, side)
+          X_te_np = X_te_np.reshape(-1, 1, side, side)
+      classes = np.unique(y_train)
+      num_classes = len(classes)
+      label2id = {c: i for i, c in enumerate(classes)}
+      id2label = {i: c for i, c in enumerate(classes)}
+      y_tr_enc = np.array([label2id[y] for y in y_train])
+      dataset = TensorDataset(torch.tensor(X_tr_np, dtype=torch.float32), torch.tensor(y_tr_enc, dtype=torch.long))
+      loader = DataLoader(dataset, batch_size=32, shuffle=True)
+
+      class CNN2DClassifier(nn.Module):
+          def __init__(self, in_channels, num_classes):
+              super().__init__()
+              self.features = nn.Sequential(
+                  nn.Conv2d(in_channels, 16, 3, padding=1), nn.ReLU(), nn.MaxPool2d(2),
+                  nn.Conv2d(16, 32, 3, padding=1), nn.ReLU(), nn.MaxPool2d(2))
+              self.classifier = nn.Sequential(nn.AdaptiveAvgPool2d(1), nn.Flatten(), nn.Linear(32, num_classes))
+          def forward(self, x):
+              return self.classifier(self.features(x))
+
+      model = CNN2DClassifier(X_tr_np.shape[1], num_classes)
+      device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+      model = model.to(device)
+      criterion = nn.CrossEntropyLoss()
+      optimizer = optim.Adam(model.parameters(), lr=0.001)
+      model.train()
+      for epoch in range(int(EPOCHS)):
+          for batch_X, batch_y in loader:
+              batch_X, batch_y = batch_X.to(device), batch_y.to(device)
+              optimizer.zero_grad()
+              loss = criterion(model(batch_X), batch_y)
+              loss.backward()
+              optimizer.step()
+      model.eval()
+      with torch.no_grad():
+          logits = model(torch.tensor(X_te_np, dtype=torch.float32).to(device))
+          preds_idx = torch.argmax(logits, dim=1).cpu().numpy()
+          y_pred = np.array([id2label[i] for i in preds_idx])
+          y_proba = torch.nn.functional.softmax(logits, dim=-1).cpu().numpy()
+      feature_importances = None
+      if 'preprocessor' in locals() and preprocessor is not None:
+          try: from imblearn.pipeline import Pipeline
+          except: from sklearn.pipeline import Pipeline
+          full_pipeline = Pipeline(steps=preprocessor.steps + [('model', model)])
+      else:
+          full_pipeline = model
+      training_history = {"status": "success", "loss": float(loss)}
+      task_type = "classification"
+      print("[MODEL] CNN 2D entraîné avec succès.")
+  else:
+      print("[ERREUR] Données ou torch manquants.")
+_metadata:
+  bloc: 3
+  section: "6_neural_networks"

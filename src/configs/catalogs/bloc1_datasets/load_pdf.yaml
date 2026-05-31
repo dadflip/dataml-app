@@ -1,0 +1,44 @@
+id: "load_pdf"
+name: "Load: Texte PDF"
+description: "Extrait le texte brut d'un document PDF pour des tâches NLP."
+category: "2. Load"
+tags: ["load", "pdf", "nlp", "text"]
+code_template: |
+  import time
+  import os
+
+  # [PARAM: FILE_PATH | file]
+  FILE_PATH = "./data/raw/document.pdf"
+  # [/PARAM]
+
+  print(f"[LOAD] Lecture du fichier PDF : {FILE_PATH}...")
+  if not os.path.exists(FILE_PATH):
+      raise FileNotFoundError(f"[ERREUR LOAD] Fichier PDF introuvable : {FILE_PATH}")
+
+  try:
+      start_time = time.time()
+      import PyPDF2
+      
+      text = ""
+      with open(FILE_PATH, 'rb') as f:
+          reader = PyPDF2.PdfReader(f)
+          num_pages = len(reader.pages)
+          for page in reader.pages:
+              text += page.extract_text() + "\\n"
+              
+      duration = time.time() - start_time
+      print(f"[LOAD] Succès PDF. {num_pages} pages lues en {duration:.2f}s.")
+  except ImportError:
+      print("[ERREUR LOAD] Le module 'PyPDF2' est requis.")
+      raise
+  except Exception as e:
+      print(f"[ERREUR LOAD] Erreur de lecture PDF : {str(e)}")
+      raise e
+
+  df = None
+  target_name = None
+  task_type = "nlp"
+  meta = {"format": "pdf", "pages": num_pages, "text_length": len(text)}
+_metadata:
+  bloc: 1
+  section: "2_load"

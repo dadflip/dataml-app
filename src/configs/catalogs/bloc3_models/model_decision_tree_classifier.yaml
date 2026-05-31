@@ -1,0 +1,61 @@
+id: "model_decision_tree_classifier"
+name: "Model: Decision Tree Classifier"
+description: "Arbre de décision pour la classification. Segmente récursivement l'espace des données."
+category: "Modèles Basés sur les Arbres"
+tags: ["model", "classification", "tabular", "sklearn", "tree"]
+applies_to: ["Tabulaire"]
+when_to_use: "Besoin impératif d'expliquer les règles de décision métier."
+pros:
+  - "Interprétable (règles if/else explicites)."
+  - "Peu sensible à l'échelle des données."
+cons:
+  - "Extrêmement sujet au sur-apprentissage si non régulé."
+hyperparameters:
+  max_depth: "Profondeur maximale de l'arbre."
+  min_samples_split: "Nombre minimum d'exemples requis pour diviser un nœud."
+code_template: |
+  import pandas as pd
+  import numpy as np
+  from sklearn.tree import DecisionTreeClassifier
+
+  # [PARAM: MAX_DEPTH | number]
+  MAX_DEPTH = 5
+  # [/PARAM]
+
+  # [PARAM: MIN_SAMPLES_SPLIT | number]
+  MIN_SAMPLES_SPLIT = 2
+  # [/PARAM]
+
+  print(f"[MODEL] Entraînement Arbre de Décision (max_depth={MAX_DEPTH})...")
+  if 'X_train' in locals() and 'y_train' in locals() and 'X_test' in locals():
+      # Gestion propre de None pour max_depth
+      depth = None if MAX_DEPTH <= 0 else int(MAX_DEPTH)
+      
+      model = DecisionTreeClassifier(max_depth=depth, min_samples_split=int(MIN_SAMPLES_SPLIT), random_state=42)
+      model.fit(X_train, y_train)
+      
+      y_pred = model.predict(X_test)
+      y_proba = model.predict_proba(X_test) if hasattr(model, 'predict_proba') else None
+      
+      feature_importances = None
+      if 'feature_names_out' in locals() and hasattr(model, 'feature_importances_'):
+          if len(model.feature_importances_) == len(feature_names_out):
+              feature_importances = pd.Series(model.feature_importances_, index=feature_names_out)
+              
+      if 'preprocessor' in locals() and preprocessor is not None:
+          try: from imblearn.pipeline import Pipeline
+          except: from sklearn.pipeline import Pipeline
+          full_pipeline = Pipeline(steps=preprocessor.steps + [('model', model)])
+      else:
+          try: from imblearn.pipeline import Pipeline
+          except: from sklearn.pipeline import Pipeline
+          full_pipeline = Pipeline(steps=[('model', model)])
+          
+      training_history = {"status": "success", "fitted_on": len(X_train), "depth": model.get_depth()}
+      task_type = "classification"
+      print("[MODEL] Modèle entraîné et Full Pipeline compilé avec succès.")
+  else:
+      print("[ERREUR] Données d'entraînement introuvables.")
+_metadata:
+  bloc: 3
+  section: "1_classification_tabulaire"

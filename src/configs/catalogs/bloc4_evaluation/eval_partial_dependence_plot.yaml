@@ -1,0 +1,51 @@
+id: "eval_partial_dependence_plot"
+name: "Eval Plot: Partial Dependence Plot (PDP)"
+description: "Montre l'effet marginal d'une ou deux features sur le résultat prédit d'un modèle machine learning."
+category: "Explainability & Feature Importance"
+tags: ["eval", "plot", "explainability", "pdp", "sklearn"]
+applies_to: ["Classification", "Regression"]
+when_to_use: "Pour comprendre si la relation entre une feature importante et la prédiction est linéaire, monotone ou complexe."
+pros:
+  - "Très facile à interpréter."
+cons:
+  - "Suppose que les features sont indépendantes, ce qui est rarement le cas."
+code_template: |
+  import os
+  import numpy as np
+  import matplotlib.pyplot as plt
+  from sklearn.inspection import PartialDependenceDisplay
+
+  evaluation_metrics = {}
+
+  if 'full_pipeline' in locals() and 'X_train' in locals() and 'feature_names_out' in locals():
+      print("[EVAL] Génération du Partial Dependence Plot (PDP)...")
+      try:
+          os.makedirs("outputs/evaluation", exist_ok=True)
+          
+          # On prend les 2 premières features par défaut
+          features_to_plot = [0, 1]
+          if len(feature_names_out) >= 2:
+              feature_names = feature_names_out
+          else:
+              feature_names = [f"Feature {i}" for i in range(X_train.shape[1])]
+              features_to_plot = [0]
+              
+          fig, ax = plt.subplots(figsize=(10, 6))
+          
+          display = PartialDependenceDisplay.from_estimator(
+              full_pipeline, X_train, features_to_plot, feature_names=feature_names, ax=ax
+          )
+          
+          ax.set_title('Partial Dependence Plot (Top Features)')
+          
+          plot_path = "outputs/evaluation/partial_dependence_plot.png"
+          fig.savefig(plot_path, dpi=300)
+          plt.close(fig)
+          
+          evaluation_metrics["partial_dependence_plot"] = plot_path
+          print(f"[EVAL] Plot sauvegardé sous {plot_path}")
+      except Exception as e:
+          print(f"[EVAL ERREUR] PDP : {str(e)}")
+_metadata:
+  bloc: 4
+  section: "1_evaluation"

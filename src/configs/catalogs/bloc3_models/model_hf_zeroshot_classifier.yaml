@@ -1,0 +1,70 @@
+id: "model_hf_zeroshot_classifier"
+name: "Model: HuggingFace Zero-Shot Classifier"
+description: "Pipeline HuggingFace permettant de classifier du texte dans des catégories personnalisées sans aucun entraînement."
+category: "Modèles NLP (Pré-entraînés)"
+tags: ["model", "nlp", "classification", "transformers", "huggingface", "zero-shot"]
+applies_to: ["Texte"]
+when_to_use: "Vous avez des catégories métier (ex: 'sport', 'finance', 'politique') mais AUCUNE donnée labellisée pour entraîner."
+pros:
+  - "Magique : classifie du texte dans n'importe quelles catégories inventées à la volée."
+cons:
+  - "Lent (modèle Transformer BART/RoBERTa sous le capot)."
+hyperparameters:
+  text_col: "Colonne texte (si dataframe)."
+  candidate_labels: "Classes cibles séparées par des virgules (ex: 'sport, cuisine, politique')."
+code_template: |
+  import pandas as pd
+  import numpy as np
+  try:
+      from transformers import pipeline
+  except ImportError:
+      pipeline = None
+      print("[ERREUR] transformers n'est pas installé. Lancez : !pip install transformers")
+
+  # [PARAM: TEXT_COL | string]
+  TEXT_COL = "text"
+  # [/PARAM]
+
+  # [PARAM: CANDIDATE_LABELS | string]
+  CANDIDATE_LABELS = "positif, négatif, neutre"
+  # [/PARAM]
+
+  print(f"[MODEL] HuggingFace Zero-Shot (labels: {CANDIDATE_LABELS})...")
+  if 'X_test' in locals() and pipeline is not None:
+      labels = [x.strip() for x in CANDIDATE_LABELS.split(',')]
+      
+      texts = []
+      if isinstance(X_test, pd.DataFrame) and TEXT_COL in X_test.columns:
+          texts = X_test[TEXT_COL].astype(str).tolist()
+      elif isinstance(X_test, (pd.Series, np.ndarray, list)):
+          texts = [str(x) for x in X_test]
+          
+      if texts:
+          # Attention: Le téléchargement du modèle (valhalla/distilbart...) peut prendre du temps la 1ère fois
+          print("Chargement du modèle Transformer...")
+          classifier = pipeline("zero-shot-classification", model="valhalla/distilbart-mnli-12-1")
+          
+          print("Inférence en cours (peut être long sur CPU)...")
+          results = classifier(texts, candidate_labels=labels)
+          
+          # results est une liste de dict avec 'labels' et 'scores' triés par ordre décroissant
+          y_pred = np.array([res['labels'][0] for res in results])
+          y_proba = None
+          feature_importances = None
+          model = classifier
+          
+          if 'preprocessor' in locals() and preprocessor is not None:
+              try: from imblearn.pipeline import Pipeline
+              except: from sklearn.pipeline import Pipeline
+              full_pipeline = Pipeline(steps=preprocessor.steps + [('model', model)])
+          else:
+              full_pipeline = model
+              
+          training_history = {"status": "success", "type": "zero_shot_transformer"}
+          task_type = "classification"
+          print("[MODEL] Zero-Shot HuggingFace terminé avec succès.")
+  else:
+      print("[ERREUR] Données introuvables ou transformers non installé.")
+_metadata:
+  bloc: 3
+  section: "3_nlp_and_timeseries"

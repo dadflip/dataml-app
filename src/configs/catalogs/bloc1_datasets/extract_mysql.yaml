@@ -1,0 +1,64 @@
+id: "extract_mysql"
+name: "Extract: Base MySQL/MariaDB"
+description: "Exécute une requête SQL via mysql-connector et exporte en CSV."
+category: "1. Extract"
+tags: ["extract", "mysql", "sql", "db"]
+code_template: |
+  import mysql.connector
+  import pandas as pd
+  import os
+  import time
+
+  # [PARAM: DB_HOST | string]
+  DB_HOST = "localhost"
+  # [/PARAM]
+  
+  # [PARAM: DB_USER | string]
+  DB_USER = "root"
+  # [/PARAM]
+  
+  # [PARAM: DB_PASS | string]
+  DB_PASS = "password"
+  # [/PARAM]
+  
+  # [PARAM: DB_NAME | string]
+  DB_NAME = "my_database"
+  # [/PARAM]
+  
+  # [PARAM: QUERY | string]
+  QUERY = "SELECT * FROM users"
+  # [/PARAM]
+  
+  # [PARAM: DEST_PATH | string]
+  DEST_PATH = "./data/raw/mysql_export.csv"
+  # [/PARAM]
+
+  print(f"[EXTRACT] Exécution de la requête sur MySQL ({DB_HOST})...")
+  os.makedirs(os.path.dirname(DEST_PATH), exist_ok=True)
+
+  try:
+      start_time = time.time()
+      conn = mysql.connector.connect(
+          host=DB_HOST,
+          user=DB_USER,
+          password=DB_PASS,
+          database=DB_NAME
+      )
+      
+      df_temp = pd.read_sql_query(QUERY, conn)
+      df_temp.to_csv(DEST_PATH, index=False)
+      conn.close()
+      
+      duration = time.time() - start_time
+      print(f"[EXTRACT] Succès MySQL. Dump de {df_temp.shape[0]} lignes en {duration:.2f}s.")
+  except Exception as e:
+      print(f"[ERREUR EXTRACT] Échec de la connexion ou requête MySQL : {str(e)}")
+      raise e
+
+  df = None
+  target_name = None
+  task_type = "unknown"
+  meta = {"source": "mysql", "path": DEST_PATH}
+_metadata:
+  bloc: 1
+  section: "1_extract"

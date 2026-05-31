@@ -1,0 +1,58 @@
+id: "transform_tfidf_vectorizer"
+name: "Transform: TF-IDF Vectorizer"
+description: "TF-IDF sur le texte."
+category: "4.1 Preprocessing"
+tags: ["transform", "nlp", "text", "sklearn", "pipeline"]
+applies_to: ["Texte"]
+when_to_use: "Modèles ML classiques avec texte."
+pros:
+  - "Donne poids aux mots rares."
+cons:
+  - "Matrice creuse gigantesque."
+hyperparameters:
+  text_col: "Colonne de texte"
+  max_features: "Nb de features"
+code_template: |
+  import pandas as pd
+  from sklearn.feature_extraction.text import TfidfVectorizer
+  from sklearn.compose import ColumnTransformer
+
+  # [PARAM: TEXT_COL | string]
+  TEXT_COL = "text"
+  # [/PARAM]
+
+  # [PARAM: MAX_FEATURES | number]
+  MAX_FEATURES = 5000
+  # [/PARAM]
+
+  print(f"[TRANSFORM] TF-IDF sur '{TEXT_COL}'...")
+  if 'df' in locals():
+      if 'pipeline_steps' not in locals(): pipeline_steps = {}
+      
+      if TEXT_COL in df.columns:
+          # Fillna avant au cas où
+          df[TEXT_COL] = df[TEXT_COL].fillna('')
+          
+          tfidf = TfidfVectorizer(max_features=MAX_FEATURES)
+          # Tfidf nécessite une matrice 1D, ColumnTransformer s'occupe du passe-plat
+          ct = ColumnTransformer(
+              [('tfidf', tfidf, TEXT_COL)],
+              remainder='passthrough', verbose_feature_names_out=False
+          )
+          try: ct.set_output(transform="pandas")
+          except: pass
+          
+          step_name = 'tfidf'
+          pipeline_steps[step_name] = (step_name, ct)
+          
+          df = pd.DataFrame(ct.fit_transform(df))
+          # Noter qu'en pandas, la colonne texte originale disparait (comportement CT sur un string col), 
+          # remplacée par les n features.
+          print(f"[TRANSFORM] TF-IDF appliqué au pipeline. Nbre cols: {df.shape[1]}")
+      else:
+          print("[ERREUR] Colonne introuvable.")
+  else:
+      print("[ERREUR] 'df' introuvable.")
+_metadata:
+  bloc: 2
+  section: "4_preprocessing"

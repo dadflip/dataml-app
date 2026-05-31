@@ -1,0 +1,33 @@
+id: "eval_perplexity_score"
+name: "Eval Metric: Perplexity"
+description: "Calcule la perplexité pour un modèle de langage génératif."
+category: "NLP Metrics"
+tags: ["eval", "metric", "nlp", "generation", "perplexity", "llm"]
+applies_to: ["NLP Generation"]
+when_to_use: "Pour évaluer à quel point un modèle de langage 'comprend' bien le dataset de test."
+pros:
+  - "Métrique absolue standard pour les LLMs."
+cons:
+  - "Nécessite les probabilités brutes (Logits) ou la perte (Cross Entropy) du modèle pour être calculée exactement."
+code_template: |
+  import numpy as np
+
+  evaluation_metrics = {}
+
+  if 'y_test' in locals() and 'y_proba' in locals() and y_proba is not None:
+      print("[EVAL] Calcul de la Perplexité...")
+      try:
+          # Approximation de la perplexité via la perte log-loss moyenne
+          from sklearn.metrics import log_loss
+          
+          # Si y_proba est une séquence de probas par token
+          loss = log_loss(y_test, y_proba)
+          perplexity = np.exp(loss)
+          
+          evaluation_metrics["perplexity"] = float(perplexity)
+          print(f"[EVAL] Perplexity: {perplexity:.3f}")
+      except Exception as e:
+          print(f"[EVAL ERREUR] Perplexity : {str(e)}")
+_metadata:
+  bloc: 4
+  section: "1_evaluation"

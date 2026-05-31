@@ -1,0 +1,58 @@
+id: "deploy_huggingface_hub"
+name: "Deploy: Hugging Face Hub"
+description: "Pousse le modèle directement sur un repository (Model Hub) d'Hugging Face."
+category: "Cloud Services"
+tags: ["deploy", "huggingface", "hub", "cloud", "model-sharing"]
+applies_to: ["Classification", "Regression", "NLP", "Computer Vision"]
+when_to_use: "Pour partager un modèle avec la communauté ou l'héberger gratuitement pour l'API Hugging Face Inference."
+pros:
+  - "Hébergement gratuit, versioning natif (Git LFS), écosystème très dynamique."
+cons:
+  - "Nécessite la librairie huggingface_hub et un token API."
+code_template: |
+  import os
+  import joblib
+  try:
+      from huggingface_hub import HfApi, login
+  except ImportError:
+      HfApi = None
+
+  deployment_artifacts = {}
+
+  if 'full_pipeline' in locals() and HfApi is not None:
+      print("[DEPLOY] Upload du modèle vers Hugging Face Hub...")
+      try:
+          os.makedirs("outputs/deployment", exist_ok=True)
+          
+          # Sauvegarde locale
+          model_path = "outputs/deployment/model.joblib"
+          joblib.dump(full_pipeline, model_path)
+          
+          # [PARAM: HF_REPO_ID | string]
+          HF_REPO_ID = "username/my-dataml-model"
+          # [/PARAM]
+          
+          print(f"[DEPLOY] (Simulation) Uploading {model_path} to HF Hub repo {HF_REPO_ID}")
+          
+          # Code réel (commenté pour éviter le blocage sans token)
+          # if 'HF_TOKEN' in os.environ:
+          #     login(token=os.environ['HF_TOKEN'])
+          # api = HfApi()
+          # api.create_repo(repo_id=HF_REPO_ID, exist_ok=True)
+          # api.upload_file(
+          #     path_or_fileobj=model_path,
+          #     path_in_repo="model.joblib",
+          #     repo_id=HF_REPO_ID,
+          #     repo_type="model"
+          # )
+          
+          deployment_artifacts["local_model_path"] = model_path
+          deployment_artifacts["hf_repo_id"] = HF_REPO_ID
+          print(f"[DEPLOY] Upload simulé réussi vers Hugging Face Hub.")
+      except Exception as e:
+          print(f"[DEPLOY ERREUR] Hugging Face Hub : {str(e)}")
+  elif HfApi is None:
+      print("[DEPLOY ERREUR] Le package 'huggingface_hub' n'est pas installé.")
+_metadata:
+  bloc: 5
+  section: "5_cloud"

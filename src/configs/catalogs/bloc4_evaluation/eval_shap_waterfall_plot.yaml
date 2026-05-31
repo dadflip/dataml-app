@@ -1,0 +1,51 @@
+id: "eval_shap_waterfall_plot"
+name: "Eval Plot: SHAP Waterfall (Local)"
+description: "Explication détaillée de la prédiction d'une seule instance, montrant comment chaque feature a poussé la prédiction depuis la valeur de base."
+category: "Explainability & Feature Importance"
+tags: ["eval", "plot", "explainability", "shap", "local", "waterfall"]
+applies_to: ["Classification", "Regression"]
+when_to_use: "Pour un cas d'usage où le client demande : 'Pourquoi le modèle a refusé CE prêt en particulier ?'."
+pros:
+  - "Très apprécié par les utilisateurs finaux pour l'explicabilité individuelle."
+cons:
+  - "Ne donne qu'une vision locale, pas globale."
+code_template: |
+  import os
+  import numpy as np
+  import matplotlib.pyplot as plt
+  try:
+      import shap
+  except ImportError:
+      shap = None
+
+  evaluation_metrics = {}
+
+  if 'full_pipeline' in locals() and 'X_test' in locals() and shap is not None:
+      print("[EVAL] Génération du SHAP Waterfall Plot (Instance locale)...")
+      try:
+          os.makedirs("outputs/evaluation", exist_ok=True)
+          
+          X_arr = np.array(X_test)
+          # On explique la toute première instance du set de test
+          instance = X_arr[0:1]
+          background = X_arr[1:100] if len(X_arr) > 100 else X_arr
+              
+          model = full_pipeline.steps[-1][1] if hasattr(full_pipeline, 'steps') else full_pipeline
+          
+          explainer = shap.Explainer(model.predict, background)
+          shap_values = explainer(instance)
+          
+          fig = plt.figure(figsize=(8, 6))
+          shap.plots.waterfall(shap_values[0], show=False)
+          
+          plot_path = "outputs/evaluation/shap_waterfall_local.png"
+          plt.savefig(plot_path, dpi=300, bbox_inches='tight')
+          plt.close()
+          
+          evaluation_metrics["shap_waterfall_plot"] = plot_path
+          print(f"[EVAL] Plot sauvegardé sous {plot_path}")
+      except Exception as e:
+          print(f"[EVAL ERREUR] SHAP Waterfall : {str(e)}")
+_metadata:
+  bloc: 4
+  section: "1_evaluation"

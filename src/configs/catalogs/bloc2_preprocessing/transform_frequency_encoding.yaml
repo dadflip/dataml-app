@@ -1,0 +1,43 @@
+id: "transform_frequency_encoding"
+name: "Transform: Frequency Encoding"
+description: "Encode par la fréquence d'apparition (%)."
+category: "4.1 Preprocessing"
+tags: ["transform", "encoding", "tabular", "category_encoders", "pipeline"]
+applies_to: ["Tabulaire"]
+when_to_use: "Quand la fréquence porte une information utile."
+pros:
+  - "N'ajoute pas de colonnes."
+cons:
+  - "Nécessite le package category_encoders."
+hyperparameters: {}
+code_template: |
+  import pandas as pd
+  try:
+      import category_encoders as ce
+  except ImportError:
+      ce = None
+      print("[ERREUR] Installez category_encoders: !pip install category_encoders")
+
+  print("[TRANSFORM] Frequency Encoding...")
+  if 'df' in locals() and ce:
+      if 'pipeline_steps' not in locals(): pipeline_steps = {}
+      
+      cat_cols = df.select_dtypes(exclude=['number', 'datetime']).columns.tolist()
+      if 'target_name' in locals() and target_name in cat_cols:
+          cat_cols.remove(target_name)
+          
+      if len(cat_cols) > 0:
+          fe = ce.CountEncoder(cols=cat_cols, normalize=True)
+          
+          step_name = 'freq_encoding'
+          pipeline_steps[step_name] = (step_name, fe)
+          
+          df = fe.fit_transform(df)
+          print(f"[TRANSFORM] Frequency Encoding ajouté au pipeline.")
+      else:
+          print("[TRANSFORM] Aucune variable catégorielle.")
+  else:
+      print("[ERREUR] 'df' introuvable.")
+_metadata:
+  bloc: 2
+  section: "4_preprocessing"

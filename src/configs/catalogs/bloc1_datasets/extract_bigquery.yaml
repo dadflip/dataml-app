@@ -1,0 +1,46 @@
+id: "extract_bigquery"
+name: "Extract: Google BigQuery"
+description: "Exécute une requête SQL massive sur GCP BigQuery."
+category: "1. Extract"
+tags: ["extract", "gcp", "bigquery", "sql"]
+code_template: |
+  from google.cloud import bigquery
+  import os
+  import time
+
+  # [PARAM: PROJECT_ID | string]
+  PROJECT_ID = "my-gcp-project"
+  # [/PARAM]
+  
+  # [PARAM: QUERY | string]
+  QUERY = "SELECT * FROM `bigquery-public-data.samples.github_timeline` LIMIT 1000"
+  # [/PARAM]
+  
+  # [PARAM: DEST_PATH | string]
+  DEST_PATH = "./data/raw/bigquery_export.csv"
+  # [/PARAM]
+
+  print(f"[EXTRACT] Requête BigQuery sur le projet {PROJECT_ID}...")
+  os.makedirs(os.path.dirname(DEST_PATH), exist_ok=True)
+
+  try:
+      start_time = time.time()
+      client = bigquery.Client(project=PROJECT_ID)
+      query_job = client.query(QUERY)
+      df_temp = query_job.to_dataframe()
+      
+      df_temp.to_csv(DEST_PATH, index=False)
+      
+      duration = time.time() - start_time
+      print(f"[EXTRACT] Succès BigQuery. {df_temp.shape[0]} lignes extraites en {duration:.2f}s.")
+  except Exception as e:
+      print(f"[ERREUR EXTRACT] Échec de la requête BigQuery : {str(e)}")
+      raise e
+
+  df = None
+  target_name = None
+  task_type = "unknown"
+  meta = {"source": "bigquery", "path": DEST_PATH}
+_metadata:
+  bloc: 1
+  section: "1_extract"

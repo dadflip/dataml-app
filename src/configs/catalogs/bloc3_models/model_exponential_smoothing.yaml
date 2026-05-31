@@ -1,0 +1,65 @@
+id: "model_exponential_smoothing"
+name: "Model: Exponential Smoothing (Holt-Winters)"
+description: "Modèle de lissage exponentiel pour séries temporelles, gérant tendance et saisonnalité."
+category: "Modèles Séries Temporelles"
+tags: ["model", "time-series", "forecasting", "statsmodels", "smoothing"]
+applies_to: ["Séries Temporelles"]
+when_to_use: "Alternative classique et performante à ARIMA pour les données avec saisonnalité explicite."
+pros:
+  - "Supporte bien la saisonnalité explicite."
+cons:
+  - "Moins robuste aux données bruitées ou aux sauts soudains que Prophet."
+hyperparameters:
+  trend: "Type de tendance ('add' pour additive, 'mul' pour multiplicative, ou 'none')."
+  seasonal: "Type de saisonnalité ('add', 'mul', ou 'none')."
+  seasonal_periods: "Période de la saisonnalité (ex: 12 pour des mois sur un an)."
+code_template: |
+  import pandas as pd
+  import numpy as np
+  try:
+      from statsmodels.tsa.holtwinters import ExponentialSmoothing
+  except ImportError:
+      ExponentialSmoothing = None
+      print("[ERREUR] statsmodels n'est pas installé. Lancez : !pip install statsmodels")
+
+  # [PARAM: TREND | string]
+  TREND = "add"
+  # [/PARAM]
+
+  # [PARAM: SEASONAL | string]
+  SEASONAL = "add"
+  # [/PARAM]
+
+  # [PARAM: SEASONAL_PERIODS | number]
+  SEASONAL_PERIODS = 12
+  # [/PARAM]
+
+  print(f"[MODEL] Entraînement Holt-Winters (trend={TREND}, seasonal={SEASONAL}, periods={SEASONAL_PERIODS})...")
+  if 'y_train' in locals() and 'X_test' in locals() and ExponentialSmoothing is not None:
+      y_tr = np.array(y_train)
+      
+      try:
+          tr = None if TREND.lower() == 'none' else TREND
+          sea = None if SEASONAL.lower() == 'none' else SEASONAL
+          
+          model = ExponentialSmoothing(y_tr, trend=tr, seasonal=sea, seasonal_periods=int(SEASONAL_PERIODS))
+          model_fit = model.fit()
+          
+          steps = len(X_test) if hasattr(X_test, '__len__') else 10
+          y_pred = model_fit.forecast(steps=steps)
+          
+          y_proba = None
+          feature_importances = None
+          
+          full_pipeline = model_fit
+              
+          training_history = {"status": "success"}
+          task_type = "forecasting"
+          print("[MODEL] Modèle Exponential Smoothing entraîné avec succès.")
+      except Exception as e:
+          print(f"[ERREUR] Exponential Smoothing a échoué. Détail: {e}")
+  else:
+      print("[ERREUR] y_train introuvable ou module statsmodels non installé.")
+_metadata:
+  bloc: 3
+  section: "3_nlp_and_timeseries"

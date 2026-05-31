@@ -1,0 +1,58 @@
+id: "model_mlp_classifier"
+name: "Model: Multi-Layer Perceptron (Classifier)"
+description: "Réseau de neurones artificiel standard (fully connected) via Scikit-Learn pour la classification."
+category: "Réseaux de Neurones"
+tags: ["model", "classification", "tabular", "sklearn", "mlp", "neural-network"]
+applies_to: ["Tabulaire"]
+when_to_use: "Baseline rapide pour les réseaux de neurones sans sortir l'artillerie lourde PyTorch."
+pros:
+  - "Intégré dans Sklearn, pas de dépendances complexes."
+cons:
+  - "Pas d'accélération GPU."
+hyperparameters:
+  hidden_layer_sizes: "Tailles des couches séparées par des virgules (ex: '100, 50')."
+  activation: "Fonction d'activation ('relu', 'tanh', 'logistic')."
+  max_iter: "Nombre max d'époques (ex: 200)."
+code_template: |
+  import pandas as pd
+  import numpy as np
+  from sklearn.neural_network import MLPClassifier
+
+  # [PARAM: HIDDEN_LAYER_SIZES | string]
+  HIDDEN_LAYER_SIZES = "100, 50"
+  # [/PARAM]
+
+  # [PARAM: ACTIVATION | string]
+  ACTIVATION = "relu"
+  # [/PARAM]
+
+  # [PARAM: MAX_ITER | number]
+  MAX_ITER = 200
+  # [/PARAM]
+
+  print(f"[MODEL] Entraînement MLP Classifier (layers={HIDDEN_LAYER_SIZES})...")
+  if 'X_train' in locals() and 'y_train' in locals() and 'X_test' in locals():
+      layers = tuple(int(x.strip()) for x in HIDDEN_LAYER_SIZES.split(','))
+      model = MLPClassifier(hidden_layer_sizes=layers, activation=ACTIVATION, max_iter=int(MAX_ITER), random_state=42)
+      
+      model.fit(X_train, y_train)
+      
+      y_pred = model.predict(X_test)
+      y_proba = model.predict_proba(X_test)
+      feature_importances = None # MLP n'a pas de feature_importances directes
+      
+      if 'preprocessor' in locals() and preprocessor is not None:
+          try: from imblearn.pipeline import Pipeline
+          except: from sklearn.pipeline import Pipeline
+          full_pipeline = Pipeline(steps=preprocessor.steps + [('model', model)])
+      else:
+          full_pipeline = model
+          
+      training_history = {"status": "success", "n_iter": model.n_iter_, "loss": float(model.loss_)}
+      task_type = "classification"
+      print("[MODEL] MLP Classifier entraîné avec succès.")
+  else:
+      print("[ERREUR] Données d'entraînement introuvables.")
+_metadata:
+  bloc: 3
+  section: "6_neural_networks"

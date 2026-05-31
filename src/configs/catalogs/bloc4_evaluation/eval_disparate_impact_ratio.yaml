@@ -1,0 +1,55 @@
+id: "eval_disparate_impact_ratio"
+name: "Eval Fairness: Disparate Impact Ratio"
+description: "Calcule le ratio d'impact disparate (Règle des 80%). Un ratio < 0.8 indique généralement un biais légal (aux USA)."
+category: "Fairness & Bias Metrics"
+tags: ["eval", "metric", "fairness", "bias", "classification", "disparate-impact"]
+applies_to: ["Classification Binaire"]
+when_to_use: "Pour auditer un modèle RH (recrutement) ou bancaire (prêt) vis-à-vis de la loi (règle des 4/5ème)."
+pros:
+  - "Métrique de référence en droit anti-discrimination."
+cons:
+  - "Asymétrique (privilégié / non-privilégié)."
+code_template: |
+  import numpy as np
+
+  evaluation_metrics = {}
+
+  if task_type == "classification" and 'X_test' in locals() and 'y_pred' in locals():
+      print("[EVAL] Calcul du Disparate Impact Ratio...")
+      try:
+          # [PARAM: SENSITIVE_COLUMN_INDEX | number]
+          SENSITIVE_COLUMN_INDEX = 0
+          # [/PARAM]
+          
+          # [PARAM: PRIVILEGED_VALUE | number/string]
+          PRIVILEGED_VALUE = 1
+          # [/PARAM]
+          
+          X_arr = np.array(X_test)
+          if len(X_arr.shape) > 1 and X_arr.shape[1] > SENSITIVE_COLUMN_INDEX:
+              sensitive_attr = X_arr[:, int(SENSITIVE_COLUMN_INDEX)]
+              preds = np.array(y_pred)
+              
+              idx_priv = (sensitive_attr == PRIVILEGED_VALUE)
+              idx_unpriv = (sensitive_attr != PRIVILEGED_VALUE)
+              
+              if sum(idx_priv) > 0 and sum(idx_unpriv) > 0:
+                  rate_priv = np.mean(preds[idx_priv] == 1)
+                  rate_unpriv = np.mean(preds[idx_unpriv] == 1)
+                  
+                  if rate_priv == 0:
+                      dir_ratio = 1.0 # Evite div zero
+                  else:
+                      dir_ratio = rate_unpriv / rate_priv
+                  
+                  evaluation_metrics["disparate_impact_ratio"] = float(dir_ratio)
+                  evaluation_metrics["is_biased_80_rule"] = bool(dir_ratio < 0.8 or dir_ratio > 1.25)
+                  
+                  print(f"[EVAL] Disparate Impact Ratio: {dir_ratio:.3f} (Biais si < 0.8)")
+              else:
+                  print("[EVAL] Impossible de diviser les groupes.")
+      except Exception as e:
+          print(f"[EVAL ERREUR] Disparate Impact : {str(e)}")
+_metadata:
+  bloc: 4
+  section: "1_evaluation"

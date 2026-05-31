@@ -1,0 +1,40 @@
+id: "eval_median_absolute_error"
+name: "Eval: Median Absolute Error (MedAE)"
+description: >
+  Calcule la mediane des erreurs absolues entre les valeurs reelles et les predictions.
+  Contrairement au MAE qui utilise la moyenne, le MedAE utilise la mediane, ce qui le
+  rend extremement robuste aux valeurs aberrantes.
+category: "Metriques de Regression"
+tags: ["eval", "regression", "median", "erreur", "robuste", "metrique"]
+applies_to: ["Regression"]
+when_to_use: >
+  Utiliser lorsque les donnees contiennent des valeurs aberrantes et que l'on souhaite
+  une metrique d'erreur qui n'est pas influencee par quelques predictions extremes.
+pros:
+  - "Tres robuste aux valeurs aberrantes (outliers)"
+  - "Interpretable dans l'unite de la variable cible"
+  - "Donne l'erreur typique plutot que l'erreur moyenne"
+cons:
+  - "Ignore la distribution complete des erreurs"
+  - "Peut masquer de grandes erreurs systematiques sur une partie des donnees"
+  - "Moins standard que le MAE ou le RMSE dans la litterature"
+code_template: |
+  evaluation_metrics = {}
+  try:
+      from sklearn.metrics import median_absolute_error
+
+      print("[EVAL] Calcul du Median Absolute Error (MedAE)...")
+
+      medae_value = median_absolute_error(y_test, y_pred)
+
+      evaluation_metrics["median_absolute_error"] = float(medae_value)
+
+      print(f"[EVAL] MedAE = {medae_value:.6f}")
+
+  except Exception as e:
+      print(f"[EVAL] Erreur lors du calcul du MedAE : {e}")
+      evaluation_metrics["median_absolute_error"] = None
+      evaluation_metrics["error"] = str(e)
+_metadata:
+  bloc: 4
+  section: "1_evaluation"

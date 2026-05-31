@@ -1,0 +1,33 @@
+id: "pipeline_nlp_sentiment"
+name: "Recette : NLP Sentiment Analysis"
+description: "Pipeline NLP : dataset HuggingFace, tokenization, BERT Finetune, export vers le Hub."
+category: "Natural Language Processing"
+nodes:
+  - node_id: "load_hf"
+    block_id: "load_huggingface"
+    params:
+      DATASET_NAME: "imdb"
+      SPLIT: "train"
+
+  - node_id: "tokenize_text"
+    block_id: "transform_text_tokenizer_padder"
+    depends_on: ["load_hf"]
+    params:
+      MAX_LEN: 128
+      TEXT_COL: "text"
+
+  - node_id: "model_bert"
+    block_id: "model_bert_sequence_classifier"
+    depends_on: ["tokenize_text"]
+    params:
+      EPOCHS: 3
+
+  - node_id: "eval_accuracy"
+    block_id: "eval_accuracy"
+    depends_on: ["model_bert"]
+
+  - node_id: "deploy_hf_hub"
+    block_id: "deploy_huggingface_hub"
+    depends_on: ["eval_accuracy"]
+    params:
+      HF_REPO_ID: "my_username/imdb_bert_sentiment"

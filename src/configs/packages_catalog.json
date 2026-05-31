@@ -1,0 +1,247 @@
+{
+  "packages": [
+    {
+      "id": "pandas",
+      "name": "Pandas",
+      "category": "Data Manipulation",
+      "description": "Bibliothèque d'analyse et de manipulation de données rapide, puissante et flexible.",
+      "url": "https://pandas.pydata.org/",
+      "command": "pip install pandas",
+      "architectures": ["CPU"]
+    },
+    {
+      "id": "numpy",
+      "name": "NumPy",
+      "category": "Data Manipulation",
+      "description": "Le package fondamental pour le calcul scientifique en Python.",
+      "url": "https://numpy.org/",
+      "command": "pip install numpy",
+      "architectures": ["CPU"]
+    },
+    {
+      "id": "polars",
+      "name": "Polars",
+      "category": "Data Manipulation",
+      "description": "Bibliothèque DataFrame ultra-rapide écrite en Rust.",
+      "url": "https://pola.rs/",
+      "command": "pip install polars",
+      "architectures": ["CPU", "Multi-Thread"]
+    },
+    {
+      "id": "duckdb",
+      "name": "DuckDB",
+      "category": "Data Manipulation",
+      "description": "Système de gestion de base de données SQL analytique en cours de processus (OLAP).",
+      "url": "https://duckdb.org/",
+      "command": "pip install duckdb",
+      "architectures": ["CPU"]
+    },
+    {
+      "id": "scikit-learn",
+      "name": "Scikit-Learn",
+      "category": "Machine Learning",
+      "description": "Outils simples et efficaces pour l'analyse prédictive des données.",
+      "url": "https://scikit-learn.org/",
+      "command": "pip install scikit-learn",
+      "architectures": ["CPU"]
+    },
+    {
+      "id": "xgboost",
+      "name": "XGBoost",
+      "category": "Machine Learning",
+      "description": "Bibliothèque optimisée de gradient boosting (Gong, TGB, etc.).",
+      "url": "https://xgboost.ai/",
+      "command": "pip install xgboost",
+      "architectures": ["CPU", "GPU"]
+    },
+    {
+      "id": "lightgbm",
+      "name": "LightGBM",
+      "category": "Machine Learning",
+      "description": "Un framework de gradient boosting rapide, distribué et très performant.",
+      "url": "https://lightgbm.readthedocs.io/",
+      "command": "pip install lightgbm",
+      "architectures": ["CPU", "GPU"]
+    },
+    {
+      "id": "catboost",
+      "name": "CatBoost",
+      "category": "Machine Learning",
+      "description": "Algorithme de gradient boosting sur les arbres de décision rapide, évolutif et performant gérant nativement les catégories.",
+      "url": "https://catboost.ai/",
+      "command": "pip install catboost",
+      "architectures": ["CPU", "GPU"]
+    },
+    {
+      "id": "optuna",
+      "name": "Optuna",
+      "category": "Machine Learning",
+      "description": "Framework d'optimisation d'hyperparamètres de nouvelle génération.",
+      "url": "https://optuna.org/",
+      "command": "pip install optuna",
+      "architectures": ["CPU"]
+    },
+    {
+      "id": "pytorch",
+      "name": "PyTorch",
+      "category": "Deep Learning",
+      "description": "Un framework de machine learning open source qui accélère le chemin du prototypage de recherche au déploiement de production.",
+      "url": "https://pytorch.org/",
+      "command": "pip install torch torchvision torchaudio",
+      "architectures": ["CPU", "GPU CUDA", "MPS"]
+    },
+    {
+      "id": "tensorflow",
+      "name": "TensorFlow",
+      "category": "Deep Learning",
+      "description": "Plateforme open source de bout en bout pour le machine learning par Google.",
+      "url": "https://www.tensorflow.org/",
+      "command": "pip install tensorflow",
+      "architectures": ["CPU", "GPU CUDA", "TPU"]
+    },
+    {
+      "id": "jax",
+      "name": "JAX",
+      "category": "Deep Learning",
+      "description": "Autograd et XLA pour le machine learning haute performance.",
+      "url": "https://jax.readthedocs.io/",
+      "command": "pip install jax jaxlib",
+      "architectures": ["CPU", "GPU", "TPU"]
+    },
+    {
+      "id": "transformers",
+      "name": "Transformers (Hugging Face)",
+      "category": "NLP & GenAI",
+      "description": "L'API pour les modèles de Machine Learning de pointe (LLM, Vision, Audio).",
+      "url": "https://huggingface.co/docs/transformers/",
+      "command": "pip install transformers datasets accelerate",
+      "architectures": ["CPU", "GPU"]
+    },
+    {
+      "id": "langchain",
+      "name": "LangChain",
+      "category": "NLP & GenAI",
+      "description": "Construire des applications avec des LLMs par la composabilité.",
+      "url": "https://www.langchain.com/",
+      "command": "pip install langchain",
+      "architectures": ["CPU"]
+    },
+    {
+      "id": "llamaindex",
+      "name": "LlamaIndex",
+      "category": "NLP & GenAI",
+      "description": "Interface de données pour les LLMs.",
+      "url": "https://www.llamaindex.ai/",
+      "command": "pip install llama-index",
+      "architectures": ["CPU"]
+    },
+    {
+      "id": "openai",
+      "name": "OpenAI Python API",
+      "category": "NLP & GenAI",
+      "description": "La bibliothèque officielle Python pour l'API OpenAI (GPT-4, etc.).",
+      "url": "https://github.com/openai/openai-python",
+      "command": "pip install openai",
+      "architectures": ["CPU"]
+    },
+    {
+      "id": "vllm",
+      "name": "vLLM",
+      "category": "NLP & GenAI",
+      "description": "Une bibliothèque pour l'inférence et le service de LLMs rapide et facile (Paging Attention).",
+      "url": "https://vllm.ai/",
+      "command": "pip install vllm",
+      "architectures": ["GPU CUDA"]
+    },
+    {
+      "id": "matplotlib",
+      "name": "Matplotlib",
+      "category": "Visualisation",
+      "description": "Visualisation statique, animée et interactive en Python.",
+      "url": "https://matplotlib.org/",
+      "command": "pip install matplotlib",
+      "architectures": ["CPU"]
+    },
+    {
+      "id": "seaborn",
+      "name": "Seaborn",
+      "category": "Visualisation",
+      "description": "Visualisation de données statistiques en Python basée sur matplotlib.",
+      "url": "https://seaborn.pydata.org/",
+      "command": "pip install seaborn",
+      "architectures": ["CPU"]
+    },
+    {
+      "id": "plotly",
+      "name": "Plotly",
+      "category": "Visualisation",
+      "description": "Bibliothèque de graphiques interactive, open source et sur navigateur.",
+      "url": "https://plotly.com/python/",
+      "command": "pip install plotly",
+      "architectures": ["CPU", "Browser"]
+    },
+    {
+      "id": "sweetviz",
+      "name": "Sweetviz",
+      "category": "Visualisation",
+      "description": "Exploration visuelle automatisée ultra-rapide des données cibles et des comparaisons de données.",
+      "url": "https://pypi.org/project/sweetviz/",
+      "command": "pip install sweetviz",
+      "architectures": ["CPU"]
+    },
+    {
+      "id": "pygwalker",
+      "name": "PyGWalker",
+      "category": "Visualisation",
+      "description": "Transforme vos données pandas en une interface d'exploration visuelle de style Tableau.",
+      "url": "https://kanaries.net/",
+      "command": "pip install pygwalker",
+      "architectures": ["CPU", "Browser"]
+    },
+    {
+      "id": "mlflow",
+      "name": "MLflow",
+      "category": "MLOps & Tracking",
+      "description": "Plateforme open source pour le cycle de vie de l'apprentissage automatique.",
+      "url": "https://mlflow.org/",
+      "command": "pip install mlflow",
+      "architectures": ["CPU"]
+    },
+    {
+      "id": "wandb",
+      "name": "Weights & Biases",
+      "category": "MLOps & Tracking",
+      "description": "Outils de développement pour l'apprentissage automatique (suivi des expériences, etc.).",
+      "url": "https://wandb.ai/",
+      "command": "pip install wandb",
+      "architectures": ["CPU"]
+    },
+    {
+      "id": "fastapi",
+      "name": "FastAPI",
+      "category": "MLOps & Tracking",
+      "description": "Framework web moderne, rapide (haute performance), pour construire des APIs.",
+      "url": "https://fastapi.tiangolo.com/",
+      "command": "pip install fastapi uvicorn nest-asyncio requests",
+      "architectures": ["CPU"]
+    },
+    {
+      "id": "requests",
+      "name": "Requests",
+      "category": "Utils",
+      "description": "HTTP for Humans. Les requêtes HTTP rendues simples.",
+      "url": "https://requests.readthedocs.io/",
+      "command": "pip install requests",
+      "architectures": ["CPU"]
+    },
+    {
+      "id": "beautifulsoup4",
+      "name": "BeautifulSoup",
+      "category": "Utils",
+      "description": "Pour extraire des données de fichiers HTML et XML (Web Scraping).",
+      "url": "https://www.crummy.com/software/BeautifulSoup/bs4/doc/",
+      "command": "pip install beautifulsoup4",
+      "architectures": ["CPU"]
+    }
+  ]
+}

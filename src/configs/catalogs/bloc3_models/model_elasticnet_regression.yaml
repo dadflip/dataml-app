@@ -1,0 +1,57 @@
+id: "model_elasticnet_regression"
+name: "Model: ElasticNet Regression"
+description: "Régression linéaire combinant les pénalités L1 (Lasso) et L2 (Ridge)."
+category: "Modèles Linéaires"
+tags: ["model", "regression", "tabular", "sklearn", "linear"]
+applies_to: ["Tabulaire"]
+when_to_use: "Quand vous voulez de la sélection de variables (L1) ET de la stabilité (L2)."
+pros:
+  - "Plus robuste que le Lasso seul en présence de groupes de variables corrélées."
+cons:
+  - "Deux hyperparamètres à optimiser au lieu d'un."
+hyperparameters:
+  alpha: "Force globale de la régularisation (ex: 1.0)."
+  l1_ratio: "Ratio L1 vs L2 (0 = Ridge, 1 = Lasso). (ex: 0.5)."
+code_template: |
+  import pandas as pd
+  import numpy as np
+  from sklearn.linear_model import ElasticNet
+
+  # [PARAM: ALPHA | number]
+  ALPHA = 1.0
+  # [/PARAM]
+
+  # [PARAM: L1_RATIO | number]
+  L1_RATIO = 0.5
+  # [/PARAM]
+
+  print(f"[MODEL] Entraînement ElasticNet (alpha={ALPHA}, l1_ratio={L1_RATIO})...")
+  if 'X_train' in locals() and 'y_train' in locals() and 'X_test' in locals():
+      model = ElasticNet(alpha=float(ALPHA), l1_ratio=float(L1_RATIO), random_state=42)
+      model.fit(X_train, y_train)
+      
+      y_pred = model.predict(X_test)
+      y_proba = None
+      
+      feature_importances = None
+      if 'feature_names_out' in locals():
+          if len(model.coef_) == len(feature_names_out):
+              feature_importances = pd.Series(np.abs(model.coef_), index=feature_names_out)
+              
+      if 'preprocessor' in locals() and preprocessor is not None:
+          try: from imblearn.pipeline import Pipeline
+          except: from sklearn.pipeline import Pipeline
+          full_pipeline = Pipeline(steps=preprocessor.steps + [('model', model)])
+      else:
+          try: from imblearn.pipeline import Pipeline
+          except: from sklearn.pipeline import Pipeline
+          full_pipeline = Pipeline(steps=[('model', model)])
+          
+      training_history = {"status": "success", "fitted_on": len(X_train)}
+      task_type = "regression"
+      print("[MODEL] Modèle entraîné et Full Pipeline compilé avec succès.")
+  else:
+      print("[ERREUR] Données d'entraînement introuvables.")
+_metadata:
+  bloc: 3
+  section: "2_regression_tabulaire"
