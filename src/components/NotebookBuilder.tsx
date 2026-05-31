@@ -524,6 +524,7 @@ function SortableCell({
   isRunning,
   output,
   onRun,
+  onStop,
 }: {
   cell: NotebookCell;
   index: number;
