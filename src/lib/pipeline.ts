@@ -763,7 +763,7 @@ export function buildHtmlReport(cells: NotebookCell[], outputs: Record<string, a
   <hr>
   <div id="content"></div>
   <script>
-    const data = \${JSON.stringify(jsonCells)};
+    const data = ${JSON.stringify(jsonCells)};
     
     const content = document.getElementById('content');
     
@@ -838,7 +838,7 @@ export function buildHtmlReport(cells: NotebookCell[], outputs: Record<string, a
     hljs.highlightAll();
   </script>
 </body>
-</html>\`;
+</html>`;
 
   return html;
 }
