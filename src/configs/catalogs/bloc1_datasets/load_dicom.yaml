@@ -1,52 +1,35 @@
-id: "load_dicom"
-name: "Load: Image Médicale DICOM"
-description: "Charge une image médicale au format DICOM et extrait ses métadonnées (Patient, Modalité)."
-category: "2. Load"
-tags: ["load", "dicom", "medical", "image"]
-code_template: |
-  import pydicom
-  import numpy as np
-  import time
-  import os
-
-  # [PARAM: FILE_PATH | file]
-  FILE_PATH = "./data/raw/scan.dcm"
-  # [/PARAM]
-
-  print(f"[LOAD] Lecture du fichier DICOM : {FILE_PATH}...")
-  if not os.path.exists(FILE_PATH):
-      raise FileNotFoundError(f"[ERREUR LOAD] Fichier DICOM introuvable : {FILE_PATH}")
-
-  try:
-      start_time = time.time()
-      dcm = pydicom.dcmread(FILE_PATH)
-      
-      # Extraction des pixels en matrice NumPy
-      pixel_data = dcm.pixel_array
-      
-      # Récupération de métadonnées médicales basiques
-      patient_name = str(dcm.PatientName) if 'PatientName' in dcm else "Inconnu"
-      modality = str(dcm.Modality) if 'Modality' in dcm else "Inconnue"
-      
-      duration = time.time() - start_time
-      print(f"[LOAD] Succès DICOM. Patient: {patient_name}, Modalité: {modality}.")
-      print(f"[LOAD] Matrice {pixel_data.shape} extraite en {duration:.2f}s.")
-  except ImportError:
-      print("[ERREUR LOAD] Le module 'pydicom' est requis pour les images DICOM.")
-      raise
-  except Exception as e:
-      print(f"[ERREUR LOAD] Impossible de parser le DICOM : {str(e)}")
-      raise e
-
-  df = None
-  target_name = None
-  task_type = "computer_vision"
-  meta = {
-      "format": "dicom",
-      "shape": pixel_data.shape,
-      "patient": patient_name,
-      "modality": modality
-  }
+id: load_dicom
+name: 'Load: Image Médicale DICOM'
+description: Charge une image médicale au format DICOM et extrait ses métadonnées
+  (Patient, Modalité).
+category: 2. Load
+tags:
+- load
+- dicom
+- medical
+- image
+code_template: "import pydicom\nimport numpy as np\nimport time\nimport os\n\n# [PARAM:\
+  \ FILE_PATH | file]\nFILE_PATH = \"./data/raw/scan.dcm\"\n# [/PARAM]\n\nprint(f\"\
+  [LOAD] Lecture du fichier DICOM : {FILE_PATH}...\")\nif not os.path.exists(FILE_PATH):\n\
+  \    raise FileNotFoundError(f\"[ERREUR LOAD] Fichier DICOM introuvable : {FILE_PATH}\"\
+  )\n\ntry:\n    start_time = time.time()\n    dcm = pydicom.dcmread(FILE_PATH)\n\
+  \    \n    # Extraction des pixels en matrice NumPy\n    pixel_data = dcm.pixel_array\n\
+  \    \n    # Récupération de métadonnées médicales basiques\n    patient_name =\
+  \ str(dcm.PatientName) if 'PatientName' in dcm else \"Inconnu\"\n    modality =\
+  \ str(dcm.Modality) if 'Modality' in dcm else \"Inconnue\"\n    \n    duration =\
+  \ time.time() - start_time\n    print(f\"[LOAD] Succès DICOM. Patient: {patient_name},\
+  \ Modalité: {modality}.\")\n    print(f\"[LOAD] Matrice {pixel_data.shape} extraite\
+  \ en {duration:.2f}s.\")\nexcept ImportError:\n    print(\"[ERREUR LOAD] Le module\
+  \ 'pydicom' est requis pour les images DICOM.\")\n    raise\nexcept Exception as\
+  \ e:\n    print(f\"[ERREUR LOAD] Impossible de parser le DICOM : {str(e)}\")\n \
+  \   raise e\n\ndf = None\ntarget_name = None\ntask_type = \"computer_vision\"\n\
+  meta = {\n    \"format\": \"dicom\",\n    \"shape\": pixel_data.shape,\n    \"patient\"\
+  : patient_name,\n    \"modality\": modality\n}\n"
+illustration_svg: <svg viewBox="0 0 400 200" xmlns="http://www.w3.org/2000/svg"><rect
+  width="400" height="200" fill="#0f172a"/><rect x="150" y="50" width="100" height="100"
+  fill="#1e293b" stroke="white" stroke-width="4"/><circle cx="200" cy="100" r="40"
+  fill="none" stroke="#64748b" stroke-width="10"/><circle cx="200" cy="100" r="20"
+  fill="white" opacity="0.8"/><circle cx="200" cy="100" r="5" fill="#1e293b"/></svg>
 _metadata:
   bloc: 1
-  section: "2_load"
+  section: 2_load

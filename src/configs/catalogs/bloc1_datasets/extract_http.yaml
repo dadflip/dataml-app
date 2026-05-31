@@ -1,42 +1,30 @@
-id: "extract_http"
-name: "Extract: Fichier distant (HTTP/HTTPS)"
-description: "Télécharge un fichier brut depuis une URL publique."
-category: "1. Extract"
-tags: ["extract", "http", "download"]
-code_template: |
-  import urllib.request
-  import os
-  import time
-
-  # [PARAM: FILE_URL | string]
-  FILE_URL = "https://example.com/data.csv"
-  # [/PARAM]
-  
-  # [PARAM: DEST_PATH | string]
-  DEST_PATH = "./data/raw/data.csv"
-  # [/PARAM]
-
-  print(f"[EXTRACT] Téléchargement depuis {FILE_URL} vers {DEST_PATH}...")
-  os.makedirs(os.path.dirname(DEST_PATH), exist_ok=True)
-
-  try:
-      start_time = time.time()
-      # On simule un navigateur pour éviter certains blocages
-      req = urllib.request.Request(FILE_URL, headers={'User-Agent': 'Mozilla/5.0'})
-      with urllib.request.urlopen(req) as response, open(DEST_PATH, 'wb') as out_file:
-          out_file.write(response.read())
-          
-      duration = time.time() - start_time
-      size_mb = os.path.getsize(DEST_PATH) / (1024 * 1024)
-      print(f"[EXTRACT] Succès. Fichier ({size_mb:.2f} MB) téléchargé en {duration:.2f}s.")
-  except Exception as e:
-      print(f"[ERREUR EXTRACT] Échec du téléchargement : {str(e)}")
-      raise e
-
-  df = None
-  target_name = None
-  task_type = "unknown"
-  meta = {"source": "http", "path": DEST_PATH}
+id: extract_http
+name: 'Extract: Fichier distant (HTTP/HTTPS)'
+description: Télécharge un fichier brut depuis une URL publique.
+category: 1. Extract
+tags:
+- extract
+- http
+- download
+code_template: "import urllib.request\nimport os\nimport time\n\n# [PARAM: FILE_URL\
+  \ | string]\nFILE_URL = \"https://example.com/data.csv\"\n# [/PARAM]\n\n# [PARAM:\
+  \ DEST_PATH | string]\nDEST_PATH = \"./data/raw/data.csv\"\n# [/PARAM]\n\nprint(f\"\
+  [EXTRACT] Téléchargement depuis {FILE_URL} vers {DEST_PATH}...\")\nos.makedirs(os.path.dirname(DEST_PATH),\
+  \ exist_ok=True)\n\ntry:\n    start_time = time.time()\n    # On simule un navigateur\
+  \ pour éviter certains blocages\n    req = urllib.request.Request(FILE_URL, headers={'User-Agent':\
+  \ 'Mozilla/5.0'})\n    with urllib.request.urlopen(req) as response, open(DEST_PATH,\
+  \ 'wb') as out_file:\n        out_file.write(response.read())\n        \n    duration\
+  \ = time.time() - start_time\n    size_mb = os.path.getsize(DEST_PATH) / (1024 *\
+  \ 1024)\n    print(f\"[EXTRACT] Succès. Fichier ({size_mb:.2f} MB) téléchargé en\
+  \ {duration:.2f}s.\")\nexcept Exception as e:\n    print(f\"[ERREUR EXTRACT] Échec\
+  \ du téléchargement : {str(e)}\")\n    raise e\n\ndf = None\ntarget_name = None\n\
+  task_type = \"unknown\"\nmeta = {\"source\": \"http\", \"path\": DEST_PATH}\n"
+illustration_svg: <svg viewBox="0 0 400 200" xmlns="http://www.w3.org/2000/svg"><rect
+  width="400" height="200" fill="#0f172a"/><circle cx="200" cy="100" r="60" fill="none"
+  stroke="#3b82f6" stroke-width="4"/><ellipse cx="200" cy="100" rx="20" ry="60" fill="none"
+  stroke="#3b82f6" stroke-width="4"/><line x1="140" y1="100" x2="260" y2="100" stroke="#3b82f6"
+  stroke-width="4"/><line x1="150" y1="65" x2="250" y2="65" stroke="#3b82f6" stroke-width="4"/><line
+  x1="150" y1="135" x2="250" y2="135" stroke="#3b82f6" stroke-width="4"/></svg>
 _metadata:
   bloc: 1
-  section: "1_extract"
+  section: 1_extract

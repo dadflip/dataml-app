@@ -1,57 +1,32 @@
-id: "extract_mongo"
-name: "Extract: MongoDB"
-description: "Exporte une collection NoSQL MongoDB au format JSON Lines."
-category: "1. Extract"
-tags: ["extract", "mongo", "nosql", "db"]
-code_template: |
-  from pymongo import MongoClient
-  import json
-  import os
-  from bson import json_util
-  import time
-
-  # [PARAM: MONGO_URI | string]
-  MONGO_URI = "mongodb://localhost:27017/"
-  # [/PARAM]
-  
-  # [PARAM: DB_NAME | string]
-  DB_NAME = "ml_database"
-  # [/PARAM]
-  
-  # [PARAM: COLLECTION | string]
-  COLLECTION = "logs"
-  # [/PARAM]
-  
-  # [PARAM: DEST_PATH | string]
-  DEST_PATH = "./data/raw/mongo_dump.jsonlines"
-  # [/PARAM]
-
-  print(f"[EXTRACT] Export de la collection MongoDB {DB_NAME}.{COLLECTION}...")
-  os.makedirs(os.path.dirname(DEST_PATH), exist_ok=True)
-
-  try:
-      start_time = time.time()
-      client = MongoClient(MONGO_URI, serverSelectionTimeoutMS=5000)
-      db = client[DB_NAME]
-      col = db[COLLECTION]
-      
-      cursor = col.find({})
-      count = 0
-      with open(DEST_PATH, "w", encoding="utf-8") as f:
-          for doc in cursor:
-              f.write(json_util.dumps(doc) + "\\n")
-              count += 1
-              
-      duration = time.time() - start_time
-      print(f"[EXTRACT] Succès MongoDB. {count} documents exportés en {duration:.2f}s.")
-  except Exception as e:
-      print(f"[ERREUR EXTRACT] Échec de la connexion MongoDB : {str(e)}")
-      raise e
-
-  df = None
-  target_name = None
-  task_type = "unknown"
-  meta = {"source": "mongodb", "path": DEST_PATH}
+id: extract_mongo
+name: 'Extract: MongoDB'
+description: Exporte une collection NoSQL MongoDB au format JSON Lines.
+category: 1. Extract
+tags:
+- extract
+- mongo
+- nosql
+- db
+code_template: "from pymongo import MongoClient\nimport json\nimport os\nfrom bson\
+  \ import json_util\nimport time\n\n# [PARAM: MONGO_URI | string]\nMONGO_URI = \"\
+  mongodb://localhost:27017/\"\n# [/PARAM]\n\n# [PARAM: DB_NAME | string]\nDB_NAME\
+  \ = \"ml_database\"\n# [/PARAM]\n\n# [PARAM: COLLECTION | string]\nCOLLECTION =\
+  \ \"logs\"\n# [/PARAM]\n\n# [PARAM: DEST_PATH | string]\nDEST_PATH = \"./data/raw/mongo_dump.jsonlines\"\
+  \n# [/PARAM]\n\nprint(f\"[EXTRACT] Export de la collection MongoDB {DB_NAME}.{COLLECTION}...\"\
+  )\nos.makedirs(os.path.dirname(DEST_PATH), exist_ok=True)\n\ntry:\n    start_time\
+  \ = time.time()\n    client = MongoClient(MONGO_URI, serverSelectionTimeoutMS=5000)\n\
+  \    db = client[DB_NAME]\n    col = db[COLLECTION]\n    \n    cursor = col.find({})\n\
+  \    count = 0\n    with open(DEST_PATH, \"w\", encoding=\"utf-8\") as f:\n    \
+  \    for doc in cursor:\n            f.write(json_util.dumps(doc) + \"\\\\n\")\n\
+  \            count += 1\n            \n    duration = time.time() - start_time\n\
+  \    print(f\"[EXTRACT] Succès MongoDB. {count} documents exportés en {duration:.2f}s.\"\
+  )\nexcept Exception as e:\n    print(f\"[ERREUR EXTRACT] Échec de la connexion MongoDB\
+  \ : {str(e)}\")\n    raise e\n\ndf = None\ntarget_name = None\ntask_type = \"unknown\"\
+  \nmeta = {\"source\": \"mongodb\", \"path\": DEST_PATH}\n"
+illustration_svg: <svg viewBox="0 0 400 200" xmlns="http://www.w3.org/2000/svg"><rect
+  width="400" height="200" fill="#0f172a"/><path d="M 200 40 Q 250 80 230 140 Q 200
+  160 170 140 Q 150 80 200 40" fill="#10b981"/><path d="M 200 40 Q 220 80 200 150"
+  fill="none" stroke="#047857" stroke-width="4"/></svg>
 _metadata:
   bloc: 1
-  section: "1_extract"
+  section: 1_extract

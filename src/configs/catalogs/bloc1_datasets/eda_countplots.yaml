@@ -1,31 +1,26 @@
-id: "eda_countplots"
-name: "EDA: Fréquences Catégorielles"
-description: "Trace des diagrammes en barres pour la fréquence des modalités des variables qualitatives."
-category: "3. Exploratory Data Analysis"
-tags: ["eda", "countplot", "tabular", "seaborn"]
-code_template: |
-  import pandas as pd
-  import matplotlib.pyplot as plt
-  import seaborn as sns
-
-  # [PARAM: TOP_N | number]
-  TOP_N = 10
-  # [/PARAM]
-  
-  cols = df.select_dtypes(exclude=['number', 'datetime']).columns.tolist()
-  print(f"[EDA] === COUNTPLOTS ({len(cols)} variables) ===")
-  
-  if len(cols) > 20:
-      cols = cols[:20]
-      
-  plt.figure(figsize=(15, 4 * ((len(cols) + 1) // 2)))
-  for i, col in enumerate(cols):
-      plt.subplot(((len(cols) + 1) // 2), 2, i + 1)
-      order = df[col].value_counts().iloc[:TOP_N].index
-      sns.countplot(data=df, y=col, order=order)
-      plt.title(f"Fréquence de {col}")
-  plt.tight_layout()
-  plt.show()
+id: eda_countplots
+name: 'EDA: Fréquences Catégorielles'
+description: Trace des diagrammes en barres pour la fréquence des modalités des variables
+  qualitatives.
+category: 3. Exploratory Data Analysis
+tags:
+- eda
+- countplot
+- tabular
+- seaborn
+code_template: "import pandas as pd\nimport matplotlib.pyplot as plt\nimport seaborn\
+  \ as sns\n\n# [PARAM: TOP_N | number]\nTOP_N = 10\n# [/PARAM]\n\ncols = df.select_dtypes(exclude=['number',\
+  \ 'datetime']).columns.tolist()\nprint(f\"[EDA] === COUNTPLOTS ({len(cols)} variables)\
+  \ ===\")\n\nif len(cols) > 20:\n    cols = cols[:20]\n    \nplt.figure(figsize=(15,\
+  \ 4 * ((len(cols) + 1) // 2)))\nfor i, col in enumerate(cols):\n    plt.subplot(((len(cols)\
+  \ + 1) // 2), 2, i + 1)\n    order = df[col].value_counts().iloc[:TOP_N].index\n\
+  \    sns.countplot(data=df, y=col, order=order)\n    plt.title(f\"Fréquence de {col}\"\
+  )\nplt.tight_layout()\nplt.show()\n"
+illustration_svg: <svg viewBox="0 0 400 200" xmlns="http://www.w3.org/2000/svg"><rect
+  width="400" height="200" fill="#0f172a"/><line x1="40" y1="170" x2="360" y2="170"
+  stroke="#475569" stroke-width="2"/><rect x="80" y="100" width="40" height="70" fill="#3b82f6"/><rect
+  x="160" y="40" width="40" height="130" fill="#3b82f6"/><rect x="240" y="120" width="40"
+  height="50" fill="#3b82f6"/><rect x="320" y="80" width="40" height="90" fill="#3b82f6"/></svg>
 _metadata:
   bloc: 1
-  section: "3_eda"
+  section: 3_eda

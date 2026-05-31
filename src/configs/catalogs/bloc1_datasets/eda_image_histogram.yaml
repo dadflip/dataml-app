@@ -1,31 +1,27 @@
-id: "eda_image_histogram"
-name: "EDA: Histogramme des Pixels"
-description: "Trace la distribution des intensités de pixels par canal (RGB)."
-category: "3. Exploratory Data Analysis"
-tags: ["eda", "images", "multimedia", "histogram"]
-code_template: |
-  import matplotlib.pyplot as plt
-  import numpy as np
-  import torch
-  import torchvision.transforms as T
-
-  if 'dataset' in locals() and len(dataset) > 0:
-      sample = dataset[0][0]
-      img = sample if isinstance(sample, torch.Tensor) else T.ToTensor()(sample)
-          
-      colors = ('r', 'g', 'b') if img.shape[0] == 3 else ('k',)
-      
-      plt.figure(figsize=(8, 5))
-      for i, color in enumerate(colors):
-          histogram, bin_edges = np.histogram(img[i].numpy(), bins=256, range=(0, 1))
-          plt.plot(bin_edges[0:-1], histogram, color=color)
-          
-      plt.title("Histogramme des intensités des pixels (RGB/Gray) - Première image")
-      plt.xlabel("Intensité [0..1]")
-      plt.ylabel("Nombre de pixels")
-      plt.show()
-  else:
-      print("[EDA] Dataset non trouvé ou vide.")
+id: eda_image_histogram
+name: 'EDA: Histogramme des Pixels'
+description: Trace la distribution des intensités de pixels par canal (RGB).
+category: 3. Exploratory Data Analysis
+tags:
+- eda
+- images
+- multimedia
+- histogram
+code_template: "import matplotlib.pyplot as plt\nimport numpy as np\nimport torch\n\
+  import torchvision.transforms as T\n\nif 'dataset' in locals() and len(dataset)\
+  \ > 0:\n    sample = dataset[0][0]\n    img = sample if isinstance(sample, torch.Tensor)\
+  \ else T.ToTensor()(sample)\n        \n    colors = ('r', 'g', 'b') if img.shape[0]\
+  \ == 3 else ('k',)\n    \n    plt.figure(figsize=(8, 5))\n    for i, color in enumerate(colors):\n\
+  \        histogram, bin_edges = np.histogram(img[i].numpy(), bins=256, range=(0,\
+  \ 1))\n        plt.plot(bin_edges[0:-1], histogram, color=color)\n        \n   \
+  \ plt.title(\"Histogramme des intensités des pixels (RGB/Gray) - Première image\"\
+  )\n    plt.xlabel(\"Intensité [0..1]\")\n    plt.ylabel(\"Nombre de pixels\")\n\
+  \    plt.show()\nelse:\n    print(\"[EDA] Dataset non trouvé ou vide.\")\n"
+illustration_svg: <svg viewBox="0 0 400 200" xmlns="http://www.w3.org/2000/svg"><rect
+  width="400" height="200" fill="#0f172a"/><path d="M 50 160 Q 150 20 200 160 T 350
+  160" fill="none" stroke="#ef4444" stroke-width="3"/><path d="M 50 160 Q 120 40 180
+  160 T 350 160" fill="none" stroke="#22c55e" stroke-width="3"/><path d="M 50 160
+  Q 180 10 250 160 T 350 160" fill="none" stroke="#3b82f6" stroke-width="3"/></svg>
 _metadata:
   bloc: 1
-  section: "3_eda"
+  section: 3_eda

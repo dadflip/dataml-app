@@ -1,58 +1,37 @@
-id: "extract_scraper_selenium"
-name: "Extract: Web Scraping (Selenium)"
-description: "Pilote un navigateur Chrome headless pour extraire une page web dynamique (JavaScript)."
-category: "1. Extract"
-tags: ["extract", "scraping", "selenium", "dynamic"]
-code_template: |
-  from selenium import webdriver
-  from selenium.webdriver.chrome.options import Options
-  import os
-  import time
-
-  # [PARAM: TARGET_URL | string]
-  TARGET_URL = "https://example.com/dynamic"
-  # [/PARAM]
-  
-  # [PARAM: WAIT_SEC | string]
-  WAIT_SEC = "3"
-  # [/PARAM]
-  
-  # [PARAM: DEST_PATH | string]
-  DEST_PATH = "./data/raw/scraped_dynamic.html"
-  # [/PARAM]
-
-  print(f"[EXTRACT] Lancement de Selenium en mode Headless pour {TARGET_URL}...")
-  os.makedirs(os.path.dirname(DEST_PATH), exist_ok=True)
-
-  try:
-      start_time = time.time()
-      chrome_options = Options()
-      chrome_options.add_argument("--headless")
-      chrome_options.add_argument("--no-sandbox")
-      chrome_options.add_argument("--disable-dev-shm-usage")
-      
-      driver = webdriver.Chrome(options=chrome_options)
-      driver.get(TARGET_URL)
-      
-      print(f"[EXTRACT] Attente de {WAIT_SEC}s pour le chargement du JavaScript...")
-      time.sleep(int(WAIT_SEC))
-      
-      html_content = driver.page_source
-      driver.quit()
-      
-      with open(DEST_PATH, "w", encoding="utf-8") as f:
-          f.write(html_content)
-          
-      duration = time.time() - start_time
-      print(f"[EXTRACT] Succès Selenium. DOM sauvegardé en {duration:.2f}s.")
-  except Exception as e:
-      print(f"[ERREUR EXTRACT] Échec du scraping Selenium : {str(e)}")
-      raise e
-
-  df = None
-  target_name = None
-  task_type = "unknown"
-  meta = {"source": "scraping_selenium", "path": DEST_PATH}
+id: extract_scraper_selenium
+name: 'Extract: Web Scraping (Selenium)'
+description: Pilote un navigateur Chrome headless pour extraire une page web dynamique
+  (JavaScript).
+category: 1. Extract
+tags:
+- extract
+- scraping
+- selenium
+- dynamic
+code_template: "from selenium import webdriver\nfrom selenium.webdriver.chrome.options\
+  \ import Options\nimport os\nimport time\n\n# [PARAM: TARGET_URL | string]\nTARGET_URL\
+  \ = \"https://example.com/dynamic\"\n# [/PARAM]\n\n# [PARAM: WAIT_SEC | string]\n\
+  WAIT_SEC = \"3\"\n# [/PARAM]\n\n# [PARAM: DEST_PATH | string]\nDEST_PATH = \"./data/raw/scraped_dynamic.html\"\
+  \n# [/PARAM]\n\nprint(f\"[EXTRACT] Lancement de Selenium en mode Headless pour {TARGET_URL}...\"\
+  )\nos.makedirs(os.path.dirname(DEST_PATH), exist_ok=True)\n\ntry:\n    start_time\
+  \ = time.time()\n    chrome_options = Options()\n    chrome_options.add_argument(\"\
+  --headless\")\n    chrome_options.add_argument(\"--no-sandbox\")\n    chrome_options.add_argument(\"\
+  --disable-dev-shm-usage\")\n    \n    driver = webdriver.Chrome(options=chrome_options)\n\
+  \    driver.get(TARGET_URL)\n    \n    print(f\"[EXTRACT] Attente de {WAIT_SEC}s\
+  \ pour le chargement du JavaScript...\")\n    time.sleep(int(WAIT_SEC))\n    \n\
+  \    html_content = driver.page_source\n    driver.quit()\n    \n    with open(DEST_PATH,\
+  \ \"w\", encoding=\"utf-8\") as f:\n        f.write(html_content)\n        \n  \
+  \  duration = time.time() - start_time\n    print(f\"[EXTRACT] Succès Selenium.\
+  \ DOM sauvegardé en {duration:.2f}s.\")\nexcept Exception as e:\n    print(f\"[ERREUR\
+  \ EXTRACT] Échec du scraping Selenium : {str(e)}\")\n    raise e\n\ndf = None\n\
+  target_name = None\ntask_type = \"unknown\"\nmeta = {\"source\": \"scraping_selenium\"\
+  , \"path\": DEST_PATH}\n"
+illustration_svg: <svg viewBox="0 0 400 200" xmlns="http://www.w3.org/2000/svg"><rect
+  width="400" height="200" fill="#0f172a"/><rect x="140" y="50" width="120" height="100"
+  rx="8" fill="none" stroke="#3b82f6" stroke-width="4"/><circle cx="200" cy="100"
+  r="25" fill="none" stroke="#3b82f6" stroke-width="4"/><circle cx="200" cy="100"
+  r="10" fill="#3b82f6"/><line x1="200" y1="50" x2="200" y2="75" stroke="#3b82f6"
+  stroke-width="4"/><line x1="200" y1="125" x2="200" y2="150" stroke="#3b82f6" stroke-width="4"/></svg>
 _metadata:
   bloc: 1
-  section: "1_extract"
+  section: 1_extract

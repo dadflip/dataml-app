@@ -1,33 +1,31 @@
-id: "eda_histograms"
-name: "EDA: Histogrammes Numériques"
-description: "Trace la distribution (Histogramme + KDE) des variables numériques du dataset."
-category: "3. Exploratory Data Analysis"
-tags: ["eda", "histogram", "tabular", "seaborn"]
-code_template: |
-  import pandas as pd
-  import numpy as np
-  import matplotlib.pyplot as plt
-  import seaborn as sns
-
-  # [PARAM: NUM_BINS | number]
-  NUM_BINS = 30
-  # [/PARAM]
-  
-  cols = df.select_dtypes(include=[np.number]).columns.tolist()
-  print(f"[EDA] === HISTOGRAMMES ({len(cols)} variables) ===")
-  
-  # Limiter à 20 pour éviter de bloquer l'affichage
-  if len(cols) > 20:
-      print("Trop de colonnes, affichage limité aux 20 premières.")
-      cols = cols[:20]
-      
-  plt.figure(figsize=(15, 4 * ((len(cols) + 2) // 3)))
-  for i, col in enumerate(cols):
-      plt.subplot(((len(cols) + 2) // 3), 3, i + 1)
-      sns.histplot(df[col].dropna(), bins=NUM_BINS, kde=True)
-      plt.title(f"Distribution de {col}")
-  plt.tight_layout()
-  plt.show()
+id: eda_histograms
+name: 'EDA: Histogrammes Numériques'
+description: Trace la distribution (Histogramme + KDE) des variables numériques du
+  dataset.
+category: 3. Exploratory Data Analysis
+tags:
+- eda
+- histogram
+- tabular
+- seaborn
+code_template: "import pandas as pd\nimport numpy as np\nimport matplotlib.pyplot\
+  \ as plt\nimport seaborn as sns\n\n# [PARAM: NUM_BINS | number]\nNUM_BINS = 30\n\
+  # [/PARAM]\n\ncols = df.select_dtypes(include=[np.number]).columns.tolist()\nprint(f\"\
+  [EDA] === HISTOGRAMMES ({len(cols)} variables) ===\")\n\n# Limiter à 20 pour éviter\
+  \ de bloquer l'affichage\nif len(cols) > 20:\n    print(\"Trop de colonnes, affichage\
+  \ limité aux 20 premières.\")\n    cols = cols[:20]\n    \nplt.figure(figsize=(15,\
+  \ 4 * ((len(cols) + 2) // 3)))\nfor i, col in enumerate(cols):\n    plt.subplot(((len(cols)\
+  \ + 2) // 3), 3, i + 1)\n    sns.histplot(df[col].dropna(), bins=NUM_BINS, kde=True)\n\
+  \    plt.title(f\"Distribution de {col}\")\nplt.tight_layout()\nplt.show()\n"
+illustration_svg: <svg viewBox="0 0 400 200" xmlns="http://www.w3.org/2000/svg"><rect
+  width="400" height="200" fill="#0f172a"/><line x1="40" y1="170" x2="360" y2="170"
+  stroke="#475569" stroke-width="2"/><rect x="60" y="140" width="20" height="30" fill="#8b5cf6"/><rect
+  x="82" y="100" width="20" height="70" fill="#8b5cf6"/><rect x="104" y="70" width="20"
+  height="100" fill="#8b5cf6"/><rect x="126" y="50" width="20" height="120" fill="#8b5cf6"/><rect
+  x="148" y="30" width="20" height="140" fill="#8b5cf6"/><rect x="170" y="45" width="20"
+  height="125" fill="#8b5cf6"/><rect x="192" y="60" width="20" height="110" fill="#8b5cf6"/><rect
+  x="214" y="90" width="20" height="80" fill="#8b5cf6"/><rect x="236" y="120" width="20"
+  height="50" fill="#8b5cf6"/><rect x="258" y="150" width="20" height="20" fill="#8b5cf6"/></svg>
 _metadata:
   bloc: 1
-  section: "3_eda"
+  section: 3_eda

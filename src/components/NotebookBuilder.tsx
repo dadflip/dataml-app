@@ -364,10 +364,20 @@ export function NotebookBuilder({ cells, setCells, catalogs }: Props) {
               size="sm"
               disabled={!cells.length}
               onClick={() => downloadText("report.html", buildHtmlReport(cells, outputs), "text/html")}
-              title="Générer un Rapport (HTML / DOCX)"
+              title="Générer un Rapport HTML"
             >
               <Download className="h-3.5 w-3.5" />
-              <span className="hidden md:inline">Report</span>
+              <span className="hidden md:inline">HTML</span>
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              disabled={!cells.length}
+              onClick={() => downloadText("report.doc", buildHtmlReport(cells, outputs), "application/msword")}
+              title="Générer un Rapport DOCX (Word)"
+            >
+              <Download className="h-3.5 w-3.5" />
+              <span className="hidden md:inline">DOCX</span>
             </Button>
             <input
               type="file"

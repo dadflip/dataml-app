@@ -1,41 +1,30 @@
-id: "load_feather"
-name: "Load: Fichier Feather"
-description: "Charge un dataset au format binaire Apache Arrow Feather (haute vitesse)."
-category: "2. Load"
-tags: ["load", "feather", "arrow", "pandas"]
-code_template: |
-  import pandas as pd
-  import time
-  import os
-
-  # [PARAM: FILE_PATH | file]
-  FILE_PATH = "./data/raw/data.feather"
-  # [/PARAM]
-  
-  # [PARAM: TARGET_COL | string]
-  TARGET_COL = "target"
-  # [/PARAM]
-
-  print(f"[LOAD] Chargement du fichier Feather depuis {FILE_PATH}...")
-  if not os.path.exists(FILE_PATH):
-      raise FileNotFoundError(f"[ERREUR LOAD] Fichier Feather introuvable : {FILE_PATH}")
-
-  try:
-      start_time = time.time()
-      df = pd.read_feather(FILE_PATH)
-      
-      duration = time.time() - start_time
-      print(f"[LOAD] Succès Feather. L'accès direct en mémoire a pris {duration:.2f}s pour {df.shape[0]} lignes.")
-  except ImportError:
-      print("[ERREUR LOAD] Le module 'pyarrow' est requis pour lire les fichiers Feather.")
-      raise
-  except Exception as e:
-      print(f"[ERREUR LOAD] Impossible de lire le fichier Feather : {str(e)}")
-      raise e
-
-  target_name = TARGET_COL if TARGET_COL and TARGET_COL in df.columns else None
-  task_type = "unknown"
-  meta = {"format": "feather", "shape": df.shape}
+id: load_feather
+name: 'Load: Fichier Feather'
+description: Charge un dataset au format binaire Apache Arrow Feather (haute vitesse).
+category: 2. Load
+tags:
+- load
+- feather
+- arrow
+- pandas
+code_template: "import pandas as pd\nimport time\nimport os\n\n# [PARAM: FILE_PATH\
+  \ | file]\nFILE_PATH = \"./data/raw/data.feather\"\n# [/PARAM]\n\n# [PARAM: TARGET_COL\
+  \ | string]\nTARGET_COL = \"target\"\n# [/PARAM]\n\nprint(f\"[LOAD] Chargement du\
+  \ fichier Feather depuis {FILE_PATH}...\")\nif not os.path.exists(FILE_PATH):\n\
+  \    raise FileNotFoundError(f\"[ERREUR LOAD] Fichier Feather introuvable : {FILE_PATH}\"\
+  )\n\ntry:\n    start_time = time.time()\n    df = pd.read_feather(FILE_PATH)\n \
+  \   \n    duration = time.time() - start_time\n    print(f\"[LOAD] Succès Feather.\
+  \ L'accès direct en mémoire a pris {duration:.2f}s pour {df.shape[0]} lignes.\"\
+  )\nexcept ImportError:\n    print(\"[ERREUR LOAD] Le module 'pyarrow' est requis\
+  \ pour lire les fichiers Feather.\")\n    raise\nexcept Exception as e:\n    print(f\"\
+  [ERREUR LOAD] Impossible de lire le fichier Feather : {str(e)}\")\n    raise e\n\
+  \ntarget_name = TARGET_COL if TARGET_COL and TARGET_COL in df.columns else None\n\
+  task_type = \"unknown\"\nmeta = {\"format\": \"feather\", \"shape\": df.shape}\n"
+illustration_svg: <svg viewBox="0 0 400 200" xmlns="http://www.w3.org/2000/svg"><rect
+  width="400" height="200" fill="#0f172a"/><path d="M 150 150 Q 180 50 250 50 Q 220
+  100 150 150 Z" fill="#38bdf8"/><path d="M 170 120 Q 200 80 230 70" fill="none" stroke="white"
+  stroke-width="2"/><path d="M 190 140 Q 210 100 240 90" fill="none" stroke="white"
+  stroke-width="2"/></svg>
 _metadata:
   bloc: 1
-  section: "2_load"
+  section: 2_load

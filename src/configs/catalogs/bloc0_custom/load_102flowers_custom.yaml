@@ -1,73 +1,50 @@
-id: "load_102flowers_custom"
-name: "Load: 102 Flowers (Custom + Distances)"
-description: "Associe images, labels, et met en cache les matrices de distances précalculées (Oxford 102 Flowers)."
-category: "Custom"
-tags: ["load", "image", "102flowers", "matlab", "custom"]
-code_template: |
-  import pandas as pd
-  import os
-  import glob
-  import time
-  import scipy.io
-
-  # [PARAM: IMAGES_DIR | string]
-  IMAGES_DIR = "./data/extracted/102flowers/jpg"
-  # [/PARAM]
-  
-  # [PARAM: LABELS_MAT | string]
-  LABELS_MAT = "./data/raw/102flowers/imagelabels.mat"
-  # [/PARAM]
-
-  # [PARAM: DISTANCES_MAT | string]
-  DISTANCES_MAT = "./data/raw/102flowers/distancematrices102.mat"
-  # [/PARAM]
-
-  print(f"[LOAD] Chargement 102flowers (Images, Labels, et Matrices de distance)...")
-
-  try:
-      start_time = time.time()
-      
-      # Chargement des labels
-      mat = scipy.io.loadmat(LABELS_MAT)
-      labels = mat['labels'][0]
-      
-      # Chargement des matrices de distance si disponible
-      if os.path.exists(DISTANCES_MAT):
-          dist_mat = scipy.io.loadmat(DISTANCES_MAT)
-          # dist_mat contient typiquement D_hsv, D_hog, D_siftint, D_siftbdy
-          # on les stocke en mémoire locale pour que le bloc KNN precomputed puisse les récupérer
-          # Attention: globals() pour qu'il survive d'une cellule à l'autre dans le notebook !
-          globals()['OXFORD_DISTANCES'] = {k: v for k, v in dist_mat.items() if not k.startswith('_')}
-          print(f"[LOAD] Matrices de distance chargées : {list(globals()['OXFORD_DISTANCES'].keys())}")
-      else:
-          print(f"[AVERTISSEMENT] {DISTANCES_MAT} introuvable. Le KNN precomputed ne fonctionnera pas.")
-
-      # Les images sont nommées image_0001.jpg, image_0002.jpg etc. 
-      image_paths = sorted(glob.glob(os.path.join(IMAGES_DIR, "*.jpg")))
-      
-      if len(image_paths) != len(labels):
-          print(f"[AVERTISSEMENT] Nombre d'images ({len(image_paths)}) différent du nombre de labels ({len(labels)})!")
-          
-      df = pd.DataFrame({
-          'image_path': image_paths[:len(labels)],
-          'target_class': labels[:len(image_paths)]
-      })
-      
-      # L'index du DataFrame (0  N-1) correspond exactement aux indices des lignes/colonnes de la matrice de distance.
-      # C'est crucial car train_test_split conservera les index d'origine dans X_train.index et X_test.index !
-      
-      df['target_class'] = df['target_class'].astype(str)
-      
-      duration = time.time() - start_time
-      print(f"[LOAD] Succès. {len(df)} images associées à leurs labels en {duration:.2f}s.")
-      
-      target_name = "target_class"
-      task_type = "image_classification"
-      meta = {"format": "102flowers_custom", "shape": df.shape, "classes": df['target_class'].nunique()}
-  except Exception as e:
-      print(f"[ERREUR LOAD] Échec du chargement 102flowers : {str(e)}")
-      raise e
-
+id: load_102flowers_custom
+name: 'Load: 102 Flowers (Custom + Distances)'
+description: Associe images, labels, et met en cache les matrices de distances précalculées
+  (Oxford 102 Flowers).
+category: Custom
+tags:
+- load
+- image
+- 102flowers
+- matlab
+- custom
+code_template: "import pandas as pd\nimport os\nimport glob\nimport time\nimport scipy.io\n\
+  \n# [PARAM: IMAGES_DIR | string]\nIMAGES_DIR = \"./data/extracted/102flowers/jpg\"\
+  \n# [/PARAM]\n\n# [PARAM: LABELS_MAT | string]\nLABELS_MAT = \"./data/raw/102flowers/imagelabels.mat\"\
+  \n# [/PARAM]\n\n# [PARAM: DISTANCES_MAT | string]\nDISTANCES_MAT = \"./data/raw/102flowers/distancematrices102.mat\"\
+  \n# [/PARAM]\n\nprint(f\"[LOAD] Chargement 102flowers (Images, Labels, et Matrices\
+  \ de distance)...\")\n\ntry:\n    start_time = time.time()\n    \n    # Chargement\
+  \ des labels\n    mat = scipy.io.loadmat(LABELS_MAT)\n    labels = mat['labels'][0]\n\
+  \    \n    # Chargement des matrices de distance si disponible\n    if os.path.exists(DISTANCES_MAT):\n\
+  \        dist_mat = scipy.io.loadmat(DISTANCES_MAT)\n        # dist_mat contient\
+  \ typiquement D_hsv, D_hog, D_siftint, D_siftbdy\n        # on les stocke en mémoire\
+  \ locale pour que le bloc KNN precomputed puisse les récupérer\n        # Attention:\
+  \ globals() pour qu'il survive d'une cellule à l'autre dans le notebook !\n    \
+  \    globals()['OXFORD_DISTANCES'] = {k: v for k, v in dist_mat.items() if not k.startswith('_')}\n\
+  \        print(f\"[LOAD] Matrices de distance chargées : {list(globals()['OXFORD_DISTANCES'].keys())}\"\
+  )\n    else:\n        print(f\"[AVERTISSEMENT] {DISTANCES_MAT} introuvable. Le KNN\
+  \ precomputed ne fonctionnera pas.\")\n\n    # Les images sont nommées image_0001.jpg,\
+  \ image_0002.jpg etc. \n    image_paths = sorted(glob.glob(os.path.join(IMAGES_DIR,\
+  \ \"*.jpg\")))\n    \n    if len(image_paths) != len(labels):\n        print(f\"\
+  [AVERTISSEMENT] Nombre d'images ({len(image_paths)}) différent du nombre de labels\
+  \ ({len(labels)})!\")\n        \n    df = pd.DataFrame({\n        'image_path':\
+  \ image_paths[:len(labels)],\n        'target_class': labels[:len(image_paths)]\n\
+  \    })\n    \n    # L'index du DataFrame (0  N-1) correspond exactement aux indices\
+  \ des lignes/colonnes de la matrice de distance.\n    # C'est crucial car train_test_split\
+  \ conservera les index d'origine dans X_train.index et X_test.index !\n    \n  \
+  \  df['target_class'] = df['target_class'].astype(str)\n    \n    duration = time.time()\
+  \ - start_time\n    print(f\"[LOAD] Succès. {len(df)} images associées à leurs labels\
+  \ en {duration:.2f}s.\")\n    \n    target_name = \"target_class\"\n    task_type\
+  \ = \"image_classification\"\n    meta = {\"format\": \"102flowers_custom\", \"\
+  shape\": df.shape, \"classes\": df['target_class'].nunique()}\nexcept Exception\
+  \ as e:\n    print(f\"[ERREUR LOAD] Échec du chargement 102flowers : {str(e)}\"\
+  )\n    raise e\n"
+illustration_svg: <svg viewBox="0 0 400 200" xmlns="http://www.w3.org/2000/svg"><rect
+  width="400" height="200" fill="#0f172a"/><path d="M100 60 L140 60 L160 80 L300 80
+  L300 150 L100 150 Z" fill="#eab308"/><rect x="120" y="100" width="140" height="30"
+  rx="4" fill="#fef08a"/><text x="190" y="120" fill="#854d0e" font-family="sans-serif"
+  font-size="12" font-weight="bold" text-anchor="middle">102 Flowers Data</text></svg>
 _metadata:
   bloc: -1
-  section: "0_custom_project"
+  section: 0_custom_project

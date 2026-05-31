@@ -1,22 +1,45 @@
-id: "eda_pandas_profiling"
-name: "EDA: YData Profiling"
-description: "Génère un rapport HTML interactif exhaustif (distributions, corrélations, warnings)."
-category: "3. Exploratory Data Analysis"
-tags: ["eda", "profiling", "tabular", "ydata"]
-code_template: |
-  import pandas as pd
+id: eda_pandas_profiling
+name: 'EDA: YData Profiling'
+description: Génère un rapport HTML interactif exhaustif (distributions, corrélations,
+  warnings).
+category: 3. Exploratory Data Analysis
+tags:
+- eda
+- profiling
+- tabular
+- ydata
+code_template: 'import pandas as pd
+
   # Note: ydata_profiling doit être installé
+
   from ydata_profiling import ProfileReport
 
+
   # [PARAM: MINIMAL_MODE | boolean]
+
   MINIMAL_MODE = True
+
   # [/PARAM]
-  
+
+
   print("[EDA] Génération du rapport de profiling... Cela peut prendre un moment.")
-  profile = ProfileReport(df, title="Pandas Profiling Report", minimal=MINIMAL_MODE, explorative=True)
-  
+
+  profile = ProfileReport(df, title="Pandas Profiling Report", minimal=MINIMAL_MODE,
+  explorative=True)
+
+
   # Affichage dans un notebook
+
   profile.to_notebook_iframe()
+
+  '
+illustration_svg: <svg viewBox="0 0 400 200" xmlns="http://www.w3.org/2000/svg"><rect
+  width="400" height="200" fill="#0f172a"/><rect x="100" y="40" width="200" height="120"
+  rx="8" fill="#1e293b" stroke="#3b82f6"/><line x1="100" y1="65" x2="300" y2="65"
+  stroke="#3b82f6" stroke-width="2"/><circle cx="130" cy="100" r="15" fill="#f59e0b"/><rect
+  x="160" y="90" width="100" height="6" fill="#cbd5e1"/><rect x="160" y="105" width="60"
+  height="6" fill="#94a3b8"/><line x1="120" y1="135" x2="280" y2="135" stroke="#334155"
+  stroke-width="2"/></svg>
 _metadata:
   bloc: 1
-  section: "3_eda"
+  section: 3_eda

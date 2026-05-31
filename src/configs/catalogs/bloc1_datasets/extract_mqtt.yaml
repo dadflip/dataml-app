@@ -1,59 +1,37 @@
-id: "extract_mqtt"
-name: "Extract: Serveur MQTT (IoT)"
-description: "S'abonne à un topic MQTT (ex: capteurs IoT) et enregistre les trames localement."
-category: "1. Extract"
-tags: ["extract", "mqtt", "iot"]
-code_template: |
-  import paho.mqtt.client as mqtt
-  import os
-  import time
-
-  # [PARAM: BROKER | string]
-  BROKER = "test.mosquitto.org"
-  # [/PARAM]
-  
-  # [PARAM: TOPIC | string]
-  TOPIC = "temperature/sensor1"
-  # [/PARAM]
-  
-  # [PARAM: DURATION_SEC | string]
-  DURATION_SEC = "3"
-  # [/PARAM]
-  
-  # [PARAM: DEST_PATH | string]
-  DEST_PATH = "./data/raw/mqtt_dump.txt"
-  # [/PARAM]
-
-  print(f"[EXTRACT] Abonnement MQTT à {BROKER} sur {TOPIC}...")
-  os.makedirs(os.path.dirname(DEST_PATH), exist_ok=True)
-
-  messages = []
-  def on_message(client, userdata, msg):
-      messages.append(msg.payload.decode('utf-8'))
-
-  try:
-      client = mqtt.Client()
-      client.on_message = on_message
-      client.connect(BROKER)
-      client.subscribe(TOPIC)
-      
-      client.loop_start()
-      time.sleep(int(DURATION_SEC))
-      client.loop_stop()
-      
-      with open(DEST_PATH, "w", encoding="utf-8") as f:
-          for m in messages:
-              f.write(m + "\\n")
-              
-      print(f"[EXTRACT] Succès MQTT. {len(messages)} trames captées.")
-  except Exception as e:
-      print(f"[ERREUR EXTRACT] Échec MQTT : {str(e)}")
-      raise e
-
-  df = None
-  target_name = None
-  task_type = "unknown"
-  meta = {"source": "mqtt", "path": DEST_PATH}
+id: extract_mqtt
+name: 'Extract: Serveur MQTT (IoT)'
+description: 'S''abonne à un topic MQTT (ex: capteurs IoT) et enregistre les trames
+  localement.'
+category: 1. Extract
+tags:
+- extract
+- mqtt
+- iot
+code_template: "import paho.mqtt.client as mqtt\nimport os\nimport time\n\n# [PARAM:\
+  \ BROKER | string]\nBROKER = \"test.mosquitto.org\"\n# [/PARAM]\n\n# [PARAM: TOPIC\
+  \ | string]\nTOPIC = \"temperature/sensor1\"\n# [/PARAM]\n\n# [PARAM: DURATION_SEC\
+  \ | string]\nDURATION_SEC = \"3\"\n# [/PARAM]\n\n# [PARAM: DEST_PATH | string]\n\
+  DEST_PATH = \"./data/raw/mqtt_dump.txt\"\n# [/PARAM]\n\nprint(f\"[EXTRACT] Abonnement\
+  \ MQTT à {BROKER} sur {TOPIC}...\")\nos.makedirs(os.path.dirname(DEST_PATH), exist_ok=True)\n\
+  \nmessages = []\ndef on_message(client, userdata, msg):\n    messages.append(msg.payload.decode('utf-8'))\n\
+  \ntry:\n    client = mqtt.Client()\n    client.on_message = on_message\n    client.connect(BROKER)\n\
+  \    client.subscribe(TOPIC)\n    \n    client.loop_start()\n    time.sleep(int(DURATION_SEC))\n\
+  \    client.loop_stop()\n    \n    with open(DEST_PATH, \"w\", encoding=\"utf-8\"\
+  ) as f:\n        for m in messages:\n            f.write(m + \"\\\\n\")\n      \
+  \      \n    print(f\"[EXTRACT] Succès MQTT. {len(messages)} trames captées.\")\n\
+  except Exception as e:\n    print(f\"[ERREUR EXTRACT] Échec MQTT : {str(e)}\")\n\
+  \    raise e\n\ndf = None\ntarget_name = None\ntask_type = \"unknown\"\nmeta = {\"\
+  source\": \"mqtt\", \"path\": DEST_PATH}\n"
+illustration_svg: <svg viewBox="0 0 400 200" xmlns="http://www.w3.org/2000/svg"><rect
+  width="400" height="200" fill="#0f172a"/><rect x="160" y="80" width="80" height="40"
+  rx="8" fill="#8b5cf6"/><circle cx="100" cy="100" r="10" fill="#8b5cf6"/><circle
+  cx="300" cy="100" r="10" fill="#8b5cf6"/><circle cx="200" cy="40" r="10" fill="#8b5cf6"/><circle
+  cx="200" cy="160" r="10" fill="#8b5cf6"/><line x1="120" y1="100" x2="150" y2="100"
+  stroke="#8b5cf6" stroke-width="2" stroke-dasharray="4 4"/><line x1="250" y1="100"
+  x2="280" y2="100" stroke="#8b5cf6" stroke-width="2" stroke-dasharray="4 4"/><line
+  x1="200" y1="60" x2="200" y2="70" stroke="#8b5cf6" stroke-width="2" stroke-dasharray="4
+  4"/><line x1="200" y1="130" x2="200" y2="140" stroke="#8b5cf6" stroke-width="2"
+  stroke-dasharray="4 4"/></svg>
 _metadata:
   bloc: 1
-  section: "1_extract"
+  section: 1_extract

@@ -1,30 +1,31 @@
-id: "eda_target_distribution"
-name: "EDA: Distribution de la Target"
-description: "Analyse spécifique de la variable cible (Régression ou Classification)."
-category: "3. Exploratory Data Analysis"
-tags: ["eda", "target", "tabular", "seaborn"]
-code_template: |
-  import pandas as pd
-  import numpy as np
-  import matplotlib.pyplot as plt
-  import seaborn as sns
-
-  # target_name provient du bloc LOAD précédent
-  if 'target_name' in locals() and target_name and target_name in df.columns:
-      plt.figure(figsize=(8, 5))
-      if pd.api.types.is_numeric_dtype(df[target_name]) and df[target_name].nunique() > 20:
-          print(f"[EDA] Target '{target_name}' détectée comme CONTINUE (Régression).")
-          sns.histplot(df[target_name].dropna(), kde=True, color='purple')
-          plt.title(f"Distribution Continue de la cible : {target_name}")
-      else:
-          print(f"[EDA] Target '{target_name}' détectée comme CATÉGORIELLE (Classification).")
-          val_counts = df[target_name].value_counts(normalize=True) * 100
-          print("Répartition (%) :\n", val_counts)
-          sns.countplot(data=df, x=target_name, order=df[target_name].value_counts().index, palette='viridis')
-          plt.title(f"Distribution Catégorielle de la cible : {target_name}")
-      plt.show()
-  else:
-      print("[EDA] AVERTISSEMENT : target_name n'est pas définie ou introuvable dans df.")
+id: eda_target_distribution
+name: 'EDA: Distribution de la Target'
+description: Analyse spécifique de la variable cible (Régression ou Classification).
+category: 3. Exploratory Data Analysis
+tags:
+- eda
+- target
+- tabular
+- seaborn
+code_template: "import pandas as pd\nimport numpy as np\nimport matplotlib.pyplot\
+  \ as plt\nimport seaborn as sns\n\n# target_name provient du bloc LOAD précédent\n\
+  if 'target_name' in locals() and target_name and target_name in df.columns:\n  \
+  \  plt.figure(figsize=(8, 5))\n    if pd.api.types.is_numeric_dtype(df[target_name])\
+  \ and df[target_name].nunique() > 20:\n        print(f\"[EDA] Target '{target_name}'\
+  \ détectée comme CONTINUE (Régression).\")\n        sns.histplot(df[target_name].dropna(),\
+  \ kde=True, color='purple')\n        plt.title(f\"Distribution Continue de la cible\
+  \ : {target_name}\")\n    else:\n        print(f\"[EDA] Target '{target_name}' détectée\
+  \ comme CATÉGORIELLE (Classification).\")\n        val_counts = df[target_name].value_counts(normalize=True)\
+  \ * 100\n        print(\"Répartition (%) :\\n\", val_counts)\n        sns.countplot(data=df,\
+  \ x=target_name, order=df[target_name].value_counts().index, palette='viridis')\n\
+  \        plt.title(f\"Distribution Catégorielle de la cible : {target_name}\")\n\
+  \    plt.show()\nelse:\n    print(\"[EDA] AVERTISSEMENT : target_name n'est pas\
+  \ définie ou introuvable dans df.\")\n"
+illustration_svg: <svg viewBox="0 0 400 200" xmlns="http://www.w3.org/2000/svg"><rect
+  width="400" height="200" fill="#0f172a"/><path d="M 50 160 Q 150 160 200 40 Q 250
+  160 350 160" fill="none" stroke="#3b82f6" stroke-width="4"/><rect x="175" y="60"
+  width="50" height="100" fill="#3b82f6" opacity="0.3"/><line x1="50" y1="160" x2="350"
+  y2="160" stroke="#475569" stroke-width="2"/></svg>
 _metadata:
   bloc: 1
-  section: "3_eda"
+  section: 3_eda

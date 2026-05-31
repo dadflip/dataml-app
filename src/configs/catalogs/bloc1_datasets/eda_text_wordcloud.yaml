@@ -1,30 +1,28 @@
-id: "eda_text_wordcloud"
-name: "EDA: Nuage de Mots"
-description: "Génère un WordCloud à partir d'une colonne de texte."
-category: "3. Exploratory Data Analysis"
-tags: ["eda", "text", "nlp", "wordcloud"]
-code_template: |
-  import pandas as pd
-  import matplotlib.pyplot as plt
-  from wordcloud import WordCloud
-
-  # [PARAM: TEXT_COL | string]
-  TEXT_COL = "text"
-  # [/PARAM]
-
-  if TEXT_COL in df.columns:
-      text_data = " ".join([str(t) for t in df[TEXT_COL] if isinstance(t, str)])
-      if text_data.strip():
-          wordcloud = WordCloud(width=800, height=400, background_color='white').generate(text_data)
-          plt.figure(figsize=(12, 6))
-          plt.imshow(wordcloud, interpolation='bilinear')
-          plt.axis('off')
-          plt.title("Nuage de mots")
-          plt.show()
-      else:
-          print("[EDA] Texte vide.")
-  else:
-      print(f"[EDA] Colonne {TEXT_COL} introuvable.")
+id: eda_text_wordcloud
+name: 'EDA: Nuage de Mots'
+description: Génère un WordCloud à partir d'une colonne de texte.
+category: 3. Exploratory Data Analysis
+tags:
+- eda
+- text
+- nlp
+- wordcloud
+code_template: "import pandas as pd\nimport matplotlib.pyplot as plt\nfrom wordcloud\
+  \ import WordCloud\n\n# [PARAM: TEXT_COL | string]\nTEXT_COL = \"text\"\n# [/PARAM]\n\
+  \nif TEXT_COL in df.columns:\n    text_data = \" \".join([str(t) for t in df[TEXT_COL]\
+  \ if isinstance(t, str)])\n    if text_data.strip():\n        wordcloud = WordCloud(width=800,\
+  \ height=400, background_color='white').generate(text_data)\n        plt.figure(figsize=(12,\
+  \ 6))\n        plt.imshow(wordcloud, interpolation='bilinear')\n        plt.axis('off')\n\
+  \        plt.title(\"Nuage de mots\")\n        plt.show()\n    else:\n        print(\"\
+  [EDA] Texte vide.\")\nelse:\n    print(f\"[EDA] Colonne {TEXT_COL} introuvable.\"\
+  )\n"
+illustration_svg: <svg viewBox="0 0 400 200" xmlns="http://www.w3.org/2000/svg"><rect
+  width="400" height="200" fill="#0f172a"/><text x="200" y="110" fill="#3b82f6" font-size="40"
+  font-weight="bold" text-anchor="middle">DATA</text><text x="140" y="70" fill="#10b981"
+  font-size="20" text-anchor="middle">ML</text><text x="280" y="140" fill="#ef4444"
+  font-size="24" text-anchor="middle">AI</text><text x="260" y="60" fill="#f59e0b"
+  font-size="16" text-anchor="middle">Cloud</text><text x="120" y="150" fill="#a855f7"
+  font-size="18" text-anchor="middle">Text</text></svg>
 _metadata:
   bloc: 1
-  section: "3_eda"
+  section: 3_eda

@@ -1,22 +1,24 @@
-id: "eda_piechart"
-name: "EDA: Diagramme Circulaire"
-description: "Affiche les proportions en camembert pour une variable catégorielle."
-category: "3. Exploratory Data Analysis"
-tags: ["eda", "piechart", "tabular", "matplotlib"]
-code_template: |
-  import matplotlib.pyplot as plt
-
-  if 'target_name' in locals() and target_name and target_name in df.columns:
-      counts = df[target_name].value_counts()
-      if len(counts) <= 10:
-          plt.figure(figsize=(8, 8))
-          plt.pie(counts, labels=counts.index, autopct='%1.1f%%', startangle=140)
-          plt.title(f"Proportions de {target_name}")
-          plt.show()
-      else:
-          print("[EDA] Trop de catégories pour un camembert lisible.")
-  else:
-      print("[EDA] Cible introuvable.")
+id: eda_piechart
+name: 'EDA: Diagramme Circulaire'
+description: Affiche les proportions en camembert pour une variable catégorielle.
+category: 3. Exploratory Data Analysis
+tags:
+- eda
+- piechart
+- tabular
+- matplotlib
+code_template: "import matplotlib.pyplot as plt\n\nif 'target_name' in locals() and\
+  \ target_name and target_name in df.columns:\n    counts = df[target_name].value_counts()\n\
+  \    if len(counts) <= 10:\n        plt.figure(figsize=(8, 8))\n        plt.pie(counts,\
+  \ labels=counts.index, autopct='%1.1f%%', startangle=140)\n        plt.title(f\"\
+  Proportions de {target_name}\")\n        plt.show()\n    else:\n        print(\"\
+  [EDA] Trop de catégories pour un camembert lisible.\")\nelse:\n    print(\"[EDA]\
+  \ Cible introuvable.\")\n"
+illustration_svg: <svg viewBox="0 0 400 200" xmlns="http://www.w3.org/2000/svg"><rect
+  width="400" height="200" fill="#0f172a"/><path d="M 200 100 L 200 40 A 60 60 0 0
+  1 260 100 Z" fill="#3b82f6"/><path d="M 200 100 L 260 100 A 60 60 0 0 1 157 142
+  Z" fill="#10b981"/><path d="M 200 100 L 157 142 A 60 60 0 0 1 140 100 Z" fill="#f59e0b"/><path
+  d="M 200 100 L 140 100 A 60 60 0 0 1 200 40 Z" fill="#ef4444"/></svg>
 _metadata:
   bloc: 1
-  section: "3_eda"
+  section: 3_eda

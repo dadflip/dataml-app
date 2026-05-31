@@ -745,16 +745,19 @@ export function buildHtmlReport(cells: NotebookCell[], outputs: Record<string, a
   <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/languages/python.min.js"></script>
   <style>
-    body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; line-height: 1.6; max-width: 900px; margin: 0 auto; padding: 2rem; color: #333; }
-    h1, h2, h3 { border-bottom: 1px solid #eaecef; padding-bottom: 0.3em; }
-    .cell { margin-bottom: 2rem; padding: 1rem; border: 1px solid #e1e4e8; border-radius: 6px; }
-    .cell-header { font-size: 0.85em; color: #6a737d; margin-bottom: 0.5rem; text-transform: uppercase; letter-spacing: 0.5px; }
-    .markdown-cell { border: none; padding: 0; margin-bottom: 1rem; }
-    .code-cell { background: #f6f8fa; }
-    pre { margin: 0; padding: 1rem; overflow-x: auto; font-size: 13px; background: #f6f8fa; border-radius: 6px; }
-    .output { margin-top: 1rem; padding: 1rem; background: #fff; border-top: 1px solid #e1e4e8; }
-    .output-error { color: #d73a49; }
-    .output img { max-width: 100%; height: auto; display: block; margin: 0.5rem 0; }
+    body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; line-height: 1.6; max-width: 1000px; margin: 0 auto; padding: 2rem; color: #333; background: #f8fafc; }
+    h1, h2, h3 { border-bottom: 1px solid #e2e8f0; padding-bottom: 0.3em; color: #0f172a; }
+    .cell { margin-bottom: 2.5rem; padding: 1.5rem; border: 1px solid #cbd5e1; border-radius: 8px; background: #ffffff; box-shadow: 0 1px 3px rgba(0,0,0,0.05); }
+    .cell-header { font-size: 0.85em; font-weight: bold; color: #475569; margin-bottom: 0.75rem; text-transform: uppercase; letter-spacing: 0.5px; }
+    .markdown-cell { border: none; padding: 0; margin-bottom: 1.5rem; background: transparent; box-shadow: none; }
+    .code-cell { background: #ffffff; }
+    pre { margin: 0; padding: 1rem; overflow-x: auto; font-size: 13px; font-family: 'Consolas', 'Monaco', monospace; border-radius: 6px; }
+    .code-pre { background: #f1f5f9; border: 1px solid #e2e8f0; }
+    .output { margin-top: 1rem; padding: 1rem; background: #0f172a; border-radius: 6px; color: #e2e8f0; overflow-x: auto; }
+    .output-text { background: transparent !important; padding: 0 !important; color: #38bdf8 !important; }
+    .output-error { background: transparent !important; padding: 0 !important; color: #ef4444 !important; font-weight: bold; }
+    .output-img { background: transparent; padding: 0; }
+    .output img { max-width: 100%; height: auto; display: block; margin: 0.5rem 0; border-radius: 4px; background: white; padding: 0.5rem; }
   </style>
 </head>
 <body>
@@ -780,6 +783,7 @@ export function buildHtmlReport(cells: NotebookCell[], outputs: Record<string, a
         div.appendChild(header);
       
         const pre = document.createElement('pre');
+        pre.className = 'code-pre';
         const code = document.createElement('code');
         code.className = 'language-python';
         code.textContent = cell.code;
@@ -792,35 +796,38 @@ export function buildHtmlReport(cells: NotebookCell[], outputs: Record<string, a
           
           if (cell.output.stdout) {
             const outPre = document.createElement('pre');
+            outPre.className = 'output-text';
             outPre.textContent = cell.output.stdout;
-            outPre.style.background = '#fff';
-            outPre.style.padding = '0';
             outDiv.appendChild(outPre);
           }
           if (cell.output.stderr) {
             const errPre = document.createElement('pre');
             errPre.className = 'output-error';
             errPre.textContent = cell.output.stderr;
-            errPre.style.background = '#fff';
-            errPre.style.padding = '0';
             outDiv.appendChild(errPre);
           }
           
           if (cell.output.displays) {
             cell.output.displays.forEach(d => {
               if (d.metadata?.renderAs === 'image') {
+                const imgContainer = document.createElement('div');
+                imgContainer.className = 'output-img';
                 const img = document.createElement('img');
                 img.src = 'data:' + d.mime + ';base64,' + d.data;
-                outDiv.appendChild(img);
+                imgContainer.appendChild(img);
+                outDiv.appendChild(imgContainer);
               } else if (d.metadata?.renderAs === 'html') {
                 const h = document.createElement('div');
+                h.style.background = 'white';
+                h.style.color = 'black';
+                h.style.padding = '1rem';
+                h.style.borderRadius = '4px';
                 h.innerHTML = d.data;
                 outDiv.appendChild(h);
               } else {
                 const outPre = document.createElement('pre');
+                outPre.className = 'output-text';
                 outPre.textContent = d.data;
-                outPre.style.background = '#fff';
-                outPre.style.padding = '0';
                 outDiv.appendChild(outPre);
               }
             });

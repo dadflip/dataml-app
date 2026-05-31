@@ -1,46 +1,30 @@
-id: "load_image"
-name: "Load: Image (JPG, PNG, TIFF)"
-description: "Charge une image sous forme de matrice NumPy (RGB)."
-category: "2. Load"
-tags: ["load", "image", "cv2", "media"]
-code_template: |
-  import cv2
-  import numpy as np
-  import time
-  import os
-
-  # [PARAM: FILE_PATH | file]
-  FILE_PATH = "./data/raw/photo.jpg"
-  # [/PARAM]
-
-  print(f"[LOAD] Lecture de l'image : {FILE_PATH}...")
-  if not os.path.exists(FILE_PATH):
-      raise FileNotFoundError(f"[ERREUR LOAD] Fichier Image introuvable : {FILE_PATH}")
-
-  try:
-      start_time = time.time()
-      
-      # Lecture OpenCV (BGB par défaut)
-      img_bgr = cv2.imread(FILE_PATH)
-      if img_bgr is None:
-          raise ValueError("Le fichier n'est pas une image valide ou est corrompu.")
-          
-      # Conversion BGR -> RGB pour compatibilité ML/DL
-      img_rgb = cv2.cvtColor(img_bgr, cv2.COLOR_BGR2RGB)
-      
-      duration = time.time() - start_time
-      print(f"[LOAD] Succès. Image {img_rgb.shape} chargée en {duration:.2f}s.")
-  except ImportError:
-      print("[ERREUR LOAD] Le module 'opencv-python' (cv2) est requis.")
-      raise
-  except Exception as e:
-      print(f"[ERREUR LOAD] Impossible de charger l'image : {str(e)}")
-      raise e
-
-  df = None
-  target_name = None
-  task_type = "computer_vision"
-  meta = {"format": "image", "shape": img_rgb.shape}
+id: load_image
+name: 'Load: Image (JPG, PNG, TIFF)'
+description: Charge une image sous forme de matrice NumPy (RGB).
+category: 2. Load
+tags:
+- load
+- image
+- cv2
+- media
+code_template: "import cv2\nimport numpy as np\nimport time\nimport os\n\n# [PARAM:\
+  \ FILE_PATH | file]\nFILE_PATH = \"./data/raw/photo.jpg\"\n# [/PARAM]\n\nprint(f\"\
+  [LOAD] Lecture de l'image : {FILE_PATH}...\")\nif not os.path.exists(FILE_PATH):\n\
+  \    raise FileNotFoundError(f\"[ERREUR LOAD] Fichier Image introuvable : {FILE_PATH}\"\
+  )\n\ntry:\n    start_time = time.time()\n    \n    # Lecture OpenCV (BGB par défaut)\n\
+  \    img_bgr = cv2.imread(FILE_PATH)\n    if img_bgr is None:\n        raise ValueError(\"\
+  Le fichier n'est pas une image valide ou est corrompu.\")\n        \n    # Conversion\
+  \ BGR -> RGB pour compatibilité ML/DL\n    img_rgb = cv2.cvtColor(img_bgr, cv2.COLOR_BGR2RGB)\n\
+  \    \n    duration = time.time() - start_time\n    print(f\"[LOAD] Succès. Image\
+  \ {img_rgb.shape} chargée en {duration:.2f}s.\")\nexcept ImportError:\n    print(\"\
+  [ERREUR LOAD] Le module 'opencv-python' (cv2) est requis.\")\n    raise\nexcept\
+  \ Exception as e:\n    print(f\"[ERREUR LOAD] Impossible de charger l'image : {str(e)}\"\
+  )\n    raise e\n\ndf = None\ntarget_name = None\ntask_type = \"computer_vision\"\
+  \nmeta = {\"format\": \"image\", \"shape\": img_rgb.shape}\n"
+illustration_svg: <svg viewBox="0 0 400 200" xmlns="http://www.w3.org/2000/svg"><rect
+  width="400" height="200" fill="#0f172a"/><rect x="120" y="50" width="160" height="100"
+  fill="#1e293b" stroke="white" stroke-width="4"/><circle cx="160" cy="80" r="15"
+  fill="#fcd34d"/><polygon points="120,150 180,90 230,140 250,120 280,150" fill="#10b981"/></svg>
 _metadata:
   bloc: 1
-  section: "2_load"
+  section: 2_load

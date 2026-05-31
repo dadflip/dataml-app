@@ -1,29 +1,28 @@
-id: "eda_correlation_matrix"
-name: "EDA: Matrice de Corrélation"
-description: "Affiche une heatmap des corrélations de Pearson."
-category: "3. Exploratory Data Analysis"
-tags: ["eda", "correlation", "tabular", "seaborn"]
-code_template: |
-  import pandas as pd
-  import numpy as np
-  import matplotlib.pyplot as plt
-  import seaborn as sns
-
-  # [PARAM: CMAP | string]
-  CMAP = "coolwarm"
-  # [/PARAM]
-  
-  num_df = df.select_dtypes(include=[np.number])
-  if len(num_df.columns) < 2:
-      print("[EDA] Pas assez de colonnes numériques pour une corrélation.")
-  else:
-      corr = num_df.corr()
-      mask = np.triu(np.ones_like(corr, dtype=bool))
-      plt.figure(figsize=(12, 10))
-      sns.heatmap(corr, mask=mask, annot=False, cmap=CMAP, center=0, 
-                  square=True, linewidths=.5, cbar_kws={"shrink": .5})
-      plt.title("Matrice de Corrélation Linéaire")
-      plt.show()
+id: eda_correlation_matrix
+name: 'EDA: Matrice de Corrélation'
+description: Affiche une heatmap des corrélations de Pearson.
+category: 3. Exploratory Data Analysis
+tags:
+- eda
+- correlation
+- tabular
+- seaborn
+code_template: "import pandas as pd\nimport numpy as np\nimport matplotlib.pyplot\
+  \ as plt\nimport seaborn as sns\n\n# [PARAM: CMAP | string]\nCMAP = \"coolwarm\"\
+  \n# [/PARAM]\n\nnum_df = df.select_dtypes(include=[np.number])\nif len(num_df.columns)\
+  \ < 2:\n    print(\"[EDA] Pas assez de colonnes numériques pour une corrélation.\"\
+  )\nelse:\n    corr = num_df.corr()\n    mask = np.triu(np.ones_like(corr, dtype=bool))\n\
+  \    plt.figure(figsize=(12, 10))\n    sns.heatmap(corr, mask=mask, annot=False,\
+  \ cmap=CMAP, center=0, \n                square=True, linewidths=.5, cbar_kws={\"\
+  shrink\": .5})\n    plt.title(\"Matrice de Corrélation Linéaire\")\n    plt.show()\n"
+illustration_svg: <svg viewBox="0 0 400 200" xmlns="http://www.w3.org/2000/svg"><rect
+  width="400" height="200" fill="#0f172a"/><g transform="translate(125, 25)"><rect
+  x="0" y="0" width="50" height="50" fill="#991b1b"/><rect x="50" y="0" width="50"
+  height="50" fill="#1e3a8a"/><rect x="100" y="0" width="50" height="50" fill="#fef08a"/><rect
+  x="0" y="50" width="50" height="50" fill="#1e3a8a"/><rect x="50" y="50" width="50"
+  height="50" fill="#991b1b"/><rect x="100" y="50" width="50" height="50" fill="#1e3a8a"/><rect
+  x="0" y="100" width="50" height="50" fill="#fef08a"/><rect x="50" y="100" width="50"
+  height="50" fill="#1e3a8a"/><rect x="100" y="100" width="50" height="50" fill="#991b1b"/></g></svg>
 _metadata:
   bloc: 1
-  section: "3_eda"
+  section: 3_eda

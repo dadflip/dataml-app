@@ -1,47 +1,28 @@
-id: "extract_gcs"
-name: "Extract: Google Cloud Storage"
-description: "Télécharge un fichier depuis un bucket GCP Storage."
-category: "1. Extract"
-tags: ["extract", "gcs", "gcp", "cloud"]
-code_template: |
-  from google.cloud import storage
-  import os
-  import time
-
-  # [PARAM: BUCKET_NAME | string]
-  BUCKET_NAME = "my-gcp-bucket"
-  # [/PARAM]
-  
-  # [PARAM: BLOB_NAME | string]
-  BLOB_NAME = "data.csv"
-  # [/PARAM]
-  
-  # [PARAM: DEST_PATH | string]
-  DEST_PATH = "./data/raw/gcs_data.csv"
-  # [/PARAM]
-
-  print(f"[EXTRACT] Téléchargement depuis gs://{BUCKET_NAME}/{BLOB_NAME}...")
-  os.makedirs(os.path.dirname(DEST_PATH), exist_ok=True)
-
-  try:
-      start_time = time.time()
-      # Assurez-vous que GOOGLE_APPLICATION_CREDENTIALS est défini
-      client = storage.Client()
-      bucket = client.bucket(BUCKET_NAME)
-      blob = bucket.blob(BLOB_NAME)
-      
-      blob.download_to_filename(DEST_PATH)
-      
-      duration = time.time() - start_time
-      print(f"[EXTRACT] Succès GCP. Fichier téléchargé en {duration:.2f}s.")
-  except Exception as e:
-      print(f"[ERREUR EXTRACT] Échec GCS : {str(e)}")
-      raise e
-
-  df = None
-  target_name = None
-  task_type = "unknown"
-  meta = {"source": "gcs", "path": DEST_PATH}
+id: extract_gcs
+name: 'Extract: Google Cloud Storage'
+description: Télécharge un fichier depuis un bucket GCP Storage.
+category: 1. Extract
+tags:
+- extract
+- gcs
+- gcp
+- cloud
+code_template: "from google.cloud import storage\nimport os\nimport time\n\n# [PARAM:\
+  \ BUCKET_NAME | string]\nBUCKET_NAME = \"my-gcp-bucket\"\n# [/PARAM]\n\n# [PARAM:\
+  \ BLOB_NAME | string]\nBLOB_NAME = \"data.csv\"\n# [/PARAM]\n\n# [PARAM: DEST_PATH\
+  \ | string]\nDEST_PATH = \"./data/raw/gcs_data.csv\"\n# [/PARAM]\n\nprint(f\"[EXTRACT]\
+  \ Téléchargement depuis gs://{BUCKET_NAME}/{BLOB_NAME}...\")\nos.makedirs(os.path.dirname(DEST_PATH),\
+  \ exist_ok=True)\n\ntry:\n    start_time = time.time()\n    # Assurez-vous que GOOGLE_APPLICATION_CREDENTIALS\
+  \ est défini\n    client = storage.Client()\n    bucket = client.bucket(BUCKET_NAME)\n\
+  \    blob = bucket.blob(BLOB_NAME)\n    \n    blob.download_to_filename(DEST_PATH)\n\
+  \    \n    duration = time.time() - start_time\n    print(f\"[EXTRACT] Succès GCP.\
+  \ Fichier téléchargé en {duration:.2f}s.\")\nexcept Exception as e:\n    print(f\"\
+  [ERREUR EXTRACT] Échec GCS : {str(e)}\")\n    raise e\n\ndf = None\ntarget_name\
+  \ = None\ntask_type = \"unknown\"\nmeta = {\"source\": \"gcs\", \"path\": DEST_PATH}\n"
+illustration_svg: <svg viewBox="0 0 400 200" xmlns="http://www.w3.org/2000/svg"><rect
+  width="400" height="200" fill="#0f172a"/><path d="M 150 70 L 250 70 L 230 150 L
+  170 150 Z" fill="#f59e0b" opacity="0.8"/><rect x="140" y="50" width="120" height="20"
+  rx="4" fill="#f59e0b"/><ellipse cx="200" cy="150" rx="30" ry="10" fill="#d97706"/></svg>
 _metadata:
   bloc: 1
-  section: "1_extract"
+  section: 1_extract

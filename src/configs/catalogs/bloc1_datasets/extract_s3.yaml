@@ -1,47 +1,29 @@
-id: "extract_s3"
-name: "Extract: AWS S3"
-description: "Télécharge un objet depuis un bucket Amazon S3 (requiert boto3)."
-category: "1. Extract"
-tags: ["extract", "s3", "aws", "cloud"]
-code_template: |
-  import boto3
-  from botocore.exceptions import NoCredentialsError, ClientError
-  import os
-  import time
-
-  # [PARAM: BUCKET_NAME | string]
-  BUCKET_NAME = "my-aws-bucket"
-  # [/PARAM]
-  
-  # [PARAM: FILE_KEY | string]
-  FILE_KEY = "datasets/data.parquet"
-  # [/PARAM]
-  
-  # [PARAM: DEST_PATH | string]
-  DEST_PATH = "./data/raw/data.parquet"
-  # [/PARAM]
-
-  print(f"[EXTRACT] Téléchargement depuis s3://{BUCKET_NAME}/{FILE_KEY}...")
-  os.makedirs(os.path.dirname(DEST_PATH), exist_ok=True)
-
-  try:
-      start_time = time.time()
-      s3 = boto3.client('s3')
-      s3.download_file(BUCKET_NAME, FILE_KEY, DEST_PATH)
-      
-      duration = time.time() - start_time
-      print(f"[EXTRACT] Succès AWS S3. Fichier rapatrié en {duration:.2f}s.")
-  except NoCredentialsError:
-      print("[ERREUR EXTRACT] Credentials AWS introuvables (~/.aws/credentials).")
-      raise
-  except ClientError as e:
-      print(f"[ERREUR EXTRACT] Erreur de client S3 : {e}")
-      raise e
-
-  df = None
-  target_name = None
-  task_type = "unknown"
-  meta = {"source": "s3", "path": DEST_PATH}
+id: extract_s3
+name: 'Extract: AWS S3'
+description: Télécharge un objet depuis un bucket Amazon S3 (requiert boto3).
+category: 1. Extract
+tags:
+- extract
+- s3
+- aws
+- cloud
+code_template: "import boto3\nfrom botocore.exceptions import NoCredentialsError,\
+  \ ClientError\nimport os\nimport time\n\n# [PARAM: BUCKET_NAME | string]\nBUCKET_NAME\
+  \ = \"my-aws-bucket\"\n# [/PARAM]\n\n# [PARAM: FILE_KEY | string]\nFILE_KEY = \"\
+  datasets/data.parquet\"\n# [/PARAM]\n\n# [PARAM: DEST_PATH | string]\nDEST_PATH\
+  \ = \"./data/raw/data.parquet\"\n# [/PARAM]\n\nprint(f\"[EXTRACT] Téléchargement\
+  \ depuis s3://{BUCKET_NAME}/{FILE_KEY}...\")\nos.makedirs(os.path.dirname(DEST_PATH),\
+  \ exist_ok=True)\n\ntry:\n    start_time = time.time()\n    s3 = boto3.client('s3')\n\
+  \    s3.download_file(BUCKET_NAME, FILE_KEY, DEST_PATH)\n    \n    duration = time.time()\
+  \ - start_time\n    print(f\"[EXTRACT] Succès AWS S3. Fichier rapatrié en {duration:.2f}s.\"\
+  )\nexcept NoCredentialsError:\n    print(\"[ERREUR EXTRACT] Credentials AWS introuvables\
+  \ (~/.aws/credentials).\")\n    raise\nexcept ClientError as e:\n    print(f\"[ERREUR\
+  \ EXTRACT] Erreur de client S3 : {e}\")\n    raise e\n\ndf = None\ntarget_name =\
+  \ None\ntask_type = \"unknown\"\nmeta = {\"source\": \"s3\", \"path\": DEST_PATH}\n"
+illustration_svg: <svg viewBox="0 0 400 200" xmlns="http://www.w3.org/2000/svg"><rect
+  width="400" height="200" fill="#0f172a"/><path d="M 150 70 L 250 70 L 230 150 L
+  170 150 Z" fill="#ef4444" opacity="0.8"/><rect x="140" y="50" width="120" height="20"
+  rx="4" fill="#ef4444"/><ellipse cx="200" cy="150" rx="30" ry="10" fill="#dc2626"/></svg>
 _metadata:
   bloc: 1
-  section: "1_extract"
+  section: 1_extract

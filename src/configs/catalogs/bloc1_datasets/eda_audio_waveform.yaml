@@ -1,27 +1,25 @@
-id: "eda_audio_waveform"
-name: "EDA: Waveform (Audio)"
-description: "Affiche le signal temporel d'un audio."
-category: "3. Exploratory Data Analysis"
-tags: ["eda", "audio", "multimedia", "matplotlib"]
-code_template: |
-  import matplotlib.pyplot as plt
-
-  # On suppose un 'waveform' chargé par torchaudio dans le scope
-  if 'waveform' in locals():
-      plt.figure(figsize=(10, 4))
-      if waveform.shape[0] == 1:
-          plt.plot(waveform[0].numpy())
-          plt.title("Waveform - Mono")
-      else:
-          plt.plot(waveform[0].numpy(), label="Left")
-          plt.plot(waveform[1].numpy(), alpha=0.5, label="Right")
-          plt.title("Waveform - Stéréo")
-          plt.legend()
-      plt.ylabel("Amplitude")
-      plt.xlabel("Frames")
-      plt.show()
-  else:
-      print("[EDA] Aucun Tensor 'waveform' trouvé dans le scope local.")
+id: eda_audio_waveform
+name: 'EDA: Waveform (Audio)'
+description: Affiche le signal temporel d'un audio.
+category: 3. Exploratory Data Analysis
+tags:
+- eda
+- audio
+- multimedia
+- matplotlib
+code_template: "import matplotlib.pyplot as plt\n\n# On suppose un 'waveform' chargé\
+  \ par torchaudio dans le scope\nif 'waveform' in locals():\n    plt.figure(figsize=(10,\
+  \ 4))\n    if waveform.shape[0] == 1:\n        plt.plot(waveform[0].numpy())\n \
+  \       plt.title(\"Waveform - Mono\")\n    else:\n        plt.plot(waveform[0].numpy(),\
+  \ label=\"Left\")\n        plt.plot(waveform[1].numpy(), alpha=0.5, label=\"Right\"\
+  )\n        plt.title(\"Waveform - Stéréo\")\n        plt.legend()\n    plt.ylabel(\"\
+  Amplitude\")\n    plt.xlabel(\"Frames\")\n    plt.show()\nelse:\n    print(\"[EDA]\
+  \ Aucun Tensor 'waveform' trouvé dans le scope local.\")\n"
+illustration_svg: <svg viewBox="0 0 400 200" xmlns="http://www.w3.org/2000/svg"><rect
+  width="400" height="200" fill="#0f172a"/><path d="M 20 100 L 40 100 L 60 70 L 80
+  130 L 100 50 L 120 150 L 140 40 L 160 160 L 180 80 L 200 120 L 220 30 L 240 170
+  L 260 90 L 280 110 L 300 60 L 320 140 L 340 100 L 380 100" fill="none" stroke="#14b8a6"
+  stroke-width="3" stroke-linejoin="round"/></svg>
 _metadata:
   bloc: 1
-  section: "3_eda"
+  section: 3_eda

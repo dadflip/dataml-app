@@ -1,52 +1,32 @@
-id: "extract_elasticsearch"
-name: "Extract: Elasticsearch"
-description: "Recherche et dump des documents depuis un index Elasticsearch (Scroll API)."
-category: "1. Extract"
-tags: ["extract", "elasticsearch", "search", "nosql"]
-code_template: |
-  from elasticsearch import Elasticsearch
-  from elasticsearch.helpers import scan
-  import json
-  import os
-  import time
-
-  # [PARAM: ES_URL | string]
-  ES_URL = "http://localhost:9200"
-  # [/PARAM]
-  
-  # [PARAM: INDEX_NAME | string]
-  INDEX_NAME = "logs-*"
-  # [/PARAM]
-  
-  # [PARAM: DEST_PATH | string]
-  DEST_PATH = "./data/raw/es_dump.jsonlines"
-  # [/PARAM]
-
-  print(f"[EXTRACT] Scan de l'index {INDEX_NAME} sur Elasticsearch ({ES_URL})...")
-  os.makedirs(os.path.dirname(DEST_PATH), exist_ok=True)
-
-  try:
-      start_time = time.time()
-      es = Elasticsearch(ES_URL)
-      
-      query = {"query": {"match_all": {}}}
-      count = 0
-      
-      with open(DEST_PATH, "w", encoding="utf-8") as f:
-          for doc in scan(es, query=query, index=INDEX_NAME):
-              f.write(json.dumps(doc["_source"]) + "\\n")
-              count += 1
-              
-      duration = time.time() - start_time
-      print(f"[EXTRACT] Succès Elasticsearch. {count} documents dumpés en {duration:.2f}s.")
-  except Exception as e:
-      print(f"[ERREUR EXTRACT] Échec Elasticsearch : {str(e)}")
-      raise e
-
-  df = None
-  target_name = None
-  task_type = "unknown"
-  meta = {"source": "elasticsearch", "path": DEST_PATH}
+id: extract_elasticsearch
+name: 'Extract: Elasticsearch'
+description: Recherche et dump des documents depuis un index Elasticsearch (Scroll
+  API).
+category: 1. Extract
+tags:
+- extract
+- elasticsearch
+- search
+- nosql
+code_template: "from elasticsearch import Elasticsearch\nfrom elasticsearch.helpers\
+  \ import scan\nimport json\nimport os\nimport time\n\n# [PARAM: ES_URL | string]\n\
+  ES_URL = \"http://localhost:9200\"\n# [/PARAM]\n\n# [PARAM: INDEX_NAME | string]\n\
+  INDEX_NAME = \"logs-*\"\n# [/PARAM]\n\n# [PARAM: DEST_PATH | string]\nDEST_PATH\
+  \ = \"./data/raw/es_dump.jsonlines\"\n# [/PARAM]\n\nprint(f\"[EXTRACT] Scan de l'index\
+  \ {INDEX_NAME} sur Elasticsearch ({ES_URL})...\")\nos.makedirs(os.path.dirname(DEST_PATH),\
+  \ exist_ok=True)\n\ntry:\n    start_time = time.time()\n    es = Elasticsearch(ES_URL)\n\
+  \    \n    query = {\"query\": {\"match_all\": {}}}\n    count = 0\n    \n    with\
+  \ open(DEST_PATH, \"w\", encoding=\"utf-8\") as f:\n        for doc in scan(es,\
+  \ query=query, index=INDEX_NAME):\n            f.write(json.dumps(doc[\"_source\"\
+  ]) + \"\\\\n\")\n            count += 1\n            \n    duration = time.time()\
+  \ - start_time\n    print(f\"[EXTRACT] Succès Elasticsearch. {count} documents dumpés\
+  \ en {duration:.2f}s.\")\nexcept Exception as e:\n    print(f\"[ERREUR EXTRACT]\
+  \ Échec Elasticsearch : {str(e)}\")\n    raise e\n\ndf = None\ntarget_name = None\n\
+  task_type = \"unknown\"\nmeta = {\"source\": \"elasticsearch\", \"path\": DEST_PATH}\n"
+illustration_svg: <svg viewBox="0 0 400 200" xmlns="http://www.w3.org/2000/svg"><rect
+  width="400" height="200" fill="#0f172a"/><circle cx="200" cy="100" r="50" fill="none"
+  stroke="#10b981" stroke-width="6"/><circle cx="200" cy="100" r="25" fill="#10b981"/><line
+  x1="235" y1="135" x2="270" y2="170" stroke="#10b981" stroke-width="8" stroke-linecap="round"/></svg>
 _metadata:
   bloc: 1
-  section: "1_extract"
+  section: 1_extract

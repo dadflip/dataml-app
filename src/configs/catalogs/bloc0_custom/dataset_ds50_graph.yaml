@@ -1,77 +1,64 @@
-id: "dataset_ds50_graph"
-name: "Load DS50 Graphs (nodesNew & edgesNew)"
-description: "Chargement des CSV et construction des graphes (G_full, G_mp) pour la tâche de Link Prediction."
-category: "Custom"
-tags: ["dataset", "graph", "ds50", "networkx"]
-applies_to: ["Données tabulaires", "Graphes"]
-when_to_use: "Pour initialiser les graphes G_full et G_mp à partir de nodesNew.csv et edgesNew.csv."
+id: dataset_ds50_graph
+name: Load DS50 Graphs (nodesNew & edgesNew)
+description: Chargement des CSV et construction des graphes (G_full, G_mp) pour la
+  tâche de Link Prediction.
+category: Custom
+tags:
+- dataset
+- graph
+- ds50
+- networkx
+applies_to:
+- Données tabulaires
+- Graphes
+when_to_use: Pour initialiser les graphes G_full et G_mp à partir de nodesNew.csv
+  et edgesNew.csv.
 pros:
-  - "Génère automatiquement le graphe avec/sans la relation cible."
+- Génère automatiquement le graphe avec/sans la relation cible.
 cons:
-  - "Requiert la présence de nodesNew.csv et edgesNew.csv en local."
+- Requiert la présence de nodesNew.csv et edgesNew.csv en local.
 hyperparameters:
-  NODES_PATH: "Chemin vers le fichier des nœuds."
-  EDGES_PATH: "Chemin vers le fichier des arêtes."
-  TARGET_RELATION: "Relation à prédire (exclue de G_mp)."
+  NODES_PATH: Chemin vers le fichier des nœuds.
+  EDGES_PATH: Chemin vers le fichier des arêtes.
+  TARGET_RELATION: Relation à prédire (exclue de G_mp).
 input_variables:
   optional: []
 output_variables:
-  nodes: "DataFrame des noeuds"
-  edges: "DataFrame des arêtes"
-  G_full: "Graphe networkx complet"
-  G_mp: "Graphe networkx sans la target relation"
-code_template: |
-  import os, json, random
-  import numpy as np
-  import pandas as pd
-  import networkx as nx
-
-  # [PARAM: NODES_PATH | string]
-  NODES_PATH = "nodesNew.csv"
-  # [/PARAM]
-
-  # [PARAM: EDGES_PATH | string]
-  EDGES_PATH = "edgesNew.csv"
-  # [/PARAM]
-
-  # [PARAM: TARGET_RELATION | string]
-  TARGET_RELATION = "containsGameElement"
-  # [/PARAM]
-
-  print(f"[INFO] Loading nodes from {NODES_PATH} and edges from {EDGES_PATH}...")
-  nodes = pd.read_csv(NODES_PATH)
-  edges = pd.read_csv(EDGES_PATH)
-
-  nodes["id"]      = nodes["id"].astype(str).str.strip()
-  edges["source"]  = edges["source"].astype(str).str.strip()
-  edges["target"]  = edges["target"].astype(str).str.strip()
-  nodes["primary_type"] = nodes["primary_type"].fillna("unknown").astype(str)
-
-  assert not ({"id","label","primary_type"} - set(nodes.columns)), "Colonnes manquantes dans nodes"
-  assert not ({"source","target","relation"} - set(edges.columns)), "Colonnes manquantes dans edges"
-
-  print("nodes:", nodes.shape)
-  print("edges:", edges.shape)
-
-  def build_graph(nodes_df, edges_df, exclude_relation=None):
-      G = nx.DiGraph()
-      label_set = set(nodes_df["label"])
-      for _, row in nodes_df.iterrows():
-          G.add_node(row["label"], label=row["label"],
-                     type=row.get("primary_type","unknown"), iri=row.get("id",""))
-      for _, row in edges_df.iterrows():
-          src, tgt = row["source"], row["target"]
-          rel = str(row["relation"]).strip()
-          if src in label_set and tgt in label_set:
-              if exclude_relation is None or rel != exclude_relation.strip():
-                  G.add_edge(src, tgt, relation=rel)
-      return G
-
-  G_full = build_graph(nodes, edges)
-  G_mp   = build_graph(nodes, edges, exclude_relation=TARGET_RELATION)
-
-  print(f"G_full  — nodes: {G_full.number_of_nodes()} | edges: {G_full.number_of_edges()}")
-  print(f"G_mp    — nodes: {G_mp.number_of_nodes()}   | edges: {G_mp.number_of_edges()}")
+  nodes: DataFrame des noeuds
+  edges: DataFrame des arêtes
+  G_full: Graphe networkx complet
+  G_mp: Graphe networkx sans la target relation
+code_template: "import os, json, random\nimport numpy as np\nimport pandas as pd\n\
+  import networkx as nx\n\n# [PARAM: NODES_PATH | string]\nNODES_PATH = \"nodesNew.csv\"\
+  \n# [/PARAM]\n\n# [PARAM: EDGES_PATH | string]\nEDGES_PATH = \"edgesNew.csv\"\n\
+  # [/PARAM]\n\n# [PARAM: TARGET_RELATION | string]\nTARGET_RELATION = \"containsGameElement\"\
+  \n# [/PARAM]\n\nprint(f\"[INFO] Loading nodes from {NODES_PATH} and edges from {EDGES_PATH}...\"\
+  )\nnodes = pd.read_csv(NODES_PATH)\nedges = pd.read_csv(EDGES_PATH)\n\nnodes[\"\
+  id\"]      = nodes[\"id\"].astype(str).str.strip()\nedges[\"source\"]  = edges[\"\
+  source\"].astype(str).str.strip()\nedges[\"target\"]  = edges[\"target\"].astype(str).str.strip()\n\
+  nodes[\"primary_type\"] = nodes[\"primary_type\"].fillna(\"unknown\").astype(str)\n\
+  \nassert not ({\"id\",\"label\",\"primary_type\"} - set(nodes.columns)), \"Colonnes\
+  \ manquantes dans nodes\"\nassert not ({\"source\",\"target\",\"relation\"} - set(edges.columns)),\
+  \ \"Colonnes manquantes dans edges\"\n\nprint(\"nodes:\", nodes.shape)\nprint(\"\
+  edges:\", edges.shape)\n\ndef build_graph(nodes_df, edges_df, exclude_relation=None):\n\
+  \    G = nx.DiGraph()\n    label_set = set(nodes_df[\"label\"])\n    for _, row\
+  \ in nodes_df.iterrows():\n        G.add_node(row[\"label\"], label=row[\"label\"\
+  ],\n                   type=row.get(\"primary_type\",\"unknown\"), iri=row.get(\"\
+  id\",\"\"))\n    for _, row in edges_df.iterrows():\n        src, tgt = row[\"source\"\
+  ], row[\"target\"]\n        rel = str(row[\"relation\"]).strip()\n        if src\
+  \ in label_set and tgt in label_set:\n            if exclude_relation is None or\
+  \ rel != exclude_relation.strip():\n                G.add_edge(src, tgt, relation=rel)\n\
+  \    return G\n\nG_full = build_graph(nodes, edges)\nG_mp   = build_graph(nodes,\
+  \ edges, exclude_relation=TARGET_RELATION)\n\nprint(f\"G_full  — nodes: {G_full.number_of_nodes()}\
+  \ | edges: {G_full.number_of_edges()}\")\nprint(f\"G_mp    — nodes: {G_mp.number_of_nodes()}\
+  \   | edges: {G_mp.number_of_edges()}\")\n"
+illustration_svg: <svg viewBox="0 0 400 200" xmlns="http://www.w3.org/2000/svg"><rect
+  width="400" height="200" fill="#0f172a"/><circle cx="100" cy="100" r="15" fill="#3b82f6"/><circle
+  cx="300" cy="60" r="15" fill="#3b82f6"/><circle cx="250" cy="150" r="15" fill="#3b82f6"/><line
+  x1="115" y1="95" x2="285" y2="65" stroke="#94a3b8" stroke-width="2"/><line x1="110"
+  y1="110" x2="235" y2="145" stroke="#94a3b8" stroke-width="2"/><line x1="300" y1="75"
+  x2="255" y2="135" stroke="#94a3b8" stroke-width="2"/><text x="200" y="100" fill="white"
+  font-family="sans-serif" font-size="12" text-anchor="middle">Nodes &amp; Edges</text></svg>
 _metadata:
   bloc: -1
-  section: "0_custom_project"
+  section: 0_custom_project

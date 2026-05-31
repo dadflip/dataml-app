@@ -1,40 +1,29 @@
-id: "extract_onedrive"
-name: "Extract: Microsoft OneDrive"
-description: "Télécharge un fichier partagé publiquement depuis OneDrive."
-category: "1. Extract"
-tags: ["extract", "onedrive", "microsoft", "cloud"]
-code_template: |
-  import urllib.request
-  import os
-  import time
-
-  # [PARAM: DIRECT_LINK | string]
-  DIRECT_LINK = "https://onedrive.live.com/download?cid=XXX&resid=XXX&authkey=XXX"
-  # [/PARAM]
-  
-  # [PARAM: DEST_PATH | string]
-  DEST_PATH = "./data/raw/onedrive_data.zip"
-  # [/PARAM]
-
-  print(f"[EXTRACT] Téléchargement depuis OneDrive...")
-  os.makedirs(os.path.dirname(DEST_PATH), exist_ok=True)
-
-  try:
-      start_time = time.time()
-      req = urllib.request.Request(DIRECT_LINK, headers={'User-Agent': 'Mozilla/5.0'})
-      with urllib.request.urlopen(req) as response, open(DEST_PATH, 'wb') as out_file:
-          out_file.write(response.read())
-          
-      duration = time.time() - start_time
-      print(f"[EXTRACT] Succès OneDrive. Fichier téléchargé en {duration:.2f}s.")
-  except Exception as e:
-      print(f"[ERREUR EXTRACT] Echec du lien OneDrive : {str(e)}")
-      raise e
-
-  df = None
-  target_name = None
-  task_type = "unknown"
-  meta = {"source": "onedrive", "path": DEST_PATH}
+id: extract_onedrive
+name: 'Extract: Microsoft OneDrive'
+description: Télécharge un fichier partagé publiquement depuis OneDrive.
+category: 1. Extract
+tags:
+- extract
+- onedrive
+- microsoft
+- cloud
+code_template: "import urllib.request\nimport os\nimport time\n\n# [PARAM: DIRECT_LINK\
+  \ | string]\nDIRECT_LINK = \"https://onedrive.live.com/download?cid=XXX&resid=XXX&authkey=XXX\"\
+  \n# [/PARAM]\n\n# [PARAM: DEST_PATH | string]\nDEST_PATH = \"./data/raw/onedrive_data.zip\"\
+  \n# [/PARAM]\n\nprint(f\"[EXTRACT] Téléchargement depuis OneDrive...\")\nos.makedirs(os.path.dirname(DEST_PATH),\
+  \ exist_ok=True)\n\ntry:\n    start_time = time.time()\n    req = urllib.request.Request(DIRECT_LINK,\
+  \ headers={'User-Agent': 'Mozilla/5.0'})\n    with urllib.request.urlopen(req) as\
+  \ response, open(DEST_PATH, 'wb') as out_file:\n        out_file.write(response.read())\n\
+  \        \n    duration = time.time() - start_time\n    print(f\"[EXTRACT] Succès\
+  \ OneDrive. Fichier téléchargé en {duration:.2f}s.\")\nexcept Exception as e:\n\
+  \    print(f\"[ERREUR EXTRACT] Echec du lien OneDrive : {str(e)}\")\n    raise e\n\
+  \ndf = None\ntarget_name = None\ntask_type = \"unknown\"\nmeta = {\"source\": \"\
+  onedrive\", \"path\": DEST_PATH}\n"
+illustration_svg: <svg viewBox="0 0 400 200" xmlns="http://www.w3.org/2000/svg"><rect
+  width="400" height="200" fill="#0f172a"/><path d="M 140 120 A 30 30 0 0 1 140 60
+  A 40 40 0 0 1 220 50 A 30 30 0 0 1 270 70 A 30 30 0 0 1 270 120 Z" fill="#0ea5e9"/><path
+  d="M 120 140 A 25 25 0 0 1 120 90 A 35 35 0 0 1 190 80 A 25 25 0 0 1 230 100 A 25
+  25 0 0 1 230 140 Z" fill="#38bdf8"/></svg>
 _metadata:
   bloc: 1
-  section: "1_extract"
+  section: 1_extract

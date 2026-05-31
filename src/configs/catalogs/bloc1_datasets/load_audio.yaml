@@ -1,45 +1,30 @@
-id: "load_audio"
-name: "Load: Audio (WAV, MP3)"
-description: "Charge un fichier audio sous forme de série temporelle (Librosa)."
-category: "2. Load"
-tags: ["load", "audio", "wav", "librosa"]
-code_template: |
-  import time
-  import os
-
-  # [PARAM: FILE_PATH | file]
-  FILE_PATH = "./data/raw/sound.wav"
-  # [/PARAM]
-  
-  # [PARAM: SAMPLE_RATE | string]
-  SAMPLE_RATE = "22050"
-  # [/PARAM]
-
-  print(f"[LOAD] Lecture du fichier audio : {FILE_PATH}...")
-  if not os.path.exists(FILE_PATH):
-      raise FileNotFoundError(f"[ERREUR LOAD] Fichier Audio introuvable : {FILE_PATH}")
-
-  try:
-      start_time = time.time()
-      import librosa
-      
-      # Le parametre sr=None conserve le taux d'échantillonnage d'origine
-      sr_target = int(SAMPLE_RATE) if SAMPLE_RATE.isdigit() else None
-      y, sr = librosa.load(FILE_PATH, sr=sr_target)
-      
-      duration = time.time() - start_time
-      print(f"[LOAD] Succès Audio. {len(y)} échantillons lus à {sr} Hz en {duration:.2f}s.")
-  except ImportError:
-      print("[ERREUR LOAD] Le module 'librosa' est requis.")
-      raise
-  except Exception as e:
-      print(f"[ERREUR LOAD] Impossible de parser le fichier audio : {str(e)}")
-      raise e
-
-  df = None
-  target_name = None
-  task_type = "audio_processing"
-  meta = {"format": "audio", "sample_rate": sr, "length": len(y)}
+id: load_audio
+name: 'Load: Audio (WAV, MP3)'
+description: Charge un fichier audio sous forme de série temporelle (Librosa).
+category: 2. Load
+tags:
+- load
+- audio
+- wav
+- librosa
+code_template: "import time\nimport os\n\n# [PARAM: FILE_PATH | file]\nFILE_PATH =\
+  \ \"./data/raw/sound.wav\"\n# [/PARAM]\n\n# [PARAM: SAMPLE_RATE | string]\nSAMPLE_RATE\
+  \ = \"22050\"\n# [/PARAM]\n\nprint(f\"[LOAD] Lecture du fichier audio : {FILE_PATH}...\"\
+  )\nif not os.path.exists(FILE_PATH):\n    raise FileNotFoundError(f\"[ERREUR LOAD]\
+  \ Fichier Audio introuvable : {FILE_PATH}\")\n\ntry:\n    start_time = time.time()\n\
+  \    import librosa\n    \n    # Le parametre sr=None conserve le taux d'échantillonnage\
+  \ d'origine\n    sr_target = int(SAMPLE_RATE) if SAMPLE_RATE.isdigit() else None\n\
+  \    y, sr = librosa.load(FILE_PATH, sr=sr_target)\n    \n    duration = time.time()\
+  \ - start_time\n    print(f\"[LOAD] Succès Audio. {len(y)} échantillons lus à {sr}\
+  \ Hz en {duration:.2f}s.\")\nexcept ImportError:\n    print(\"[ERREUR LOAD] Le module\
+  \ 'librosa' est requis.\")\n    raise\nexcept Exception as e:\n    print(f\"[ERREUR\
+  \ LOAD] Impossible de parser le fichier audio : {str(e)}\")\n    raise e\n\ndf =\
+  \ None\ntarget_name = None\ntask_type = \"audio_processing\"\nmeta = {\"format\"\
+  : \"audio\", \"sample_rate\": sr, \"length\": len(y)}\n"
+illustration_svg: <svg viewBox="0 0 400 200" xmlns="http://www.w3.org/2000/svg"><rect
+  width="400" height="200" fill="#0f172a"/><path d="M 80 100 Q 120 20 160 100 T 240
+  100 T 320 100" fill="none" stroke="#f59e0b" stroke-width="6" stroke-linecap="round"/><circle
+  cx="200" cy="100" r="5" fill="white"/></svg>
 _metadata:
   bloc: 1
-  section: "2_load"
+  section: 2_load

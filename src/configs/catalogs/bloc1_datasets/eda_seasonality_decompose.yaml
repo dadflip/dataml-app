@@ -1,33 +1,27 @@
-id: "eda_seasonality_decompose"
-name: "EDA: Décomposition Saisonnière"
-description: "Décomposition Trend/Season/Resid d'une time series."
-category: "3. Exploratory Data Analysis"
-tags: ["eda", "timeseries", "statsmodels"]
-code_template: |
-  import pandas as pd
-  import matplotlib.pyplot as plt
-  from statsmodels.tsa.seasonal import seasonal_decompose
-
-  # [PARAM: TIME_COL | string]
-  TIME_COL = "date"
-  # [/PARAM]
-
-  # [PARAM: PERIOD | number]
-  PERIOD = 12
-  # [/PARAM]
-
-  if TIME_COL in df.columns and 'target_name' in locals() and target_name:
-      temp_df = df.copy()
-      temp_df[TIME_COL] = pd.to_datetime(temp_df[TIME_COL], errors='coerce')
-      temp_df = temp_df.dropna(subset=[TIME_COL, target_name]).sort_values(TIME_COL).set_index(TIME_COL)
-      
-      print(f"[EDA] Décomposition (période={PERIOD}) de {target_name}")
-      result = seasonal_decompose(temp_df[target_name], model='additive', period=PERIOD)
-      result.plot()
-      plt.gcf().set_size_inches(12, 8)
-      plt.show()
-  else:
-      print("[EDA] Colonnes temporelles manquantes.")
+id: eda_seasonality_decompose
+name: 'EDA: Décomposition Saisonnière'
+description: Décomposition Trend/Season/Resid d'une time series.
+category: 3. Exploratory Data Analysis
+tags:
+- eda
+- timeseries
+- statsmodels
+code_template: "import pandas as pd\nimport matplotlib.pyplot as plt\nfrom statsmodels.tsa.seasonal\
+  \ import seasonal_decompose\n\n# [PARAM: TIME_COL | string]\nTIME_COL = \"date\"\
+  \n# [/PARAM]\n\n# [PARAM: PERIOD | number]\nPERIOD = 12\n# [/PARAM]\n\nif TIME_COL\
+  \ in df.columns and 'target_name' in locals() and target_name:\n    temp_df = df.copy()\n\
+  \    temp_df[TIME_COL] = pd.to_datetime(temp_df[TIME_COL], errors='coerce')\n  \
+  \  temp_df = temp_df.dropna(subset=[TIME_COL, target_name]).sort_values(TIME_COL).set_index(TIME_COL)\n\
+  \    \n    print(f\"[EDA] Décomposition (période={PERIOD}) de {target_name}\")\n\
+  \    result = seasonal_decompose(temp_df[target_name], model='additive', period=PERIOD)\n\
+  \    result.plot()\n    plt.gcf().set_size_inches(12, 8)\n    plt.show()\nelse:\n\
+  \    print(\"[EDA] Colonnes temporelles manquantes.\")\n"
+illustration_svg: <svg viewBox="0 0 400 200" xmlns="http://www.w3.org/2000/svg"><rect
+  width="400" height="200" fill="#0f172a"/><path d="M 60 70 Q 100 20 140 70 T 220
+  70 T 300 70 T 340 50" fill="none" stroke="#3b82f6" stroke-width="2"/><path d="M
+  60 120 L 340 100" fill="none" stroke="#ef4444" stroke-width="2"/><path d="M 60 160
+  Q 80 140 100 160 T 140 160 T 180 160 T 220 160 T 260 160 T 300 160 T 340 160" fill="none"
+  stroke="#10b981" stroke-width="2"/></svg>
 _metadata:
   bloc: 1
-  section: "3_eda"
+  section: 3_eda

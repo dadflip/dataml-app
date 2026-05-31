@@ -1,29 +1,27 @@
-id: "eda_text_sentiment"
-name: "EDA: Distribution des Sentiments"
-description: "Analyse la polarité des textes via TextBlob."
-category: "3. Exploratory Data Analysis"
-tags: ["eda", "text", "nlp", "sentiment"]
-code_template: |
-  import pandas as pd
-  import matplotlib.pyplot as plt
-  import seaborn as sns
-  from textblob import TextBlob
-
-  # [PARAM: TEXT_COL | string]
-  TEXT_COL = "text"
-  # [/PARAM]
-
-  if TEXT_COL in df.columns:
-      print("[EDA] Calcul des scores de sentiment en cours...")
-      polarities = df[TEXT_COL].dropna().astype(str).apply(lambda x: TextBlob(x).sentiment.polarity)
-      
-      plt.figure(figsize=(8, 5))
-      sns.histplot(polarities, bins=30, kde=True, color='teal')
-      plt.title(f"Distribution de Polarité des Sentiments - {TEXT_COL}")
-      plt.xlabel("Polarité (-1 = Négatif, 1 = Positif)")
-      plt.show()
-  else:
-      print(f"[EDA] Colonne {TEXT_COL} introuvable.")
+id: eda_text_sentiment
+name: 'EDA: Distribution des Sentiments'
+description: Analyse la polarité des textes via TextBlob.
+category: 3. Exploratory Data Analysis
+tags:
+- eda
+- text
+- nlp
+- sentiment
+code_template: "import pandas as pd\nimport matplotlib.pyplot as plt\nimport seaborn\
+  \ as sns\nfrom textblob import TextBlob\n\n# [PARAM: TEXT_COL | string]\nTEXT_COL\
+  \ = \"text\"\n# [/PARAM]\n\nif TEXT_COL in df.columns:\n    print(\"[EDA] Calcul\
+  \ des scores de sentiment en cours...\")\n    polarities = df[TEXT_COL].dropna().astype(str).apply(lambda\
+  \ x: TextBlob(x).sentiment.polarity)\n    \n    plt.figure(figsize=(8, 5))\n   \
+  \ sns.histplot(polarities, bins=30, kde=True, color='teal')\n    plt.title(f\"Distribution\
+  \ de Polarité des Sentiments - {TEXT_COL}\")\n    plt.xlabel(\"Polarité (-1 = Négatif,\
+  \ 1 = Positif)\")\n    plt.show()\nelse:\n    print(f\"[EDA] Colonne {TEXT_COL}\
+  \ introuvable.\")\n"
+illustration_svg: <svg viewBox="0 0 400 200" xmlns="http://www.w3.org/2000/svg"><rect
+  width="400" height="200" fill="#0f172a"/><circle cx="120" cy="100" r="30" fill="#10b981"/><circle
+  cx="200" cy="100" r="30" fill="#64748b"/><circle cx="280" cy="100" r="30" fill="#ef4444"/><path
+  d="M 105 105 Q 120 120 135 105" fill="none" stroke="white" stroke-width="3"/><line
+  x1="185" y1="110" x2="215" y2="110" stroke="white" stroke-width="3"/><path d="M
+  265 115 Q 280 100 295 115" fill="none" stroke="white" stroke-width="3"/></svg>
 _metadata:
   bloc: 1
-  section: "3_eda"
+  section: 3_eda

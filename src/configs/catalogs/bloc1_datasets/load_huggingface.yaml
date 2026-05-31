@@ -1,41 +1,30 @@
-id: "load_huggingface"
-name: "Load: HuggingFace Dataset"
-description: "Charge directement un dataset depuis le hub HuggingFace (datasets)."
-category: "2. Load"
-tags: ["load", "huggingface", "hub", "nlp"]
-code_template: |
-  import time
-
-  # [PARAM: DATASET_NAME | string]
-  DATASET_NAME = "imdb"
-  # [/PARAM]
-  
-  # [PARAM: SPLIT | string]
-  SPLIT = "train"
-  # [/PARAM]
-
-  print(f"[LOAD] Chargement du dataset HuggingFace '{DATASET_NAME}' (split: {SPLIT})...")
-
-  try:
-      start_time = time.time()
-      from datasets import load_dataset
-      
-      dataset = load_dataset(DATASET_NAME, split=SPLIT)
-      # Conversion directe en DataFrame Pandas
-      df = dataset.to_pandas()
-      
-      duration = time.time() - start_time
-      print(f"[LOAD] Succès HuggingFace. {df.shape[0]} lignes chargées en {duration:.2f}s.")
-  except ImportError:
-      print("[ERREUR LOAD] Le module 'datasets' est requis (pip install datasets).")
-      raise
-  except Exception as e:
-      print(f"[ERREUR LOAD] Erreur HuggingFace : {str(e)}")
-      raise e
-
-  target_name = "label" if "label" in df.columns else None
-  task_type = "nlp_classification" if target_name else "unknown"
-  meta = {"format": "huggingface", "dataset": DATASET_NAME, "shape": df.shape}
+id: load_huggingface
+name: 'Load: HuggingFace Dataset'
+description: Charge directement un dataset depuis le hub HuggingFace (datasets).
+category: 2. Load
+tags:
+- load
+- huggingface
+- hub
+- nlp
+code_template: "import time\n\n# [PARAM: DATASET_NAME | string]\nDATASET_NAME = \"\
+  imdb\"\n# [/PARAM]\n\n# [PARAM: SPLIT | string]\nSPLIT = \"train\"\n# [/PARAM]\n\
+  \nprint(f\"[LOAD] Chargement du dataset HuggingFace '{DATASET_NAME}' (split: {SPLIT})...\"\
+  )\n\ntry:\n    start_time = time.time()\n    from datasets import load_dataset\n\
+  \    \n    dataset = load_dataset(DATASET_NAME, split=SPLIT)\n    # Conversion directe\
+  \ en DataFrame Pandas\n    df = dataset.to_pandas()\n    \n    duration = time.time()\
+  \ - start_time\n    print(f\"[LOAD] Succès HuggingFace. {df.shape[0]} lignes chargées\
+  \ en {duration:.2f}s.\")\nexcept ImportError:\n    print(\"[ERREUR LOAD] Le module\
+  \ 'datasets' est requis (pip install datasets).\")\n    raise\nexcept Exception\
+  \ as e:\n    print(f\"[ERREUR LOAD] Erreur HuggingFace : {str(e)}\")\n    raise\
+  \ e\n\ntarget_name = \"label\" if \"label\" in df.columns else None\ntask_type =\
+  \ \"nlp_classification\" if target_name else \"unknown\"\nmeta = {\"format\": \"\
+  huggingface\", \"dataset\": DATASET_NAME, \"shape\": df.shape}\n"
+illustration_svg: <svg viewBox="0 0 400 200" xmlns="http://www.w3.org/2000/svg"><rect
+  width="400" height="200" fill="#0f172a"/><rect x="160" y="60" width="80" height="80"
+  rx="8" fill="#fcd34d"/><circle cx="180" cy="90" r="6" fill="#1e293b"/><circle cx="220"
+  cy="90" r="6" fill="#1e293b"/><path d="M 190 110 Q 200 120 210 110" fill="none"
+  stroke="#1e293b" stroke-width="3" stroke-linecap="round"/></svg>
 _metadata:
   bloc: 1
-  section: "2_load"
+  section: 2_load

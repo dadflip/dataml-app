@@ -1,45 +1,28 @@
-id: "extract_gdrive"
-name: "Extract: Google Drive"
-description: "Télécharge un fichier public depuis Google Drive."
-category: "1. Extract"
-tags: ["extract", "gdrive", "google"]
-code_template: |
-  import os
-  import time
-  import subprocess
-
-  # [PARAM: FILE_ID | string]
-  FILE_ID = "1A2B3C4D5E6F7G8H9I"
-  # [/PARAM]
-  
-  # [PARAM: DEST_PATH | string]
-  DEST_PATH = "./data/raw/gdrive_data.csv"
-  # [/PARAM]
-
-  print(f"[EXTRACT] Téléchargement depuis Google Drive (ID: {FILE_ID})...")
-  os.makedirs(os.path.dirname(DEST_PATH), exist_ok=True)
-
-  try:
-      start_time = time.time()
-      # gdown est très robuste pour les gros fichiers Drive
-      result = subprocess.run(
-          ["gdown", f"https://drive.google.com/uc?id={FILE_ID}", "-O", DEST_PATH],
-          capture_output=True, text=True
-      )
-      
-      if result.returncode != 0:
-          raise RuntimeError(result.stderr)
-          
-      duration = time.time() - start_time
-      print(f"[EXTRACT] Succès GDrive. Fichier rapatrié en {duration:.2f}s.")
-  except Exception as e:
-      print(f"[ERREUR EXTRACT] Erreur gdown (Lien privé ou module non installé) : {str(e)}")
-      raise e
-
-  df = None
-  target_name = None
-  task_type = "unknown"
-  meta = {"source": "gdrive", "path": DEST_PATH}
+id: extract_gdrive
+name: 'Extract: Google Drive'
+description: Télécharge un fichier public depuis Google Drive.
+category: 1. Extract
+tags:
+- extract
+- gdrive
+- google
+code_template: "import os\nimport time\nimport subprocess\n\n# [PARAM: FILE_ID | string]\n\
+  FILE_ID = \"1A2B3C4D5E6F7G8H9I\"\n# [/PARAM]\n\n# [PARAM: DEST_PATH | string]\n\
+  DEST_PATH = \"./data/raw/gdrive_data.csv\"\n# [/PARAM]\n\nprint(f\"[EXTRACT] Téléchargement\
+  \ depuis Google Drive (ID: {FILE_ID})...\")\nos.makedirs(os.path.dirname(DEST_PATH),\
+  \ exist_ok=True)\n\ntry:\n    start_time = time.time()\n    # gdown est très robuste\
+  \ pour les gros fichiers Drive\n    result = subprocess.run(\n        [\"gdown\"\
+  , f\"https://drive.google.com/uc?id={FILE_ID}\", \"-O\", DEST_PATH],\n        capture_output=True,\
+  \ text=True\n    )\n    \n    if result.returncode != 0:\n        raise RuntimeError(result.stderr)\n\
+  \        \n    duration = time.time() - start_time\n    print(f\"[EXTRACT] Succès\
+  \ GDrive. Fichier rapatrié en {duration:.2f}s.\")\nexcept Exception as e:\n    print(f\"\
+  [ERREUR EXTRACT] Erreur gdown (Lien privé ou module non installé) : {str(e)}\")\n\
+  \    raise e\n\ndf = None\ntarget_name = None\ntask_type = \"unknown\"\nmeta = {\"\
+  source\": \"gdrive\", \"path\": DEST_PATH}\n"
+illustration_svg: <svg viewBox="0 0 400 200" xmlns="http://www.w3.org/2000/svg"><rect
+  width="400" height="200" fill="#0f172a"/><polygon points="200,50 140,150 260,150"
+  fill="none" stroke="#10b981" stroke-width="12"/><polygon points="200,50 170,100
+  230,100" fill="#f59e0b"/><polygon points="140,150 170,100 200,150" fill="#3b82f6"/></svg>
 _metadata:
   bloc: 1
-  section: "1_extract"
+  section: 1_extract

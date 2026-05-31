@@ -1,26 +1,27 @@
-id: "eda_audio_chromagram"
-name: "EDA: Visualisation Temporelle Audio"
-description: "Trace la puissance du signal audio (Energy)."
-category: "3. Exploratory Data Analysis"
-tags: ["eda", "audio", "multimedia"]
-code_template: |
-  import matplotlib.pyplot as plt
-  import numpy as np
-
-  if 'waveform' in locals():
-      signal = waveform[0].numpy()
-      # Calcul de l'énergie locale au carré (fenêtres glissantes très basique)
-      window = 100
-      energy = np.convolve(signal**2, np.ones(window)/window, mode='same')
-      
-      plt.figure(figsize=(10, 4))
-      plt.plot(energy, color='orange')
-      plt.title("Énergie temporelle du signal audio")
-      plt.xlabel("Frames")
-      plt.ylabel("Énergie")
-      plt.show()
-  else:
-      print("[EDA] Tensor 'waveform' introuvable.")
+id: eda_audio_chromagram
+name: 'EDA: Visualisation Temporelle Audio'
+description: Trace la puissance du signal audio (Energy).
+category: 3. Exploratory Data Analysis
+tags:
+- eda
+- audio
+- multimedia
+code_template: "import matplotlib.pyplot as plt\nimport numpy as np\n\nif 'waveform'\
+  \ in locals():\n    signal = waveform[0].numpy()\n    # Calcul de l'énergie locale\
+  \ au carré (fenêtres glissantes très basique)\n    window = 100\n    energy = np.convolve(signal**2,\
+  \ np.ones(window)/window, mode='same')\n    \n    plt.figure(figsize=(10, 4))\n\
+  \    plt.plot(energy, color='orange')\n    plt.title(\"Énergie temporelle du signal\
+  \ audio\")\n    plt.xlabel(\"Frames\")\n    plt.ylabel(\"Énergie\")\n    plt.show()\n\
+  else:\n    print(\"[EDA] Tensor 'waveform' introuvable.\")\n"
+illustration_svg: <svg viewBox="0 0 400 200" xmlns="http://www.w3.org/2000/svg"><rect
+  width="400" height="200" fill="#0f172a"/><rect x="50" y="40" width="30" height="120"
+  fill="#ef4444"/><rect x="80" y="40" width="30" height="120" fill="#f97316"/><rect
+  x="110" y="40" width="30" height="120" fill="#f59e0b"/><rect x="140" y="40" width="30"
+  height="120" fill="#84cc16"/><rect x="170" y="40" width="30" height="120" fill="#22c55e"/><rect
+  x="200" y="40" width="30" height="120" fill="#06b6d4"/><rect x="230" y="40" width="30"
+  height="120" fill="#3b82f6"/><rect x="260" y="40" width="30" height="120" fill="#6366f1"/><rect
+  x="290" y="40" width="30" height="120" fill="#a855f7"/><rect x="320" y="40" width="30"
+  height="120" fill="#d946ef"/></svg>
 _metadata:
   bloc: 1
-  section: "3_eda"
+  section: 3_eda

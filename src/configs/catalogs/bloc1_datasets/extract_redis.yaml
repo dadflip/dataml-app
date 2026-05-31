@@ -1,50 +1,30 @@
-id: "extract_redis"
-name: "Extract: Redis Key/Values"
-description: "Scanne une DB Redis en mémoire et exporte les clés/valeurs."
-category: "1. Extract"
-tags: ["extract", "redis", "cache", "kv"]
-code_template: |
-  import redis
-  import json
-  import os
-  import time
-
-  # [PARAM: REDIS_HOST | string]
-  REDIS_HOST = "localhost"
-  # [/PARAM]
-  
-  # [PARAM: MATCH_PATTERN | string]
-  MATCH_PATTERN = "user:*"
-  # [/PARAM]
-  
-  # [PARAM: DEST_PATH | string]
-  DEST_PATH = "./data/raw/redis_dump.json"
-  # [/PARAM]
-
-  print(f"[EXTRACT] Scan Redis ({REDIS_HOST}) avec pattern '{MATCH_PATTERN}'...")
-  os.makedirs(os.path.dirname(DEST_PATH), exist_ok=True)
-
-  try:
-      start_time = time.time()
-      r = redis.Redis(host=REDIS_HOST, port=6379, db=0, decode_responses=True)
-      
-      data = {}
-      for key in r.scan_iter(match=MATCH_PATTERN):
-          data[key] = r.get(key)
-          
-      with open(DEST_PATH, "w", encoding="utf-8") as f:
-          json.dump(data, f, indent=2)
-          
-      duration = time.time() - start_time
-      print(f"[EXTRACT] Succès Redis. {len(data)} clés exportées en {duration:.2f}s.")
-  except Exception as e:
-      print(f"[ERREUR EXTRACT] Serveur Redis inaccessible : {str(e)}")
-      raise e
-
-  df = None
-  target_name = None
-  task_type = "unknown"
-  meta = {"source": "redis", "path": DEST_PATH}
+id: extract_redis
+name: 'Extract: Redis Key/Values'
+description: Scanne une DB Redis en mémoire et exporte les clés/valeurs.
+category: 1. Extract
+tags:
+- extract
+- redis
+- cache
+- kv
+code_template: "import redis\nimport json\nimport os\nimport time\n\n# [PARAM: REDIS_HOST\
+  \ | string]\nREDIS_HOST = \"localhost\"\n# [/PARAM]\n\n# [PARAM: MATCH_PATTERN |\
+  \ string]\nMATCH_PATTERN = \"user:*\"\n# [/PARAM]\n\n# [PARAM: DEST_PATH | string]\n\
+  DEST_PATH = \"./data/raw/redis_dump.json\"\n# [/PARAM]\n\nprint(f\"[EXTRACT] Scan\
+  \ Redis ({REDIS_HOST}) avec pattern '{MATCH_PATTERN}'...\")\nos.makedirs(os.path.dirname(DEST_PATH),\
+  \ exist_ok=True)\n\ntry:\n    start_time = time.time()\n    r = redis.Redis(host=REDIS_HOST,\
+  \ port=6379, db=0, decode_responses=True)\n    \n    data = {}\n    for key in r.scan_iter(match=MATCH_PATTERN):\n\
+  \        data[key] = r.get(key)\n        \n    with open(DEST_PATH, \"w\", encoding=\"\
+  utf-8\") as f:\n        json.dump(data, f, indent=2)\n        \n    duration = time.time()\
+  \ - start_time\n    print(f\"[EXTRACT] Succès Redis. {len(data)} clés exportées\
+  \ en {duration:.2f}s.\")\nexcept Exception as e:\n    print(f\"[ERREUR EXTRACT]\
+  \ Serveur Redis inaccessible : {str(e)}\")\n    raise e\n\ndf = None\ntarget_name\
+  \ = None\ntask_type = \"unknown\"\nmeta = {\"source\": \"redis\", \"path\": DEST_PATH}\n"
+illustration_svg: <svg viewBox="0 0 400 200" xmlns="http://www.w3.org/2000/svg"><rect
+  width="400" height="200" fill="#0f172a"/><rect x="150" y="50" width="100" height="100"
+  rx="20" fill="#dc2626"/><circle cx="180" cy="80" r="10" fill="white"/><circle cx="220"
+  cy="80" r="10" fill="white"/><path d="M 170 110 Q 200 130 230 110" fill="none" stroke="white"
+  stroke-width="4" stroke-linecap="round"/></svg>
 _metadata:
   bloc: 1
-  section: "1_extract"
+  section: 1_extract

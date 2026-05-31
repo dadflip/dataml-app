@@ -1,64 +1,35 @@
-id: "extract_mysql"
-name: "Extract: Base MySQL/MariaDB"
-description: "Exécute une requête SQL via mysql-connector et exporte en CSV."
-category: "1. Extract"
-tags: ["extract", "mysql", "sql", "db"]
-code_template: |
-  import mysql.connector
-  import pandas as pd
-  import os
-  import time
-
-  # [PARAM: DB_HOST | string]
-  DB_HOST = "localhost"
-  # [/PARAM]
-  
-  # [PARAM: DB_USER | string]
-  DB_USER = "root"
-  # [/PARAM]
-  
-  # [PARAM: DB_PASS | string]
-  DB_PASS = "password"
-  # [/PARAM]
-  
-  # [PARAM: DB_NAME | string]
-  DB_NAME = "my_database"
-  # [/PARAM]
-  
-  # [PARAM: QUERY | string]
-  QUERY = "SELECT * FROM users"
-  # [/PARAM]
-  
-  # [PARAM: DEST_PATH | string]
-  DEST_PATH = "./data/raw/mysql_export.csv"
-  # [/PARAM]
-
-  print(f"[EXTRACT] Exécution de la requête sur MySQL ({DB_HOST})...")
-  os.makedirs(os.path.dirname(DEST_PATH), exist_ok=True)
-
-  try:
-      start_time = time.time()
-      conn = mysql.connector.connect(
-          host=DB_HOST,
-          user=DB_USER,
-          password=DB_PASS,
-          database=DB_NAME
-      )
-      
-      df_temp = pd.read_sql_query(QUERY, conn)
-      df_temp.to_csv(DEST_PATH, index=False)
-      conn.close()
-      
-      duration = time.time() - start_time
-      print(f"[EXTRACT] Succès MySQL. Dump de {df_temp.shape[0]} lignes en {duration:.2f}s.")
-  except Exception as e:
-      print(f"[ERREUR EXTRACT] Échec de la connexion ou requête MySQL : {str(e)}")
-      raise e
-
-  df = None
-  target_name = None
-  task_type = "unknown"
-  meta = {"source": "mysql", "path": DEST_PATH}
+id: extract_mysql
+name: 'Extract: Base MySQL/MariaDB'
+description: Exécute une requête SQL via mysql-connector et exporte en CSV.
+category: 1. Extract
+tags:
+- extract
+- mysql
+- sql
+- db
+code_template: "import mysql.connector\nimport pandas as pd\nimport os\nimport time\n\
+  \n# [PARAM: DB_HOST | string]\nDB_HOST = \"localhost\"\n# [/PARAM]\n\n# [PARAM:\
+  \ DB_USER | string]\nDB_USER = \"root\"\n# [/PARAM]\n\n# [PARAM: DB_PASS | string]\n\
+  DB_PASS = \"password\"\n# [/PARAM]\n\n# [PARAM: DB_NAME | string]\nDB_NAME = \"\
+  my_database\"\n# [/PARAM]\n\n# [PARAM: QUERY | string]\nQUERY = \"SELECT * FROM\
+  \ users\"\n# [/PARAM]\n\n# [PARAM: DEST_PATH | string]\nDEST_PATH = \"./data/raw/mysql_export.csv\"\
+  \n# [/PARAM]\n\nprint(f\"[EXTRACT] Exécution de la requête sur MySQL ({DB_HOST})...\"\
+  )\nos.makedirs(os.path.dirname(DEST_PATH), exist_ok=True)\n\ntry:\n    start_time\
+  \ = time.time()\n    conn = mysql.connector.connect(\n        host=DB_HOST,\n  \
+  \      user=DB_USER,\n        password=DB_PASS,\n        database=DB_NAME\n    )\n\
+  \    \n    df_temp = pd.read_sql_query(QUERY, conn)\n    df_temp.to_csv(DEST_PATH,\
+  \ index=False)\n    conn.close()\n    \n    duration = time.time() - start_time\n\
+  \    print(f\"[EXTRACT] Succès MySQL. Dump de {df_temp.shape[0]} lignes en {duration:.2f}s.\"\
+  )\nexcept Exception as e:\n    print(f\"[ERREUR EXTRACT] Échec de la connexion ou\
+  \ requête MySQL : {str(e)}\")\n    raise e\n\ndf = None\ntarget_name = None\ntask_type\
+  \ = \"unknown\"\nmeta = {\"source\": \"mysql\", \"path\": DEST_PATH}\n"
+illustration_svg: <svg viewBox="0 0 400 200" xmlns="http://www.w3.org/2000/svg"><rect
+  width="400" height="200" fill="#0f172a"/><ellipse cx="200" cy="70" rx="50" ry="15"
+  fill="none" stroke="#f59e0b" stroke-width="4"/><line x1="150" y1="70" x2="150" y2="130"
+  stroke="#f59e0b" stroke-width="4"/><line x1="250" y1="70" x2="250" y2="130" stroke="#f59e0b"
+  stroke-width="4"/><ellipse cx="200" cy="130" rx="50" ry="15" fill="none" stroke="#f59e0b"
+  stroke-width="4"/><ellipse cx="200" cy="100" rx="50" ry="15" fill="none" stroke="#f59e0b"
+  stroke-width="4"/></svg>
 _metadata:
   bloc: 1
-  section: "1_extract"
+  section: 1_extract

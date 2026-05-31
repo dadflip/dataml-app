@@ -1,36 +1,33 @@
-id: "eda_outliers_isolation_forest"
-name: "EDA: Détection Outliers (Isolation Forest)"
-description: "Repère visuellement les anomalies multivariées via Isolation Forest."
-category: "3. Exploratory Data Analysis"
-tags: ["eda", "outliers", "tabular", "sklearn"]
-code_template: |
-  import pandas as pd
-  import numpy as np
-  import matplotlib.pyplot as plt
-  import seaborn as sns
-  from sklearn.ensemble import IsolationForest
-
-  # [PARAM: CONTAMINATION | number]
-  CONTAMINATION = 0.05
-  # [/PARAM]
-
-  num_df = df.select_dtypes(include=[np.number]).dropna()
-  if len(num_df) > 50 and len(num_df.columns) >= 2:
-      iso = IsolationForest(contamination=CONTAMINATION, random_state=42)
-      preds = iso.fit_predict(num_df)
-      
-      cols = num_df.columns[:2]
-      
-      plt.figure(figsize=(8, 6))
-      scatter = plt.scatter(num_df[cols[0]], num_df[cols[1]], c=preds, cmap='coolwarm', alpha=0.7)
-      plt.title(f"Isolation Forest : Outliers sur {cols[0]} vs {cols[1]}")
-      plt.xlabel(cols[0])
-      plt.ylabel(cols[1])
-      # -1 (rouge) = outlier, 1 (bleu) = inlier
-      plt.show()
-      print(f"[EDA] {sum(preds == -1)} outliers détectés sur {len(num_df)} lignes ({(sum(preds == -1)/len(num_df)*100):.1f}%).")
-  else:
-      print("[EDA] Dataset inadapté pour Isolation Forest.")
+id: eda_outliers_isolation_forest
+name: 'EDA: Détection Outliers (Isolation Forest)'
+description: Repère visuellement les anomalies multivariées via Isolation Forest.
+category: 3. Exploratory Data Analysis
+tags:
+- eda
+- outliers
+- tabular
+- sklearn
+code_template: "import pandas as pd\nimport numpy as np\nimport matplotlib.pyplot\
+  \ as plt\nimport seaborn as sns\nfrom sklearn.ensemble import IsolationForest\n\n\
+  # [PARAM: CONTAMINATION | number]\nCONTAMINATION = 0.05\n# [/PARAM]\n\nnum_df =\
+  \ df.select_dtypes(include=[np.number]).dropna()\nif len(num_df) > 50 and len(num_df.columns)\
+  \ >= 2:\n    iso = IsolationForest(contamination=CONTAMINATION, random_state=42)\n\
+  \    preds = iso.fit_predict(num_df)\n    \n    cols = num_df.columns[:2]\n    \n\
+  \    plt.figure(figsize=(8, 6))\n    scatter = plt.scatter(num_df[cols[0]], num_df[cols[1]],\
+  \ c=preds, cmap='coolwarm', alpha=0.7)\n    plt.title(f\"Isolation Forest : Outliers\
+  \ sur {cols[0]} vs {cols[1]}\")\n    plt.xlabel(cols[0])\n    plt.ylabel(cols[1])\n\
+  \    # -1 (rouge) = outlier, 1 (bleu) = inlier\n    plt.show()\n    print(f\"[EDA]\
+  \ {sum(preds == -1)} outliers détectés sur {len(num_df)} lignes ({(sum(preds ==\
+  \ -1)/len(num_df)*100):.1f}%).\")\nelse:\n    print(\"[EDA] Dataset inadapté pour\
+  \ Isolation Forest.\")\n"
+illustration_svg: <svg viewBox="0 0 400 200" xmlns="http://www.w3.org/2000/svg"><rect
+  width="400" height="200" fill="#0f172a"/><circle cx="200" cy="100" r="40" fill="#3b82f6"
+  opacity="0.3"/><circle cx="190" cy="90" r="4" fill="#3b82f6"/><circle cx="210" cy="110"
+  r="4" fill="#3b82f6"/><circle cx="180" cy="105" r="4" fill="#3b82f6"/><circle cx="205"
+  cy="85" r="4" fill="#3b82f6"/><circle cx="80" cy="60" r="6" fill="#ef4444"/><circle
+  cx="320" cy="150" r="6" fill="#ef4444"/><line x1="160" y1="80" x2="85" y2="65" stroke="#ef4444"
+  stroke-width="1" stroke-dasharray="2,2"/><line x1="240" y1="120" x2="315" y2="145"
+  stroke="#ef4444" stroke-width="1" stroke-dasharray="2,2"/></svg>
 _metadata:
   bloc: 1
-  section: "3_eda"
+  section: 3_eda

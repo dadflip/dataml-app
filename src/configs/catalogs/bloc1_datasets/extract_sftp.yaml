@@ -1,57 +1,31 @@
-id: "extract_sftp"
-name: "Extract: Serveur SFTP"
-description: "Télécharge un fichier de manière sécurisée via Paramiko."
-category: "1. Extract"
-tags: ["extract", "sftp", "ssh"]
-code_template: |
-  import paramiko
-  import os
-  import time
-
-  # [PARAM: HOST | string]
-  HOST = "sftp.example.com"
-  # [/PARAM]
-  
-  # [PARAM: USER | string]
-  USER = "username"
-  # [/PARAM]
-  
-  # [PARAM: PWD | string]
-  PWD = "password"
-  # [/PARAM]
-  
-  # [PARAM: REMOTE_PATH | string]
-  REMOTE_PATH = "/secure/data.csv"
-  # [/PARAM]
-  
-  # [PARAM: DEST_PATH | string]
-  DEST_PATH = "./data/raw/sftp_data.csv"
-  # [/PARAM]
-
-  print(f"[EXTRACT] Connexion SFTP à {HOST}...")
-  os.makedirs(os.path.dirname(DEST_PATH), exist_ok=True)
-
-  try:
-      start_time = time.time()
-      ssh = paramiko.SSHClient()
-      ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
-      ssh.connect(HOST, username=USER, password=PWD)
-      
-      sftp = ssh.open_sftp()
-      sftp.get(REMOTE_PATH, DEST_PATH)
-      sftp.close()
-      ssh.close()
-      
-      duration = time.time() - start_time
-      print(f"[EXTRACT] Succès SFTP en {duration:.2f}s.")
-  except Exception as e:
-      print(f"[ERREUR EXTRACT] Échec SFTP : {str(e)}")
-      raise e
-
-  df = None
-  target_name = None
-  task_type = "unknown"
-  meta = {"source": "sftp", "path": DEST_PATH}
+id: extract_sftp
+name: 'Extract: Serveur SFTP'
+description: Télécharge un fichier de manière sécurisée via Paramiko.
+category: 1. Extract
+tags:
+- extract
+- sftp
+- ssh
+code_template: "import paramiko\nimport os\nimport time\n\n# [PARAM: HOST | string]\n\
+  HOST = \"sftp.example.com\"\n# [/PARAM]\n\n# [PARAM: USER | string]\nUSER = \"username\"\
+  \n# [/PARAM]\n\n# [PARAM: PWD | string]\nPWD = \"password\"\n# [/PARAM]\n\n# [PARAM:\
+  \ REMOTE_PATH | string]\nREMOTE_PATH = \"/secure/data.csv\"\n# [/PARAM]\n\n# [PARAM:\
+  \ DEST_PATH | string]\nDEST_PATH = \"./data/raw/sftp_data.csv\"\n# [/PARAM]\n\n\
+  print(f\"[EXTRACT] Connexion SFTP à {HOST}...\")\nos.makedirs(os.path.dirname(DEST_PATH),\
+  \ exist_ok=True)\n\ntry:\n    start_time = time.time()\n    ssh = paramiko.SSHClient()\n\
+  \    ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())\n    ssh.connect(HOST,\
+  \ username=USER, password=PWD)\n    \n    sftp = ssh.open_sftp()\n    sftp.get(REMOTE_PATH,\
+  \ DEST_PATH)\n    sftp.close()\n    ssh.close()\n    \n    duration = time.time()\
+  \ - start_time\n    print(f\"[EXTRACT] Succès SFTP en {duration:.2f}s.\")\nexcept\
+  \ Exception as e:\n    print(f\"[ERREUR EXTRACT] Échec SFTP : {str(e)}\")\n    raise\
+  \ e\n\ndf = None\ntarget_name = None\ntask_type = \"unknown\"\nmeta = {\"source\"\
+  : \"sftp\", \"path\": DEST_PATH}\n"
+illustration_svg: <svg viewBox="0 0 400 200" xmlns="http://www.w3.org/2000/svg"><rect
+  width="400" height="200" fill="#0f172a"/><rect x="100" y="70" width="60" height="60"
+  fill="#64748b"/><rect x="240" y="70" width="60" height="60" fill="#a855f7"/><path
+  d="M 170 90 L 230 90 M 170 110 L 230 110" stroke="white" stroke-width="2"/><circle
+  cx="200" cy="100" r="15" fill="#a855f7"/><text x="200" y="105" fill="white" font-size="12"
+  font-weight="bold" text-anchor="middle">S</text></svg>
 _metadata:
   bloc: 1
-  section: "1_extract"
+  section: 1_extract

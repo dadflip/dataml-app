@@ -1,50 +1,28 @@
-id: "extract_azure"
-name: "Extract: Azure Blob Storage"
-description: "Télécharge un fichier depuis un conteneur Azure."
-category: "1. Extract"
-tags: ["extract", "azure", "blob"]
-code_template: |
-  from azure.storage.blob import BlobServiceClient
-  import os
-  import time
-
-  # [PARAM: CONN_STR | string]
-  CONN_STR = "DefaultEndpointsProtocol=https;AccountName=...;AccountKey=...;EndpointSuffix=core.windows.net"
-  # [/PARAM]
-  
-  # [PARAM: CONTAINER_NAME | string]
-  CONTAINER_NAME = "my-container"
-  # [/PARAM]
-  
-  # [PARAM: BLOB_NAME | string]
-  BLOB_NAME = "data.csv"
-  # [/PARAM]
-  
-  # [PARAM: DEST_PATH | string]
-  DEST_PATH = "./data/raw/azure_data.csv"
-  # [/PARAM]
-
-  print(f"[EXTRACT] Connexion à Azure Blob Storage ({CONTAINER_NAME})...")
-  os.makedirs(os.path.dirname(DEST_PATH), exist_ok=True)
-
-  try:
-      start_time = time.time()
-      blob_service_client = BlobServiceClient.from_connection_string(CONN_STR)
-      blob_client = blob_service_client.get_blob_client(container=CONTAINER_NAME, blob=BLOB_NAME)
-      
-      with open(DEST_PATH, "wb") as download_file:
-          download_file.write(blob_client.download_blob().readall())
-          
-      duration = time.time() - start_time
-      print(f"[EXTRACT] Succès Azure. Fichier téléchargé en {duration:.2f}s.")
-  except Exception as e:
-      print(f"[ERREUR EXTRACT] Erreur Azure Storage : {str(e)}")
-      raise e
-
-  df = None
-  target_name = None
-  task_type = "unknown"
-  meta = {"source": "azure", "path": DEST_PATH}
+id: extract_azure
+name: 'Extract: Azure Blob Storage'
+description: Télécharge un fichier depuis un conteneur Azure.
+category: 1. Extract
+tags:
+- extract
+- azure
+- blob
+code_template: "from azure.storage.blob import BlobServiceClient\nimport os\nimport\
+  \ time\n\n# [PARAM: CONN_STR | string]\nCONN_STR = \"DefaultEndpointsProtocol=https;AccountName=...;AccountKey=...;EndpointSuffix=core.windows.net\"\
+  \n# [/PARAM]\n\n# [PARAM: CONTAINER_NAME | string]\nCONTAINER_NAME = \"my-container\"\
+  \n# [/PARAM]\n\n# [PARAM: BLOB_NAME | string]\nBLOB_NAME = \"data.csv\"\n# [/PARAM]\n\
+  \n# [PARAM: DEST_PATH | string]\nDEST_PATH = \"./data/raw/azure_data.csv\"\n# [/PARAM]\n\
+  \nprint(f\"[EXTRACT] Connexion à Azure Blob Storage ({CONTAINER_NAME})...\")\nos.makedirs(os.path.dirname(DEST_PATH),\
+  \ exist_ok=True)\n\ntry:\n    start_time = time.time()\n    blob_service_client\
+  \ = BlobServiceClient.from_connection_string(CONN_STR)\n    blob_client = blob_service_client.get_blob_client(container=CONTAINER_NAME,\
+  \ blob=BLOB_NAME)\n    \n    with open(DEST_PATH, \"wb\") as download_file:\n  \
+  \      download_file.write(blob_client.download_blob().readall())\n        \n  \
+  \  duration = time.time() - start_time\n    print(f\"[EXTRACT] Succès Azure. Fichier\
+  \ téléchargé en {duration:.2f}s.\")\nexcept Exception as e:\n    print(f\"[ERREUR\
+  \ EXTRACT] Erreur Azure Storage : {str(e)}\")\n    raise e\n\ndf = None\ntarget_name\
+  \ = None\ntask_type = \"unknown\"\nmeta = {\"source\": \"azure\", \"path\": DEST_PATH}\n"
+illustration_svg: <svg viewBox="0 0 400 200" xmlns="http://www.w3.org/2000/svg"><rect
+  width="400" height="200" fill="#0f172a"/><path d="M 150 140 L 250 140 L 220 60 L
+  120 60 Z" fill="#0078d4"/><path d="M 180 140 L 280 140 L 250 60 Z" fill="#50e6ff"/></svg>
 _metadata:
   bloc: 1
-  section: "1_extract"
+  section: 1_extract

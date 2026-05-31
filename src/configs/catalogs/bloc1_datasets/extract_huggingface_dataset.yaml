@@ -1,54 +1,38 @@
-id: "extract_huggingface_dataset"
-name: "Extract: HuggingFace Dataset"
-description: "Télécharge un dataset (NLP, Vision, Audio) depuis le Hub HuggingFace vers le disque local."
-category: "1. Extract"
-tags: ["extract", "huggingface", "nlp", "vision", "audio"]
-code_template: |
-  import os
-  import time
-  try:
-      from datasets import load_dataset
-  except ImportError:
-      load_dataset = None
-      print("[ERREUR EXTRACT] La librairie 'datasets' n'est pas installée. Lancez : !pip install datasets")
-
-  # [PARAM: HF_DATASET_ID | string]
-  HF_DATASET_ID = "imdb"
-  # [/PARAM]
-  
-  # [PARAM: SPLIT | string]
-  SPLIT = "train"
-  # [/PARAM]
-
-  # [PARAM: DEST_DIR | string]
-  DEST_DIR = "./data/raw/huggingface_cache"
-  # [/PARAM]
-
-  print(f"[EXTRACT] Téléchargement du dataset HF '{HF_DATASET_ID}' (split={SPLIT})...")
-  os.makedirs(DEST_DIR, exist_ok=True)
-
-  try:
-      if load_dataset is not None:
-          start_time = time.time()
-          
-          # Télécharge et met en cache localement
-          dataset = load_dataset(HF_DATASET_ID, split=SPLIT, cache_dir=DEST_DIR)
-          
-          # Sauvegarde sur disque au format flèche (Arrow) ou CSV pour être repris par le Load
-          save_path = os.path.join(DEST_DIR, f"{HF_DATASET_ID.replace('/', '_')}_{SPLIT}")
-          dataset.save_to_disk(save_path)
-          
-          duration = time.time() - start_time
-          print(f"[EXTRACT] Succès. Dataset sauvegardé dans {save_path} en {duration:.2f}s.")
-          
-          df = None
-          target_name = None
-          task_type = "unknown"
-          meta = {"source": "huggingface", "dataset_id": HF_DATASET_ID, "path": save_path}
-  except Exception as e:
-      print(f"[ERREUR EXTRACT] Échec de l'extraction HuggingFace : {str(e)}")
-      raise e
-
+id: extract_huggingface_dataset
+name: 'Extract: HuggingFace Dataset'
+description: Télécharge un dataset (NLP, Vision, Audio) depuis le Hub HuggingFace
+  vers le disque local.
+category: 1. Extract
+tags:
+- extract
+- huggingface
+- nlp
+- vision
+- audio
+code_template: "import os\nimport time\ntry:\n    from datasets import load_dataset\n\
+  except ImportError:\n    load_dataset = None\n    print(\"[ERREUR EXTRACT] La librairie\
+  \ 'datasets' n'est pas installée. Lancez : !pip install datasets\")\n\n# [PARAM:\
+  \ HF_DATASET_ID | string]\nHF_DATASET_ID = \"imdb\"\n# [/PARAM]\n\n# [PARAM: SPLIT\
+  \ | string]\nSPLIT = \"train\"\n# [/PARAM]\n\n# [PARAM: DEST_DIR | string]\nDEST_DIR\
+  \ = \"./data/raw/huggingface_cache\"\n# [/PARAM]\n\nprint(f\"[EXTRACT] Téléchargement\
+  \ du dataset HF '{HF_DATASET_ID}' (split={SPLIT})...\")\nos.makedirs(DEST_DIR, exist_ok=True)\n\
+  \ntry:\n    if load_dataset is not None:\n        start_time = time.time()\n   \
+  \     \n        # Télécharge et met en cache localement\n        dataset = load_dataset(HF_DATASET_ID,\
+  \ split=SPLIT, cache_dir=DEST_DIR)\n        \n        # Sauvegarde sur disque au\
+  \ format flèche (Arrow) ou CSV pour être repris par le Load\n        save_path =\
+  \ os.path.join(DEST_DIR, f\"{HF_DATASET_ID.replace('/', '_')}_{SPLIT}\")\n     \
+  \   dataset.save_to_disk(save_path)\n        \n        duration = time.time() -\
+  \ start_time\n        print(f\"[EXTRACT] Succès. Dataset sauvegardé dans {save_path}\
+  \ en {duration:.2f}s.\")\n        \n        df = None\n        target_name = None\n\
+  \        task_type = \"unknown\"\n        meta = {\"source\": \"huggingface\", \"\
+  dataset_id\": HF_DATASET_ID, \"path\": save_path}\nexcept Exception as e:\n    print(f\"\
+  [ERREUR EXTRACT] Échec de l'extraction HuggingFace : {str(e)}\")\n    raise e\n"
+illustration_svg: <svg viewBox="0 0 400 200" xmlns="http://www.w3.org/2000/svg"><rect
+  width="400" height="200" fill="#0f172a"/><rect x="150" y="60" width="100" height="80"
+  rx="10" fill="#fcd34d"/><circle cx="170" cy="90" r="8" fill="#1e293b"/><circle cx="230"
+  cy="90" r="8" fill="#1e293b"/><path d="M 180 110 Q 200 130 220 110" fill="none"
+  stroke="#1e293b" stroke-width="4" stroke-linecap="round"/><text x="200" y="170"
+  fill="#fcd34d" font-size="16" text-anchor="middle" font-weight="bold">HF Datasets</text></svg>
 _metadata:
   bloc: 1
-  section: "1_extract"
+  section: 1_extract

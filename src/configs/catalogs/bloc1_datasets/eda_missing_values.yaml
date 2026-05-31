@@ -1,29 +1,32 @@
-id: "eda_missing_values"
-name: "EDA: Valeurs Manquantes"
-description: "Calcule le pourcentage de valeurs manquantes par colonne et affiche une heatmap si possible."
-category: "3. Exploratory Data Analysis"
-tags: ["eda", "missing", "tabular", "seaborn"]
-code_template: |
-  import pandas as pd
-  import matplotlib.pyplot as plt
-  import seaborn as sns
-
-  missing = df.isnull().sum()
-  missing_pct = (missing / len(df)) * 100
-  missing_df = pd.DataFrame({'Manquants': missing, 'Pourcentage': missing_pct}).sort_values('Pourcentage', ascending=False)
-  missing_df = missing_df[missing_df['Manquants'] > 0]
-  
-  print("[EDA] === VALEURS MANQUANTES ===")
-  if len(missing_df) == 0:
-      print("Aucune valeur manquante détectée ! 🎉")
-  else:
-      display(missing_df)
-      
-      # Heatmap
-      plt.figure(figsize=(10, 6))
-      sns.heatmap(df.isnull(), cbar=False, cmap='viridis')
-      plt.title("Heatmap des Valeurs Manquantes")
-      plt.show()
+id: eda_missing_values
+name: 'EDA: Valeurs Manquantes'
+description: Calcule le pourcentage de valeurs manquantes par colonne et affiche une
+  heatmap si possible.
+category: 3. Exploratory Data Analysis
+tags:
+- eda
+- missing
+- tabular
+- seaborn
+code_template: "import pandas as pd\nimport matplotlib.pyplot as plt\nimport seaborn\
+  \ as sns\n\nmissing = df.isnull().sum()\nmissing_pct = (missing / len(df)) * 100\n\
+  missing_df = pd.DataFrame({'Manquants': missing, 'Pourcentage': missing_pct}).sort_values('Pourcentage',\
+  \ ascending=False)\nmissing_df = missing_df[missing_df['Manquants'] > 0]\n\nprint(\"\
+  [EDA] === VALEURS MANQUANTES ===\")\nif len(missing_df) == 0:\n    print(\"Aucune\
+  \ valeur manquante détectée ! \U0001F389\")\nelse:\n    display(missing_df)\n  \
+  \  \n    # Heatmap\n    plt.figure(figsize=(10, 6))\n    sns.heatmap(df.isnull(),\
+  \ cbar=False, cmap='viridis')\n    plt.title(\"Heatmap des Valeurs Manquantes\"\
+  )\n    plt.show()\n"
+illustration_svg: <svg viewBox="0 0 400 200" xmlns="http://www.w3.org/2000/svg"><rect
+  width="400" height="200" fill="#0f172a"/><rect x="100" y="50" width="40" height="20"
+  fill="#10b981"/><rect x="150" y="50" width="40" height="20" fill="#ef4444"/><rect
+  x="200" y="50" width="40" height="20" fill="#10b981"/><rect x="250" y="50" width="40"
+  height="20" fill="#10b981"/><rect x="100" y="80" width="40" height="20" fill="#10b981"/><rect
+  x="150" y="80" width="40" height="20" fill="#10b981"/><rect x="200" y="80" width="40"
+  height="20" fill="#ef4444"/><rect x="250" y="80" width="40" height="20" fill="#10b981"/><rect
+  x="100" y="110" width="40" height="20" fill="#10b981"/><rect x="150" y="110" width="40"
+  height="20" fill="#10b981"/><rect x="200" y="110" width="40" height="20" fill="#10b981"/><rect
+  x="250" y="110" width="40" height="20" fill="#ef4444"/></svg>
 _metadata:
   bloc: 1
-  section: "3_eda"
+  section: 3_eda

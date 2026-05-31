@@ -1,49 +1,37 @@
-id: "load_dir_text_corpus"
-name: "Load: Dossier de Textes (Corpus)"
-description: "Parcourt un dossier et lit tous les fichiers textes bruts (.txt) dans un DataFrame."
-category: "2. Load"
-tags: ["load", "directory", "text", "nlp"]
-code_template: |
-  import os
-  import glob
-  import pandas as pd
-  import time
-
-  # [PARAM: DIRECTORY_PATH | dir]
-  DIRECTORY_PATH = "./data/extracted/text_corpus"
-  # [/PARAM]
-
-  print(f"[LOAD] Lecture des fichiers texte dans {DIRECTORY_PATH}...")
-  if not os.path.exists(DIRECTORY_PATH):
-      raise FileNotFoundError(f"[ERREUR LOAD] Le dossier n'existe pas : {DIRECTORY_PATH}")
-
-  try:
-      start_time = time.time()
-      
-      txt_files = glob.glob(os.path.join(DIRECTORY_PATH, "*.txt"))
-      if not txt_files:
-          raise ValueError(f"Aucun fichier .txt trouvé dans {DIRECTORY_PATH}")
-          
-      data = []
-      for file in txt_files:
-          with open(file, 'r', encoding='utf-8') as f:
-              content = f.read()
-              data.append({
-                  "filename": os.path.basename(file),
-                  "text": content
-              })
-              
-      df = pd.DataFrame(data)
-      
-      duration = time.time() - start_time
-      print(f"[LOAD] Succès Corpus NLP. {len(txt_files)} textes lus en {duration:.2f}s.")
-  except Exception as e:
-      print(f"[ERREUR LOAD] Erreur lors de la lecture du corpus : {str(e)}")
-      raise e
-
-  target_name = None
-  task_type = "nlp"
-  meta = {"format": "directory_text", "documents": len(df)}
+id: load_dir_text_corpus
+name: 'Load: Dossier de Textes (Corpus)'
+description: Parcourt un dossier et lit tous les fichiers textes bruts (.txt) dans
+  un DataFrame.
+category: 2. Load
+tags:
+- load
+- directory
+- text
+- nlp
+code_template: "import os\nimport glob\nimport pandas as pd\nimport time\n\n# [PARAM:\
+  \ DIRECTORY_PATH | dir]\nDIRECTORY_PATH = \"./data/extracted/text_corpus\"\n# [/PARAM]\n\
+  \nprint(f\"[LOAD] Lecture des fichiers texte dans {DIRECTORY_PATH}...\")\nif not\
+  \ os.path.exists(DIRECTORY_PATH):\n    raise FileNotFoundError(f\"[ERREUR LOAD]\
+  \ Le dossier n'existe pas : {DIRECTORY_PATH}\")\n\ntry:\n    start_time = time.time()\n\
+  \    \n    txt_files = glob.glob(os.path.join(DIRECTORY_PATH, \"*.txt\"))\n    if\
+  \ not txt_files:\n        raise ValueError(f\"Aucun fichier .txt trouvé dans {DIRECTORY_PATH}\"\
+  )\n        \n    data = []\n    for file in txt_files:\n        with open(file,\
+  \ 'r', encoding='utf-8') as f:\n            content = f.read()\n            data.append({\n\
+  \                \"filename\": os.path.basename(file),\n                \"text\"\
+  : content\n            })\n            \n    df = pd.DataFrame(data)\n    \n   \
+  \ duration = time.time() - start_time\n    print(f\"[LOAD] Succès Corpus NLP. {len(txt_files)}\
+  \ textes lus en {duration:.2f}s.\")\nexcept Exception as e:\n    print(f\"[ERREUR\
+  \ LOAD] Erreur lors de la lecture du corpus : {str(e)}\")\n    raise e\n\ntarget_name\
+  \ = None\ntask_type = \"nlp\"\nmeta = {\"format\": \"directory_text\", \"documents\"\
+  : len(df)}\n"
+illustration_svg: <svg viewBox="0 0 400 200" xmlns="http://www.w3.org/2000/svg"><rect
+  width="400" height="200" fill="#0f172a"/><path d="M 100 60 L 120 60 L 140 80 L 300
+  80 L 300 150 L 100 150 Z" fill="#475569"/><rect x="140" y="100" width="30" height="30"
+  fill="white"/><rect x="190" y="100" width="30" height="30" fill="white"/><rect x="240"
+  y="100" width="30" height="30" fill="white"/><line x1="145" y1="105" x2="165" y2="105"
+  stroke="#94a3b8" stroke-width="2"/><line x1="145" y1="115" x2="165" y2="115" stroke="#94a3b8"
+  stroke-width="2"/><line x1="195" y1="105" x2="215" y2="105" stroke="#94a3b8" stroke-width="2"/><line
+  x1="195" y1="115" x2="215" y2="115" stroke="#94a3b8" stroke-width="2"/></svg>
 _metadata:
   bloc: 1
-  section: "2_load"
+  section: 2_load

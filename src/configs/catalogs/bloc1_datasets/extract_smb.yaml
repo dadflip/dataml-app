@@ -1,38 +1,27 @@
-id: "extract_smb"
-name: "Extract: Partage Windows (SMB)"
-description: "Télécharge un fichier depuis un partage réseau Windows."
-category: "1. Extract"
-tags: ["extract", "smb", "windows", "network"]
-code_template: |
-  import shutil
-  import os
-  import time
-
-  # [PARAM: SMB_UNC_PATH | string]
-  SMB_UNC_PATH = r"\\\\SERVER\\Share\\data.csv"
-  # [/PARAM]
-  
-  # [PARAM: DEST_PATH | string]
-  DEST_PATH = "./data/raw/smb_data.csv"
-  # [/PARAM]
-
-  print(f"[EXTRACT] Copie depuis le partage SMB : {SMB_UNC_PATH}...")
-  os.makedirs(os.path.dirname(DEST_PATH), exist_ok=True)
-
-  try:
-      start_time = time.time()
-      shutil.copy2(SMB_UNC_PATH, DEST_PATH)
-      
-      duration = time.time() - start_time
-      print(f"[EXTRACT] Succès SMB. Fichier copié en {duration:.2f}s.")
-  except Exception as e:
-      print(f"[ERREUR EXTRACT] Erreur de réseau Windows (Permissions SMB) : {str(e)}")
-      raise e
-
-  df = None
-  target_name = None
-  task_type = "unknown"
-  meta = {"source": "smb", "path": DEST_PATH}
+id: extract_smb
+name: 'Extract: Partage Windows (SMB)'
+description: Télécharge un fichier depuis un partage réseau Windows.
+category: 1. Extract
+tags:
+- extract
+- smb
+- windows
+- network
+code_template: "import shutil\nimport os\nimport time\n\n# [PARAM: SMB_UNC_PATH |\
+  \ string]\nSMB_UNC_PATH = r\"\\\\\\\\SERVER\\\\Share\\\\data.csv\"\n# [/PARAM]\n\
+  \n# [PARAM: DEST_PATH | string]\nDEST_PATH = \"./data/raw/smb_data.csv\"\n# [/PARAM]\n\
+  \nprint(f\"[EXTRACT] Copie depuis le partage SMB : {SMB_UNC_PATH}...\")\nos.makedirs(os.path.dirname(DEST_PATH),\
+  \ exist_ok=True)\n\ntry:\n    start_time = time.time()\n    shutil.copy2(SMB_UNC_PATH,\
+  \ DEST_PATH)\n    \n    duration = time.time() - start_time\n    print(f\"[EXTRACT]\
+  \ Succès SMB. Fichier copié en {duration:.2f}s.\")\nexcept Exception as e:\n   \
+  \ print(f\"[ERREUR EXTRACT] Erreur de réseau Windows (Permissions SMB) : {str(e)}\"\
+  )\n    raise e\n\ndf = None\ntarget_name = None\ntask_type = \"unknown\"\nmeta =\
+  \ {\"source\": \"smb\", \"path\": DEST_PATH}\n"
+illustration_svg: <svg viewBox="0 0 400 200" xmlns="http://www.w3.org/2000/svg"><rect
+  width="400" height="200" fill="#0f172a"/><path d="M 140 80 L 180 80 L 200 100 L
+  260 100 L 260 140 L 140 140 Z" fill="#3b82f6"/><line x1="140" y1="160" x2="260"
+  y2="160" stroke="#1e293b" stroke-width="4"/><circle cx="160" cy="160" r="6" fill="#3b82f6"/><circle
+  cx="200" cy="160" r="6" fill="#3b82f6"/><circle cx="240" cy="160" r="6" fill="#3b82f6"/></svg>
 _metadata:
   bloc: 1
-  section: "1_extract"
+  section: 1_extract

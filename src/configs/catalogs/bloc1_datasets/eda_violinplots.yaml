@@ -1,31 +1,28 @@
-id: "eda_violinplots"
-name: "EDA: Violin Plots vs Target"
-description: "Affiche la distribution détaillée des variables numériques par classe."
-category: "3. Exploratory Data Analysis"
-tags: ["eda", "violin", "tabular", "seaborn"]
-code_template: |
-  import pandas as pd
-  import numpy as np
-  import matplotlib.pyplot as plt
-  import seaborn as sns
-
-  if 'target_name' in locals() and target_name and target_name in df.columns:
-      num_cols = df.select_dtypes(include=[np.number]).columns.tolist()
-      if target_name in num_cols:
-          num_cols.remove(target_name)
-      if len(num_cols) > 8:
-          num_cols = num_cols[:8]
-          
-      print(f"[EDA] === VIOLIN PLOTS by {target_name} ===")
-      plt.figure(figsize=(15, 5 * ((len(num_cols) + 1) // 2)))
-      for i, col in enumerate(num_cols):
-          plt.subplot(((len(num_cols) + 1) // 2), 2, i + 1)
-          sns.violinplot(data=df, x=target_name, y=col)
-          plt.title(f"{col} by {target_name}")
-      plt.tight_layout()
-      plt.show()
-  else:
-      print("[EDA] Cible introuvable.")
+id: eda_violinplots
+name: 'EDA: Violin Plots vs Target'
+description: Affiche la distribution détaillée des variables numériques par classe.
+category: 3. Exploratory Data Analysis
+tags:
+- eda
+- violin
+- tabular
+- seaborn
+code_template: "import pandas as pd\nimport numpy as np\nimport matplotlib.pyplot\
+  \ as plt\nimport seaborn as sns\n\nif 'target_name' in locals() and target_name\
+  \ and target_name in df.columns:\n    num_cols = df.select_dtypes(include=[np.number]).columns.tolist()\n\
+  \    if target_name in num_cols:\n        num_cols.remove(target_name)\n    if len(num_cols)\
+  \ > 8:\n        num_cols = num_cols[:8]\n        \n    print(f\"[EDA] === VIOLIN\
+  \ PLOTS by {target_name} ===\")\n    plt.figure(figsize=(15, 5 * ((len(num_cols)\
+  \ + 1) // 2)))\n    for i, col in enumerate(num_cols):\n        plt.subplot(((len(num_cols)\
+  \ + 1) // 2), 2, i + 1)\n        sns.violinplot(data=df, x=target_name, y=col)\n\
+  \        plt.title(f\"{col} by {target_name}\")\n    plt.tight_layout()\n    plt.show()\n\
+  else:\n    print(\"[EDA] Cible introuvable.\")\n"
+illustration_svg: <svg viewBox="0 0 400 200" xmlns="http://www.w3.org/2000/svg"><rect
+  width="400" height="200" fill="#0f172a"/><line x1="50" y1="160" x2="350" y2="160"
+  stroke="#475569" stroke-width="2"/><path d="M 120 40 Q 160 100 120 160 Q 80 100
+  120 40 Z" fill="#8b5cf6" opacity="0.8"/><path d="M 200 60 Q 230 110 200 160 Q 170
+  110 200 60 Z" fill="#3b82f6" opacity="0.8"/><path d="M 280 80 Q 300 120 280 160
+  Q 260 120 280 80 Z" fill="#10b981" opacity="0.8"/></svg>
 _metadata:
   bloc: 1
-  section: "3_eda"
+  section: 3_eda

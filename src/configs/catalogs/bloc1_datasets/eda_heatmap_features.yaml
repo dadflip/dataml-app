@@ -1,33 +1,30 @@
-id: "eda_heatmap_features"
-name: "EDA: Top Corrélations Target"
-description: "Affiche une heatmap ciblée sur les variables les plus corrélées à la target continue."
-category: "3. Exploratory Data Analysis"
-tags: ["eda", "correlation", "tabular", "regression"]
-code_template: |
-  import pandas as pd
-  import numpy as np
-  import matplotlib.pyplot as plt
-  import seaborn as sns
-
-  if 'target_name' in locals() and target_name and target_name in df.columns and pd.api.types.is_numeric_dtype(df[target_name]):
-      num_df = df.select_dtypes(include=[np.number])
-      corr = num_df.corr()
-      
-      # [PARAM: TOP_K | number]
-      TOP_K = 10
-      # [/PARAM]
-      
-      k = min(TOP_K, len(corr.columns))
-      cols = corr.nlargest(k, target_name)[target_name].index
-      cm = np.corrcoef(df[cols].dropna().values.T)
-      
-      plt.figure(figsize=(10, 8))
-      sns.heatmap(cm, annot=True, square=True, fmt='.2f', annot_kws={'size': 10}, 
-                  yticklabels=cols.values, xticklabels=cols.values, cmap='coolwarm')
-      plt.title(f"Top {k} Variables corrélées à {target_name}")
-      plt.show()
-  else:
-      print("[EDA] Requiert une cible (target_name) numérique.")
+id: eda_heatmap_features
+name: 'EDA: Top Corrélations Target'
+description: Affiche une heatmap ciblée sur les variables les plus corrélées à la
+  target continue.
+category: 3. Exploratory Data Analysis
+tags:
+- eda
+- correlation
+- tabular
+- regression
+code_template: "import pandas as pd\nimport numpy as np\nimport matplotlib.pyplot\
+  \ as plt\nimport seaborn as sns\n\nif 'target_name' in locals() and target_name\
+  \ and target_name in df.columns and pd.api.types.is_numeric_dtype(df[target_name]):\n\
+  \    num_df = df.select_dtypes(include=[np.number])\n    corr = num_df.corr()\n\
+  \    \n    # [PARAM: TOP_K | number]\n    TOP_K = 10\n    # [/PARAM]\n    \n   \
+  \ k = min(TOP_K, len(corr.columns))\n    cols = corr.nlargest(k, target_name)[target_name].index\n\
+  \    cm = np.corrcoef(df[cols].dropna().values.T)\n    \n    plt.figure(figsize=(10,\
+  \ 8))\n    sns.heatmap(cm, annot=True, square=True, fmt='.2f', annot_kws={'size':\
+  \ 10}, \n                yticklabels=cols.values, xticklabels=cols.values, cmap='coolwarm')\n\
+  \    plt.title(f\"Top {k} Variables corrélées à {target_name}\")\n    plt.show()\n\
+  else:\n    print(\"[EDA] Requiert une cible (target_name) numérique.\")\n"
+illustration_svg: <svg viewBox="0 0 400 200" xmlns="http://www.w3.org/2000/svg"><rect
+  width="400" height="200" fill="#0f172a"/><defs><linearGradient id="heat" x1="0%"
+  y1="0%" x2="100%" y2="0%"><stop offset="0%" style="stop-color:#1e3a8a;stop-opacity:1"
+  /><stop offset="50%" style="stop-color:#fbbf24;stop-opacity:1" /><stop offset="100%"
+  style="stop-color:#991b1b;stop-opacity:1" /></linearGradient></defs><rect x="80"
+  y="50" width="240" height="100" fill="url(#heat)" rx="4"/></svg>
 _metadata:
   bloc: 1
-  section: "3_eda"
+  section: 3_eda

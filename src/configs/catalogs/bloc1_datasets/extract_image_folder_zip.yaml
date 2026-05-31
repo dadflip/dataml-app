@@ -1,47 +1,33 @@
-id: "extract_image_folder_zip"
-name: "Extract: Image Folder (from ZIP URL)"
-description: "Télécharge une archive ZIP contenant un dossier d'images structuré, puis l'extrait sur le disque."
-category: "1. Extract"
-tags: ["extract", "image", "vision", "zip"]
-code_template: |
-  import os
-  import time
-  import urllib.request
-  import zipfile
-
-  # [PARAM: ZIP_URL | string]
-  ZIP_URL = "https://example.com/dataset_images.zip"
-  # [/PARAM]
-
-  # [PARAM: DEST_DIR | string]
-  DEST_DIR = "./data/raw/images_extracted"
-  # [/PARAM]
-
-  print(f"[EXTRACT] Téléchargement et extraction du ZIP depuis {ZIP_URL}...")
-  os.makedirs(DEST_DIR, exist_ok=True)
-
-  try:
-      start_time = time.time()
-      zip_path = os.path.join(DEST_DIR, "temp_dataset.zip")
-      
-      urllib.request.urlretrieve(ZIP_URL, zip_path)
-      
-      with zipfile.ZipFile(zip_path, 'r') as zip_ref:
-          zip_ref.extractall(DEST_DIR)
-          
-      os.remove(zip_path) # Nettoyage
-      
-      duration = time.time() - start_time
-      print(f"[EXTRACT] ZIP téléchargé et extrait avec succès dans {DEST_DIR} en {duration:.2f}s.")
-      
-      df = None
-      target_name = None
-      task_type = "image_classification"
-      meta = {"source": "zip_url", "url": ZIP_URL, "path": DEST_DIR}
-  except Exception as e:
-      print(f"[ERREUR EXTRACT] Échec de l'extraction ZIP : {str(e)}")
-      raise e
-
+id: extract_image_folder_zip
+name: 'Extract: Image Folder (from ZIP URL)'
+description: Télécharge une archive ZIP contenant un dossier d'images structuré, puis
+  l'extrait sur le disque.
+category: 1. Extract
+tags:
+- extract
+- image
+- vision
+- zip
+code_template: "import os\nimport time\nimport urllib.request\nimport zipfile\n\n\
+  # [PARAM: ZIP_URL | string]\nZIP_URL = \"https://example.com/dataset_images.zip\"\
+  \n# [/PARAM]\n\n# [PARAM: DEST_DIR | string]\nDEST_DIR = \"./data/raw/images_extracted\"\
+  \n# [/PARAM]\n\nprint(f\"[EXTRACT] Téléchargement et extraction du ZIP depuis {ZIP_URL}...\"\
+  )\nos.makedirs(DEST_DIR, exist_ok=True)\n\ntry:\n    start_time = time.time()\n\
+  \    zip_path = os.path.join(DEST_DIR, \"temp_dataset.zip\")\n    \n    urllib.request.urlretrieve(ZIP_URL,\
+  \ zip_path)\n    \n    with zipfile.ZipFile(zip_path, 'r') as zip_ref:\n       \
+  \ zip_ref.extractall(DEST_DIR)\n        \n    os.remove(zip_path) # Nettoyage\n\
+  \    \n    duration = time.time() - start_time\n    print(f\"[EXTRACT] ZIP téléchargé\
+  \ et extrait avec succès dans {DEST_DIR} en {duration:.2f}s.\")\n    \n    df =\
+  \ None\n    target_name = None\n    task_type = \"image_classification\"\n    meta\
+  \ = {\"source\": \"zip_url\", \"url\": ZIP_URL, \"path\": DEST_DIR}\nexcept Exception\
+  \ as e:\n    print(f\"[ERREUR EXTRACT] Échec de l'extraction ZIP : {str(e)}\")\n\
+  \    raise e\n"
+illustration_svg: <svg viewBox="0 0 400 200" xmlns="http://www.w3.org/2000/svg"><rect
+  width="400" height="200" fill="#0f172a"/><path d="M 100 60 L 140 60 L 160 80 L 300
+  80 L 300 150 L 100 150 Z" fill="#3b82f6"/><rect x="180" y="90" width="40" height="30"
+  fill="#cbd5e1"/><circle cx="190" cy="100" r="4" fill="#3b82f6"/><path d="M 180 120
+  L 195 105 L 210 115 L 220 110 L 220 120 Z" fill="#94a3b8"/><line x1="120" y1="80"
+  x2="120" y2="140" stroke="#fcd34d" stroke-width="8" stroke-dasharray="8 4"/></svg>
 _metadata:
   bloc: 1
-  section: "1_extract"
+  section: 1_extract

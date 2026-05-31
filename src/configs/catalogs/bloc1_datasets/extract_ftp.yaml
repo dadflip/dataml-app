@@ -1,47 +1,30 @@
-id: "extract_ftp"
-name: "Extract: Serveur FTP"
-description: "Télécharge un fichier depuis un serveur FTP public ou privé."
-category: "1. Extract"
-tags: ["extract", "ftp", "server"]
-code_template: |
-  import ftplib
-  import os
-  import time
-
-  # [PARAM: FTP_HOST | string]
-  FTP_HOST = "ftp.example.com"
-  # [/PARAM]
-  
-  # [PARAM: FTP_PATH | string]
-  FTP_PATH = "/pub/data.csv"
-  # [/PARAM]
-  
-  # [PARAM: DEST_PATH | string]
-  DEST_PATH = "./data/raw/ftp_data.csv"
-  # [/PARAM]
-
-  print(f"[EXTRACT] Connexion FTP vers {FTP_HOST}...")
-  os.makedirs(os.path.dirname(DEST_PATH), exist_ok=True)
-
-  try:
-      start_time = time.time()
-      ftp = ftplib.FTP(FTP_HOST)
-      ftp.login() # Anonyme par défaut
-      
-      with open(DEST_PATH, 'wb') as local_file:
-          ftp.retrbinary(f"RETR {FTP_PATH}", local_file.write)
-          
-      ftp.quit()
-      duration = time.time() - start_time
-      print(f"[EXTRACT] Succès FTP. Fichier rapatrié en {duration:.2f}s.")
-  except Exception as e:
-      print(f"[ERREUR EXTRACT] Impossible de récupérer le fichier FTP : {str(e)}")
-      raise e
-
-  df = None
-  target_name = None
-  task_type = "unknown"
-  meta = {"source": "ftp", "path": DEST_PATH}
+id: extract_ftp
+name: 'Extract: Serveur FTP'
+description: Télécharge un fichier depuis un serveur FTP public ou privé.
+category: 1. Extract
+tags:
+- extract
+- ftp
+- server
+code_template: "import ftplib\nimport os\nimport time\n\n# [PARAM: FTP_HOST | string]\n\
+  FTP_HOST = \"ftp.example.com\"\n# [/PARAM]\n\n# [PARAM: FTP_PATH | string]\nFTP_PATH\
+  \ = \"/pub/data.csv\"\n# [/PARAM]\n\n# [PARAM: DEST_PATH | string]\nDEST_PATH =\
+  \ \"./data/raw/ftp_data.csv\"\n# [/PARAM]\n\nprint(f\"[EXTRACT] Connexion FTP vers\
+  \ {FTP_HOST}...\")\nos.makedirs(os.path.dirname(DEST_PATH), exist_ok=True)\n\ntry:\n\
+  \    start_time = time.time()\n    ftp = ftplib.FTP(FTP_HOST)\n    ftp.login() #\
+  \ Anonyme par défaut\n    \n    with open(DEST_PATH, 'wb') as local_file:\n    \
+  \    ftp.retrbinary(f\"RETR {FTP_PATH}\", local_file.write)\n        \n    ftp.quit()\n\
+  \    duration = time.time() - start_time\n    print(f\"[EXTRACT] Succès FTP. Fichier\
+  \ rapatrié en {duration:.2f}s.\")\nexcept Exception as e:\n    print(f\"[ERREUR\
+  \ EXTRACT] Impossible de récupérer le fichier FTP : {str(e)}\")\n    raise e\n\n\
+  df = None\ntarget_name = None\ntask_type = \"unknown\"\nmeta = {\"source\": \"ftp\"\
+  , \"path\": DEST_PATH}\n"
+illustration_svg: <svg viewBox="0 0 400 200" xmlns="http://www.w3.org/2000/svg"><rect
+  width="400" height="200" fill="#0f172a"/><rect x="80" y="80" width="80" height="60"
+  rx="4" fill="#64748b"/><rect x="240" y="80" width="80" height="60" rx="4" fill="#3b82f6"/><line
+  x1="170" y1="110" x2="230" y2="110" stroke="#10b981" stroke-width="4" stroke-dasharray="6
+  4"/><polygon points="230,105 240,110 230,115" fill="#10b981"/><text x="200" y="95"
+  fill="#10b981" font-size="12" text-anchor="middle">FTP</text></svg>
 _metadata:
   bloc: 1
-  section: "1_extract"
+  section: 1_extract

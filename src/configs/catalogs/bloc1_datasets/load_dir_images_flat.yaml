@@ -1,60 +1,41 @@
-id: "load_dir_images_flat"
-name: "Load: Dossier d'Images (Plat)"
-description: "Parcourt un dossier et renvoie un DataFrame contenant les chemins absolus de toutes les images. Idéal pour être croisé avec un fichier de labels."
-category: "2. Load"
-tags: ["load", "directory", "images", "crawler"]
-code_template: |
-  import os
-  import glob
-  import pandas as pd
-  import time
-
-  # [PARAM: DIRECTORY_PATH | dir]
-  DIRECTORY_PATH = "./data/extracted/images"
-  # [/PARAM]
-  
-  # [PARAM: EXTENSION | string]
-  EXTENSION = "*.jpg"
-  # [/PARAM]
-
-  print(f"[LOAD] Parcours du dossier {DIRECTORY_PATH} à la recherche de {EXTENSION}...")
-  if not os.path.exists(DIRECTORY_PATH):
-      raise FileNotFoundError(f"[ERREUR LOAD] Le dossier n'existe pas : {DIRECTORY_PATH}")
-
-  try:
-      start_time = time.time()
-      
-      search_pattern = os.path.join(DIRECTORY_PATH, EXTENSION)
-      # On cherche tous les fichiers qui matchent
-      image_files = glob.glob(search_pattern)
-      
-      if not image_files:
-          print(f"[ATTENTION] Aucune image trouvée avec le pattern {search_pattern}")
-          
-      # On extrait l'ID (ex: "image_0001") pour faciliter la jointure avec des labels
-      data = []
-      for filepath in image_files:
-          filename = os.path.basename(filepath)
-          file_id, ext = os.path.splitext(filename)
-          data.append({
-              "file_id": file_id,
-              "filename": filename,
-              "absolute_path": os.path.abspath(filepath)
-          })
-          
-      df = pd.DataFrame(data)
-      # Tri par ID pour assurer la consistance
-      df = df.sort_values(by="file_id").reset_index(drop=True)
-      
-      duration = time.time() - start_time
-      print(f"[LOAD] Succès Crawler. {len(df)} chemins d'images indexés en {duration:.2f}s.")
-  except Exception as e:
-      print(f"[ERREUR LOAD] Erreur lors du parcours du dossier : {str(e)}")
-      raise e
-
-  target_name = None
-  task_type = "computer_vision"
-  meta = {"format": "directory_flat", "images_found": len(df)}
+id: load_dir_images_flat
+name: 'Load: Dossier d''Images (Plat)'
+description: Parcourt un dossier et renvoie un DataFrame contenant les chemins absolus
+  de toutes les images. Idéal pour être croisé avec un fichier de labels.
+category: 2. Load
+tags:
+- load
+- directory
+- images
+- crawler
+code_template: "import os\nimport glob\nimport pandas as pd\nimport time\n\n# [PARAM:\
+  \ DIRECTORY_PATH | dir]\nDIRECTORY_PATH = \"./data/extracted/images\"\n# [/PARAM]\n\
+  \n# [PARAM: EXTENSION | string]\nEXTENSION = \"*.jpg\"\n# [/PARAM]\n\nprint(f\"\
+  [LOAD] Parcours du dossier {DIRECTORY_PATH} à la recherche de {EXTENSION}...\")\n\
+  if not os.path.exists(DIRECTORY_PATH):\n    raise FileNotFoundError(f\"[ERREUR LOAD]\
+  \ Le dossier n'existe pas : {DIRECTORY_PATH}\")\n\ntry:\n    start_time = time.time()\n\
+  \    \n    search_pattern = os.path.join(DIRECTORY_PATH, EXTENSION)\n    # On cherche\
+  \ tous les fichiers qui matchent\n    image_files = glob.glob(search_pattern)\n\
+  \    \n    if not image_files:\n        print(f\"[ATTENTION] Aucune image trouvée\
+  \ avec le pattern {search_pattern}\")\n        \n    # On extrait l'ID (ex: \"image_0001\"\
+  ) pour faciliter la jointure avec des labels\n    data = []\n    for filepath in\
+  \ image_files:\n        filename = os.path.basename(filepath)\n        file_id,\
+  \ ext = os.path.splitext(filename)\n        data.append({\n            \"file_id\"\
+  : file_id,\n            \"filename\": filename,\n            \"absolute_path\":\
+  \ os.path.abspath(filepath)\n        })\n        \n    df = pd.DataFrame(data)\n\
+  \    # Tri par ID pour assurer la consistance\n    df = df.sort_values(by=\"file_id\"\
+  ).reset_index(drop=True)\n    \n    duration = time.time() - start_time\n    print(f\"\
+  [LOAD] Succès Crawler. {len(df)} chemins d'images indexés en {duration:.2f}s.\"\
+  )\nexcept Exception as e:\n    print(f\"[ERREUR LOAD] Erreur lors du parcours du\
+  \ dossier : {str(e)}\")\n    raise e\n\ntarget_name = None\ntask_type = \"computer_vision\"\
+  \nmeta = {\"format\": \"directory_flat\", \"images_found\": len(df)}\n"
+illustration_svg: <svg viewBox="0 0 400 200" xmlns="http://www.w3.org/2000/svg"><rect
+  width="400" height="200" fill="#0f172a"/><rect x="100" y="80" width="40" height="40"
+  fill="#3b82f6"/><rect x="160" y="80" width="40" height="40" fill="#3b82f6"/><rect
+  x="220" y="80" width="40" height="40" fill="#3b82f6"/><rect x="280" y="80" width="40"
+  height="40" fill="#3b82f6"/><circle cx="120" cy="100" r="10" fill="white"/><circle
+  cx="180" cy="100" r="10" fill="white"/><circle cx="240" cy="100" r="10" fill="white"/><circle
+  cx="300" cy="100" r="10" fill="white"/></svg>
 _metadata:
   bloc: 1
-  section: "2_load"
+  section: 2_load

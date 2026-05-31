@@ -1,46 +1,31 @@
-id: "extract_bigquery"
-name: "Extract: Google BigQuery"
-description: "Exécute une requête SQL massive sur GCP BigQuery."
-category: "1. Extract"
-tags: ["extract", "gcp", "bigquery", "sql"]
-code_template: |
-  from google.cloud import bigquery
-  import os
-  import time
-
-  # [PARAM: PROJECT_ID | string]
-  PROJECT_ID = "my-gcp-project"
-  # [/PARAM]
-  
-  # [PARAM: QUERY | string]
-  QUERY = "SELECT * FROM `bigquery-public-data.samples.github_timeline` LIMIT 1000"
-  # [/PARAM]
-  
-  # [PARAM: DEST_PATH | string]
-  DEST_PATH = "./data/raw/bigquery_export.csv"
-  # [/PARAM]
-
-  print(f"[EXTRACT] Requête BigQuery sur le projet {PROJECT_ID}...")
-  os.makedirs(os.path.dirname(DEST_PATH), exist_ok=True)
-
-  try:
-      start_time = time.time()
-      client = bigquery.Client(project=PROJECT_ID)
-      query_job = client.query(QUERY)
-      df_temp = query_job.to_dataframe()
-      
-      df_temp.to_csv(DEST_PATH, index=False)
-      
-      duration = time.time() - start_time
-      print(f"[EXTRACT] Succès BigQuery. {df_temp.shape[0]} lignes extraites en {duration:.2f}s.")
-  except Exception as e:
-      print(f"[ERREUR EXTRACT] Échec de la requête BigQuery : {str(e)}")
-      raise e
-
-  df = None
-  target_name = None
-  task_type = "unknown"
-  meta = {"source": "bigquery", "path": DEST_PATH}
+id: extract_bigquery
+name: 'Extract: Google BigQuery'
+description: Exécute une requête SQL massive sur GCP BigQuery.
+category: 1. Extract
+tags:
+- extract
+- gcp
+- bigquery
+- sql
+code_template: "from google.cloud import bigquery\nimport os\nimport time\n\n# [PARAM:\
+  \ PROJECT_ID | string]\nPROJECT_ID = \"my-gcp-project\"\n# [/PARAM]\n\n# [PARAM:\
+  \ QUERY | string]\nQUERY = \"SELECT * FROM `bigquery-public-data.samples.github_timeline`\
+  \ LIMIT 1000\"\n# [/PARAM]\n\n# [PARAM: DEST_PATH | string]\nDEST_PATH = \"./data/raw/bigquery_export.csv\"\
+  \n# [/PARAM]\n\nprint(f\"[EXTRACT] Requête BigQuery sur le projet {PROJECT_ID}...\"\
+  )\nos.makedirs(os.path.dirname(DEST_PATH), exist_ok=True)\n\ntry:\n    start_time\
+  \ = time.time()\n    client = bigquery.Client(project=PROJECT_ID)\n    query_job\
+  \ = client.query(QUERY)\n    df_temp = query_job.to_dataframe()\n    \n    df_temp.to_csv(DEST_PATH,\
+  \ index=False)\n    \n    duration = time.time() - start_time\n    print(f\"[EXTRACT]\
+  \ Succès BigQuery. {df_temp.shape[0]} lignes extraites en {duration:.2f}s.\")\n\
+  except Exception as e:\n    print(f\"[ERREUR EXTRACT] Échec de la requête BigQuery\
+  \ : {str(e)}\")\n    raise e\n\ndf = None\ntarget_name = None\ntask_type = \"unknown\"\
+  \nmeta = {\"source\": \"bigquery\", \"path\": DEST_PATH}\n"
+illustration_svg: <svg viewBox="0 0 400 200" xmlns="http://www.w3.org/2000/svg"><rect
+  width="400" height="200" fill="#0f172a"/><rect x="150" y="50" width="100" height="100"
+  rx="8" fill="#3b82f6" opacity="0.8"/><circle cx="200" cy="100" r="30" fill="white"
+  opacity="0.9"/><circle cx="215" cy="115" r="8" fill="#1e293b"/><line x1="220" y1="120"
+  x2="240" y2="140" stroke="#1e293b" stroke-width="4"/><text x="200" y="175" fill="#3b82f6"
+  font-size="14" text-anchor="middle" font-weight="bold">BigQuery</text></svg>
 _metadata:
   bloc: 1
-  section: "1_extract"
+  section: 1_extract

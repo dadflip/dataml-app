@@ -1,52 +1,34 @@
-id: "extract_kafka"
-name: "Extract: Apache Kafka"
-description: "Consomme les messages d'un topic Kafka et les dump."
-category: "1. Extract"
-tags: ["extract", "kafka", "stream", "bigdata"]
-code_template: |
-  from kafka import KafkaConsumer
-  import os
-
-  # [PARAM: BROKER | string]
-  BROKER = "localhost:9092"
-  # [/PARAM]
-  
-  # [PARAM: TOPIC | string]
-  TOPIC = "my_data_topic"
-  # [/PARAM]
-  
-  # [PARAM: MAX_MESSAGES | string]
-  MAX_MESSAGES = "100"
-  # [/PARAM]
-  
-  # [PARAM: DEST_PATH | string]
-  DEST_PATH = "./data/raw/kafka_dump.jsonlines"
-  # [/PARAM]
-
-  print(f"[EXTRACT] Consommation Kafka de {TOPIC} (Broker: {BROKER})...")
-  os.makedirs(os.path.dirname(DEST_PATH), exist_ok=True)
-
-  try:
-      consumer = KafkaConsumer(TOPIC, bootstrap_servers=BROKER, auto_offset_reset='earliest', consumer_timeout_ms=5000)
-      
-      count = 0
-      with open(DEST_PATH, "w", encoding="utf-8") as f:
-          for message in consumer:
-              val = message.value.decode('utf-8')
-              f.write(val + "\\n")
-              count += 1
-              if count >= int(MAX_MESSAGES):
-                  break
-                  
-      print(f"[EXTRACT] Succès Kafka. {count} messages dumpés.")
-  except Exception as e:
-      print(f"[ERREUR EXTRACT] Échec de la connexion Kafka : {str(e)}")
-      raise e
-
-  df = None
-  target_name = None
-  task_type = "unknown"
-  meta = {"source": "kafka", "path": DEST_PATH}
+id: extract_kafka
+name: 'Extract: Apache Kafka'
+description: Consomme les messages d'un topic Kafka et les dump.
+category: 1. Extract
+tags:
+- extract
+- kafka
+- stream
+- bigdata
+code_template: "from kafka import KafkaConsumer\nimport os\n\n# [PARAM: BROKER | string]\n\
+  BROKER = \"localhost:9092\"\n# [/PARAM]\n\n# [PARAM: TOPIC | string]\nTOPIC = \"\
+  my_data_topic\"\n# [/PARAM]\n\n# [PARAM: MAX_MESSAGES | string]\nMAX_MESSAGES =\
+  \ \"100\"\n# [/PARAM]\n\n# [PARAM: DEST_PATH | string]\nDEST_PATH = \"./data/raw/kafka_dump.jsonlines\"\
+  \n# [/PARAM]\n\nprint(f\"[EXTRACT] Consommation Kafka de {TOPIC} (Broker: {BROKER})...\"\
+  )\nos.makedirs(os.path.dirname(DEST_PATH), exist_ok=True)\n\ntry:\n    consumer\
+  \ = KafkaConsumer(TOPIC, bootstrap_servers=BROKER, auto_offset_reset='earliest',\
+  \ consumer_timeout_ms=5000)\n    \n    count = 0\n    with open(DEST_PATH, \"w\"\
+  , encoding=\"utf-8\") as f:\n        for message in consumer:\n            val =\
+  \ message.value.decode('utf-8')\n            f.write(val + \"\\\\n\")\n        \
+  \    count += 1\n            if count >= int(MAX_MESSAGES):\n                break\n\
+  \                \n    print(f\"[EXTRACT] Succès Kafka. {count} messages dumpés.\"\
+  )\nexcept Exception as e:\n    print(f\"[ERREUR EXTRACT] Échec de la connexion Kafka\
+  \ : {str(e)}\")\n    raise e\n\ndf = None\ntarget_name = None\ntask_type = \"unknown\"\
+  \nmeta = {\"source\": \"kafka\", \"path\": DEST_PATH}\n"
+illustration_svg: <svg viewBox="0 0 400 200" xmlns="http://www.w3.org/2000/svg"><rect
+  width="400" height="200" fill="#0f172a"/><circle cx="150" cy="70" r="15" fill="#38bdf8"/><circle
+  cx="150" cy="130" r="15" fill="#38bdf8"/><circle cx="250" cy="70" r="15" fill="#38bdf8"/><circle
+  cx="250" cy="130" r="15" fill="#38bdf8"/><circle cx="200" cy="100" r="20" fill="none"
+  stroke="#38bdf8" stroke-width="4"/><path d="M 165 70 Q 200 40 235 70 M 165 130 Q
+  200 160 235 130" fill="none" stroke="#38bdf8" stroke-width="4"/><path d="M 150 85
+  L 150 115 M 250 85 L 250 115" stroke="#38bdf8" stroke-width="4"/></svg>
 _metadata:
   bloc: 1
-  section: "1_extract"
+  section: 1_extract

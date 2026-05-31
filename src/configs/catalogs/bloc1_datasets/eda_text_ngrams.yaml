@@ -1,39 +1,34 @@
-id: "eda_text_ngrams"
-name: "EDA: N-Grams les plus fréquents"
-description: "Extrait les bigrammes ou trigrammes les plus courants du texte."
-category: "3. Exploratory Data Analysis"
-tags: ["eda", "text", "nlp", "ngrams"]
-code_template: |
-  import pandas as pd
-  import matplotlib.pyplot as plt
-  import seaborn as sns
-  from sklearn.feature_extraction.text import CountVectorizer
-
-  # [PARAM: TEXT_COL | string]
-  TEXT_COL = "text"
-  # [/PARAM]
-
-  # [PARAM: N_GRAM | number]
-  N_GRAM = 2
-  # [/PARAM]
-
-  if TEXT_COL in df.columns:
-      corpus = df[TEXT_COL].dropna()
-      vec = CountVectorizer(ngram_range=(N_GRAM, N_GRAM), stop_words='english').fit(corpus)
-      bag_of_words = vec.transform(corpus)
-      sum_words = bag_of_words.sum(axis=0) 
-      
-      words_freq = [(word, sum_words[0, idx]) for word, idx in vec.vocabulary_.items()]
-      words_freq = sorted(words_freq, key=lambda x: x[1], reverse=True)[:20]
-      
-      df_freq = pd.DataFrame(words_freq, columns=['N-gram', 'Fréquence'])
-      
-      plt.figure(figsize=(10, 8))
-      sns.barplot(x='Fréquence', y='N-gram', data=df_freq, palette='viridis')
-      plt.title(f"Top 20 {N_GRAM}-grams dans {TEXT_COL}")
-      plt.show()
-  else:
-      print(f"[EDA] Colonne {TEXT_COL} introuvable.")
+id: eda_text_ngrams
+name: 'EDA: N-Grams les plus fréquents'
+description: Extrait les bigrammes ou trigrammes les plus courants du texte.
+category: 3. Exploratory Data Analysis
+tags:
+- eda
+- text
+- nlp
+- ngrams
+code_template: "import pandas as pd\nimport matplotlib.pyplot as plt\nimport seaborn\
+  \ as sns\nfrom sklearn.feature_extraction.text import CountVectorizer\n\n# [PARAM:\
+  \ TEXT_COL | string]\nTEXT_COL = \"text\"\n# [/PARAM]\n\n# [PARAM: N_GRAM | number]\n\
+  N_GRAM = 2\n# [/PARAM]\n\nif TEXT_COL in df.columns:\n    corpus = df[TEXT_COL].dropna()\n\
+  \    vec = CountVectorizer(ngram_range=(N_GRAM, N_GRAM), stop_words='english').fit(corpus)\n\
+  \    bag_of_words = vec.transform(corpus)\n    sum_words = bag_of_words.sum(axis=0)\
+  \ \n    \n    words_freq = [(word, sum_words[0, idx]) for word, idx in vec.vocabulary_.items()]\n\
+  \    words_freq = sorted(words_freq, key=lambda x: x[1], reverse=True)[:20]\n  \
+  \  \n    df_freq = pd.DataFrame(words_freq, columns=['N-gram', 'Fréquence'])\n \
+  \   \n    plt.figure(figsize=(10, 8))\n    sns.barplot(x='Fréquence', y='N-gram',\
+  \ data=df_freq, palette='viridis')\n    plt.title(f\"Top 20 {N_GRAM}-grams dans\
+  \ {TEXT_COL}\")\n    plt.show()\nelse:\n    print(f\"[EDA] Colonne {TEXT_COL} introuvable.\"\
+  )\n"
+illustration_svg: <svg viewBox="0 0 400 200" xmlns="http://www.w3.org/2000/svg"><rect
+  width="400" height="200" fill="#0f172a"/><rect x="60" y="60" width="100" height="30"
+  rx="4" fill="#3b82f6"/><rect x="140" y="110" width="100" height="30" rx="4" fill="#10b981"/><rect
+  x="220" y="60" width="100" height="30" rx="4" fill="#ef4444"/><text x="110" y="80"
+  fill="white" font-size="12" text-anchor="middle">Word 1</text><text x="190" y="130"
+  fill="white" font-size="12" text-anchor="middle">Word 2</text><text x="270" y="80"
+  fill="white" font-size="12" text-anchor="middle">Word 3</text><line x1="130" y1="90"
+  x2="170" y2="110" stroke="#cbd5e1" stroke-width="2"/><line x1="210" y1="110" x2="250"
+  y2="90" stroke="#cbd5e1" stroke-width="2"/></svg>
 _metadata:
   bloc: 1
-  section: "3_eda"
+  section: 3_eda

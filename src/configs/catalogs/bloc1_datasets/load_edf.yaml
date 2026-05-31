@@ -1,43 +1,33 @@
-id: "load_edf"
-name: "Load: Signaux EDF/EEG"
-description: "Charge des données biomédicales temporelles (ex: Électroencéphalogramme) au format European Data Format."
-category: "2. Load"
-tags: ["load", "edf", "eeg", "signal"]
-code_template: |
-  import time
-  import os
-
-  # [PARAM: FILE_PATH | file]
-  FILE_PATH = "./data/raw/patient_eeg.edf"
-  # [/PARAM]
-
-  print(f"[LOAD] Lecture du fichier EDF : {FILE_PATH}...")
-  if not os.path.exists(FILE_PATH):
-      raise FileNotFoundError(f"[ERREUR LOAD] Fichier EDF introuvable : {FILE_PATH}")
-
-  try:
-      start_time = time.time()
-      import mne
-      
-      # Chargement en mémoire sans préchargement immédiat des données
-      raw = mne.io.read_raw_edf(FILE_PATH, preload=True, verbose='ERROR')
-      
-      n_channels = len(raw.ch_names)
-      n_times = raw.n_times
-      
-      duration = time.time() - start_time
-      print(f"[LOAD] Succès EDF. {n_channels} canaux, {n_times} points temporels chargés en {duration:.2f}s.")
-  except ImportError:
-      print("[ERREUR LOAD] Le module 'mne' est requis (pip install mne).")
-      raise
-  except Exception as e:
-      print(f"[ERREUR LOAD] Impossible de parser l'EDF : {str(e)}")
-      raise e
-
-  df = None
-  target_name = None
-  task_type = "signal_processing"
-  meta = {"format": "edf", "channels": n_channels, "time_points": n_times}
+id: load_edf
+name: 'Load: Signaux EDF/EEG'
+description: 'Charge des données biomédicales temporelles (ex: Électroencéphalogramme)
+  au format European Data Format.'
+category: 2. Load
+tags:
+- load
+- edf
+- eeg
+- signal
+code_template: "import time\nimport os\n\n# [PARAM: FILE_PATH | file]\nFILE_PATH =\
+  \ \"./data/raw/patient_eeg.edf\"\n# [/PARAM]\n\nprint(f\"[LOAD] Lecture du fichier\
+  \ EDF : {FILE_PATH}...\")\nif not os.path.exists(FILE_PATH):\n    raise FileNotFoundError(f\"\
+  [ERREUR LOAD] Fichier EDF introuvable : {FILE_PATH}\")\n\ntry:\n    start_time =\
+  \ time.time()\n    import mne\n    \n    # Chargement en mémoire sans préchargement\
+  \ immédiat des données\n    raw = mne.io.read_raw_edf(FILE_PATH, preload=True, verbose='ERROR')\n\
+  \    \n    n_channels = len(raw.ch_names)\n    n_times = raw.n_times\n    \n   \
+  \ duration = time.time() - start_time\n    print(f\"[LOAD] Succès EDF. {n_channels}\
+  \ canaux, {n_times} points temporels chargés en {duration:.2f}s.\")\nexcept ImportError:\n\
+  \    print(\"[ERREUR LOAD] Le module 'mne' est requis (pip install mne).\")\n  \
+  \  raise\nexcept Exception as e:\n    print(f\"[ERREUR LOAD] Impossible de parser\
+  \ l'EDF : {str(e)}\")\n    raise e\n\ndf = None\ntarget_name = None\ntask_type =\
+  \ \"signal_processing\"\nmeta = {\"format\": \"edf\", \"channels\": n_channels,\
+  \ \"time_points\": n_times}\n"
+illustration_svg: <svg viewBox="0 0 400 200" xmlns="http://www.w3.org/2000/svg"><rect
+  width="400" height="200" fill="#0f172a"/><text x="200" y="70" fill="white" font-size="20"
+  font-weight="bold" text-anchor="middle">EDF</text><path d="M 100 120 Q 120 90 140
+  120 T 180 120 T 220 120 T 260 120 T 300 120" fill="none" stroke="#10b981" stroke-width="3"/><path
+  d="M 100 140 Q 120 170 140 140 T 180 140 T 220 140 T 260 140 T 300 140" fill="none"
+  stroke="#3b82f6" stroke-width="3"/></svg>
 _metadata:
   bloc: 1
-  section: "2_load"
+  section: 2_load

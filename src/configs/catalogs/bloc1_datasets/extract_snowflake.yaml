@@ -1,68 +1,37 @@
-id: "extract_snowflake"
-name: "Extract: Snowflake Data Warehouse"
-description: "Interroge un cluster Snowflake via le connecteur officiel Python."
-category: "1. Extract"
-tags: ["extract", "snowflake", "dwh", "sql"]
-code_template: |
-  import snowflake.connector
-  import pandas as pd
-  import os
-  import time
-
-  # [PARAM: USER | string]
-  USER = "user_name"
-  # [/PARAM]
-  
-  # [PARAM: PASSWORD | string]
-  PASSWORD = "secret_password"
-  # [/PARAM]
-  
-  # [PARAM: ACCOUNT | string]
-  ACCOUNT = "xy12345.us-east-1"
-  # [/PARAM]
-  
-  # [PARAM: WAREHOUSE | string]
-  WAREHOUSE = "COMPUTE_WH"
-  # [/PARAM]
-  
-  # [PARAM: QUERY | string]
-  QUERY = "SELECT * FROM my_db.my_schema.my_table"
-  # [/PARAM]
-  
-  # [PARAM: DEST_PATH | string]
-  DEST_PATH = "./data/raw/snowflake_export.csv"
-  # [/PARAM]
-
-  print(f"[EXTRACT] Interrogation du Data Warehouse Snowflake ({ACCOUNT})...")
-  os.makedirs(os.path.dirname(DEST_PATH), exist_ok=True)
-
-  try:
-      start_time = time.time()
-      ctx = snowflake.connector.connect(
-          user=USER,
-          password=PASSWORD,
-          account=ACCOUNT,
-          warehouse=WAREHOUSE
-      )
-      
-      # execute_dataframe nécessite pandas et pyarrow (option de fetch très rapide)
-      cursor = ctx.cursor()
-      cursor.execute(QUERY)
-      df_temp = cursor.fetch_pandas_all()
-      
-      df_temp.to_csv(DEST_PATH, index=False)
-      ctx.close()
-      
-      duration = time.time() - start_time
-      print(f"[EXTRACT] Succès Snowflake. {df_temp.shape[0]} lignes dumpées en {duration:.2f}s.")
-  except Exception as e:
-      print(f"[ERREUR EXTRACT] Échec de la connexion ou requête Snowflake : {str(e)}")
-      raise e
-
-  df = None
-  target_name = None
-  task_type = "unknown"
-  meta = {"source": "snowflake", "path": DEST_PATH}
+id: extract_snowflake
+name: 'Extract: Snowflake Data Warehouse'
+description: Interroge un cluster Snowflake via le connecteur officiel Python.
+category: 1. Extract
+tags:
+- extract
+- snowflake
+- dwh
+- sql
+code_template: "import snowflake.connector\nimport pandas as pd\nimport os\nimport\
+  \ time\n\n# [PARAM: USER | string]\nUSER = \"user_name\"\n# [/PARAM]\n\n# [PARAM:\
+  \ PASSWORD | string]\nPASSWORD = \"secret_password\"\n# [/PARAM]\n\n# [PARAM: ACCOUNT\
+  \ | string]\nACCOUNT = \"xy12345.us-east-1\"\n# [/PARAM]\n\n# [PARAM: WAREHOUSE\
+  \ | string]\nWAREHOUSE = \"COMPUTE_WH\"\n# [/PARAM]\n\n# [PARAM: QUERY | string]\n\
+  QUERY = \"SELECT * FROM my_db.my_schema.my_table\"\n# [/PARAM]\n\n# [PARAM: DEST_PATH\
+  \ | string]\nDEST_PATH = \"./data/raw/snowflake_export.csv\"\n# [/PARAM]\n\nprint(f\"\
+  [EXTRACT] Interrogation du Data Warehouse Snowflake ({ACCOUNT})...\")\nos.makedirs(os.path.dirname(DEST_PATH),\
+  \ exist_ok=True)\n\ntry:\n    start_time = time.time()\n    ctx = snowflake.connector.connect(\n\
+  \        user=USER,\n        password=PASSWORD,\n        account=ACCOUNT,\n    \
+  \    warehouse=WAREHOUSE\n    )\n    \n    # execute_dataframe nécessite pandas\
+  \ et pyarrow (option de fetch très rapide)\n    cursor = ctx.cursor()\n    cursor.execute(QUERY)\n\
+  \    df_temp = cursor.fetch_pandas_all()\n    \n    df_temp.to_csv(DEST_PATH, index=False)\n\
+  \    ctx.close()\n    \n    duration = time.time() - start_time\n    print(f\"[EXTRACT]\
+  \ Succès Snowflake. {df_temp.shape[0]} lignes dumpées en {duration:.2f}s.\")\nexcept\
+  \ Exception as e:\n    print(f\"[ERREUR EXTRACT] Échec de la connexion ou requête\
+  \ Snowflake : {str(e)}\")\n    raise e\n\ndf = None\ntarget_name = None\ntask_type\
+  \ = \"unknown\"\nmeta = {\"source\": \"snowflake\", \"path\": DEST_PATH}\n"
+illustration_svg: <svg viewBox="0 0 400 200" xmlns="http://www.w3.org/2000/svg"><rect
+  width="400" height="200" fill="#0f172a"/><line x1="200" y1="40" x2="200" y2="160"
+  stroke="#38bdf8" stroke-width="4"/><line x1="140" y1="70" x2="260" y2="130" stroke="#38bdf8"
+  stroke-width="4"/><line x1="140" y1="130" x2="260" y2="70" stroke="#38bdf8" stroke-width="4"/><circle
+  cx="200" cy="40" r="6" fill="#0ea5e9"/><circle cx="200" cy="160" r="6" fill="#0ea5e9"/><circle
+  cx="140" cy="70" r="6" fill="#0ea5e9"/><circle cx="260" cy="130" r="6" fill="#0ea5e9"/><circle
+  cx="140" cy="130" r="6" fill="#0ea5e9"/><circle cx="260" cy="70" r="6" fill="#0ea5e9"/></svg>
 _metadata:
   bloc: 1
-  section: "1_extract"
+  section: 1_extract

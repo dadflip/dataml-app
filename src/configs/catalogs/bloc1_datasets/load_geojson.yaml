@@ -1,42 +1,31 @@
-id: "load_geojson"
-name: "Load: GeoJSON (Spatial)"
-description: "Charge un fichier de données géospatiales GeoJSON dans un GeoDataFrame."
-category: "2. Load"
-tags: ["load", "geojson", "spatial", "geopandas"]
-code_template: |
-  import time
-  import os
-
-  # [PARAM: FILE_PATH | file]
-  FILE_PATH = "./data/raw/map.geojson"
-  # [/PARAM]
-  
-  # [PARAM: TARGET_COL | string]
-  TARGET_COL = "target"
-  # [/PARAM]
-
-  print(f"[LOAD] Chargement du fichier GeoJSON : {FILE_PATH}...")
-  if not os.path.exists(FILE_PATH):
-      raise FileNotFoundError(f"[ERREUR LOAD] Fichier GeoJSON introuvable : {FILE_PATH}")
-
-  try:
-      start_time = time.time()
-      import geopandas as gpd
-      
-      df = gpd.read_file(FILE_PATH)
-      
-      duration = time.time() - start_time
-      print(f"[LOAD] Succès GeoJSON. {df.shape[0]} géométries chargées en {duration:.2f}s.")
-  except ImportError:
-      print("[ERREUR LOAD] Le module 'geopandas' est requis.")
-      raise
-  except Exception as e:
-      print(f"[ERREUR LOAD] Impossible de lire le fichier GeoJSON : {str(e)}")
-      raise e
-
-  target_name = TARGET_COL if TARGET_COL and TARGET_COL in df.columns else None
-  task_type = "spatial_analysis"
-  meta = {"format": "geojson", "shape": df.shape, "crs": str(df.crs)}
+id: load_geojson
+name: 'Load: GeoJSON (Spatial)'
+description: Charge un fichier de données géospatiales GeoJSON dans un GeoDataFrame.
+category: 2. Load
+tags:
+- load
+- geojson
+- spatial
+- geopandas
+code_template: "import time\nimport os\n\n# [PARAM: FILE_PATH | file]\nFILE_PATH =\
+  \ \"./data/raw/map.geojson\"\n# [/PARAM]\n\n# [PARAM: TARGET_COL | string]\nTARGET_COL\
+  \ = \"target\"\n# [/PARAM]\n\nprint(f\"[LOAD] Chargement du fichier GeoJSON : {FILE_PATH}...\"\
+  )\nif not os.path.exists(FILE_PATH):\n    raise FileNotFoundError(f\"[ERREUR LOAD]\
+  \ Fichier GeoJSON introuvable : {FILE_PATH}\")\n\ntry:\n    start_time = time.time()\n\
+  \    import geopandas as gpd\n    \n    df = gpd.read_file(FILE_PATH)\n    \n  \
+  \  duration = time.time() - start_time\n    print(f\"[LOAD] Succès GeoJSON. {df.shape[0]}\
+  \ géométries chargées en {duration:.2f}s.\")\nexcept ImportError:\n    print(\"\
+  [ERREUR LOAD] Le module 'geopandas' est requis.\")\n    raise\nexcept Exception\
+  \ as e:\n    print(f\"[ERREUR LOAD] Impossible de lire le fichier GeoJSON : {str(e)}\"\
+  )\n    raise e\n\ntarget_name = TARGET_COL if TARGET_COL and TARGET_COL in df.columns\
+  \ else None\ntask_type = \"spatial_analysis\"\nmeta = {\"format\": \"geojson\",\
+  \ \"shape\": df.shape, \"crs\": str(df.crs)}\n"
+illustration_svg: <svg viewBox="0 0 400 200" xmlns="http://www.w3.org/2000/svg"><rect
+  width="400" height="200" fill="#0f172a"/><path d="M 120 120 L 160 80 L 220 100 L
+  260 60 L 300 100 L 280 160 L 200 140 Z" fill="#10b981" opacity="0.5" stroke="#10b981"
+  stroke-width="4"/><circle cx="120" cy="120" r="4" fill="white"/><circle cx="160"
+  cy="80" r="4" fill="white"/><circle cx="260" cy="60" r="4" fill="white"/><circle
+  cx="300" cy="100" r="4" fill="white"/></svg>
 _metadata:
   bloc: 1
-  section: "2_load"
+  section: 2_load

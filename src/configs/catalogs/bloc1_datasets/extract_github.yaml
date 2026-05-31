@@ -1,46 +1,28 @@
-id: "extract_github"
-name: "Extract: GitHub Raw"
-description: "Télécharge un fichier brut depuis un dépôt GitHub public."
-category: "1. Extract"
-tags: ["extract", "github", "raw"]
-code_template: |
-  import urllib.request
-  import os
-  import time
-
-  # [PARAM: REPO | string]
-  REPO = "mwaskom/seaborn-data"
-  # [/PARAM]
-  
-  # [PARAM: FILE_PATH_IN_REPO | string]
-  FILE_PATH_IN_REPO = "iris.csv"
-  # [/PARAM]
-  
-  # [PARAM: BRANCH | string]
-  BRANCH = "master"
-  # [/PARAM]
-  
-  # [PARAM: DEST_PATH | string]
-  DEST_PATH = "./data/raw/github_data.csv"
-  # [/PARAM]
-
-  RAW_URL = f"https://raw.githubusercontent.com/{REPO}/{BRANCH}/{FILE_PATH_IN_REPO}"
-  print(f"[EXTRACT] Requête GitHub Raw : {RAW_URL}")
-  os.makedirs(os.path.dirname(DEST_PATH), exist_ok=True)
-
-  try:
-      start_time = time.time()
-      urllib.request.urlretrieve(RAW_URL, DEST_PATH)
-      duration = time.time() - start_time
-      print(f"[EXTRACT] Succès GitHub. Fichier sauvegardé en {duration:.2f}s.")
-  except Exception as e:
-      print(f"[ERREUR EXTRACT] Echec du téléchargement (Dépôt privé ou lien invalide) : {str(e)}")
-      raise e
-
-  df = None
-  target_name = None
-  task_type = "unknown"
-  meta = {"source": "github", "path": DEST_PATH}
+id: extract_github
+name: 'Extract: GitHub Raw'
+description: Télécharge un fichier brut depuis un dépôt GitHub public.
+category: 1. Extract
+tags:
+- extract
+- github
+- raw
+code_template: "import urllib.request\nimport os\nimport time\n\n# [PARAM: REPO |\
+  \ string]\nREPO = \"mwaskom/seaborn-data\"\n# [/PARAM]\n\n# [PARAM: FILE_PATH_IN_REPO\
+  \ | string]\nFILE_PATH_IN_REPO = \"iris.csv\"\n# [/PARAM]\n\n# [PARAM: BRANCH |\
+  \ string]\nBRANCH = \"master\"\n# [/PARAM]\n\n# [PARAM: DEST_PATH | string]\nDEST_PATH\
+  \ = \"./data/raw/github_data.csv\"\n# [/PARAM]\n\nRAW_URL = f\"https://raw.githubusercontent.com/{REPO}/{BRANCH}/{FILE_PATH_IN_REPO}\"\
+  \nprint(f\"[EXTRACT] Requête GitHub Raw : {RAW_URL}\")\nos.makedirs(os.path.dirname(DEST_PATH),\
+  \ exist_ok=True)\n\ntry:\n    start_time = time.time()\n    urllib.request.urlretrieve(RAW_URL,\
+  \ DEST_PATH)\n    duration = time.time() - start_time\n    print(f\"[EXTRACT] Succès\
+  \ GitHub. Fichier sauvegardé en {duration:.2f}s.\")\nexcept Exception as e:\n  \
+  \  print(f\"[ERREUR EXTRACT] Echec du téléchargement (Dépôt privé ou lien invalide)\
+  \ : {str(e)}\")\n    raise e\n\ndf = None\ntarget_name = None\ntask_type = \"unknown\"\
+  \nmeta = {\"source\": \"github\", \"path\": DEST_PATH}\n"
+illustration_svg: <svg viewBox="0 0 400 200" xmlns="http://www.w3.org/2000/svg"><rect
+  width="400" height="200" fill="#0f172a"/><circle cx="200" cy="100" r="50" fill="#cbd5e1"/><path
+  d="M 180 90 L 160 110 L 180 130 M 220 90 L 240 110 L 220 130" fill="none" stroke="#0f172a"
+  stroke-width="4" stroke-linecap="round"/><line x1="210" y1="80" x2="190" y2="140"
+  stroke="#0f172a" stroke-width="4" stroke-linecap="round"/></svg>
 _metadata:
   bloc: 1
-  section: "1_extract"
+  section: 1_extract

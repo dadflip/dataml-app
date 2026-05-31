@@ -1,53 +1,40 @@
-id: "load_image_directory"
-name: "Load: Image Directory (Paths)"
-description: "Scanne un dossier d'images organisé en sous-dossiers (classes) et construit un DataFrame avec les chemins et les cibles."
-category: "2. Load"
-tags: ["load", "image", "vision", "cnn"]
-code_template: |
-  import pandas as pd
-  import os
-  import glob
-  import time
-
-  # [PARAM: DIRECTORY_PATH | string]
-  DIRECTORY_PATH = "./data/raw/images_extracted"
-  # [/PARAM]
-
-  print(f"[LOAD] Analyse du dossier image : {DIRECTORY_PATH}...")
-
-  try:
-      start_time = time.time()
-      paths = []
-      labels = []
-      
-      if os.path.exists(DIRECTORY_PATH) and os.path.isdir(DIRECTORY_PATH):
-          classes = [d for d in os.listdir(DIRECTORY_PATH) if os.path.isdir(os.path.join(DIRECTORY_PATH, d))]
-          
-          for cls in classes:
-              cls_path = os.path.join(DIRECTORY_PATH, cls)
-              for ext in ('*.jpg', '*.jpeg', '*.png'):
-                  for img_file in glob.glob(os.path.join(cls_path, ext)):
-                      paths.append(img_file)
-                      labels.append(cls)
-                      
-          df = pd.DataFrame({'image_path': paths, 'target_class': labels})
-          
-          duration = time.time() - start_time
-          print(f"[LOAD] Succès. {len(paths)} images listées dans {len(classes)} classes en {duration:.2f}s.")
-          
-          target_name = "target_class"
-          task_type = "image_classification"
-          meta = {"format": "image_directory", "shape": df.shape, "classes": classes}
-      else:
-          print(f"[ERREUR LOAD] Le dossier {DIRECTORY_PATH} est introuvable.")
-          df = None
-          target_name = None
-          task_type = "unknown"
-          meta = {}
-  except Exception as e:
-      print(f"[ERREUR LOAD] Échec de l'analyse du dossier : {str(e)}")
-      raise e
-
+id: load_image_directory
+name: 'Load: Image Directory (Paths)'
+description: Scanne un dossier d'images organisé en sous-dossiers (classes) et construit
+  un DataFrame avec les chemins et les cibles.
+category: 2. Load
+tags:
+- load
+- image
+- vision
+- cnn
+code_template: "import pandas as pd\nimport os\nimport glob\nimport time\n\n# [PARAM:\
+  \ DIRECTORY_PATH | string]\nDIRECTORY_PATH = \"./data/raw/images_extracted\"\n#\
+  \ [/PARAM]\n\nprint(f\"[LOAD] Analyse du dossier image : {DIRECTORY_PATH}...\")\n\
+  \ntry:\n    start_time = time.time()\n    paths = []\n    labels = []\n    \n  \
+  \  if os.path.exists(DIRECTORY_PATH) and os.path.isdir(DIRECTORY_PATH):\n      \
+  \  classes = [d for d in os.listdir(DIRECTORY_PATH) if os.path.isdir(os.path.join(DIRECTORY_PATH,\
+  \ d))]\n        \n        for cls in classes:\n            cls_path = os.path.join(DIRECTORY_PATH,\
+  \ cls)\n            for ext in ('*.jpg', '*.jpeg', '*.png'):\n                for\
+  \ img_file in glob.glob(os.path.join(cls_path, ext)):\n                    paths.append(img_file)\n\
+  \                    labels.append(cls)\n                    \n        df = pd.DataFrame({'image_path':\
+  \ paths, 'target_class': labels})\n        \n        duration = time.time() - start_time\n\
+  \        print(f\"[LOAD] Succès. {len(paths)} images listées dans {len(classes)}\
+  \ classes en {duration:.2f}s.\")\n        \n        target_name = \"target_class\"\
+  \n        task_type = \"image_classification\"\n        meta = {\"format\": \"image_directory\"\
+  , \"shape\": df.shape, \"classes\": classes}\n    else:\n        print(f\"[ERREUR\
+  \ LOAD] Le dossier {DIRECTORY_PATH} est introuvable.\")\n        df = None\n   \
+  \     target_name = None\n        task_type = \"unknown\"\n        meta = {}\nexcept\
+  \ Exception as e:\n    print(f\"[ERREUR LOAD] Échec de l'analyse du dossier : {str(e)}\"\
+  )\n    raise e\n"
+illustration_svg: <svg viewBox="0 0 400 200" xmlns="http://www.w3.org/2000/svg"><rect
+  width="400" height="200" fill="#0f172a"/><path d="M 100 60 L 140 60 L 160 80 L 300
+  80 L 300 160 L 100 160 Z" fill="#64748b"/><rect x="130" y="100" width="40" height="30"
+  fill="#1e293b" stroke="white" stroke-width="2"/><circle cx="145" cy="110" r="4"
+  fill="#fcd34d"/><polygon points="130,130 145,115 155,125 160,120 170,130" fill="#10b981"/><rect
+  x="190" y="100" width="40" height="30" fill="#1e293b" stroke="white" stroke-width="2"/><circle
+  cx="205" cy="110" r="4" fill="#fcd34d"/><polygon points="190,130 205,115 215,125
+  220,120 230,130" fill="#10b981"/></svg>
 _metadata:
   bloc: 1
-  section: "2_load"
+  section: 2_load

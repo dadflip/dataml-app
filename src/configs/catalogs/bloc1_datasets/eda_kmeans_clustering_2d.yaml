@@ -1,40 +1,33 @@
-id: "eda_kmeans_clustering_2d"
-name: "EDA: Clustering Rapide (K-Means 2D)"
-description: "Applique une PCA à 2D suivie d'un K-Means pour voir des structures non supervisées."
-category: "3. Exploratory Data Analysis"
-tags: ["eda", "clustering", "tabular", "pca"]
-code_template: |
-  import pandas as pd
-  import numpy as np
-  import matplotlib.pyplot as plt
-  import seaborn as sns
-  from sklearn.decomposition import PCA
-  from sklearn.cluster import KMeans
-  from sklearn.preprocessing import StandardScaler
-
-  # [PARAM: N_CLUSTERS | number]
-  N_CLUSTERS = 3
-  # [/PARAM]
-
-  num_df = df.select_dtypes(include=[np.number]).dropna()
-  if len(num_df) > 50 and len(num_df.columns) >= 2:
-      scaler = StandardScaler()
-      scaled = scaler.fit_transform(num_df)
-      
-      pca = PCA(n_components=2)
-      coords = pca.fit_transform(scaled)
-      
-      kmeans = KMeans(n_clusters=N_CLUSTERS, random_state=42)
-      clusters = kmeans.fit_predict(scaled)
-      
-      plt.figure(figsize=(8, 6))
-      sns.scatterplot(x=coords[:,0], y=coords[:,1], hue=clusters, palette='Set1', legend='full')
-      plt.title(f"K-Means Clustering ({N_CLUSTERS} clusters) sur PCA 2D")
-      plt.xlabel("PCA 1")
-      plt.ylabel("PCA 2")
-      plt.show()
-  else:
-      print("[EDA] Dataset inadapté pour le clustering (trop petit ou NaNs).")
+id: eda_kmeans_clustering_2d
+name: 'EDA: Clustering Rapide (K-Means 2D)'
+description: Applique une PCA à 2D suivie d'un K-Means pour voir des structures non
+  supervisées.
+category: 3. Exploratory Data Analysis
+tags:
+- eda
+- clustering
+- tabular
+- pca
+code_template: "import pandas as pd\nimport numpy as np\nimport matplotlib.pyplot\
+  \ as plt\nimport seaborn as sns\nfrom sklearn.decomposition import PCA\nfrom sklearn.cluster\
+  \ import KMeans\nfrom sklearn.preprocessing import StandardScaler\n\n# [PARAM: N_CLUSTERS\
+  \ | number]\nN_CLUSTERS = 3\n# [/PARAM]\n\nnum_df = df.select_dtypes(include=[np.number]).dropna()\n\
+  if len(num_df) > 50 and len(num_df.columns) >= 2:\n    scaler = StandardScaler()\n\
+  \    scaled = scaler.fit_transform(num_df)\n    \n    pca = PCA(n_components=2)\n\
+  \    coords = pca.fit_transform(scaled)\n    \n    kmeans = KMeans(n_clusters=N_CLUSTERS,\
+  \ random_state=42)\n    clusters = kmeans.fit_predict(scaled)\n    \n    plt.figure(figsize=(8,\
+  \ 6))\n    sns.scatterplot(x=coords[:,0], y=coords[:,1], hue=clusters, palette='Set1',\
+  \ legend='full')\n    plt.title(f\"K-Means Clustering ({N_CLUSTERS} clusters) sur\
+  \ PCA 2D\")\n    plt.xlabel(\"PCA 1\")\n    plt.ylabel(\"PCA 2\")\n    plt.show()\n\
+  else:\n    print(\"[EDA] Dataset inadapté pour le clustering (trop petit ou NaNs).\"\
+  )\n"
+illustration_svg: <svg viewBox="0 0 400 200" xmlns="http://www.w3.org/2000/svg"><rect
+  width="400" height="200" fill="#0f172a"/><circle cx="120" cy="80" r="25" fill="#3b82f6"
+  opacity="0.4"/><circle cx="120" cy="75" r="4" fill="#3b82f6"/><circle cx="110" cy="90"
+  r="4" fill="#3b82f6"/><circle cx="130" cy="85" r="4" fill="#3b82f6"/><circle cx="250"
+  cy="120" r="30" fill="#ef4444" opacity="0.4"/><circle cx="250" cy="120" r="4" fill="#ef4444"/><circle
+  cx="240" cy="110" r="4" fill="#ef4444"/><circle cx="260" cy="130" r="4" fill="#ef4444"/><circle
+  cx="260" cy="105" r="4" fill="#ef4444"/></svg>
 _metadata:
   bloc: 1
-  section: "3_eda"
+  section: 3_eda

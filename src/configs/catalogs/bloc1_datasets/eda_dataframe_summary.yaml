@@ -1,21 +1,43 @@
-id: "eda_dataframe_summary"
-name: "EDA: Résumé DataFrame"
-description: "Affiche les infos générales, statistiques descriptives et un aperçu du jeu de données."
-category: "3. Exploratory Data Analysis"
-tags: ["eda", "summary", "tabular", "pandas"]
-code_template: |
-  import pandas as pd
+id: eda_dataframe_summary
+name: 'EDA: Résumé DataFrame'
+description: Affiche les infos générales, statistiques descriptives et un aperçu du
+  jeu de données.
+category: 3. Exploratory Data Analysis
+tags:
+- eda
+- summary
+- tabular
+- pandas
+code_template: 'import pandas as pd
+
 
   # [PARAM: HEAD_N | number]
+
   HEAD_N = 5
+
   # [/PARAM]
-  
+
+
   print("[EDA] === INFORMATIONS GÉNÉRALES ===")
+
   df.info()
+
   print("\n[EDA] === STATISTIQUES DESCRIPTIVES ===")
-  display(df.describe(include='all'))
+
+  display(df.describe(include=''all''))
+
   print("\n[EDA] === APERÇU (HEAD) ===")
+
   display(df.head(HEAD_N))
+
+  '
+illustration_svg: <svg viewBox="0 0 400 200" xmlns="http://www.w3.org/2000/svg"><rect
+  width="400" height="200" fill="#0f172a"/><rect x="50" y="40" width="300" height="120"
+  rx="6" fill="#1e293b" stroke="#334155" stroke-width="2"/><line x1="50" y1="70" x2="350"
+  y2="70" stroke="#334155" stroke-width="2"/><line x1="150" y1="40" x2="150" y2="160"
+  stroke="#334155" stroke-width="2"/><line x1="250" y1="40" x2="250" y2="160" stroke="#334155"
+  stroke-width="2"/><line x1="50" y1="100" x2="350" y2="100" stroke="#334155" stroke-width="2"/><line
+  x1="50" y1="130" x2="350" y2="130" stroke="#334155" stroke-width="2"/></svg>
 _metadata:
   bloc: 1
-  section: "3_eda"
+  section: 3_eda

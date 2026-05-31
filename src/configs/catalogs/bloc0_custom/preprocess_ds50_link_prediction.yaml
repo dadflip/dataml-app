@@ -1,192 +1,121 @@
-id: "preprocess_ds50_link_prediction"
-name: "Preprocess DS50 (Pairs, Heuristics & Features)"
-description: "Construit le dataset (paires +/-), les features de nœuds et les heuristiques de paires pour le Graphes DS50."
-category: "Custom"
-tags: ["preprocessing", "graph", "link-prediction", "features"]
-applies_to: ["Graphes"]
-when_to_use: "Après avoir construit les graphes avec dataset_ds50_graph."
+id: preprocess_ds50_link_prediction
+name: Preprocess DS50 (Pairs, Heuristics & Features)
+description: Construit le dataset (paires +/-), les features de nœuds et les heuristiques
+  de paires pour le Graphes DS50.
+category: Custom
+tags:
+- preprocessing
+- graph
+- link-prediction
+- features
+applies_to:
+- Graphes
+when_to_use: Après avoir construit les graphes avec dataset_ds50_graph.
 pros:
-  - "Prépare tous les tenseurs nécessaires pour Pytorch et scikit-learn."
+- Prépare tous les tenseurs nécessaires pour Pytorch et scikit-learn.
 cons:
-  - "Lourd en RAM si le graphe est énorme (heuristiques complexes)."
+- Lourd en RAM si le graphe est énorme (heuristiques complexes).
 hyperparameters:
-  MASTER_SEED: "Seed aléatoire pour le split."
-  NEGATIVE_RATIO: "Ratio d'échantillons négatifs par rapport aux positifs."
+  MASTER_SEED: Seed aléatoire pour le split.
+  NEGATIVE_RATIO: Ratio d'échantillons négatifs par rapport aux positifs.
 input_variables:
-  required: ["nodes", "edges", "G_full", "G_mp"]
+  required:
+  - nodes
+  - edges
+  - G_full
+  - G_mp
 output_variables:
-  dataset: "DataFrame des paires"
-  X_nodes: "Tensor des features noeuds"
-  adj_norm: "Matrice d'adjacence normalisée"
-  node_to_idx: "Dict de mapping"
-  all_candidate_pairs: "Liste de tous les candidats"
-  positive_set: "Set des arrêtes positives"
-  build_heuristic_features: "Fonction"
-  build_pair_features: "Fonction"
-  dataframe_to_link_tensors: "Fonction"
-code_template: |
-  try:
-      import torch
-  except ImportError:
-      torch = None
-      print("[ERREUR] torch n'est pas installé. Lancez : !pip install torch torchvision")
-  from sklearn.preprocessing import StandardScaler
-
-  # [PARAM: MASTER_SEED | int]
-  MASTER_SEED = 42
-  # [/PARAM]
-
-  # [PARAM: NEGATIVE_RATIO | number]
-  NEGATIVE_RATIO = 2
-  # [/PARAM]
-
-  DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-
-  # 3. Construction dataset (paires positives / négatives)
-  positive_edges = (
-      edges[edges["relation"] == TARGET_RELATION][["source","target"]]
-      .drop_duplicates().reset_index(drop=True)
-  )
-  design_practices = sorted(positive_edges["source"].unique())
-  game_elements    = sorted(positive_edges["target"].unique())
-  positive_set     = set(map(tuple, positive_edges.values))
-
-  all_candidate_pairs = [(dp, ge) for dp in design_practices
-                                   for ge in game_elements if dp != ge]
-  negative_candidates = [p for p in all_candidate_pairs if p not in positive_set]
-
-  rng = random.Random(MASTER_SEED)
-  rng.shuffle(negative_candidates)
-
-  n_negative = min(len(negative_candidates), len(positive_edges) * int(NEGATIVE_RATIO))
-  neg_df = pd.DataFrame(negative_candidates[:n_negative], columns=["source","target"])
-  neg_df["label"] = 0
-
-  pos_df = positive_edges.copy()
-  pos_df["label"] = 1
-
-  dataset = (pd.concat([pos_df, neg_df], ignore_index=True)
-               .sample(frac=1, random_state=MASTER_SEED)
-               .reset_index(drop=True))
-
-  print("Dataset shape:", dataset.shape)
-  print(f"design practices: {len(design_practices)} | game elements: {len(game_elements)}")
-
-  # 4. Features de nœuds
-  node_ids    = list(G_mp.nodes())
-  node_to_idx = {node: idx for idx, node in enumerate(node_ids)}
-  idx_to_node = {idx: node for node, idx in node_to_idx.items()}
-
-  degree_centrality = nx.degree_centrality(G_mp)
-  pagerank = nx.pagerank(G_mp) if G_mp.number_of_edges() > 0 else {n: 0.0 for n in node_ids}
-
-  node_types = sorted({
-      str(G_full.nodes[n].get("type","unknown")) if G_full.nodes[n].get("type") is not None else "unknown"
-      for n in G_full.nodes()
-  })
-
-  feature_rows = []
-  for node in node_ids:
-      node_type = G_mp.nodes[node].get("type","unknown")
-      row = {
-          "in_degree":         G_mp.in_degree(node),
-          "out_degree":        G_mp.out_degree(node),
-          "degree_centrality": degree_centrality.get(node, 0.0),
-          "pagerank_context":  pagerank.get(node, 0.0),
-      }
-      for t in node_types:
-          row[f"type_{t}"] = 1.0 if node_type == t else 0.0
-      feature_rows.append(row)
-
-  node_features_df = pd.DataFrame(feature_rows, index=node_ids)
-  numeric_cols = ["in_degree","out_degree","degree_centrality","pagerank_context"]
-  node_features_df[numeric_cols] = StandardScaler().fit_transform(node_features_df[numeric_cols])
-
-  X_nodes_np = node_features_df.values.astype(np.float32)
-  X_nodes    = torch.tensor(X_nodes_np, dtype=torch.float32).to(DEVICE)
-
-  # 5. Matrice d'adjacence normalisée
-  num_nodes = len(node_ids)
-  adj = torch.zeros((num_nodes, num_nodes), dtype=torch.float32)
-  for u, v in G_mp.edges():
-      if u in node_to_idx and v in node_to_idx:
-          i, j = node_to_idx[u], node_to_idx[v]
-          adj[i, j] = 1.0
-          adj[j, i] = 1.0
-  adj     += torch.eye(num_nodes)
-  adj_norm = (adj / adj.sum(dim=1, keepdim=True).clamp(min=1.0)).to(DEVICE)
-
-  # 6. Fonctions d'heuristiques et features paires
-  G_undirected = G_mp.to_undirected()
-  _clustering_cache = None
-
-  def _get_clustering():
-      global _clustering_cache
-      if _clustering_cache is None:
-          _clustering_cache = nx.clustering(G_undirected)
-      return _clustering_cache
-
-  def compute_graph_heuristics(u, v):
-      try:    aa = next(nx.adamic_adar_index(G_undirected, [(u,v)]))[2]
-      except: aa = 0.0
-      try:    jc = next(nx.jaccard_coefficient(G_undirected, [(u,v)]))[2]
-      except: jc = 0.0
-      try:    pa = next(nx.preferential_attachment(G_undirected, [(u,v)]))[2]
-      except: pa = 0.0
-      try:    cn = len(list(nx.common_neighbors(G_undirected, u, v)))
-      except: cn = 0
-      try:    sp = nx.shortest_path_length(G_undirected, u, v)
-      except: sp = 999
-      neighbors_u = set(G_undirected.neighbors(u))
-      neighbors_v = set(G_undirected.neighbors(v))
-      n2_u = set(n for nb in neighbors_u for n in G_undirected.neighbors(nb)) - {u}
-      n2_v = set(n for nb in neighbors_v for n in G_undirected.neighbors(nb)) - {v}
-      cn2 = len(n2_u & n2_v)
-      try:    ra = next(nx.resource_allocation_index(G_undirected, [(u,v)]))[2]
-      except: ra = 0.0
-      cc = _get_clustering()
-      cc_u = cc.get(u, 0.0)
-      cc_v = cc.get(v, 0.0)
-      pr_diff = abs(pagerank.get(u, 0.0) - pagerank.get(v, 0.0))
-      return np.array([aa, jc, pa, cn, sp, cn2, ra, cc_u, cc_v, pr_diff], dtype=np.float32)
-
-  def build_heuristic_features(df):
-      return np.vstack([
-          compute_graph_heuristics(r["source"], r["target"])
-          for _, r in df.iterrows()
-      ]).astype(np.float32)
-
-  def build_pair_features(df):
-      type_map = dict(zip(nodes["label"], nodes["primary_type"]))
-      type_pairs = sorted({
-          f"{type_map.get(r['source'],'?')}_{type_map.get(r['target'],'?')}"
-          for _, r in df.iterrows()
-      })
-      type_pair_to_idx = {tp: idx for idx, tp in enumerate(type_pairs)}
-      feats = []
-      for _, r in df.iterrows():
-          src  = X_nodes_np[node_to_idx[r["source"]]]
-          dst  = X_nodes_np[node_to_idx[r["target"]]]
-          heur = compute_graph_heuristics(r["source"], r["target"])
-          same_type = float(type_map.get(r["source"]) == type_map.get(r["target"]))
-          tp_key    = f"{type_map.get(r['source'],'?')}_{type_map.get(r['target'],'?')}"
-          type_pair_feat = np.zeros(len(type_pair_to_idx), dtype=np.float32)
-          type_pair_feat[type_pair_to_idx[tp_key]] = 1.0
-          feats.append(np.concatenate([
-              src, dst, np.abs(src-dst), src*dst,
-              heur,
-              np.array([same_type], dtype=np.float32),
-              type_pair_feat,
-          ]))
-      return np.vstack(feats)
-
-  def dataframe_to_link_tensors(df):
-      src = torch.tensor([node_to_idx[n] for n in df["source"]], dtype=torch.long,    device=DEVICE)
-      dst = torch.tensor([node_to_idx[n] for n in df["target"]], dtype=torch.long,    device=DEVICE)
-      y   = torch.tensor(df["label"].values,                     dtype=torch.float32,  device=DEVICE)
-      return src, dst, y
-
-  print("[PREPROCESSING] Preprocessing terminé avec succès.")
+  dataset: DataFrame des paires
+  X_nodes: Tensor des features noeuds
+  adj_norm: Matrice d'adjacence normalisée
+  node_to_idx: Dict de mapping
+  all_candidate_pairs: Liste de tous les candidats
+  positive_set: Set des arrêtes positives
+  build_heuristic_features: Fonction
+  build_pair_features: Fonction
+  dataframe_to_link_tensors: Fonction
+code_template: "try:\n    import torch\nexcept ImportError:\n    torch = None\n  \
+  \  print(\"[ERREUR] torch n'est pas installé. Lancez : !pip install torch torchvision\"\
+  )\nfrom sklearn.preprocessing import StandardScaler\n\n# [PARAM: MASTER_SEED | int]\n\
+  MASTER_SEED = 42\n# [/PARAM]\n\n# [PARAM: NEGATIVE_RATIO | number]\nNEGATIVE_RATIO\
+  \ = 2\n# [/PARAM]\n\nDEVICE = torch.device(\"cuda\" if torch.cuda.is_available()\
+  \ else \"cpu\")\n\n# 3. Construction dataset (paires positives / négatives)\npositive_edges\
+  \ = (\n    edges[edges[\"relation\"] == TARGET_RELATION][[\"source\",\"target\"\
+  ]]\n    .drop_duplicates().reset_index(drop=True)\n)\ndesign_practices = sorted(positive_edges[\"\
+  source\"].unique())\ngame_elements    = sorted(positive_edges[\"target\"].unique())\n\
+  positive_set     = set(map(tuple, positive_edges.values))\n\nall_candidate_pairs\
+  \ = [(dp, ge) for dp in design_practices\n                                 for ge\
+  \ in game_elements if dp != ge]\nnegative_candidates = [p for p in all_candidate_pairs\
+  \ if p not in positive_set]\n\nrng = random.Random(MASTER_SEED)\nrng.shuffle(negative_candidates)\n\
+  \nn_negative = min(len(negative_candidates), len(positive_edges) * int(NEGATIVE_RATIO))\n\
+  neg_df = pd.DataFrame(negative_candidates[:n_negative], columns=[\"source\",\"target\"\
+  ])\nneg_df[\"label\"] = 0\n\npos_df = positive_edges.copy()\npos_df[\"label\"] =\
+  \ 1\n\ndataset = (pd.concat([pos_df, neg_df], ignore_index=True)\n             .sample(frac=1,\
+  \ random_state=MASTER_SEED)\n             .reset_index(drop=True))\n\nprint(\"Dataset\
+  \ shape:\", dataset.shape)\nprint(f\"design practices: {len(design_practices)} |\
+  \ game elements: {len(game_elements)}\")\n\n# 4. Features de nœuds\nnode_ids   \
+  \ = list(G_mp.nodes())\nnode_to_idx = {node: idx for idx, node in enumerate(node_ids)}\n\
+  idx_to_node = {idx: node for node, idx in node_to_idx.items()}\n\ndegree_centrality\
+  \ = nx.degree_centrality(G_mp)\npagerank = nx.pagerank(G_mp) if G_mp.number_of_edges()\
+  \ > 0 else {n: 0.0 for n in node_ids}\n\nnode_types = sorted({\n    str(G_full.nodes[n].get(\"\
+  type\",\"unknown\")) if G_full.nodes[n].get(\"type\") is not None else \"unknown\"\
+  \n    for n in G_full.nodes()\n})\n\nfeature_rows = []\nfor node in node_ids:\n\
+  \    node_type = G_mp.nodes[node].get(\"type\",\"unknown\")\n    row = {\n     \
+  \   \"in_degree\":         G_mp.in_degree(node),\n        \"out_degree\":      \
+  \  G_mp.out_degree(node),\n        \"degree_centrality\": degree_centrality.get(node,\
+  \ 0.0),\n        \"pagerank_context\":  pagerank.get(node, 0.0),\n    }\n    for\
+  \ t in node_types:\n        row[f\"type_{t}\"] = 1.0 if node_type == t else 0.0\n\
+  \    feature_rows.append(row)\n\nnode_features_df = pd.DataFrame(feature_rows, index=node_ids)\n\
+  numeric_cols = [\"in_degree\",\"out_degree\",\"degree_centrality\",\"pagerank_context\"\
+  ]\nnode_features_df[numeric_cols] = StandardScaler().fit_transform(node_features_df[numeric_cols])\n\
+  \nX_nodes_np = node_features_df.values.astype(np.float32)\nX_nodes    = torch.tensor(X_nodes_np,\
+  \ dtype=torch.float32).to(DEVICE)\n\n# 5. Matrice d'adjacence normalisée\nnum_nodes\
+  \ = len(node_ids)\nadj = torch.zeros((num_nodes, num_nodes), dtype=torch.float32)\n\
+  for u, v in G_mp.edges():\n    if u in node_to_idx and v in node_to_idx:\n     \
+  \   i, j = node_to_idx[u], node_to_idx[v]\n        adj[i, j] = 1.0\n        adj[j,\
+  \ i] = 1.0\nadj     += torch.eye(num_nodes)\nadj_norm = (adj / adj.sum(dim=1, keepdim=True).clamp(min=1.0)).to(DEVICE)\n\
+  \n# 6. Fonctions d'heuristiques et features paires\nG_undirected = G_mp.to_undirected()\n\
+  _clustering_cache = None\n\ndef _get_clustering():\n    global _clustering_cache\n\
+  \    if _clustering_cache is None:\n        _clustering_cache = nx.clustering(G_undirected)\n\
+  \    return _clustering_cache\n\ndef compute_graph_heuristics(u, v):\n    try: \
+  \   aa = next(nx.adamic_adar_index(G_undirected, [(u,v)]))[2]\n    except: aa =\
+  \ 0.0\n    try:    jc = next(nx.jaccard_coefficient(G_undirected, [(u,v)]))[2]\n\
+  \    except: jc = 0.0\n    try:    pa = next(nx.preferential_attachment(G_undirected,\
+  \ [(u,v)]))[2]\n    except: pa = 0.0\n    try:    cn = len(list(nx.common_neighbors(G_undirected,\
+  \ u, v)))\n    except: cn = 0\n    try:    sp = nx.shortest_path_length(G_undirected,\
+  \ u, v)\n    except: sp = 999\n    neighbors_u = set(G_undirected.neighbors(u))\n\
+  \    neighbors_v = set(G_undirected.neighbors(v))\n    n2_u = set(n for nb in neighbors_u\
+  \ for n in G_undirected.neighbors(nb)) - {u}\n    n2_v = set(n for nb in neighbors_v\
+  \ for n in G_undirected.neighbors(nb)) - {v}\n    cn2 = len(n2_u & n2_v)\n    try:\
+  \    ra = next(nx.resource_allocation_index(G_undirected, [(u,v)]))[2]\n    except:\
+  \ ra = 0.0\n    cc = _get_clustering()\n    cc_u = cc.get(u, 0.0)\n    cc_v = cc.get(v,\
+  \ 0.0)\n    pr_diff = abs(pagerank.get(u, 0.0) - pagerank.get(v, 0.0))\n    return\
+  \ np.array([aa, jc, pa, cn, sp, cn2, ra, cc_u, cc_v, pr_diff], dtype=np.float32)\n\
+  \ndef build_heuristic_features(df):\n    return np.vstack([\n        compute_graph_heuristics(r[\"\
+  source\"], r[\"target\"])\n        for _, r in df.iterrows()\n    ]).astype(np.float32)\n\
+  \ndef build_pair_features(df):\n    type_map = dict(zip(nodes[\"label\"], nodes[\"\
+  primary_type\"]))\n    type_pairs = sorted({\n        f\"{type_map.get(r['source'],'?')}_{type_map.get(r['target'],'?')}\"\
+  \n        for _, r in df.iterrows()\n    })\n    type_pair_to_idx = {tp: idx for\
+  \ idx, tp in enumerate(type_pairs)}\n    feats = []\n    for _, r in df.iterrows():\n\
+  \        src  = X_nodes_np[node_to_idx[r[\"source\"]]]\n        dst  = X_nodes_np[node_to_idx[r[\"\
+  target\"]]]\n        heur = compute_graph_heuristics(r[\"source\"], r[\"target\"\
+  ])\n        same_type = float(type_map.get(r[\"source\"]) == type_map.get(r[\"target\"\
+  ]))\n        tp_key    = f\"{type_map.get(r['source'],'?')}_{type_map.get(r['target'],'?')}\"\
+  \n        type_pair_feat = np.zeros(len(type_pair_to_idx), dtype=np.float32)\n \
+  \       type_pair_feat[type_pair_to_idx[tp_key]] = 1.0\n        feats.append(np.concatenate([\n\
+  \            src, dst, np.abs(src-dst), src*dst,\n            heur,\n          \
+  \  np.array([same_type], dtype=np.float32),\n            type_pair_feat,\n     \
+  \   ]))\n    return np.vstack(feats)\n\ndef dataframe_to_link_tensors(df):\n   \
+  \ src = torch.tensor([node_to_idx[n] for n in df[\"source\"]], dtype=torch.long,\
+  \    device=DEVICE)\n    dst = torch.tensor([node_to_idx[n] for n in df[\"target\"\
+  ]], dtype=torch.long,    device=DEVICE)\n    y   = torch.tensor(df[\"label\"].values,\
+  \                     dtype=torch.float32,  device=DEVICE)\n    return src, dst,\
+  \ y\n\nprint(\"[PREPROCESSING] Preprocessing terminé avec succès.\")\n"
+illustration_svg: <svg viewBox="0 0 400 200" xmlns="http://www.w3.org/2000/svg"><rect
+  width="400" height="200" fill="#0f172a"/><circle cx="100" cy="100" r="20" fill="#8b5cf6"/><circle
+  cx="300" cy="100" r="20" fill="#ec4899"/><line x1="120" y1="100" x2="280" y2="100"
+  stroke="#e2e8f0" stroke-width="4" stroke-dasharray="8,8"/><text x="200" y="90" fill="white"
+  font-family="sans-serif" font-size="14" text-anchor="middle">Predict Link</text></svg>
 _metadata:
   bloc: -1
-  section: "0_custom_project"
+  section: 0_custom_project

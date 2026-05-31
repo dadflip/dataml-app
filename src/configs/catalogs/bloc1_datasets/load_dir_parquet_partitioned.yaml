@@ -1,39 +1,35 @@
-id: "load_dir_parquet_partitioned"
-name: "Load: Parquet Partitionné"
-description: "Charge un dataset Parquet Big Data organisé en sous-dossiers de partition (ex: /year=2023/month=05/)."
-category: "2. Load"
-tags: ["load", "directory", "parquet", "bigdata"]
-code_template: |
-  import pandas as pd
-  import time
-  import os
-
-  # [PARAM: DIRECTORY_PATH | dir]
-  DIRECTORY_PATH = "./data/extracted/parquet_db"
-  # [/PARAM]
-
-  print(f"[LOAD] Chargement du dataset Parquet partitionné depuis {DIRECTORY_PATH}...")
-  if not os.path.exists(DIRECTORY_PATH):
-      raise FileNotFoundError(f"[ERREUR LOAD] Le dossier n'existe pas : {DIRECTORY_PATH}")
-
-  try:
-      start_time = time.time()
-      
-      # pandas (via pyarrow ou fastparquet) gère nativement le directory de partitions
-      df = pd.read_parquet(DIRECTORY_PATH, engine='auto')
-      
-      duration = time.time() - start_time
-      print(f"[LOAD] Succès Parquet Partitionné. {df.shape[0]} lignes chargées en {duration:.2f}s.")
-  except ImportError:
-      print("[ERREUR LOAD] Le module 'pyarrow' ou 'fastparquet' est requis.")
-      raise
-  except Exception as e:
-      print(f"[ERREUR LOAD] Erreur lors de la lecture des partitions Parquet : {str(e)}")
-      raise e
-
-  target_name = None
-  task_type = "unknown"
-  meta = {"format": "parquet_partitioned", "shape": df.shape}
+id: load_dir_parquet_partitioned
+name: 'Load: Parquet Partitionné'
+description: 'Charge un dataset Parquet Big Data organisé en sous-dossiers de partition
+  (ex: /year=2023/month=05/).'
+category: 2. Load
+tags:
+- load
+- directory
+- parquet
+- bigdata
+code_template: "import pandas as pd\nimport time\nimport os\n\n# [PARAM: DIRECTORY_PATH\
+  \ | dir]\nDIRECTORY_PATH = \"./data/extracted/parquet_db\"\n# [/PARAM]\n\nprint(f\"\
+  [LOAD] Chargement du dataset Parquet partitionné depuis {DIRECTORY_PATH}...\")\n\
+  if not os.path.exists(DIRECTORY_PATH):\n    raise FileNotFoundError(f\"[ERREUR LOAD]\
+  \ Le dossier n'existe pas : {DIRECTORY_PATH}\")\n\ntry:\n    start_time = time.time()\n\
+  \    \n    # pandas (via pyarrow ou fastparquet) gère nativement le directory de\
+  \ partitions\n    df = pd.read_parquet(DIRECTORY_PATH, engine='auto')\n    \n  \
+  \  duration = time.time() - start_time\n    print(f\"[LOAD] Succès Parquet Partitionné.\
+  \ {df.shape[0]} lignes chargées en {duration:.2f}s.\")\nexcept ImportError:\n  \
+  \  print(\"[ERREUR LOAD] Le module 'pyarrow' ou 'fastparquet' est requis.\")\n \
+  \   raise\nexcept Exception as e:\n    print(f\"[ERREUR LOAD] Erreur lors de la\
+  \ lecture des partitions Parquet : {str(e)}\")\n    raise e\n\ntarget_name = None\n\
+  task_type = \"unknown\"\nmeta = {\"format\": \"parquet_partitioned\", \"shape\"\
+  : df.shape}\n"
+illustration_svg: <svg viewBox="0 0 400 200" xmlns="http://www.w3.org/2000/svg"><rect
+  width="400" height="200" fill="#0f172a"/><path d="M 120 60 L 140 60 L 160 80 L 280
+  80 L 280 150 L 120 150 Z" fill="#64748b"/><rect x="140" y="100" width="30" height="40"
+  fill="#f59e0b"/><rect x="180" y="100" width="30" height="40" fill="#f59e0b"/><rect
+  x="220" y="100" width="30" height="40" fill="#f59e0b"/><line x1="150" y1="120" x2="160"
+  y2="120" stroke="white" stroke-width="2"/><line x1="190" y1="120" x2="200" y2="120"
+  stroke="white" stroke-width="2"/><line x1="230" y1="120" x2="240" y2="120" stroke="white"
+  stroke-width="2"/></svg>
 _metadata:
   bloc: 1
-  section: "2_load"
+  section: 2_load

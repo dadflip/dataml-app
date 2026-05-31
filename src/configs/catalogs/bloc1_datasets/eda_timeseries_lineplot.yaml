@@ -1,27 +1,25 @@
-id: "eda_timeseries_lineplot"
-name: "EDA: Série Temporelle"
-description: "Trace l'évolution temporelle globale."
-category: "3. Exploratory Data Analysis"
-tags: ["eda", "timeseries", "tabular", "lineplot"]
-code_template: |
-  import pandas as pd
-  import matplotlib.pyplot as plt
-  import seaborn as sns
-
-  # [PARAM: TIME_COL | string]
-  TIME_COL = "date"
-  # [/PARAM]
-
-  if TIME_COL in df.columns and 'target_name' in locals() and target_name:
-      time_series = pd.to_datetime(df[TIME_COL], errors='coerce')
-      plt.figure(figsize=(15, 5))
-      sns.lineplot(x=time_series, y=df[target_name])
-      plt.title(f"Évolution de {target_name} au cours du temps ({TIME_COL})")
-      plt.xticks(rotation=45)
-      plt.tight_layout()
-      plt.show()
-  else:
-      print("[EDA] TIME_COL ou target_name introuvable.")
+id: eda_timeseries_lineplot
+name: 'EDA: Série Temporelle'
+description: Trace l'évolution temporelle globale.
+category: 3. Exploratory Data Analysis
+tags:
+- eda
+- timeseries
+- tabular
+- lineplot
+code_template: "import pandas as pd\nimport matplotlib.pyplot as plt\nimport seaborn\
+  \ as sns\n\n# [PARAM: TIME_COL | string]\nTIME_COL = \"date\"\n# [/PARAM]\n\nif\
+  \ TIME_COL in df.columns and 'target_name' in locals() and target_name:\n    time_series\
+  \ = pd.to_datetime(df[TIME_COL], errors='coerce')\n    plt.figure(figsize=(15, 5))\n\
+  \    sns.lineplot(x=time_series, y=df[target_name])\n    plt.title(f\"Évolution\
+  \ de {target_name} au cours du temps ({TIME_COL})\")\n    plt.xticks(rotation=45)\n\
+  \    plt.tight_layout()\n    plt.show()\nelse:\n    print(\"[EDA] TIME_COL ou target_name\
+  \ introuvable.\")\n"
+illustration_svg: <svg viewBox="0 0 400 200" xmlns="http://www.w3.org/2000/svg"><rect
+  width="400" height="200" fill="#0f172a"/><line x1="50" y1="160" x2="350" y2="160"
+  stroke="#475569" stroke-width="2"/><line x1="50" y1="160" x2="50" y2="40" stroke="#475569"
+  stroke-width="2"/><path d="M 50 140 L 100 120 L 150 130 L 200 80 L 250 90 L 300
+  40 L 350 50" fill="none" stroke="#3b82f6" stroke-width="3"/></svg>
 _metadata:
   bloc: 1
-  section: "3_eda"
+  section: 3_eda

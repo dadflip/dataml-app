@@ -1,40 +1,33 @@
-id: "load_fasta"
-name: "Load: Séquences ADN FASTA"
-description: "Parse un fichier de séquences génétiques FASTA via Biopython."
-category: "2. Load"
-tags: ["load", "fasta", "bioinformatics", "dna"]
-code_template: |
-  import time
-  import os
-
-  # [PARAM: FILE_PATH | file]
-  FILE_PATH = "./data/raw/sequence.fasta"
-  # [/PARAM]
-
-  print(f"[LOAD] Parsing FASTA : {FILE_PATH}...")
-  if not os.path.exists(FILE_PATH):
-      raise FileNotFoundError(f"[ERREUR LOAD] Fichier FASTA introuvable : {FILE_PATH}")
-
-  try:
-      start_time = time.time()
-      from Bio import SeqIO
-      
-      records = list(SeqIO.parse(FILE_PATH, "fasta"))
-      count = len(records)
-      
-      duration = time.time() - start_time
-      print(f"[LOAD] Succès FASTA. {count} séquences chargées en {duration:.2f}s.")
-  except ImportError:
-      print("[ERREUR LOAD] Le module 'biopython' est requis (pip install biopython).")
-      raise
-  except Exception as e:
-      print(f"[ERREUR LOAD] Erreur de parsing FASTA : {str(e)}")
-      raise e
-
-  df = None
-  target_name = None
-  task_type = "nlp_sequence"
-  meta = {"format": "fasta", "num_sequences": count}
+id: load_fasta
+name: 'Load: Séquences ADN FASTA'
+description: Parse un fichier de séquences génétiques FASTA via Biopython.
+category: 2. Load
+tags:
+- load
+- fasta
+- bioinformatics
+- dna
+code_template: "import time\nimport os\n\n# [PARAM: FILE_PATH | file]\nFILE_PATH =\
+  \ \"./data/raw/sequence.fasta\"\n# [/PARAM]\n\nprint(f\"[LOAD] Parsing FASTA : {FILE_PATH}...\"\
+  )\nif not os.path.exists(FILE_PATH):\n    raise FileNotFoundError(f\"[ERREUR LOAD]\
+  \ Fichier FASTA introuvable : {FILE_PATH}\")\n\ntry:\n    start_time = time.time()\n\
+  \    from Bio import SeqIO\n    \n    records = list(SeqIO.parse(FILE_PATH, \"fasta\"\
+  ))\n    count = len(records)\n    \n    duration = time.time() - start_time\n  \
+  \  print(f\"[LOAD] Succès FASTA. {count} séquences chargées en {duration:.2f}s.\"\
+  )\nexcept ImportError:\n    print(\"[ERREUR LOAD] Le module 'biopython' est requis\
+  \ (pip install biopython).\")\n    raise\nexcept Exception as e:\n    print(f\"\
+  [ERREUR LOAD] Erreur de parsing FASTA : {str(e)}\")\n    raise e\n\ndf = None\n\
+  target_name = None\ntask_type = \"nlp_sequence\"\nmeta = {\"format\": \"fasta\"\
+  , \"num_sequences\": count}\n"
+illustration_svg: <svg viewBox="0 0 400 200" xmlns="http://www.w3.org/2000/svg"><rect
+  width="400" height="200" fill="#0f172a"/><path d="M 100 80 Q 150 20 200 80 T 300
+  80" fill="none" stroke="#3b82f6" stroke-width="8"/><path d="M 100 120 Q 150 180
+  200 120 T 300 120" fill="none" stroke="#ef4444" stroke-width="8"/><line x1="120"
+  y1="80" x2="120" y2="120" stroke="white" stroke-width="2"/><line x1="160" y1="70"
+  x2="160" y2="130" stroke="white" stroke-width="2"/><line x1="200" y1="80" x2="200"
+  y2="120" stroke="white" stroke-width="2"/><line x1="240" y1="70" x2="240" y2="130"
+  stroke="white" stroke-width="2"/><line x1="280" y1="80" x2="280" y2="120" stroke="white"
+  stroke-width="2"/></svg>
 _metadata:
   bloc: 1
-  section: "2_load"
+  section: 2_load

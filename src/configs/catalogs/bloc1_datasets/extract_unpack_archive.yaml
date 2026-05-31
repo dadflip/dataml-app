@@ -1,46 +1,33 @@
-id: "extract_unpack_archive"
-name: "Extract: Décompresser Archive"
-description: "Dézippe ou dé-tar un fichier d'archive téléchargé."
-category: "1. Extract"
-tags: ["extract", "unzip", "tar", "archive"]
-code_template: |
-  import os
-  import tarfile
-  import zipfile
-  import time
-
-  # [PARAM: ARCHIVE_PATH | file]
-  ARCHIVE_PATH = "./data/raw/dataset.zip"
-  # [/PARAM]
-  
-  # [PARAM: EXTRACT_DIR | dir]
-  EXTRACT_DIR = "./data/extracted"
-  # [/PARAM]
-
-  print(f"[EXTRACT] Décompression de {ARCHIVE_PATH} vers {EXTRACT_DIR}...")
-  os.makedirs(EXTRACT_DIR, exist_ok=True)
-
-  try:
-      start_time = time.time()
-      if ARCHIVE_PATH.endswith(".zip"):
-          with zipfile.ZipFile(ARCHIVE_PATH, 'r') as zip_ref:
-              zip_ref.extractall(EXTRACT_DIR)
-      elif ARCHIVE_PATH.endswith((".tar", ".tar.gz", ".tgz")):
-          with tarfile.open(ARCHIVE_PATH, "r:*") as tar_ref:
-              tar_ref.extractall(path=EXTRACT_DIR)
-      else:
-          raise ValueError("Format d'archive non supporté (.zip, .tar, .tgz uniquement)")
-          
-      duration = time.time() - start_time
-      print(f"[EXTRACT] Succès. Contenu extrait en {duration:.2f}s.")
-  except Exception as e:
-      print(f"[ERREUR EXTRACT] Impossible de décompresser l'archive : {str(e)}")
-      raise e
-
-  df = None
-  target_name = None
-  task_type = "unknown"
-  meta = {"source": "archive_extract", "path": EXTRACT_DIR}
+id: extract_unpack_archive
+name: 'Extract: Décompresser Archive'
+description: Dézippe ou dé-tar un fichier d'archive téléchargé.
+category: 1. Extract
+tags:
+- extract
+- unzip
+- tar
+- archive
+code_template: "import os\nimport tarfile\nimport zipfile\nimport time\n\n# [PARAM:\
+  \ ARCHIVE_PATH | file]\nARCHIVE_PATH = \"./data/raw/dataset.zip\"\n# [/PARAM]\n\n\
+  # [PARAM: EXTRACT_DIR | dir]\nEXTRACT_DIR = \"./data/extracted\"\n# [/PARAM]\n\n\
+  print(f\"[EXTRACT] Décompression de {ARCHIVE_PATH} vers {EXTRACT_DIR}...\")\nos.makedirs(EXTRACT_DIR,\
+  \ exist_ok=True)\n\ntry:\n    start_time = time.time()\n    if ARCHIVE_PATH.endswith(\"\
+  .zip\"):\n        with zipfile.ZipFile(ARCHIVE_PATH, 'r') as zip_ref:\n        \
+  \    zip_ref.extractall(EXTRACT_DIR)\n    elif ARCHIVE_PATH.endswith((\".tar\",\
+  \ \".tar.gz\", \".tgz\")):\n        with tarfile.open(ARCHIVE_PATH, \"r:*\") as\
+  \ tar_ref:\n            tar_ref.extractall(path=EXTRACT_DIR)\n    else:\n      \
+  \  raise ValueError(\"Format d'archive non supporté (.zip, .tar, .tgz uniquement)\"\
+  )\n        \n    duration = time.time() - start_time\n    print(f\"[EXTRACT] Succès.\
+  \ Contenu extrait en {duration:.2f}s.\")\nexcept Exception as e:\n    print(f\"\
+  [ERREUR EXTRACT] Impossible de décompresser l'archive : {str(e)}\")\n    raise e\n\
+  \ndf = None\ntarget_name = None\ntask_type = \"unknown\"\nmeta = {\"source\": \"\
+  archive_extract\", \"path\": EXTRACT_DIR}\n"
+illustration_svg: <svg viewBox="0 0 400 200" xmlns="http://www.w3.org/2000/svg"><rect
+  width="400" height="200" fill="#0f172a"/><rect x="150" y="80" width="100" height="80"
+  fill="#f59e0b"/><rect x="150" y="80" width="50" height="80" fill="#d97706"/><polygon
+  points="150,80 200,40 250,80" fill="#fcd34d"/><line x1="200" y1="40" x2="200" y2="80"
+  stroke="#d97706" stroke-width="4"/><path d="M 200 40 L 200 10 M 180 20 L 200 10
+  L 220 20" stroke="white" stroke-width="4" stroke-linecap="round" fill="none"/></svg>
 _metadata:
   bloc: 1
-  section: "1_extract"
+  section: 1_extract

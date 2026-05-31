@@ -1,50 +1,38 @@
-id: "load_dir_audio_classes"
-name: "Load: Dossier d'Audios par Classes"
-description: "Parcourt un dossier contenant des fichiers audios répartis en sous-dossiers (classes)."
-category: "2. Load"
-tags: ["load", "directory", "audio", "classification"]
-code_template: |
-  import os
-  import glob
-  import pandas as pd
-  import time
-
-  # [PARAM: ROOT_DIRECTORY | dir]
-  ROOT_DIRECTORY = "./data/extracted/audio_dataset"
-  # [/PARAM]
-
-  print(f"[LOAD] Parcours de la hiérarchie audio dans {ROOT_DIRECTORY}...")
-  if not os.path.exists(ROOT_DIRECTORY):
-      raise FileNotFoundError(f"[ERREUR LOAD] Le dossier racine n'existe pas : {ROOT_DIRECTORY}")
-
-  try:
-      start_time = time.time()
-      
-      data = []
-      classes = [d for d in os.listdir(ROOT_DIRECTORY) if os.path.isdir(os.path.join(ROOT_DIRECTORY, d))]
-      
-      for class_name in classes:
-          class_dir = os.path.join(ROOT_DIRECTORY, class_name)
-          files = glob.glob(os.path.join(class_dir, "*.*"))
-          valid_files = [f for f in files if f.lower().endswith(('.wav', '.mp3', '.flac', '.ogg'))]
-          
-          for filepath in valid_files:
-              data.append({
-                  "class_name": class_name,
-                  "absolute_path": os.path.abspath(filepath)
-              })
-              
-      df = pd.DataFrame(data)
-      
-      duration = time.time() - start_time
-      print(f"[LOAD] Succès Audio. {len(df)} fichiers audios (dans {len(classes)} classes) indexés en {duration:.2f}s.")
-  except Exception as e:
-      print(f"[ERREUR LOAD] Erreur lors du parcours du dossier audio : {str(e)}")
-      raise e
-
-  target_name = "class_name"
-  task_type = "audio_classification"
-  meta = {"format": "directory_audio_classes", "classes_found": len(classes), "audio_files_found": len(df)}
+id: load_dir_audio_classes
+name: 'Load: Dossier d''Audios par Classes'
+description: Parcourt un dossier contenant des fichiers audios répartis en sous-dossiers
+  (classes).
+category: 2. Load
+tags:
+- load
+- directory
+- audio
+- classification
+code_template: "import os\nimport glob\nimport pandas as pd\nimport time\n\n# [PARAM:\
+  \ ROOT_DIRECTORY | dir]\nROOT_DIRECTORY = \"./data/extracted/audio_dataset\"\n#\
+  \ [/PARAM]\n\nprint(f\"[LOAD] Parcours de la hiérarchie audio dans {ROOT_DIRECTORY}...\"\
+  )\nif not os.path.exists(ROOT_DIRECTORY):\n    raise FileNotFoundError(f\"[ERREUR\
+  \ LOAD] Le dossier racine n'existe pas : {ROOT_DIRECTORY}\")\n\ntry:\n    start_time\
+  \ = time.time()\n    \n    data = []\n    classes = [d for d in os.listdir(ROOT_DIRECTORY)\
+  \ if os.path.isdir(os.path.join(ROOT_DIRECTORY, d))]\n    \n    for class_name in\
+  \ classes:\n        class_dir = os.path.join(ROOT_DIRECTORY, class_name)\n     \
+  \   files = glob.glob(os.path.join(class_dir, \"*.*\"))\n        valid_files = [f\
+  \ for f in files if f.lower().endswith(('.wav', '.mp3', '.flac', '.ogg'))]\n   \
+  \     \n        for filepath in valid_files:\n            data.append({\n      \
+  \          \"class_name\": class_name,\n                \"absolute_path\": os.path.abspath(filepath)\n\
+  \            })\n            \n    df = pd.DataFrame(data)\n    \n    duration =\
+  \ time.time() - start_time\n    print(f\"[LOAD] Succès Audio. {len(df)} fichiers\
+  \ audios (dans {len(classes)} classes) indexés en {duration:.2f}s.\")\nexcept Exception\
+  \ as e:\n    print(f\"[ERREUR LOAD] Erreur lors du parcours du dossier audio : {str(e)}\"\
+  )\n    raise e\n\ntarget_name = \"class_name\"\ntask_type = \"audio_classification\"\
+  \nmeta = {\"format\": \"directory_audio_classes\", \"classes_found\": len(classes),\
+  \ \"audio_files_found\": len(df)}\n"
+illustration_svg: <svg viewBox="0 0 400 200" xmlns="http://www.w3.org/2000/svg"><rect
+  width="400" height="200" fill="#0f172a"/><path d="M 100 60 L 120 60 L 140 80 L 300
+  80 L 300 150 L 100 150 Z" fill="#475569"/><rect x="140" y="100" width="40" height="30"
+  fill="#f59e0b" rx="2"/><rect x="220" y="100" width="40" height="30" fill="#f59e0b"
+  rx="2"/><path d="M 145 115 Q 160 100 175 115" fill="none" stroke="white" stroke-width="2"/><path
+  d="M 225 115 Q 240 100 255 115" fill="none" stroke="white" stroke-width="2"/></svg>
 _metadata:
   bloc: 1
-  section: "2_load"
+  section: 2_load

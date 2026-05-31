@@ -1,49 +1,33 @@
-id: "load_hdf5"
-name: "Load: Hiérarchique HDF5"
-description: "Charge un dataset multidimensionnel depuis un fichier HDF5 (.h5)."
-category: "2. Load"
-tags: ["load", "hdf5", "scientific", "matrix"]
-code_template: |
-  import h5py
-  import time
-  import os
-
-  # [PARAM: FILE_PATH | file]
-  FILE_PATH = "./data/raw/data.h5"
-  # [/PARAM]
-  
-  # [PARAM: DATASET_NAME | string]
-  DATASET_NAME = "my_dataset"
-  # [/PARAM]
-
-  print(f"[LOAD] Lecture HDF5 depuis {FILE_PATH} (Dataset: {DATASET_NAME})...")
-  if not os.path.exists(FILE_PATH):
-      raise FileNotFoundError(f"[ERREUR LOAD] Fichier HDF5 introuvable : {FILE_PATH}")
-
-  try:
-      start_time = time.time()
-      
-      with h5py.File(FILE_PATH, 'r') as f:
-          if DATASET_NAME not in f:
-              available = list(f.keys())
-              raise KeyError(f"Le dataset '{DATASET_NAME}' n'existe pas. Datasets disponibles : {available}")
-              
-          # On charge les données en mémoire (NumPy array)
-          data = f[DATASET_NAME][:]
-          
-      duration = time.time() - start_time
-      print(f"[LOAD] Succès HDF5. Matrice {data.shape} chargée en {duration:.2f}s.")
-  except ImportError:
-      print("[ERREUR LOAD] Le module 'h5py' est requis.")
-      raise
-  except Exception as e:
-      print(f"[ERREUR LOAD] Erreur de lecture HDF5 : {str(e)}")
-      raise e
-
-  df = None
-  target_name = None
-  task_type = "unknown"
-  meta = {"format": "hdf5", "shape": data.shape}
+id: load_hdf5
+name: 'Load: Hiérarchique HDF5'
+description: Charge un dataset multidimensionnel depuis un fichier HDF5 (.h5).
+category: 2. Load
+tags:
+- load
+- hdf5
+- scientific
+- matrix
+code_template: "import h5py\nimport time\nimport os\n\n# [PARAM: FILE_PATH | file]\n\
+  FILE_PATH = \"./data/raw/data.h5\"\n# [/PARAM]\n\n# [PARAM: DATASET_NAME | string]\n\
+  DATASET_NAME = \"my_dataset\"\n# [/PARAM]\n\nprint(f\"[LOAD] Lecture HDF5 depuis\
+  \ {FILE_PATH} (Dataset: {DATASET_NAME})...\")\nif not os.path.exists(FILE_PATH):\n\
+  \    raise FileNotFoundError(f\"[ERREUR LOAD] Fichier HDF5 introuvable : {FILE_PATH}\"\
+  )\n\ntry:\n    start_time = time.time()\n    \n    with h5py.File(FILE_PATH, 'r')\
+  \ as f:\n        if DATASET_NAME not in f:\n            available = list(f.keys())\n\
+  \            raise KeyError(f\"Le dataset '{DATASET_NAME}' n'existe pas. Datasets\
+  \ disponibles : {available}\")\n            \n        # On charge les données en\
+  \ mémoire (NumPy array)\n        data = f[DATASET_NAME][:]\n        \n    duration\
+  \ = time.time() - start_time\n    print(f\"[LOAD] Succès HDF5. Matrice {data.shape}\
+  \ chargée en {duration:.2f}s.\")\nexcept ImportError:\n    print(\"[ERREUR LOAD]\
+  \ Le module 'h5py' est requis.\")\n    raise\nexcept Exception as e:\n    print(f\"\
+  [ERREUR LOAD] Erreur de lecture HDF5 : {str(e)}\")\n    raise e\n\ndf = None\ntarget_name\
+  \ = None\ntask_type = \"unknown\"\nmeta = {\"format\": \"hdf5\", \"shape\": data.shape}\n"
+illustration_svg: <svg viewBox="0 0 400 200" xmlns="http://www.w3.org/2000/svg"><rect
+  width="400" height="200" fill="#0f172a"/><rect x="140" y="60" width="120" height="80"
+  rx="8" fill="#3b82f6"/><rect x="160" y="80" width="30" height="20" fill="white"/><rect
+  x="210" y="80" width="30" height="20" fill="white"/><rect x="160" y="110" width="30"
+  height="20" fill="white"/><rect x="210" y="110" width="30" height="20" fill="white"/><text
+  x="200" y="165" fill="#3b82f6" font-size="16" font-weight="bold" text-anchor="middle">HDF5</text></svg>
 _metadata:
   bloc: 1
-  section: "2_load"
+  section: 2_load

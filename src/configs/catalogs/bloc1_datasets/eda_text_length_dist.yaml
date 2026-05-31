@@ -1,27 +1,27 @@
-id: "eda_text_length_dist"
-name: "EDA: Longueur Textes"
-description: "Histogramme de la taille des documents textuels."
-category: "3. Exploratory Data Analysis"
-tags: ["eda", "text", "nlp", "seaborn"]
-code_template: |
-  import pandas as pd
-  import matplotlib.pyplot as plt
-  import seaborn as sns
-
-  # [PARAM: TEXT_COL | string]
-  TEXT_COL = "text"
-  # [/PARAM]
-
-  if TEXT_COL in df.columns:
-      lengths = df[TEXT_COL].apply(lambda x: len(str(x).split()))
-      plt.figure(figsize=(10, 5))
-      sns.histplot(lengths, bins=50, kde=True)
-      plt.title(f"Distribution de la longueur (mots) - {TEXT_COL}")
-      plt.xlabel("Nombre de mots")
-      plt.show()
-      print(f"[EDA] Longueur max : {lengths.max()}, Moyenne : {lengths.mean():.1f}")
-  else:
-      print(f"[EDA] Colonne {TEXT_COL} introuvable.")
+id: eda_text_length_dist
+name: 'EDA: Longueur Textes'
+description: Histogramme de la taille des documents textuels.
+category: 3. Exploratory Data Analysis
+tags:
+- eda
+- text
+- nlp
+- seaborn
+code_template: "import pandas as pd\nimport matplotlib.pyplot as plt\nimport seaborn\
+  \ as sns\n\n# [PARAM: TEXT_COL | string]\nTEXT_COL = \"text\"\n# [/PARAM]\n\nif\
+  \ TEXT_COL in df.columns:\n    lengths = df[TEXT_COL].apply(lambda x: len(str(x).split()))\n\
+  \    plt.figure(figsize=(10, 5))\n    sns.histplot(lengths, bins=50, kde=True)\n\
+  \    plt.title(f\"Distribution de la longueur (mots) - {TEXT_COL}\")\n    plt.xlabel(\"\
+  Nombre de mots\")\n    plt.show()\n    print(f\"[EDA] Longueur max : {lengths.max()},\
+  \ Moyenne : {lengths.mean():.1f}\")\nelse:\n    print(f\"[EDA] Colonne {TEXT_COL}\
+  \ introuvable.\")\n"
+illustration_svg: <svg viewBox="0 0 400 200" xmlns="http://www.w3.org/2000/svg"><rect
+  width="400" height="200" fill="#0f172a"/><line x1="50" y1="160" x2="350" y2="160"
+  stroke="#475569" stroke-width="2"/><rect x="80" y="140" width="30" height="20" fill="#a855f7"/><rect
+  x="120" y="100" width="30" height="60" fill="#a855f7"/><rect x="160" y="60" width="30"
+  height="100" fill="#a855f7"/><rect x="200" y="40" width="30" height="120" fill="#a855f7"/><rect
+  x="240" y="80" width="30" height="80" fill="#a855f7"/><rect x="280" y="130" width="30"
+  height="30" fill="#a855f7"/></svg>
 _metadata:
   bloc: 1
-  section: "3_eda"
+  section: 3_eda

@@ -1,122 +1,83 @@
-id: "generic_model_wrapper"
-name: "Custom: Generic Model Wrapper"
-description: "Un wrapper générique capable d'encapsuler n'importe quelle logique de modèle Python pour l'exposer via une interface standard (fit, predict, save, load) en utilisant dill pour la sérialisation."
-category: "Custom"
-tags: ["model", "wrapper", "custom", "pytorch", "dill"]
-applies_to: ["Tabulaire", "Images", "Graphes", "Texte"]
-when_to_use: "Quand vous voulez transformer un code d'entraînement personnalisé complexe (ex. un modèle PyTorch avec des étapes de construction spécifiques) en un modèle standardisé réutilisable."
+id: generic_model_wrapper
+name: 'Custom: Generic Model Wrapper'
+description: Un wrapper générique capable d'encapsuler n'importe quelle logique de
+  modèle Python pour l'exposer via une interface standard (fit, predict, save, load)
+  en utilisant dill pour la sérialisation.
+category: Custom
+tags:
+- model
+- wrapper
+- custom
+- pytorch
+- dill
+applies_to:
+- Tabulaire
+- Images
+- Graphes
+- Texte
+when_to_use: Quand vous voulez transformer un code d'entraînement personnalisé complexe
+  (ex. un modèle PyTorch avec des étapes de construction spécifiques) en un modèle
+  standardisé réutilisable.
 pros:
-  - "Permet d'encapsuler n'importe quelle logique d'entraînement (Deep Learning, réseaux complexes)."
-  - "Offre une interface unifiée (fit, predict, save, load) facilitant l'intégration et le déploiement."
-  - "Utilise dill pour sauvegarder l'entièreté des dépendances de la classe."
+- Permet d'encapsuler n'importe quelle logique d'entraînement (Deep Learning, réseaux
+  complexes).
+- Offre une interface unifiée (fit, predict, save, load) facilitant l'intégration
+  et le déploiement.
+- Utilise dill pour sauvegarder l'entièreté des dépendances de la classe.
 cons:
-  - "Nécessite d'écrire des sous-fonctions explicites (build, train, predict)."
+- Nécessite d'écrire des sous-fonctions explicites (build, train, predict).
 hyperparameters:
-  hidden_dim: "Dimension de la couche cachée pour l'exemple (si applicable)."
-  epochs: "Nombre d'époques d'entraînement (pour le modèle interne)."
-code_template: |
-  import os
-  
-  try:
-      import dill
-  except ImportError:
-      print("[INFO] Installation de dill requise pour la sauvegarde du GenericModelWrapper...")
-      import subprocess
-      import sys
-      subprocess.check_call([sys.executable, "-m", "pip", "install", "dill"])
-      import dill
-
-  class GenericModelWrapper:
-      """
-      Un wrapper générique capable d'encapsuler n'importe quelle logique de modèle Python
-      pour l'exposer via une interface standard (fit, predict, save, load).
-      """
-      def __init__(self, build_fn, train_fn, predict_fn, **hyperparameters):
-          self.hyperparameters = hyperparameters
-          self.build_fn = build_fn
-          self.train_fn = train_fn
-          self.predict_fn = predict_fn
-          self.model = None
-          self.is_fitted = False
-
-      def fit(self, X, y=None, **fit_params):
-          print("[WRAPPER] Initialisation du modèle interne...")
-          self.model = self.build_fn(**self.hyperparameters)
-          print("[WRAPPER] Entraînement en cours...")
-          self.model = self.train_fn(self.model, X, y, **fit_params)
-          self.is_fitted = True
-          return self
-
-      def predict(self, X, **predict_params):
-          if not self.is_fitted:
-              raise ValueError("Le modèle doit être entraîné avec fit() avant predict().")
-          return self.predict_fn(self.model, X, **predict_params)
-
-      def save(self, filepath):
-          os.makedirs(os.path.dirname(filepath), exist_ok=True)
-          with open(filepath, 'wb') as f:
-              dill.dump(self, f)
-
-      @classmethod
-      def load(cls, filepath):
-          with open(filepath, 'rb') as f:
-              return dill.load(f)
-
-  # [PARAM: HIDDEN_DIM | number]
-  HIDDEN_DIM = 128
-  # [/PARAM]
-  
-  # [PARAM: EPOCHS | number]
-  EPOCHS = 100
-  # [/PARAM]
-  
-  print(f"[MODEL] Préparation du Wrapper Modèle (Hidden={HIDDEN_DIM}, Epochs={EPOCHS})...")
-
-  # Exemple d'implémentation des sous-fonctions requises par le wrapper 
-  # (A adapter selon le modèle réel, e.g. PyTorch, réseau de graphe, etc.)
-  def build_dummy(**kwargs):
-      # Remplacer par la logique d'instanciation de votre modèle
-      return {"params": kwargs, "weights": None}
-      
-  def train_dummy(model, X, y, **fit_params):
-      # Remplacer par la logique d'entraînement (epochs, optimizer, etc.)
-      model["weights"] = "trained_weights_example"
-      return model
-      
-  def predict_dummy(model, X):
-      # Remplacer par la logique d'inférence
-      import numpy as np
-      return np.zeros(len(X))
-
-  if 'X_train' in locals() and 'X_test' in locals() and 'y_train' in locals():
-      # Instanciation de notre Wrapper
-      model = GenericModelWrapper(
-          build_fn=build_dummy,
-          train_fn=train_dummy,
-          predict_fn=predict_dummy,
-          hidden_dim=HIDDEN_DIM,
-          epochs=EPOCHS
-      )
-      
-      # Entraînement
-      model.fit(X_train, y_train)
-      
-      # Prédiction
-      y_pred = model.predict(X_test)
-      try:
-          y_proba = model.predict_proba(X_test) if hasattr(model, 'predict_proba') else None
-      except Exception:
-          y_proba = None
-          
-      feature_importances = None
-      full_pipeline = model
-      
-      training_history = {"status": "success", "type": "generic_wrapper"}
-      task_type = "custom"
-      print("[MODEL] Wrapper générique instancié, entraîné et testé avec succès.")
-  else:
-      print("[ERREUR] Données d'entraînement introuvables. Avez-vous défini X_train, y_train et X_test ?")
-
+  hidden_dim: Dimension de la couche cachée pour l'exemple (si applicable).
+  epochs: Nombre d'époques d'entraînement (pour le modèle interne).
+code_template: "import os\n\ntry:\n    import dill\nexcept ImportError:\n    print(\"\
+  [INFO] Installation de dill requise pour la sauvegarde du GenericModelWrapper...\"\
+  )\n    import subprocess\n    import sys\n    subprocess.check_call([sys.executable,\
+  \ \"-m\", \"pip\", \"install\", \"dill\"])\n    import dill\n\nclass GenericModelWrapper:\n\
+  \    \"\"\"\n    Un wrapper générique capable d'encapsuler n'importe quelle logique\
+  \ de modèle Python\n    pour l'exposer via une interface standard (fit, predict,\
+  \ save, load).\n    \"\"\"\n    def __init__(self, build_fn, train_fn, predict_fn,\
+  \ **hyperparameters):\n        self.hyperparameters = hyperparameters\n        self.build_fn\
+  \ = build_fn\n        self.train_fn = train_fn\n        self.predict_fn = predict_fn\n\
+  \        self.model = None\n        self.is_fitted = False\n\n    def fit(self,\
+  \ X, y=None, **fit_params):\n        print(\"[WRAPPER] Initialisation du modèle\
+  \ interne...\")\n        self.model = self.build_fn(**self.hyperparameters)\n  \
+  \      print(\"[WRAPPER] Entraînement en cours...\")\n        self.model = self.train_fn(self.model,\
+  \ X, y, **fit_params)\n        self.is_fitted = True\n        return self\n\n  \
+  \  def predict(self, X, **predict_params):\n        if not self.is_fitted:\n   \
+  \         raise ValueError(\"Le modèle doit être entraîné avec fit() avant predict().\"\
+  )\n        return self.predict_fn(self.model, X, **predict_params)\n\n    def save(self,\
+  \ filepath):\n        os.makedirs(os.path.dirname(filepath), exist_ok=True)\n  \
+  \      with open(filepath, 'wb') as f:\n            dill.dump(self, f)\n\n    @classmethod\n\
+  \    def load(cls, filepath):\n        with open(filepath, 'rb') as f:\n       \
+  \     return dill.load(f)\n\n# [PARAM: HIDDEN_DIM | number]\nHIDDEN_DIM = 128\n\
+  # [/PARAM]\n\n# [PARAM: EPOCHS | number]\nEPOCHS = 100\n# [/PARAM]\n\nprint(f\"\
+  [MODEL] Préparation du Wrapper Modèle (Hidden={HIDDEN_DIM}, Epochs={EPOCHS})...\"\
+  )\n\n# Exemple d'implémentation des sous-fonctions requises par le wrapper \n# (A\
+  \ adapter selon le modèle réel, e.g. PyTorch, réseau de graphe, etc.)\ndef build_dummy(**kwargs):\n\
+  \    # Remplacer par la logique d'instanciation de votre modèle\n    return {\"\
+  params\": kwargs, \"weights\": None}\n    \ndef train_dummy(model, X, y, **fit_params):\n\
+  \    # Remplacer par la logique d'entraînement (epochs, optimizer, etc.)\n    model[\"\
+  weights\"] = \"trained_weights_example\"\n    return model\n    \ndef predict_dummy(model,\
+  \ X):\n    # Remplacer par la logique d'inférence\n    import numpy as np\n    return\
+  \ np.zeros(len(X))\n\nif 'X_train' in locals() and 'X_test' in locals() and 'y_train'\
+  \ in locals():\n    # Instanciation de notre Wrapper\n    model = GenericModelWrapper(\n\
+  \        build_fn=build_dummy,\n        train_fn=train_dummy,\n        predict_fn=predict_dummy,\n\
+  \        hidden_dim=HIDDEN_DIM,\n        epochs=EPOCHS\n    )\n    \n    # Entraînement\n\
+  \    model.fit(X_train, y_train)\n    \n    # Prédiction\n    y_pred = model.predict(X_test)\n\
+  \    try:\n        y_proba = model.predict_proba(X_test) if hasattr(model, 'predict_proba')\
+  \ else None\n    except Exception:\n        y_proba = None\n        \n    feature_importances\
+  \ = None\n    full_pipeline = model\n    \n    training_history = {\"status\": \"\
+  success\", \"type\": \"generic_wrapper\"}\n    task_type = \"custom\"\n    print(\"\
+  [MODEL] Wrapper générique instancié, entraîné et testé avec succès.\")\nelse:\n\
+  \    print(\"[ERREUR] Données d'entraînement introuvables. Avez-vous défini X_train,\
+  \ y_train et X_test ?\")\n"
+illustration_svg: <svg viewBox="0 0 400 200" xmlns="http://www.w3.org/2000/svg"><rect
+  width="400" height="200" fill="#0f172a"/><rect x="100" y="50" width="200" height="100"
+  rx="8" fill="#1e293b" stroke="#3b82f6" stroke-width="3"/><circle cx="200" cy="100"
+  r="20" fill="#3b82f6"/><path d="M 200 65 L 200 135 M 165 100 L 235 100" stroke="#0f172a"
+  stroke-width="4"/><line x1="30" y1="100" x2="100" y2="100" stroke="#cbd5e1" stroke-width="3"
+  marker-end="url(#arrow)"/><line x1="300" y1="100" x2="370" y2="100" stroke="#cbd5e1"
+  stroke-width="3"/></svg>
 _metadata:
   bloc: -1
-  section: "0_custom_project"
+  section: 0_custom_project

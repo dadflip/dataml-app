@@ -1,47 +1,32 @@
-id: "extract_hdfs"
-name: "Extract: Hadoop HDFS"
-description: "Télécharge un fichier depuis un cluster Hadoop."
-category: "1. Extract"
-tags: ["extract", "hdfs", "hadoop", "bigdata"]
-code_template: |
-  from hdfs import InsecureClient
-  import os
-  import time
-
-  # [PARAM: HDFS_URL | string]
-  HDFS_URL = "http://namenode:50070"
-  # [/PARAM]
-  
-  # [PARAM: HDFS_USER | string]
-  HDFS_USER = "hadoop"
-  # [/PARAM]
-  
-  # [PARAM: REMOTE_PATH | string]
-  REMOTE_PATH = "/user/hadoop/data.csv"
-  # [/PARAM]
-  
-  # [PARAM: DEST_PATH | string]
-  DEST_PATH = "./data/raw/hdfs_data.csv"
-  # [/PARAM]
-
-  print(f"[EXTRACT] Connexion HDFS ({HDFS_URL})...")
-  os.makedirs(os.path.dirname(DEST_PATH), exist_ok=True)
-
-  try:
-      start_time = time.time()
-      client = InsecureClient(HDFS_URL, user=HDFS_USER)
-      client.download(REMOTE_PATH, DEST_PATH, overwrite=True)
-      
-      duration = time.time() - start_time
-      print(f"[EXTRACT] Succès HDFS. Fichier téléchargé en {duration:.2f}s.")
-  except Exception as e:
-      print(f"[ERREUR EXTRACT] Échec HDFS : {str(e)}")
-      raise e
-
-  df = None
-  target_name = None
-  task_type = "unknown"
-  meta = {"source": "hdfs", "path": DEST_PATH}
+id: extract_hdfs
+name: 'Extract: Hadoop HDFS'
+description: Télécharge un fichier depuis un cluster Hadoop.
+category: 1. Extract
+tags:
+- extract
+- hdfs
+- hadoop
+- bigdata
+code_template: "from hdfs import InsecureClient\nimport os\nimport time\n\n# [PARAM:\
+  \ HDFS_URL | string]\nHDFS_URL = \"http://namenode:50070\"\n# [/PARAM]\n\n# [PARAM:\
+  \ HDFS_USER | string]\nHDFS_USER = \"hadoop\"\n# [/PARAM]\n\n# [PARAM: REMOTE_PATH\
+  \ | string]\nREMOTE_PATH = \"/user/hadoop/data.csv\"\n# [/PARAM]\n\n# [PARAM: DEST_PATH\
+  \ | string]\nDEST_PATH = \"./data/raw/hdfs_data.csv\"\n# [/PARAM]\n\nprint(f\"[EXTRACT]\
+  \ Connexion HDFS ({HDFS_URL})...\")\nos.makedirs(os.path.dirname(DEST_PATH), exist_ok=True)\n\
+  \ntry:\n    start_time = time.time()\n    client = InsecureClient(HDFS_URL, user=HDFS_USER)\n\
+  \    client.download(REMOTE_PATH, DEST_PATH, overwrite=True)\n    \n    duration\
+  \ = time.time() - start_time\n    print(f\"[EXTRACT] Succès HDFS. Fichier téléchargé\
+  \ en {duration:.2f}s.\")\nexcept Exception as e:\n    print(f\"[ERREUR EXTRACT]\
+  \ Échec HDFS : {str(e)}\")\n    raise e\n\ndf = None\ntarget_name = None\ntask_type\
+  \ = \"unknown\"\nmeta = {\"source\": \"hdfs\", \"path\": DEST_PATH}\n"
+illustration_svg: <svg viewBox="0 0 400 200" xmlns="http://www.w3.org/2000/svg"><rect
+  width="400" height="200" fill="#0f172a"/><rect x="100" y="60" width="60" height="40"
+  fill="#eab308" stroke="white" stroke-width="2"/><rect x="170" y="60" width="60"
+  height="40" fill="#eab308" stroke="white" stroke-width="2"/><rect x="240" y="60"
+  width="60" height="40" fill="#eab308" stroke="white" stroke-width="2"/><rect x="100"
+  y="110" width="60" height="40" fill="#eab308" stroke="white" stroke-width="2"/><rect
+  x="170" y="110" width="60" height="40" fill="#eab308" stroke="white" stroke-width="2"/><rect
+  x="240" y="110" width="60" height="40" fill="#eab308" stroke="white" stroke-width="2"/></svg>
 _metadata:
   bloc: 1
-  section: "1_extract"
+  section: 1_extract

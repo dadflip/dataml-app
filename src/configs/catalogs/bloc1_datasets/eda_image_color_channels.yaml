@@ -1,38 +1,29 @@
-id: "eda_image_color_channels"
-name: "EDA: Canaux RGB Séparés"
-description: "Affiche séparément les canaux Rouge, Vert, Bleu d'une image."
-category: "3. Exploratory Data Analysis"
-tags: ["eda", "images", "multimedia", "rgb"]
-code_template: |
-  import matplotlib.pyplot as plt
-  import torch
-  import torchvision.transforms as T
-
-  if 'dataset' in locals() and len(dataset) > 0:
-      sample = dataset[0][0]
-      img = sample if isinstance(sample, torch.Tensor) else T.ToTensor()(sample)
-          
-      if img.shape[0] == 3:
-          fig, axes = plt.subplots(1, 4, figsize=(16, 4))
-          
-          axes[0].imshow(img.permute(1,2,0).numpy())
-          axes[0].set_title("Originale")
-          axes[0].axis('off')
-          
-          cmaps = ['Reds', 'Greens', 'Blues']
-          titles = ['Canal Rouge', 'Canal Vert', 'Canal Bleu']
-          
-          for i in range(3):
-              axes[i+1].imshow(img[i].numpy(), cmap=cmaps[i])
-              axes[i+1].set_title(titles[i])
-              axes[i+1].axis('off')
-              
-          plt.tight_layout()
-          plt.show()
-      else:
-          print("[EDA] L'image n'est pas RGB (3 canaux).")
-  else:
-      print("[EDA] Dataset non trouvé ou vide.")
+id: eda_image_color_channels
+name: 'EDA: Canaux RGB Séparés'
+description: Affiche séparément les canaux Rouge, Vert, Bleu d'une image.
+category: 3. Exploratory Data Analysis
+tags:
+- eda
+- images
+- multimedia
+- rgb
+code_template: "import matplotlib.pyplot as plt\nimport torch\nimport torchvision.transforms\
+  \ as T\n\nif 'dataset' in locals() and len(dataset) > 0:\n    sample = dataset[0][0]\n\
+  \    img = sample if isinstance(sample, torch.Tensor) else T.ToTensor()(sample)\n\
+  \        \n    if img.shape[0] == 3:\n        fig, axes = plt.subplots(1, 4, figsize=(16,\
+  \ 4))\n        \n        axes[0].imshow(img.permute(1,2,0).numpy())\n        axes[0].set_title(\"\
+  Originale\")\n        axes[0].axis('off')\n        \n        cmaps = ['Reds', 'Greens',\
+  \ 'Blues']\n        titles = ['Canal Rouge', 'Canal Vert', 'Canal Bleu']\n     \
+  \   \n        for i in range(3):\n            axes[i+1].imshow(img[i].numpy(), cmap=cmaps[i])\n\
+  \            axes[i+1].set_title(titles[i])\n            axes[i+1].axis('off')\n\
+  \            \n        plt.tight_layout()\n        plt.show()\n    else:\n     \
+  \   print(\"[EDA] L'image n'est pas RGB (3 canaux).\")\nelse:\n    print(\"[EDA]\
+  \ Dataset non trouvé ou vide.\")\n"
+illustration_svg: '<svg viewBox="0 0 400 200" xmlns="http://www.w3.org/2000/svg"><rect
+  width="400" height="200" fill="#0f172a"/><circle cx="170" cy="90" r="40" fill="#ef4444"
+  style="mix-blend-mode: screen;"/><circle cx="230" cy="90" r="40" fill="#22c55e"
+  style="mix-blend-mode: screen;"/><circle cx="200" cy="130" r="40" fill="#3b82f6"
+  style="mix-blend-mode: screen;"/></svg>'
 _metadata:
   bloc: 1
-  section: "3_eda"
+  section: 3_eda

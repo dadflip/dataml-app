@@ -1,165 +1,109 @@
-id: "eval_ds50_viz"
-name: "Visualisation DS50 (6 Figures + Export)"
-description: "Agrégation des résultats multi-seeds, tracés des graphiques matplotlib et sauvegarde CSV."
-category: "Custom"
-tags: ["evaluation", "viz", "matplotlib", "aggregation"]
-applies_to: ["Graphes"]
-when_to_use: "Après avoir fait tourner le multi-seed models block."
+id: eval_ds50_viz
+name: Visualisation DS50 (6 Figures + Export)
+description: Agrégation des résultats multi-seeds, tracés des graphiques matplotlib
+  et sauvegarde CSV.
+category: Custom
+tags:
+- evaluation
+- viz
+- matplotlib
+- aggregation
+applies_to:
+- Graphes
+when_to_use: Après avoir fait tourner le multi-seed models block.
 pros:
-  - "Visualise finement les résultats (boxplot, heatmap, etc.)."
+- Visualise finement les résultats (boxplot, heatmap, etc.).
 cons:
-  - "Très spécifique aux noms de métriques du pipeline d'origine."
+- Très spécifique aux noms de métriques du pipeline d'origine.
 hyperparameters:
-  OUTPUT_DIR: "Dossier de sortie (ex: 'outputs_task2_multimodel')"
-  TOP_K: "Nombre de recommandations (ex: 5)"
+  OUTPUT_DIR: 'Dossier de sortie (ex: ''outputs_task2_multimodel'')'
+  TOP_K: 'Nombre de recommandations (ex: 5)'
 input_variables:
-  required: ["all_seed_results", "all_recommendations", "SEEDS"]
+  required:
+  - all_seed_results
+  - all_recommendations
+  - SEEDS
 output_variables:
-  full_results_df: "Résultats complets (DataFrame)"
-  summary_df: "Résumé par modèle"
-  agg_reco_df: "Recommandations agrégées"
-code_template: |
-  import os, json
-  import pandas as pd
-  import numpy as np
-  import matplotlib
-  import matplotlib.pyplot as plt
-
-  # [PARAM: OUTPUT_DIR | string]
-  OUTPUT_DIR = "outputs_task2_multimodel"
-  # [/PARAM]
-
-  # [PARAM: TOP_K | int]
-  TOP_K = 5
-  # [/PARAM]
-
-  os.makedirs(OUTPUT_DIR, exist_ok=True)
-
-  # 10. Agrégation des résultats
-  full_results_df = pd.DataFrame(all_seed_results)
-
-  summary_df = (
-      full_results_df
-      .groupby("model")[["roc_auc","average_precision","accuracy","f1"]]
-      .agg(["mean","std"])
-      .round(4)
-  )
-  summary_df.columns = ["_".join(c) for c in summary_df.columns]
-  summary_df = summary_df.sort_values("roc_auc_mean", ascending=False).reset_index()
-
-  print(f"Résultats agrégés sur {len(SEEDS)} seeds :")
-  display(summary_df)
-
-  all_reco_df = pd.concat(all_recommendations, ignore_index=True)
-  agg_reco_df = (
-      all_reco_df
-      .groupby(["source","target"], as_index=False)
-      .agg(
-          probability_mean=("probability","mean"),
-          probability_std= ("probability","std"),
-          known_positive=  ("known_positive","first"),
-          source_type=     ("source_type","first"),
-          target_type=     ("target_type","first"),
-      )
-      .sort_values("probability_mean", ascending=False)
-      .reset_index(drop=True)
-  )
-
-  topk_recommendations = (
-      agg_reco_df
-      .groupby("source", group_keys=False)
-      .head(int(TOP_K))
-      .reset_index(drop=True)
-  )
-
-  # 11. Visuel
-  matplotlib.rcParams.update({
-      "figure.facecolor":  "white",
-      "axes.facecolor":    "white",
-      "axes.grid":         True,
-      "grid.color":        "#E8E8E8",
-      "grid.linewidth":    0.6,
-      "axes.spines.top":   False,
-      "axes.spines.right": False,
-      "font.family":       "sans-serif",
-      "font.size":         11,
-  })
-
-  MODEL_COLORS = {
-      "Logistic Regression":      "#5B8DEF",
-      "Random Forest":            "#F4A44A",
-      "MLP Link Predictor":       "#A07BE5",
-      "GCN Link Prediction":      "#3EC97C",
-      "GraphSAGE Link Prediction":"#EF6B5B",
-      "XGBoost":                  "#2EC4B6"
-  }
-  METRICS = ["roc_auc", "average_precision", "accuracy", "f1"]
-  METRIC_LABELS = {"roc_auc": "ROC-AUC", "average_precision": "Avg Precision",
-                   "accuracy": "Accuracy", "f1": "F1-Score"}
-
-  models = [m for m in MODEL_COLORS.keys() if m in full_results_df["model"].values]
-
-  # Figure 1 — Comparaison ROC-AUC par seed
-  fig, ax = plt.subplots(figsize=(10, 4.5))
-  for model in models:
-      sub = full_results_df[full_results_df["model"] == model].sort_values("seed")
-      ax.plot(sub["seed"], sub["roc_auc"],
-              marker="o", linewidth=2, markersize=6,
-              color=MODEL_COLORS.get(model, "#000"), label=model)
-  ax.set_xlabel("Seed"); ax.set_ylabel("ROC-AUC")
-  ax.set_title("ROC-AUC par seed et par modèle", fontweight="bold")
-  ax.set_xticks(SEEDS)
-  ax.legend(loc="lower right", fontsize=9, framealpha=0.7)
-  plt.tight_layout(); plt.savefig(f"{OUTPUT_DIR}/fig1_roc_auc_per_seed.png", dpi=150)
-  plt.show()
-
-  # Figure 2 — Boxplots ROC-AUC
-  fig, ax = plt.subplots(figsize=(10, 4.5))
-  data_boxes = [full_results_df[full_results_df["model"] == m]["roc_auc"].values for m in models]
-  bp = ax.boxplot(data_boxes, patch_artist=True, widths=0.5,
-                  medianprops=dict(color="white", linewidth=2))
-  for patch, model in zip(bp["boxes"], models):
-      patch.set_facecolor(MODEL_COLORS.get(model, "#000")); patch.set_alpha(0.8)
-  for element in ["whiskers","caps","fliers"]:
-      for item, model in zip(bp[element], [m for m in models for _ in range(2 if element != "fliers" else 1)]):
-          item.set_color(MODEL_COLORS.get(model, "#000")); item.set_linewidth(1.2)
-  ax.set_xticks(range(1, len(models)+1))
-  ax.set_xticklabels([m.replace(" Link Prediction","").replace(" Link Predictor","")
-                      for m in models], rotation=15, ha="right")
-  ax.set_ylabel("ROC-AUC"); ax.set_ylim(0, 1.05)
-  ax.set_title("Distribution ROC-AUC sur toutes les seeds", fontweight="bold")
-  plt.tight_layout(); plt.savefig(f"{OUTPUT_DIR}/fig2_boxplot_roc_auc.png", dpi=150)
-  plt.show()
-
-  # Figure 3 — Heatmap
-  fig, axes = plt.subplots(1, 2, figsize=(13, 3.5))
-  agg = full_results_df.groupby("model")[METRICS].agg(["mean","std"]).round(4)
-  
-  for ax, stat, title, cmap in zip(
-          axes, ["mean","std"],
-          ["Moyenne des métriques", "Écart-type des métriques"],
-          ["YlGnBu","Oranges"]):
-      mat = pd.DataFrame({m: agg[m][stat] for m in METRICS if m in agg.columns.levels[0]}, index=models)
-      mat.index = [i.replace(" Link Prediction","").replace(" Link Predictor","") for i in mat.index]
-      im = ax.imshow(mat.values, aspect="auto", cmap=cmap, vmin=mat.values.min(), vmax=mat.values.max())
-      ax.set_xticks(range(len(METRICS)))
-      ax.set_xticklabels([METRIC_LABELS[m] for m in METRICS], rotation=30, ha="right")
-      ax.set_yticks(range(len(mat))); ax.set_yticklabels(mat.index)
-      for i in range(len(mat)):
-          for j in range(len(METRICS)):
-              ax.text(j, i, f"{mat.values[i,j]:.3f}", ha="center", va="center",
-                      fontsize=9, color="white" if mat.values[i,j] > mat.values.max()*0.65 else "black")
-      ax.set_title(title, fontweight="bold")
-      plt.colorbar(im, ax=ax, shrink=0.8)
-  plt.tight_layout(); plt.savefig(f"{OUTPUT_DIR}/fig3_heatmap_metrics.png", dpi=150)
-  plt.show()
-
-  # 12. Sauvegarde
-  full_results_df.to_csv(f"{OUTPUT_DIR}/all_seeds_results.csv", index=False)
-  summary_df.to_csv(f"{OUTPUT_DIR}/model_comparison_summary.csv", index=False)
-  agg_reco_df.to_csv(f"{OUTPUT_DIR}/best_model_all_predictions.csv", index=False)
-  topk_recommendations.to_csv(f"{OUTPUT_DIR}/best_model_topk_recommendations.csv", index=False)
-  print(f"[EVALUATION] Visualisations et fichiers exportés dans {OUTPUT_DIR}/")
+  full_results_df: Résultats complets (DataFrame)
+  summary_df: Résumé par modèle
+  agg_reco_df: Recommandations agrégées
+code_template: "import os, json\nimport pandas as pd\nimport numpy as np\nimport matplotlib\n\
+  import matplotlib.pyplot as plt\n\n# [PARAM: OUTPUT_DIR | string]\nOUTPUT_DIR =\
+  \ \"outputs_task2_multimodel\"\n# [/PARAM]\n\n# [PARAM: TOP_K | int]\nTOP_K = 5\n\
+  # [/PARAM]\n\nos.makedirs(OUTPUT_DIR, exist_ok=True)\n\n# 10. Agrégation des résultats\n\
+  full_results_df = pd.DataFrame(all_seed_results)\n\nsummary_df = (\n    full_results_df\n\
+  \    .groupby(\"model\")[[\"roc_auc\",\"average_precision\",\"accuracy\",\"f1\"\
+  ]]\n    .agg([\"mean\",\"std\"])\n    .round(4)\n)\nsummary_df.columns = [\"_\"\
+  .join(c) for c in summary_df.columns]\nsummary_df = summary_df.sort_values(\"roc_auc_mean\"\
+  , ascending=False).reset_index()\n\nprint(f\"Résultats agrégés sur {len(SEEDS)}\
+  \ seeds :\")\ndisplay(summary_df)\n\nall_reco_df = pd.concat(all_recommendations,\
+  \ ignore_index=True)\nagg_reco_df = (\n    all_reco_df\n    .groupby([\"source\"\
+  ,\"target\"], as_index=False)\n    .agg(\n        probability_mean=(\"probability\"\
+  ,\"mean\"),\n        probability_std= (\"probability\",\"std\"),\n        known_positive=\
+  \  (\"known_positive\",\"first\"),\n        source_type=     (\"source_type\",\"\
+  first\"),\n        target_type=     (\"target_type\",\"first\"),\n    )\n    .sort_values(\"\
+  probability_mean\", ascending=False)\n    .reset_index(drop=True)\n)\n\ntopk_recommendations\
+  \ = (\n    agg_reco_df\n    .groupby(\"source\", group_keys=False)\n    .head(int(TOP_K))\n\
+  \    .reset_index(drop=True)\n)\n\n# 11. Visuel\nmatplotlib.rcParams.update({\n\
+  \    \"figure.facecolor\":  \"white\",\n    \"axes.facecolor\":    \"white\",\n\
+  \    \"axes.grid\":         True,\n    \"grid.color\":        \"#E8E8E8\",\n   \
+  \ \"grid.linewidth\":    0.6,\n    \"axes.spines.top\":   False,\n    \"axes.spines.right\"\
+  : False,\n    \"font.family\":       \"sans-serif\",\n    \"font.size\":       \
+  \  11,\n})\n\nMODEL_COLORS = {\n    \"Logistic Regression\":      \"#5B8DEF\",\n\
+  \    \"Random Forest\":            \"#F4A44A\",\n    \"MLP Link Predictor\":   \
+  \    \"#A07BE5\",\n    \"GCN Link Prediction\":      \"#3EC97C\",\n    \"GraphSAGE\
+  \ Link Prediction\":\"#EF6B5B\",\n    \"XGBoost\":                  \"#2EC4B6\"\n\
+  }\nMETRICS = [\"roc_auc\", \"average_precision\", \"accuracy\", \"f1\"]\nMETRIC_LABELS\
+  \ = {\"roc_auc\": \"ROC-AUC\", \"average_precision\": \"Avg Precision\",\n     \
+  \            \"accuracy\": \"Accuracy\", \"f1\": \"F1-Score\"}\n\nmodels = [m for\
+  \ m in MODEL_COLORS.keys() if m in full_results_df[\"model\"].values]\n\n# Figure\
+  \ 1 — Comparaison ROC-AUC par seed\nfig, ax = plt.subplots(figsize=(10, 4.5))\n\
+  for model in models:\n    sub = full_results_df[full_results_df[\"model\"] == model].sort_values(\"\
+  seed\")\n    ax.plot(sub[\"seed\"], sub[\"roc_auc\"],\n            marker=\"o\"\
+  , linewidth=2, markersize=6,\n            color=MODEL_COLORS.get(model, \"#000\"\
+  ), label=model)\nax.set_xlabel(\"Seed\"); ax.set_ylabel(\"ROC-AUC\")\nax.set_title(\"\
+  ROC-AUC par seed et par modèle\", fontweight=\"bold\")\nax.set_xticks(SEEDS)\nax.legend(loc=\"\
+  lower right\", fontsize=9, framealpha=0.7)\nplt.tight_layout(); plt.savefig(f\"\
+  {OUTPUT_DIR}/fig1_roc_auc_per_seed.png\", dpi=150)\nplt.show()\n\n# Figure 2 — Boxplots\
+  \ ROC-AUC\nfig, ax = plt.subplots(figsize=(10, 4.5))\ndata_boxes = [full_results_df[full_results_df[\"\
+  model\"] == m][\"roc_auc\"].values for m in models]\nbp = ax.boxplot(data_boxes,\
+  \ patch_artist=True, widths=0.5,\n                medianprops=dict(color=\"white\"\
+  , linewidth=2))\nfor patch, model in zip(bp[\"boxes\"], models):\n    patch.set_facecolor(MODEL_COLORS.get(model,\
+  \ \"#000\")); patch.set_alpha(0.8)\nfor element in [\"whiskers\",\"caps\",\"fliers\"\
+  ]:\n    for item, model in zip(bp[element], [m for m in models for _ in range(2\
+  \ if element != \"fliers\" else 1)]):\n        item.set_color(MODEL_COLORS.get(model,\
+  \ \"#000\")); item.set_linewidth(1.2)\nax.set_xticks(range(1, len(models)+1))\n\
+  ax.set_xticklabels([m.replace(\" Link Prediction\",\"\").replace(\" Link Predictor\"\
+  ,\"\")\n                    for m in models], rotation=15, ha=\"right\")\nax.set_ylabel(\"\
+  ROC-AUC\"); ax.set_ylim(0, 1.05)\nax.set_title(\"Distribution ROC-AUC sur toutes\
+  \ les seeds\", fontweight=\"bold\")\nplt.tight_layout(); plt.savefig(f\"{OUTPUT_DIR}/fig2_boxplot_roc_auc.png\"\
+  , dpi=150)\nplt.show()\n\n# Figure 3 — Heatmap\nfig, axes = plt.subplots(1, 2, figsize=(13,\
+  \ 3.5))\nagg = full_results_df.groupby(\"model\")[METRICS].agg([\"mean\",\"std\"\
+  ]).round(4)\n\nfor ax, stat, title, cmap in zip(\n        axes, [\"mean\",\"std\"\
+  ],\n        [\"Moyenne des métriques\", \"Écart-type des métriques\"],\n       \
+  \ [\"YlGnBu\",\"Oranges\"]):\n    mat = pd.DataFrame({m: agg[m][stat] for m in METRICS\
+  \ if m in agg.columns.levels[0]}, index=models)\n    mat.index = [i.replace(\" Link\
+  \ Prediction\",\"\").replace(\" Link Predictor\",\"\") for i in mat.index]\n   \
+  \ im = ax.imshow(mat.values, aspect=\"auto\", cmap=cmap, vmin=mat.values.min(),\
+  \ vmax=mat.values.max())\n    ax.set_xticks(range(len(METRICS)))\n    ax.set_xticklabels([METRIC_LABELS[m]\
+  \ for m in METRICS], rotation=30, ha=\"right\")\n    ax.set_yticks(range(len(mat)));\
+  \ ax.set_yticklabels(mat.index)\n    for i in range(len(mat)):\n        for j in\
+  \ range(len(METRICS)):\n            ax.text(j, i, f\"{mat.values[i,j]:.3f}\", ha=\"\
+  center\", va=\"center\",\n                    fontsize=9, color=\"white\" if mat.values[i,j]\
+  \ > mat.values.max()*0.65 else \"black\")\n    ax.set_title(title, fontweight=\"\
+  bold\")\n    plt.colorbar(im, ax=ax, shrink=0.8)\nplt.tight_layout(); plt.savefig(f\"\
+  {OUTPUT_DIR}/fig3_heatmap_metrics.png\", dpi=150)\nplt.show()\n\n# 12. Sauvegarde\n\
+  full_results_df.to_csv(f\"{OUTPUT_DIR}/all_seeds_results.csv\", index=False)\nsummary_df.to_csv(f\"\
+  {OUTPUT_DIR}/model_comparison_summary.csv\", index=False)\nagg_reco_df.to_csv(f\"\
+  {OUTPUT_DIR}/best_model_all_predictions.csv\", index=False)\ntopk_recommendations.to_csv(f\"\
+  {OUTPUT_DIR}/best_model_topk_recommendations.csv\", index=False)\nprint(f\"[EVALUATION]\
+  \ Visualisations et fichiers exportés dans {OUTPUT_DIR}/\")\n"
+illustration_svg: <svg viewBox="0 0 400 200" xmlns="http://www.w3.org/2000/svg"><rect
+  width="400" height="200" fill="#0f172a"/><line x1="50" y1="150" x2="350" y2="150"
+  stroke="#475569" stroke-width="2"/><line x1="50" y1="150" x2="50" y2="30" stroke="#475569"
+  stroke-width="2"/><path d="M 50 150 Q 150 140 200 80 T 350 40" fill="none" stroke="#10b981"
+  stroke-width="4"/><path d="M 50 150 L 350 30" fill="none" stroke="#64748b" stroke-width="2"
+  stroke-dasharray="5,5"/></svg>
 _metadata:
   bloc: -1
-  section: "0_custom_project"
+  section: 0_custom_project

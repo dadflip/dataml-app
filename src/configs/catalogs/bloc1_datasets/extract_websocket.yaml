@@ -1,56 +1,35 @@
-id: "extract_websocket"
-name: "Extract: WebSocket Stream"
-description: "Écoute un WebSocket pendant N secondes et enregistre les trames."
-category: "1. Extract"
-tags: ["extract", "websocket", "stream", "realtime"]
-code_template: |
-  import asyncio
-  import websockets
-  import os
-  import time
-
-  # [PARAM: WS_URL | string]
-  WS_URL = "wss://stream.binance.com:9443/ws/btcusdt@trade"
-  # [/PARAM]
-  
-  # [PARAM: DURATION_SEC | string]
-  DURATION_SEC = "5"
-  # [/PARAM]
-  
-  # [PARAM: DEST_PATH | string]
-  DEST_PATH = "./data/raw/websocket_stream.jsonlines"
-  # [/PARAM]
-
-  print(f"[EXTRACT] Écoute de {WS_URL} pendant {DURATION_SEC} sec...")
-  os.makedirs(os.path.dirname(DEST_PATH), exist_ok=True)
-
-  async def dump_stream():
-      messages = []
-      start_time = time.time()
-      try:
-          async with websockets.connect(WS_URL) as websocket:
-              while (time.time() - start_time) < int(DURATION_SEC):
-                  msg = await asyncio.wait_for(websocket.recv(), timeout=2.0)
-                  messages.append(msg)
-      except asyncio.TimeoutError:
-          pass
-      
-      with open(DEST_PATH, "w", encoding="utf-8") as f:
-          for m in messages:
-              f.write(m + "\\n")
-      return len(messages)
-
-  try:
-      count = asyncio.run(dump_stream())
-      print(f"[EXTRACT] Succès WebSocket. {count} messages capturés.")
-  except Exception as e:
-      print(f"[ERREUR EXTRACT] Échec WebSocket : {str(e)}")
-      raise e
-
-  df = None
-  target_name = None
-  task_type = "unknown"
-  meta = {"source": "websocket", "path": DEST_PATH}
+id: extract_websocket
+name: 'Extract: WebSocket Stream'
+description: Écoute un WebSocket pendant N secondes et enregistre les trames.
+category: 1. Extract
+tags:
+- extract
+- websocket
+- stream
+- realtime
+code_template: "import asyncio\nimport websockets\nimport os\nimport time\n\n# [PARAM:\
+  \ WS_URL | string]\nWS_URL = \"wss://stream.binance.com:9443/ws/btcusdt@trade\"\n\
+  # [/PARAM]\n\n# [PARAM: DURATION_SEC | string]\nDURATION_SEC = \"5\"\n# [/PARAM]\n\
+  \n# [PARAM: DEST_PATH | string]\nDEST_PATH = \"./data/raw/websocket_stream.jsonlines\"\
+  \n# [/PARAM]\n\nprint(f\"[EXTRACT] Écoute de {WS_URL} pendant {DURATION_SEC} sec...\"\
+  )\nos.makedirs(os.path.dirname(DEST_PATH), exist_ok=True)\n\nasync def dump_stream():\n\
+  \    messages = []\n    start_time = time.time()\n    try:\n        async with websockets.connect(WS_URL)\
+  \ as websocket:\n            while (time.time() - start_time) < int(DURATION_SEC):\n\
+  \                msg = await asyncio.wait_for(websocket.recv(), timeout=2.0)\n \
+  \               messages.append(msg)\n    except asyncio.TimeoutError:\n       \
+  \ pass\n    \n    with open(DEST_PATH, \"w\", encoding=\"utf-8\") as f:\n      \
+  \  for m in messages:\n            f.write(m + \"\\\\n\")\n    return len(messages)\n\
+  \ntry:\n    count = asyncio.run(dump_stream())\n    print(f\"[EXTRACT] Succès WebSocket.\
+  \ {count} messages capturés.\")\nexcept Exception as e:\n    print(f\"[ERREUR EXTRACT]\
+  \ Échec WebSocket : {str(e)}\")\n    raise e\n\ndf = None\ntarget_name = None\n\
+  task_type = \"unknown\"\nmeta = {\"source\": \"websocket\", \"path\": DEST_PATH}\n"
+illustration_svg: <svg viewBox="0 0 400 200" xmlns="http://www.w3.org/2000/svg"><rect
+  width="400" height="200" fill="#0f172a"/><circle cx="120" cy="100" r="40" fill="none"
+  stroke="#10b981" stroke-width="4"/><circle cx="280" cy="100" r="40" fill="none"
+  stroke="#3b82f6" stroke-width="4"/><path d="M 160 80 Q 200 50 240 80" fill="none"
+  stroke="#10b981" stroke-width="4" marker-end="url(#arrow)"/><path d="M 240 120 Q
+  200 150 160 120" fill="none" stroke="#3b82f6" stroke-width="4" marker-end="url(#arrow)"/><circle
+  cx="200" cy="65" r="5" fill="#10b981"/><circle cx="200" cy="135" r="5" fill="#3b82f6"/></svg>
 _metadata:
   bloc: 1
-  section: "1_extract"
+  section: 1_extract

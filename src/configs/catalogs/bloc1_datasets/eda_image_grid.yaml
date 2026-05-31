@@ -1,32 +1,28 @@
-id: "eda_image_grid"
-name: "EDA: Grille d'Images"
-description: "Affiche un batch d'images en grille."
-category: "3. Exploratory Data Analysis"
-tags: ["eda", "images", "multimedia"]
-code_template: |
-  import matplotlib.pyplot as plt
-  import torchvision.transforms as T
-  from torchvision.utils import make_grid
-  import torch
-
-  # [PARAM: NUM_IMAGES | number]
-  NUM_IMAGES = 16
-  # [/PARAM]
-
-  if 'dataset' in locals():
-      imgs = [dataset[i][0] for i in range(min(NUM_IMAGES, len(dataset)))]
-  else:
-      imgs = []
-      print("[EDA] Dataset non trouvé dans l'environnement local.")
-
-  if len(imgs) > 0:
-      tensors = [T.ToTensor()(img) if not isinstance(img, torch.Tensor) else img for img in imgs]
-      grid = make_grid(tensors, nrow=int(len(tensors)**0.5))
-      plt.figure(figsize=(10, 10))
-      plt.imshow(grid.permute(1, 2, 0).numpy())
-      plt.axis('off')
-      plt.title(f"Aperçu de {len(imgs)} images")
-      plt.show()
+id: eda_image_grid
+name: 'EDA: Grille d''Images'
+description: Affiche un batch d'images en grille.
+category: 3. Exploratory Data Analysis
+tags:
+- eda
+- images
+- multimedia
+code_template: "import matplotlib.pyplot as plt\nimport torchvision.transforms as\
+  \ T\nfrom torchvision.utils import make_grid\nimport torch\n\n# [PARAM: NUM_IMAGES\
+  \ | number]\nNUM_IMAGES = 16\n# [/PARAM]\n\nif 'dataset' in locals():\n    imgs\
+  \ = [dataset[i][0] for i in range(min(NUM_IMAGES, len(dataset)))]\nelse:\n    imgs\
+  \ = []\n    print(\"[EDA] Dataset non trouvé dans l'environnement local.\")\n\n\
+  if len(imgs) > 0:\n    tensors = [T.ToTensor()(img) if not isinstance(img, torch.Tensor)\
+  \ else img for img in imgs]\n    grid = make_grid(tensors, nrow=int(len(tensors)**0.5))\n\
+  \    plt.figure(figsize=(10, 10))\n    plt.imshow(grid.permute(1, 2, 0).numpy())\n\
+  \    plt.axis('off')\n    plt.title(f\"Aperçu de {len(imgs)} images\")\n    plt.show()\n"
+illustration_svg: <svg viewBox="0 0 400 200" xmlns="http://www.w3.org/2000/svg"><rect
+  width="400" height="200" fill="#0f172a"/><rect x="110" y="30" width="50" height="40"
+  fill="#64748b"/><rect x="170" y="30" width="50" height="40" fill="#94a3b8"/><rect
+  x="230" y="30" width="50" height="40" fill="#cbd5e1"/><rect x="110" y="80" width="50"
+  height="40" fill="#cbd5e1"/><rect x="170" y="80" width="50" height="40" fill="#64748b"/><rect
+  x="230" y="80" width="50" height="40" fill="#94a3b8"/><rect x="110" y="130" width="50"
+  height="40" fill="#94a3b8"/><rect x="170" y="130" width="50" height="40" fill="#cbd5e1"/><rect
+  x="230" y="130" width="50" height="40" fill="#64748b"/></svg>
 _metadata:
   bloc: 1
-  section: "3_eda"
+  section: 3_eda

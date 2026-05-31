@@ -1,41 +1,32 @@
-id: "eda_custom_flowers_grid"
-name: "EDA: Aperçu des Fleurs"
-description: "Affiche quelques images de fleurs en lisant les chemins depuis le dataframe."
-category: "Custom"
-tags: ["eda", "images", "102flowers", "custom"]
-code_template: |
-  import matplotlib.pyplot as plt
-  from PIL import Image
-  import os
-
-  # [PARAM: NUM_IMAGES | number]
-  NUM_IMAGES = 16
-  # [/PARAM]
-
-  print("[EDA] Aperçu des images...")
-  if 'df' in locals() and 'image_path' in df.columns:
-      # S'assure que c'est bien des chaînes de caractères (avant transformation tensor)
-      paths = df['image_path'].dropna().head(int(NUM_IMAGES)).tolist()
-      
-      if len(paths) > 0 and isinstance(paths[0], str):
-          cols = int(len(paths)**0.5)
-          rows = (len(paths) + cols - 1) // cols
-          
-          plt.figure(figsize=(10, 10))
-          for i, path in enumerate(paths):
-              if os.path.exists(path):
-                  img = Image.open(path).convert('RGB')
-                  plt.subplot(rows, cols, i + 1)
-                  plt.imshow(img)
-                  plt.axis('off')
-          
-          plt.suptitle(f"Aperçu de {len(paths)} fleurs")
-          plt.tight_layout()
-          plt.show()
-      else:
-          print("[EDA] Impossible d'afficher les images (déjà converties en tenseurs ?)")
-  else:
-      print("[ERREUR] 'df' ou colonne 'image_path' introuvable.")
+id: eda_custom_flowers_grid
+name: 'EDA: Aperçu des Fleurs'
+description: Affiche quelques images de fleurs en lisant les chemins depuis le dataframe.
+category: Custom
+tags:
+- eda
+- images
+- 102flowers
+- custom
+code_template: "import matplotlib.pyplot as plt\nfrom PIL import Image\nimport os\n\
+  \n# [PARAM: NUM_IMAGES | number]\nNUM_IMAGES = 16\n# [/PARAM]\n\nprint(\"[EDA] Aperçu\
+  \ des images...\")\nif 'df' in locals() and 'image_path' in df.columns:\n    # S'assure\
+  \ que c'est bien des chaînes de caractères (avant transformation tensor)\n    paths\
+  \ = df['image_path'].dropna().head(int(NUM_IMAGES)).tolist()\n    \n    if len(paths)\
+  \ > 0 and isinstance(paths[0], str):\n        cols = int(len(paths)**0.5)\n    \
+  \    rows = (len(paths) + cols - 1) // cols\n        \n        plt.figure(figsize=(10,\
+  \ 10))\n        for i, path in enumerate(paths):\n            if os.path.exists(path):\n\
+  \                img = Image.open(path).convert('RGB')\n                plt.subplot(rows,\
+  \ cols, i + 1)\n                plt.imshow(img)\n                plt.axis('off')\n\
+  \        \n        plt.suptitle(f\"Aperçu de {len(paths)} fleurs\")\n        plt.tight_layout()\n\
+  \        plt.show()\n    else:\n        print(\"[EDA] Impossible d'afficher les\
+  \ images (déjà converties en tenseurs ?)\")\nelse:\n    print(\"[ERREUR] 'df' ou\
+  \ colonne 'image_path' introuvable.\")\n"
+illustration_svg: <svg viewBox="0 0 400 200" xmlns="http://www.w3.org/2000/svg"><rect
+  width="400" height="200" fill="#0f172a"/><rect x="50" y="30" width="80" height="60"
+  rx="4" fill="#f472b6"/><rect x="160" y="30" width="80" height="60" rx="4" fill="#a78bfa"/><rect
+  x="270" y="30" width="80" height="60" rx="4" fill="#38bdf8"/><rect x="50" y="110"
+  width="80" height="60" rx="4" fill="#fbbf24"/><rect x="160" y="110" width="80" height="60"
+  rx="4" fill="#34d399"/><rect x="270" y="110" width="80" height="60" rx="4" fill="#f87171"/></svg>
 _metadata:
   bloc: -1
-  section: "0_custom_project"
+  section: 0_custom_project

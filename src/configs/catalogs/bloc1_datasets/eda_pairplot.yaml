@@ -1,23 +1,28 @@
-id: "eda_pairplot"
-name: "EDA: Pairplot"
-description: "Trace les relations bivariées entre les premières variables numériques."
-category: "3. Exploratory Data Analysis"
-tags: ["eda", "pairplot", "tabular", "seaborn"]
-code_template: |
-  import pandas as pd
-  import numpy as np
-  import matplotlib.pyplot as plt
-  import seaborn as sns
-
-  cols = df.select_dtypes(include=[np.number]).columns.tolist()[:5]
-  hue_col = target_name if 'target_name' in locals() and target_name in df.columns else None
-  
-  if hue_col and hue_col not in cols:
-      cols.append(hue_col)
-      
-  print(f"[EDA] === PAIRPLOT sur {len(cols)} variables ===")
-  sns.pairplot(df[cols].dropna(), hue=hue_col, corner=True)
-  plt.show()
+id: eda_pairplot
+name: 'EDA: Pairplot'
+description: Trace les relations bivariées entre les premières variables numériques.
+category: 3. Exploratory Data Analysis
+tags:
+- eda
+- pairplot
+- tabular
+- seaborn
+code_template: "import pandas as pd\nimport numpy as np\nimport matplotlib.pyplot\
+  \ as plt\nimport seaborn as sns\n\ncols = df.select_dtypes(include=[np.number]).columns.tolist()[:5]\n\
+  hue_col = target_name if 'target_name' in locals() and target_name in df.columns\
+  \ else None\n\nif hue_col and hue_col not in cols:\n    cols.append(hue_col)\n \
+  \   \nprint(f\"[EDA] === PAIRPLOT sur {len(cols)} variables ===\")\nsns.pairplot(df[cols].dropna(),\
+  \ hue=hue_col, corner=True)\nplt.show()\n"
+illustration_svg: <svg viewBox="0 0 400 200" xmlns="http://www.w3.org/2000/svg"><rect
+  width="400" height="200" fill="#0f172a"/><rect x="120" y="40" width="50" height="50"
+  fill="#1e293b" stroke="#334155"/><rect x="180" y="40" width="50" height="50" fill="#1e293b"
+  stroke="#334155"/><rect x="240" y="40" width="50" height="50" fill="#1e293b" stroke="#334155"/><rect
+  x="120" y="100" width="50" height="50" fill="#1e293b" stroke="#334155"/><rect x="180"
+  y="100" width="50" height="50" fill="#1e293b" stroke="#334155"/><rect x="240" y="100"
+  width="50" height="50" fill="#1e293b" stroke="#334155"/><circle cx="145" cy="65"
+  r="2" fill="#3b82f6"/><circle cx="205" cy="65" r="2" fill="#10b981"/><circle cx="265"
+  cy="65" r="2" fill="#f59e0b"/><circle cx="145" cy="125" r="2" fill="#f59e0b"/><circle
+  cx="205" cy="125" r="2" fill="#3b82f6"/><circle cx="265" cy="125" r="2" fill="#10b981"/></svg>
 _metadata:
   bloc: 1
-  section: "3_eda"
+  section: 3_eda

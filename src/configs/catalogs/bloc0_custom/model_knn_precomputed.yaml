@@ -1,82 +1,57 @@
-id: "model_knn_precomputed"
-name: "Model: KNN (Precomputed Distance)"
-description: "K-Nearest Neighbors utilisant une matrice de distance pré-calculée. Spécialement adapté pour Oxford 102 Flowers."
-category: "Custom"
-tags: ["model", "classification", "knn", "precomputed", "custom"]
-applies_to: ["Tabulaire", "Images"]
-when_to_use: "Quand vous disposez déjà des distances entre vos échantillons d'entraînement et de test."
+id: model_knn_precomputed
+name: 'Model: KNN (Precomputed Distance)'
+description: K-Nearest Neighbors utilisant une matrice de distance pré-calculée. Spécialement
+  adapté pour Oxford 102 Flowers.
+category: Custom
+tags:
+- model
+- classification
+- knn
+- precomputed
+- custom
+applies_to:
+- Tabulaire
+- Images
+when_to_use: Quand vous disposez déjà des distances entre vos échantillons d'entraînement
+  et de test.
 pros:
-  - "Évite de recalculer des distances coûteuses."
+- Évite de recalculer des distances coûteuses.
 cons:
-  - "Nécessite la matrice NxN complète en mémoire."
+- Nécessite la matrice NxN complète en mémoire.
 hyperparameters:
-  n_neighbors: "Nombre de voisins (K)."
-  distance_key: "Clé de la matrice de distance (ex: D_hsv, D_hog)."
-code_template: |
-  import pandas as pd
-  import numpy as np
-  from sklearn.neighbors import KNeighborsClassifier
-
-  # [PARAM: N_NEIGHBORS | number]
-  N_NEIGHBORS = 5
-  # [/PARAM]
-
-  # [PARAM: DISTANCE_KEY | string]
-  DISTANCE_KEY = "D_hsv"
-  # [/PARAM]
-
-  print(f"[MODEL] Entraînement KNN (K={N_NEIGHBORS}, Matrice={DISTANCE_KEY})...")
-  
-  if 'X_train' in locals() and 'X_test' in locals() and 'y_train' in locals():
-      # Vérification de la disponibilité des distances
-      if 'OXFORD_DISTANCES' not in globals():
-          print("[ERREUR] OXFORD_DISTANCES introuvable. Exécutez le bloc Load 102Flowers d'abord.")
-      else:
-          keys = [k.strip() for k in DISTANCE_KEY.split(',')]
-          missing = [k for k in keys if k not in globals()['OXFORD_DISTANCES']]
-          if missing:
-              print(f"[ERREUR] Matrices {missing} non trouvées dans OXFORD_DISTANCES.")
-          else:
-              mats = [globals()['OXFORD_DISTANCES'][k] for k in keys]
-              full_dist_mat = np.mean(mats, axis=0)
-              print(f"[MODEL] Matrices fusionnées (moyenne) : {keys}")
-          
-              # Les index de X_train et X_test correspondent aux index d'origine de la base de données 102flowers
-              # Pour le KNN precomputed de Scikit-Learn:
-              # X_train doit être la matrice des distances entre les échantillons de train: shape (N_train, N_train)
-              # X_test doit être la matrice des distances entre test et train: shape (N_test, N_train)
-              
-              train_idx = X_train.index.to_numpy()
-              test_idx = X_test.index.to_numpy()
-              
-              # On extrait les sous-matrices
-              # Lignes : train, Colonnes : train
-              X_train_precomputed = full_dist_mat[train_idx][:, train_idx]
-              
-              # Lignes : test, Colonnes : train
-              X_test_precomputed = full_dist_mat[test_idx][:, train_idx]
-          
-          model = KNeighborsClassifier(n_neighbors=int(N_NEIGHBORS), metric='precomputed')
-          
-          # Entraînement
-          model.fit(X_train_precomputed, y_train)
-          
-          # Prédiction
-          y_pred = model.predict(X_test_precomputed)
-          try:
-              y_proba = model.predict_proba(X_test_precomputed)
-          except Exception:
-              y_proba = None
-              
-          feature_importances = None
-          full_pipeline = model
-          
-          training_history = {"status": "success", "metric": "precomputed"}
-          task_type = "classification"
-          print("[MODEL] KNN pré-calculé entraîné et évalué avec succès.")
-  else:
-      print("[ERREUR] Données d'entraînement introuvables. Avez-vous oublié le train_test_split ?")
-
+  n_neighbors: Nombre de voisins (K).
+  distance_key: 'Clé de la matrice de distance (ex: D_hsv, D_hog).'
+code_template: "import pandas as pd\nimport numpy as np\nfrom sklearn.neighbors import\
+  \ KNeighborsClassifier\n\n# [PARAM: N_NEIGHBORS | number]\nN_NEIGHBORS = 5\n# [/PARAM]\n\
+  \n# [PARAM: DISTANCE_KEY | expr]\nDISTANCE_KEY = ['Dsiftint', 'Dhsv', 'Dsiftbdy', 'Dhog']\n\
+  # [/PARAM]\n\nprint(f\"[MODEL] Entraînement KNN (K={N_NEIGHBORS}, Matrice={DISTANCE_KEY})...\")\n\
+  \nif 'X_train' in locals() and 'X_test' in locals() and 'y_train' in locals():\n\
+  \    # Vérification de la disponibilité des distances\n    if 'OXFORD_DISTANCES' not in globals():\n        print(\"[ERREUR] OXFORD_DISTANCES introuvable. Exécutez le bloc Load 102Flowers d'abord.\")\n    else:\n        keys = [k.strip() for k in DISTANCE_KEY]\n        missing = [k for k in keys if k not in globals()['OXFORD_DISTANCES']]\n        if missing:\n            print(f\"[ERREUR] Matrices {missing} non trouvées dans OXFORD_DISTANCES.\")\n        else:\n            mats = [globals()['OXFORD_DISTANCES'][k] for k in keys]\n            full_dist_mat = np.mean(mats, axis=0)\n            print(f\"[MODEL] Matrices fusionnées (moyenne) : {keys}\")\n        \n            # Les index de X_train et X_test correspondent aux index d'origine de la\
+  \ base de données 102flowers\n            # Pour le KNN precomputed de Scikit-Learn:\n\
+  \            # X_train doit être la matrice des distances entre les échantillons\
+  \ de train: shape (N_train, N_train)\n            # X_test doit être la matrice\
+  \ des distances entre test et train: shape (N_test, N_train)\n            \n   \
+  \         train_idx = X_train.index.to_numpy()\n            test_idx = X_test.index.to_numpy()\n\
+  \            \n            # On extrait les sous-matrices\n            # Lignes\
+  \ : train, Colonnes : train\n            X_train_precomputed = full_dist_mat[train_idx][:,\
+  \ train_idx]\n            \n            # Lignes : test, Colonnes : train\n    \
+  \        X_test_precomputed = full_dist_mat[test_idx][:, train_idx]\n        \n\
+  \        model = KNeighborsClassifier(n_neighbors=int(N_NEIGHBORS), metric='precomputed')\n\
+  \        \n        # Entraînement\n        model.fit(X_train_precomputed, y_train)\n\
+  \        \n        # Prédiction\n        y_pred = model.predict(X_test_precomputed)\n\
+  \        try:\n            y_proba = model.predict_proba(X_test_precomputed)\n \
+  \       except Exception:\n            y_proba = None\n            \n        feature_importances\
+  \ = None\n        full_pipeline = model\n        \n        training_history = {\"\
+  status\": \"success\", \"metric\": \"precomputed\"}\n        task_type = \"classification\"\
+  \n        print(\"[MODEL] KNN pré-calculé entraîné et évalué avec succès.\")\nelse:\n\
+  \    print(\"[ERREUR] Données d'entraînement introuvables. Avez-vous oublié le train_test_split\
+  \ ?\")\n"
+illustration_svg: <svg viewBox="0 0 400 200" xmlns="http://www.w3.org/2000/svg"><rect
+  width="400" height="200" fill="#0f172a"/><circle cx="150" cy="100" r="8" fill="#ef4444"/><circle
+  cx="130" cy="120" r="8" fill="#ef4444"/><circle cx="170" cy="110" r="8" fill="#ef4444"/><circle
+  cx="250" cy="80" r="8" fill="#3b82f6"/><circle cx="270" cy="100" r="8" fill="#3b82f6"/><circle
+  cx="200" cy="95" r="12" fill="#10b981"/><circle cx="200" cy="95" r="50" fill="none"
+  stroke="#10b981" stroke-width="2" stroke-dasharray="5,5"/></svg>
 _metadata:
   bloc: -1
-  section: "0_custom_project"
+  section: 0_custom_project
