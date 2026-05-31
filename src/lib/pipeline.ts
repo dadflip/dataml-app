@@ -690,6 +690,39 @@ export async function loadAllPipelines(): Promise<PipelineTemplate[]> {
 }
 
 export function buildPipelineYaml(
+  cells: NotebookCell[],
+  pipelineName = "Recette Custom",
+  pipelineDesc = "Généré depuis l'interface graphique."
+): string {
+  const nodes: PipelineNode[] = cells.map((c, i) => {
+    const node_id = `${c.blockId}_${i}`;
+    const depends_on = i > 0 ? [`${cells[i - 1].blockId}_${i - 1}`] : undefined;
+    
+    const node: any = {
+      node_id,
+      block_id: c.blockId,
+    };
+    if (depends_on) {
+      node.depends_on = depends_on;
+    }
+    if (c.overrides && Object.keys(c.overrides).length > 0) {
+      // Ensure values that look like numbers are kept as numbers if needed,
+      // but yaml.dump usually handles basic JS objects well.
+      node.params = { ...c.overrides };
+    }
+    return node as PipelineNode;
+  });
+
+  const pipeline = {
+    id: "pipeline_custom_" + Math.random().toString(36).slice(2, 8),
+    name: pipelineName,
+    description: pipelineDesc,
+    category: "Custom",
+    nodes
+  };
+
+  return yaml.dump(pipeline, { indent: 2 });
+}
 function escapeHtml(unsafe: string) {
   if (!unsafe) return '';
   return unsafe

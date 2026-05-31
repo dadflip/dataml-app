@@ -685,6 +685,14 @@ function SortableCell({
       {isOpen && (
         <div className="space-y-4 border-t border-border px-4 py-4">
 
+          {/* SVG Illustration Banner */}
+          {blockMeta?.illustration_svg && (
+            <div 
+              className="w-full flex justify-center mb-4 transition-opacity hover:opacity-100"
+              dangerouslySetInnerHTML={{ __html: blockMeta.illustration_svg }}
+            />
+          )}
+
           {/* Block info (description, use cases, hyperparams, …) */}
           {blockMeta && <BlockInfo block={blockMeta} />}
 
