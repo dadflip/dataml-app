@@ -106,6 +106,9 @@ export function NotebookBuilder({ cells, setCells, catalogs }: Props) {
   const [outputs, setOutputs] = useState<Record<string, ExecResult>>({});
   const [running, setRunning] = useState<string | null>(null);
 
+  const cancelRef = useRef<(() => void) | null>(null);
+  const isRunAllAborted = useRef(false);
+
   // ── Restore cells from localStorage on first mount ──
   useEffect(() => {
     if (cells.length === 0) {
@@ -196,33 +199,49 @@ export function NotebookBuilder({ cells, setCells, catalogs }: Props) {
       [cell.uid]: { status: "running", stdout: "", stderr: "", displays: [] },
     }));
     const code = applyParamOverrides(cell.code, cell.overrides);
+    let finalResult: ExecResult | undefined;
     try {
-      const { promise } = executeCode(kernelCfg, kernelId, code, (r) =>
+      const { promise, cancel } = executeCode(kernelCfg, kernelId, code, (r) =>
         setOutputs((o) => ({ ...o, [cell.uid]: r })),
       );
+      cancelRef.current = cancel;
       const final = await promise;
+      finalResult = final;
       setOutputs((o) => ({ ...o, [cell.uid]: final }));
     } catch (e) {
+      finalResult = {
+        status: "error",
+        stdout: "",
+        stderr: (e as Error).message,
+        displays: [],
+      };
       setOutputs((o) => ({
         ...o,
-        [cell.uid]: {
-          status: "error",
-          stdout: "",
-          stderr: (e as Error).message,
-          displays: [],
-        },
+        [cell.uid]: finalResult,
       }));
     } finally {
       setRunning(null);
+      cancelRef.current = null;
     }
+    return finalResult;
   };
 
   const runAll = async () => {
     if (!kernelId) return;
+    isRunAllAborted.current = false;
     for (const cell of cells) {
-      await runCell(cell);
-      const last = outputs[cell.uid];
-      if (last?.status === "error") break;
+      if (isRunAllAborted.current) break;
+      const result = await runCell(cell);
+      if (result?.status === "error" || result?.status === "aborted") {
+        break;
+      }
+    }
+  };
+
+  const stopRun = () => {
+    isRunAllAborted.current = true;
+    if (cancelRef.current) {
+      cancelRef.current();
     }
   };
 
@@ -287,16 +306,28 @@ export function NotebookBuilder({ cells, setCells, catalogs }: Props) {
                 </Button>
               </div>
             )}
-            <Button
-              variant="outline"
-              size="sm"
-              disabled={!cells.length || !kernelId || running !== null}
-              onClick={runAll}
-              title="Run all"
-            >
-              <PlayCircle className="h-3.5 w-3.5" />
-              <span className="hidden sm:inline">Run all</span>
-            </Button>
+            {running !== null ? (
+              <Button
+                variant="destructive"
+                size="sm"
+                onClick={stopRun}
+                title="Arrêter l'exécution"
+              >
+                <Square className="h-3.5 w-3.5" />
+                <span className="hidden sm:inline">Arrêter</span>
+              </Button>
+            ) : (
+              <Button
+                variant="outline"
+                size="sm"
+                disabled={!cells.length || !kernelId}
+                onClick={runAll}
+                title="Run all"
+              >
+                <PlayCircle className="h-3.5 w-3.5" />
+                <span className="hidden sm:inline">Run all</span>
+              </Button>
+            )}
             <Button
               variant="outline"
               size="sm"
@@ -410,6 +441,7 @@ export function NotebookBuilder({ cells, setCells, catalogs }: Props) {
                       isRunning={running === cell.uid}
                       output={outputs[cell.uid]}
                       onRun={() => runCell(cell)}
+                      onStop={() => stopRun()}
                     />
                   ))}
                 </ol>
@@ -507,6 +539,7 @@ function SortableCell({
   isRunning: boolean;
   output?: ExecResult;
   onRun: () => void;
+  onStop: () => void;
 }) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
     id: cell.uid,
@@ -604,11 +637,11 @@ function SortableCell({
         )}
 
         <button
-          onClick={onRun}
-          disabled={!canRun || isRunning || cell.type === "markdown"}
+          onClick={isRunning ? onStop : onRun}
+          disabled={!canRun || cell.type === "markdown"}
           className="rounded-md p-1 text-muted-foreground enabled:hover:bg-[color:var(--color-success)]/15 enabled:hover:text-[color:var(--color-success)] disabled:opacity-30"
-          aria-label="Exécuter"
-          title={cell.type === "markdown" ? "Cellule markdown" : canRun ? "Exécuter cette cellule" : "Connectez un kernel"}
+          aria-label={isRunning ? "Arrêter" : "Exécuter"}
+          title={cell.type === "markdown" ? "Cellule markdown" : isRunning ? "Arrêter l'exécution" : canRun ? "Exécuter cette cellule" : "Connectez un kernel"}
         >
           {isRunning ? (
             <Square className="h-3.5 w-3.5" />

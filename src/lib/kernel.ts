@@ -328,7 +328,7 @@ export function executeCode(
 
         reject(new Error("WebSocket connection timeout"));
       }
-    }, 5000);
+    }, 60000);
 
     try {
       ws = new WebSocket(
