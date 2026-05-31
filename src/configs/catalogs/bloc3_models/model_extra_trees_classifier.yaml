@@ -22,6 +22,16 @@ code_template: |
   # [/PARAM]
 
   print(f"[MODEL] Entraînement Extra Trees (n_estimators={N_ESTIMATORS})...")
+  
+  model = None
+  y_pred = None
+  y_proba = None
+  feature_importances = None
+  training_history = {}
+  task_type = "classification"
+  meta = {"framework": "sklearn", "type": "extra_trees_classifier"}
+  full_pipeline = None
+
   if 'X_train' in locals() and 'y_train' in locals() and 'X_test' in locals():
       model = ExtraTreesClassifier(n_estimators=int(N_ESTIMATORS), n_jobs=-1, random_state=42)
       model.fit(X_train, y_train)
@@ -29,7 +39,6 @@ code_template: |
       y_pred = model.predict(X_test)
       y_proba = model.predict_proba(X_test) if hasattr(model, 'predict_proba') else None
       
-      feature_importances = None
       if 'feature_names_out' in locals() and hasattr(model, 'feature_importances_'):
           if len(model.feature_importances_) == len(feature_names_out):
               feature_importances = pd.Series(model.feature_importances_, index=feature_names_out)
@@ -44,14 +53,23 @@ code_template: |
           full_pipeline = Pipeline(steps=[('model', model)])
           
       training_history = {"status": "success", "fitted_on": len(X_train)}
-      task_type = "classification"
+
 illustration_mermaid: |
-    graph LR
-      Data([Features]) --> Model((Machine Learning))
-      Model --> Pred([Predictions])
-      style Model fill:#8b5cf6,stroke:#7c3aed,stroke-width:2px,color:#fff
-      style Data fill:#f8fafc,stroke:#94a3b8,stroke-width:1px
-      style Pred fill:#f8fafc,stroke:#94a3b8,stroke-width:1px
+  graph TD
+    subgraph Extra Trees Classifier
+      In([Input Features]) --> T1[Random Tree 1]
+      In --> T2[Random Tree 2]
+      In --> TN[Random Tree N]
+      T1 --> V[Majority Vote]
+      T2 --> V
+      TN --> V
+      V --> Out([Class Prediction])
+    end
+    style In fill:#f8fafc,stroke:#94a3b8,stroke-width:1px
+    style Out fill:#10b981,stroke:#059669,stroke-width:2px,color:#fff
+    style T1 fill:#8b5cf6,stroke:#7c3aed,stroke-width:2px,color:#fff
+    style T2 fill:#8b5cf6,stroke:#7c3aed,stroke-width:2px,color:#fff
+    style TN fill:#8b5cf6,stroke:#7c3aed,stroke-width:2px,color:#fff
 
 _metadata:
   bloc: 3

@@ -23,11 +23,61 @@ code_template: |
 
   # [PARAM: TEXT_COL | string]
   TEXT_COL = "text"
+  # [/PARAM]
+
+  # [PARAM: CANDIDATE_LABELS | string]
+  CANDIDATE_LABELS = "sport, cuisine, politique"
+  # [/PARAM]
+
+  print(f"[MODEL] HuggingFace Zero-Shot Classifier...")
+  if 'X_test' in locals() and pipeline is not None:
+      texts = []
+      if isinstance(X_test, pd.DataFrame) and TEXT_COL in X_test.columns:
+          texts = X_test[TEXT_COL].astype(str).tolist()
+      elif isinstance(X_test, (pd.Series, np.ndarray, list)):
+          texts = [str(x) for x in X_test]
+          
+      if texts:
+          labels = [l.strip() for l in CANDIDATE_LABELS.split(",") if l.strip()]
+          print("Chargement du modèle zero-shot (facebook/bart-large-mnli)...")
+          classifier = pipeline("zero-shot-classification", model="facebook/bart-large-mnli")
+          
+          print("Classification en cours (peut être très long sur CPU)...")
+          results = classifier(texts, candidate_labels=labels)
+          
+          y_pred = np.array([res['labels'][0] for res in results])
+          y_proba = np.array([res['scores'][0] for res in results])
+          feature_importances = None
+          model = classifier
+          
+          if 'preprocessor' in locals() and preprocessor is not None:
+              try: from imblearn.pipeline import Pipeline
+              except: from sklearn.pipeline import Pipeline
+              full_pipeline = Pipeline(steps=preprocessor.steps + [('model', model)])
+          else:
+              full_pipeline = model
+              
+          training_history = {"status": "success", "type": "zero_shot_classification"}
+          task_type = "classification"
+          meta = {"classes": labels}
 illustration_mermaid: |
-    graph LR
-      In([Raw Data]) -->|Process| Out([Clean Data])
-      style In fill:#eff6ff,stroke:#94a3b8,stroke-width:2px,stroke-dasharray: 5 5
-      style Out fill:#10b981,stroke:#059669,stroke-width:2px,color:#fff
+  graph TD
+    subgraph Input
+      Text[Input Text]
+      Labels[Candidate Labels: sport, cuisine...]
+    end
+    subgraph Zero-Shot Inference NLI
+      Model[BART-Large-MNLI]
+      Text -->|Premise| Model
+      Labels -->|Hypothesis formulation| Model
+      Model --> NLI[Entailment vs Contradiction]
+    end
+    subgraph Output
+      NLI --> Scores[Scores / Probabilities]
+      Scores --> Pred[Predicted Label]
+    end
+    style Model fill:#8b5cf6,stroke:#7c3aed,stroke-width:2px,color:#fff
+    style NLI fill:#10b981,stroke:#059669,stroke-width:2px,color:#fff
 
 _metadata:
   bloc: 3

@@ -15,6 +15,8 @@ hyperparameters:
 code_template: |
   import pandas as pd
   import numpy as np
+  import os
+
   try:
       from autogluon.tabular import TabularDataset, TabularPredictor
   except ImportError:
@@ -26,32 +28,84 @@ code_template: |
   # [/PARAM]
 
   print(f"[MODEL] AutoGluon Classifier (time_limit={TIME_LIMIT}s)...")
+  
+  # Default fallback
+  model = None
+  full_pipeline = None
+  y_pred = None
+  y_proba = None
+  feature_importances = None
+  training_history = {}
+  task_type = "classification"
+  meta = {"model_name": "AutoGluon Classifier"}
+
   if 'X_train' in locals() and 'y_train' in locals() and 'X_test' in locals() and TabularPredictor is not None:
       # AutoGluon s'attend à un dataframe complet
       train_df = pd.DataFrame(X_train) if not isinstance(X_train, pd.DataFrame) else X_train.copy()
-      train_df['target'] = y_train
+      train_df['target'] = np.array(y_train)
+      
       test_df = pd.DataFrame(X_test) if not isinstance(X_test, pd.DataFrame) else X_test.copy()
       
       train_data = TabularDataset(train_df)
       test_data = TabularDataset(test_df)
       
-      print(f"Entraînement AutoGluon pour max {TIME_LIMIT}s...")
-      predictor = TabularPredictor(label='target').fit(train_data, time_limit=int(TIME_LIMIT))
+      print(f"[MODEL] Entraînement AutoGluon pour max {TIME_LIMIT}s...")
+      save_path = "agModels-predictClass"
+      model = TabularPredictor(label='target', path=save_path).fit(train_data, time_limit=int(TIME_LIMIT))
       
-      y_pred = predictor.predict(test_data).values
-      y_proba = predictor.predict_proba(test_data).values
-      feature_importances = None
+      y_pred = model.predict(test_data).values
+      
+      # Try to get probabilities
+      try:
+          y_proba = model.predict_proba(test_data).values
+      except Exception:
+          y_proba = None
+          
+      # Try to get feature importance
+      try:
+          # This can be slow, but it's part of the contract if possible
+          fi_df = model.feature_importance(test_data)
+          feature_importances = fi_df['importance']
+      except Exception:
+          feature_importances = None
       
       # AutoGluon ne s'exporte pas nativement dans Sklearn Pipeline, on renvoie l'objet predictor
-      full_pipeline = predictor
+      full_pipeline = model
           
-      training_history = {"status": "success", "leaderboard": predictor.leaderboard(silent=True).to_dict()}
-      task_type = "classification"
+      training_history = {
+          "status": "success", 
+          "best_model": model.get_model_best(),
+          "fitted_models": model.get_model_names()
+      }
+
 illustration_mermaid: |
-    graph LR
-      Data([Features]) --> Model((Machine Learning))
-      Model --> Pred([Predictions])
-      style Model fill:#8b5cf6,stroke:#7c3aed,stroke-width:2px,color:#fff
+    graph TD
+      subgraph AutoGluon Automagic
+        Data([X_train + y_train]) --> AG[TabularPredictor]
+        AG --> CV[Cross Validation]
+        CV --> M1[LightGBM]
+        CV --> M2[CatBoost]
+        CV --> M3[XGBoost]
+        CV --> M4[RandomForest]
+        CV --> M5[NeuralNet]
+      end
+      
+      subgraph Stacking
+        M1 --> Stack[Weighted Ensemble L2]
+        M2 --> Stack
+        M3 --> Stack
+        M4 --> Stack
+        M5 --> Stack
+      end
+      
+      subgraph Best Model Selection
+        Stack --> Best[Best Model\nSelected]
+        Best --> Pred([Predictions])
+      end
+      
+      style AG fill:#8b5cf6,stroke:#7c3aed,stroke-width:2px,color:#fff
+      style Stack fill:#c4b5fd,stroke:#8b5cf6,stroke-width:1px,color:#000
+      style Best fill:#a78bfa,stroke:#7c3aed,stroke-width:1px,color:#fff
       style Data fill:#f8fafc,stroke:#94a3b8,stroke-width:1px
       style Pred fill:#f8fafc,stroke:#94a3b8,stroke-width:1px
 

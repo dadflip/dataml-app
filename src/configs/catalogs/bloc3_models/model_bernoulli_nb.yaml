@@ -21,32 +21,83 @@ code_template: |
   # [/PARAM]
 
   print(f"[MODEL] Entraînement Bernoulli Naive Bayes (alpha={ALPHA})...")
+  
+  # Default fallback
+  model = None
+  full_pipeline = None
+  y_pred = None
+  y_proba = None
+  feature_importances = None
+  training_history = {}
+  task_type = "classification"
+  meta = {"model_name": "Bernoulli Naive Bayes"}
+
   if 'X_train' in locals() and 'y_train' in locals() and 'X_test' in locals():
       model = BernoulliNB(alpha=float(ALPHA))
-      model.fit(X_train, y_train)
       
-      y_pred = model.predict(X_test)
-      y_proba = model.predict_proba(X_test) if hasattr(model, 'predict_proba') else None
+      has_preprocessor = 'preprocessor' in locals() and preprocessor is not None
       
-      feature_importances = None
-              
-      if 'preprocessor' in locals() and preprocessor is not None:
-          try: from imblearn.pipeline import Pipeline
-          except: from sklearn.pipeline import Pipeline
-          full_pipeline = Pipeline(steps=preprocessor.steps + [('model', model)])
+      if has_preprocessor:
+          try:
+              from imblearn.pipeline import Pipeline
+          except ImportError:
+              from sklearn.pipeline import Pipeline
+          
+          steps = list(preprocessor.steps) if hasattr(preprocessor, 'steps') else [('preprocessor', preprocessor)]
+          steps.append(('model', model))
+          full_pipeline = Pipeline(steps=steps)
       else:
-          try: from imblearn.pipeline import Pipeline
-          except: from sklearn.pipeline import Pipeline
+          try:
+              from imblearn.pipeline import Pipeline
+          except ImportError:
+              from sklearn.pipeline import Pipeline
           full_pipeline = Pipeline(steps=[('model', model)])
           
+      full_pipeline.fit(X_train, y_train)
+      model = full_pipeline.named_steps['model']
+      
+      y_pred = full_pipeline.predict(X_test)
+      if hasattr(full_pipeline, 'predict_proba'):
+          y_proba = full_pipeline.predict_proba(X_test)
+      
+      # For Naive Bayes, feature_log_prob_ can serve as pseudo-importances for positive class
+      if hasattr(model, 'feature_log_prob_'):
+          # Typically feature_log_prob_ has shape (n_classes, n_features)
+          # We can use the exponentiated difference between the classes (if binary) or just the variance
+          probs = np.exp(model.feature_log_prob_)
+          diff = np.var(probs, axis=0) # Measure how much the feature helps distinguish classes
+          if 'feature_names_out' in locals() and feature_names_out is not None:
+              if len(diff) == len(feature_names_out):
+                  feature_importances = pd.Series(diff, index=feature_names_out).sort_values(ascending=False)
+              else:
+                  feature_importances = pd.Series(diff).sort_values(ascending=False)
+          else:
+              feature_importances = pd.Series(diff).sort_values(ascending=False)
+              
       training_history = {"status": "success", "fitted_on": len(X_train)}
-      task_type = "classification"
+
 illustration_mermaid: |
-    graph LR
-      Data([Features]) --> Model((Machine Learning))
-      Model --> Pred([Predictions])
-      style Model fill:#8b5cf6,stroke:#7c3aed,stroke-width:2px,color:#fff
-      style Data fill:#f8fafc,stroke:#94a3b8,stroke-width:1px
+    graph TD
+      subgraph Bayes Theorem
+        P_Y[P(Class)] --> Post[P(Class | X)]
+        P_X[P(Features | Class)] --> Post
+        P_E[P(Features)] -.-> Post
+      end
+      
+      subgraph Bernoulli Probabilities
+        Bin([Binary Features]) --> Likelihood[Bernoulli Likelihood]
+        Likelihood --> P_X
+      end
+      
+      subgraph Inference
+        Post --> ArgMax[ArgMax Class]
+        ArgMax --> Pred([Predictions])
+      end
+      
+      style Post fill:#8b5cf6,stroke:#7c3aed,stroke-width:2px,color:#fff
+      style Likelihood fill:#c4b5fd,stroke:#8b5cf6,stroke-width:1px,color:#000
+      style ArgMax fill:#a78bfa,stroke:#7c3aed,stroke-width:1px,color:#fff
+      style Bin fill:#f8fafc,stroke:#94a3b8,stroke-width:1px
       style Pred fill:#f8fafc,stroke:#94a3b8,stroke-width:1px
 
 _metadata:

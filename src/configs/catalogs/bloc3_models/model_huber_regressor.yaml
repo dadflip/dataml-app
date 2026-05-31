@@ -44,13 +44,30 @@ code_template: |
           
       training_history = {"status": "success", "fitted_on": len(X_train), "outliers_detected": int(np.sum(model.outliers_))}
       task_type = "regression"
+      meta = {}
 illustration_mermaid: |
-    graph LR
-      Data([Features]) --> Model((Machine Learning))
-      Model --> Pred([Predictions])
-      style Model fill:#8b5cf6,stroke:#7c3aed,stroke-width:2px,color:#fff
-      style Data fill:#f8fafc,stroke:#94a3b8,stroke-width:1px
-      style Pred fill:#f8fafc,stroke:#94a3b8,stroke-width:1px
+  graph TD
+    subgraph Data
+      X[Features X]
+      Y[Target Y with Outliers]
+    end
+    subgraph Robust Loss Optimization
+      Loss[Compute Huber Loss]
+      Cond{Error > Epsilon?}
+      Cond -->|Yes| L1[L1 Loss / Absolute Error]
+      Cond -->|No| L2[L2 Loss / Squared Error]
+      L1 --> Opt[Update Weights Robustly]
+      L2 --> Opt
+    end
+    subgraph Output
+      Opt --> Weights[Fitted Coefficients]
+      Weights --> Pred[Predictions]
+    end
+    X --> Loss
+    Y --> Loss
+    style L1 fill:#f59e0b,stroke:#d97706,stroke-width:2px,color:#fff
+    style L2 fill:#10b981,stroke:#059669,stroke-width:2px,color:#fff
+    style Opt fill:#3b82f6,stroke:#2563eb,stroke-width:2px,color:#fff
 
 _metadata:
   bloc: 3

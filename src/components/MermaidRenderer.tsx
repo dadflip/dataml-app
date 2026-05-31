@@ -6,12 +6,12 @@ mermaid.initialize({
   theme: 'base',
   themeVariables: {
     fontFamily: 'Inter, sans-serif',
-    primaryColor: '#0f172a',
-    primaryTextColor: '#fff',
+    primaryColor: '#e2e8f0',     // lighter base for nodes without explicit styles
+    primaryTextColor: '#0f172a', // dark text by default (so it contrasts on white/light backgrounds)
     primaryBorderColor: '#cbd5e1',
     lineColor: '#64748b',
-    secondaryColor: '#f1f5f9',
-    tertiaryColor: '#e2e8f0'
+    secondaryColor: '#f8fafc',
+    tertiaryColor: '#f1f5f9'
   }
 });
 

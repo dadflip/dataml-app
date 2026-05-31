@@ -12,25 +12,198 @@ cons:
 hyperparameters:
   epochs: "Nombre d'époques d'entraînement (ex: 5)."
 code_template: |
-  import pandas as pd
   import numpy as np
-  print("[MODEL] Dummy export pour Audio Spectrogram CNN.")
-  # Modèle complexe nécessitant Librosa pour la conversion Mel-Spectrogram + PyTorch CNN 2D.
-  # Placeholder structurel fourni pour intégration future.
+  import pandas as pd
+  import sys
   
-  if 'X_test' in locals():
-      y_pred = np.zeros(len(X_test)) 
-      y_proba = None
-      feature_importances = None
+  # [PARAM: EPOCHS | number]
+  EPOCHS = 5
+  # [/PARAM]
+  
+  print(f"[MODEL] Entraînement Audio Spectrogram CNN (epochs={EPOCHS})...")
+  
+  # Default fallback
+  model = None
+  full_pipeline = None
+  y_pred = None
+  y_proba = None
+  feature_importances = None
+  training_history = {}
+  task_type = "classification"
+  meta = {"model_name": "Audio Spectrogram CNN"}
+
+  try:
+      import torch
+      import torch.nn as nn
+      import torch.optim as optim
+      from torch.utils.data import TensorDataset, DataLoader
+      import librosa
+  except ImportError as e:
+      print(f"[ERREUR] Packages manquants pour Audio CNN: {e}. Installez torch, torchvision, librosa.")
+      torch = None
+
+  if 'X_train' in locals() and 'y_train' in locals() and 'X_test' in locals() and torch is not None:
+      # Assume X_train is a list of 1D numpy arrays (audio signals) or a 2D numpy array (samples, time)
+      # We convert them to Mel spectrograms
+      def audio_to_mel(audio_data, sr=22050, n_mels=128):
+          mels = []
+          for sig in audio_data:
+              # if sig is already 2D or 3D, we might just reshape
+              if isinstance(sig, np.ndarray) and sig.ndim >= 2:
+                  # Force resize/pad or assume already spectrogram
+                  pass
+              else:
+                  # Convert to mel spectrogram
+                  S = librosa.feature.melspectrogram(y=np.array(sig, dtype=float), sr=sr, n_mels=n_mels)
+                  S_dB = librosa.power_to_db(S, ref=np.max)
+                  mels.append(S_dB)
+          
+          if len(mels) == 0:
+              return np.array([])
+              
+          # Pad or truncate to max length for batching
+          max_len = max(m.shape[1] for m in mels)
+          mels_padded = np.array([np.pad(m, ((0, 0), (0, max_len - m.shape[1]))) for m in mels])
+          # Shape: (batch, n_mels, time) -> add channel dim for CNN -> (batch, 1, n_mels, time)
+          return np.expand_dims(mels_padded, axis=1)
+
+      print("[MODEL] Conversion de l'audio en spectrogrammes Mel...")
+      X_tr_mel = audio_to_mel(X_train)
+      X_te_mel = audio_to_mel(X_test)
       
-      full_pipeline = "Audio CNN Placeholder"
+      # Determine num_classes
+      labels_tr = np.array(y_train)
+      unique_classes = np.unique(labels_tr)
+      num_classes = len(unique_classes)
+      
+      # Map labels to 0..C-1
+      label_map = {lbl: i for i, lbl in enumerate(unique_classes)}
+      y_tr_mapped = np.array([label_map[l] for l in labels_tr])
+      
+      X_tensor = torch.tensor(X_tr_mel, dtype=torch.float32)
+      y_tensor = torch.tensor(y_tr_mapped, dtype=torch.long)
+      
+      dataset = TensorDataset(X_tensor, y_tensor)
+      loader = DataLoader(dataset, batch_size=32, shuffle=True)
+      
+      class AudioCNN(nn.Module):
+          def __init__(self, num_classes):
+              super(AudioCNN, self).__init__()
+              self.conv1 = nn.Conv2d(1, 16, kernel_size=3, padding=1)
+              self.pool = nn.MaxPool2d(2, 2)
+              self.conv2 = nn.Conv2d(16, 32, kernel_size=3, padding=1)
+              self.fc1 = nn.Linear(32 * (X_tr_mel.shape[2] // 4) * (X_tr_mel.shape[3] // 4), 128)
+              self.fc2 = nn.Linear(128, num_classes)
+              self.relu = nn.ReLU()
+              self.dropout = nn.Dropout(0.3)
+              
+          def forward(self, x):
+              x = self.pool(self.relu(self.conv1(x)))
+              x = self.pool(self.relu(self.conv2(x)))
+              x = x.view(x.size(0), -1)
+              x = self.relu(self.fc1(x))
+              x = self.dropout(x)
+              x = self.fc2(x)
+              return x
+
+      device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+      try:
+          model = AudioCNN(num_classes).to(device)
+      except Exception as e:
+          # If dimension calculation fails due to variable length, fallback to adaptive pooling
+          class AdaptiveAudioCNN(nn.Module):
+              def __init__(self, num_classes):
+                  super(AdaptiveAudioCNN, self).__init__()
+                  self.conv1 = nn.Conv2d(1, 16, kernel_size=3, padding=1)
+                  self.pool = nn.MaxPool2d(2, 2)
+                  self.conv2 = nn.Conv2d(16, 32, kernel_size=3, padding=1)
+                  self.adapt_pool = nn.AdaptiveAvgPool2d((4, 4))
+                  self.fc1 = nn.Linear(32 * 4 * 4, 128)
+                  self.fc2 = nn.Linear(128, num_classes)
+                  self.relu = nn.ReLU()
+                  
+              def forward(self, x):
+                  x = self.pool(self.relu(self.conv1(x)))
+                  x = self.pool(self.relu(self.conv2(x)))
+                  x = self.adapt_pool(x)
+                  x = x.view(x.size(0), -1)
+                  x = self.relu(self.fc1(x))
+                  x = self.fc2(x)
+                  return x
+          model = AdaptiveAudioCNN(num_classes).to(device)
+          
+      criterion = nn.CrossEntropyLoss()
+      optimizer = optim.Adam(model.parameters(), lr=0.001)
+      
+      print("[MODEL] Entraînement du modèle PyTorch...")
+      model.train()
+      for epoch in range(int(EPOCHS)):
+          running_loss = 0.0
+          for inputs, labels in loader:
+              inputs, labels = inputs.to(device), labels.to(device)
+              optimizer.zero_grad()
+              outputs = model(inputs)
+              loss = criterion(outputs, labels)
+              loss.backward()
+              optimizer.step()
+              running_loss += loss.item()
+              
+      # Inference
+      model.eval()
+      X_te_tensor = torch.tensor(X_te_mel, dtype=torch.float32)
+      test_dataset = TensorDataset(X_te_tensor)
+      test_loader = DataLoader(test_dataset, batch_size=32, shuffle=False)
+      
+      all_preds = []
+      all_probs = []
+      with torch.no_grad():
+          for (inputs,) in test_loader:
+              inputs = inputs.to(device)
+              outputs = model(inputs)
+              probs = torch.softmax(outputs, dim=1)
+              _, preds = torch.max(outputs, 1)
+              all_preds.extend(preds.cpu().numpy())
+              all_probs.extend(probs.cpu().numpy())
+              
+      # Reverse mapping
+      inv_label_map = {v: k for k, v in label_map.items()}
+      y_pred = np.array([inv_label_map[p] for p in all_preds])
+      y_proba = np.array(all_probs)
+      
+      full_pipeline = model
+      training_history = {"status": "success", "epochs_trained": int(EPOCHS)}
+
 illustration_mermaid: |
-    graph LR
-      Data([Features]) --> Model((Machine Learning))
-      Model --> Pred([Predictions])
-      style Model fill:#8b5cf6,stroke:#7c3aed,stroke-width:2px,color:#fff
-      style Data fill:#f8fafc,stroke:#94a3b8,stroke-width:1px
-      style Pred fill:#f8fafc,stroke:#94a3b8,stroke-width:1px
+    graph TD
+      subgraph Data Prep
+        Raw([Raw Audio Waveform]) --> Preproc[librosa\nMel-Spectrogram]
+        Preproc --> Spec([2D Image Tensor])
+      end
+      
+      subgraph CNN Architecture
+        Spec --> C1[Conv2d\n1->16 channels]
+        C1 --> R1[ReLU + MaxPool2d]
+        R1 --> C2[Conv2d\n16->32 channels]
+        C2 --> R2[ReLU + MaxPool2d]
+      end
+      
+      subgraph Classification Head
+        R2 --> Flat[Flatten]
+        Flat --> FC1[Linear\n128 units]
+        FC1 --> R3[ReLU + Dropout]
+        R3 --> FC2[Linear\nNum Classes]
+        FC2 --> SM[Softmax]
+      end
+      
+      SM --> Out([Predicted Class])
+      
+      style Raw fill:#f8fafc,stroke:#94a3b8,stroke-width:1px
+      style Spec fill:#f8fafc,stroke:#94a3b8,stroke-width:1px
+      style Out fill:#f8fafc,stroke:#94a3b8,stroke-width:1px
+      style C1 fill:#8b5cf6,stroke:#7c3aed,stroke-width:2px,color:#fff
+      style C2 fill:#8b5cf6,stroke:#7c3aed,stroke-width:2px,color:#fff
+      style FC1 fill:#a78bfa,stroke:#7c3aed,stroke-width:1px,color:#fff
+      style FC2 fill:#a78bfa,stroke:#7c3aed,stroke-width:1px,color:#fff
 
 _metadata:
   bloc: 3

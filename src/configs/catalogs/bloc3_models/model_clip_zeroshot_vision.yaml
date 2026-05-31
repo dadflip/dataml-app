@@ -14,20 +14,115 @@ hyperparameters:
 code_template: |
   import pandas as pd
   import numpy as np
+
+  # Default fallback
+  model = None
+  full_pipeline = None
+  y_pred = None
+  y_proba = None
+  feature_importances = None
+  training_history = {}
+  task_type = "classification"
+  meta = {"model_name": "CLIP Zero-Shot Vision"}
+
   try:
+      import torch
       from transformers import pipeline
       from PIL import Image
+      import io
   except ImportError:
       pipeline = None
-      print("[ERREUR] transformers ou pillow n'est pas installé.")
+      print("[ERREUR] transformers, torch ou pillow n'est pas installé.")
 
   # [PARAM: CANDIDATE_LABELS | string]
   CANDIDATE_LABELS = "a photo of a cat, a photo of a dog"
+  # [/PARAM]
+
+  print(f"[MODEL] Initialisation CLIP Zero-Shot (labels={CANDIDATE_LABELS})...")
+
+  if 'X_test' in locals() and pipeline is not None:
+      # Zero-shot model doesn't need X_train/y_train
+      
+      print("Chargement de openai/clip-vit-base-patch32...")
+      device = 0 if torch.cuda.is_available() else -1
+      classifier = pipeline("zero-shot-image-classification", model="openai/clip-vit-base-patch32", device=device)
+      
+      labels_list = [lbl.strip() for lbl in CANDIDATE_LABELS.split(",") if lbl.strip() != ""]
+      
+      # Process images in X_test
+      # We assume X_test contains file paths, URLs, or PIL Images or raw bytes
+      preds = []
+      probs_list = []
+      
+      print("Inférence sur le set de test...")
+      for item in X_test:
+          try:
+              # Conversion to PIL Image if necessary
+              if isinstance(item, str):
+                  img = Image.open(item)
+              elif isinstance(item, bytes):
+                  img = Image.open(io.BytesIO(item))
+              elif isinstance(item, np.ndarray):
+                  img = Image.fromarray(item.astype('uint8'), 'RGB')
+              else:
+                  img = item # Assume it's already a PIL Image
+                  
+              res = classifier(img, candidate_labels=labels_list)
+              # res is a list of dicts: [{'score': 0.9, 'label': 'cat'}, ...]
+              best_label = res[0]['label']
+              preds.append(best_label)
+              
+              # Extract all probs ordered by labels_list (optional but good for y_proba)
+              label_to_score = {r['label']: r['score'] for r in res}
+              probs = [label_to_score.get(l, 0.0) for l in labels_list]
+              probs_list.append(probs)
+              
+          except Exception as e:
+              print(f"[WARNING] Erreur sur une image: {e}")
+              preds.append("ERROR")
+              probs_list.append([0.0]*len(labels_list))
+              
+      y_pred = np.array(preds)
+      y_proba = np.array(probs_list)
+      
+      full_pipeline = classifier
+      model = classifier.model
+      
+      training_history = {"status": "success", "type": "zero_shot_vision"}
+
 illustration_mermaid: |
-    graph LR
-      In([Raw Data]) -->|Process| Out([Clean Data])
-      style In fill:#eff6ff,stroke:#94a3b8,stroke-width:2px,stroke-dasharray: 5 5
-      style Out fill:#10b981,stroke:#059669,stroke-width:2px,color:#fff
+    graph TD
+      subgraph Inputs
+        Img([Image])
+        Txt([Candidate Labels:\n'a dog', 'a cat'])
+      end
+      
+      subgraph CLIP Architecture
+        Img --> VEnc[Vision Encoder\nViT]
+        Txt --> TEnc[Text Encoder\nTransformer]
+        
+        VEnc --> VEmb[Image Embedding Vector]
+        TEnc --> TEmb[Text Embedding Vectors]
+      end
+      
+      subgraph Contrastive Matching
+        VEmb --> Dot[Cosine Similarity / Dot Product]
+        TEmb --> Dot
+        Dot --> SM[Softmax]
+      end
+      
+      subgraph Output
+        SM --> Prob([Probabilities per Label])
+        Prob --> Max[ArgMax]
+        Max --> Pred([Predicted Label])
+      end
+      
+      style VEnc fill:#8b5cf6,stroke:#7c3aed,stroke-width:2px,color:#fff
+      style TEnc fill:#8b5cf6,stroke:#7c3aed,stroke-width:2px,color:#fff
+      style Dot fill:#c4b5fd,stroke:#8b5cf6,stroke-width:1px,color:#000
+      style Img fill:#f8fafc,stroke:#94a3b8,stroke-width:1px
+      style Txt fill:#f8fafc,stroke:#94a3b8,stroke-width:1px
+      style Pred fill:#f8fafc,stroke:#94a3b8,stroke-width:1px
 
 _metadata:
   bloc: 3

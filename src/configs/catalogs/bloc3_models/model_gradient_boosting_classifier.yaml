@@ -27,6 +27,16 @@ code_template: |
   # [/PARAM]
 
   print(f"[MODEL] Entraînement Gradient Boosting (n={N_ESTIMATORS}, lr={LEARNING_RATE})...")
+  
+  model = None
+  y_pred = None
+  y_proba = None
+  feature_importances = None
+  training_history = {}
+  task_type = "classification"
+  meta = {"framework": "sklearn", "type": "gradient_boosting_classifier"}
+  full_pipeline = None
+
   if 'X_train' in locals() and 'y_train' in locals() and 'X_test' in locals():
       model = GradientBoostingClassifier(n_estimators=int(N_ESTIMATORS), learning_rate=float(LEARNING_RATE), random_state=42)
       model.fit(X_train, y_train)
@@ -34,7 +44,6 @@ code_template: |
       y_pred = model.predict(X_test)
       y_proba = model.predict_proba(X_test) if hasattr(model, 'predict_proba') else None
       
-      feature_importances = None
       if 'feature_names_out' in locals() and hasattr(model, 'feature_importances_'):
           if len(model.feature_importances_) == len(feature_names_out):
               feature_importances = pd.Series(model.feature_importances_, index=feature_names_out)
@@ -49,14 +58,24 @@ code_template: |
           full_pipeline = Pipeline(steps=[('model', model)])
           
       training_history = {"status": "success", "fitted_on": len(X_train)}
-      task_type = "classification"
+
 illustration_mermaid: |
-    graph LR
-      Data([Features]) --> Model((Machine Learning))
-      Model --> Pred([Predictions])
-      style Model fill:#8b5cf6,stroke:#7c3aed,stroke-width:2px,color:#fff
-      style Data fill:#f8fafc,stroke:#94a3b8,stroke-width:1px
-      style Pred fill:#f8fafc,stroke:#94a3b8,stroke-width:1px
+  graph TD
+    subgraph Gradient Boosting Classifier
+      In([Input Features]) --> T1[Tree 1: Fit Base Model]
+      T1 --> E1[Compute Residuals]
+      E1 --> T2[Tree 2: Fit on Residuals]
+      T2 --> E2[Compute Residuals]
+      E2 --> TN[Tree N: Fit on Residuals]
+      TN --> Sum[Sum up all trees]
+      Sum --> Sigmoid[Sigmoid / Softmax]
+      Sigmoid --> Out([Class Prediction])
+    end
+    style In fill:#f8fafc,stroke:#94a3b8,stroke-width:1px
+    style Out fill:#10b981,stroke:#059669,stroke-width:2px,color:#fff
+    style T1 fill:#8b5cf6,stroke:#7c3aed,stroke-width:2px,color:#fff
+    style T2 fill:#8b5cf6,stroke:#7c3aed,stroke-width:2px,color:#fff
+    style TN fill:#8b5cf6,stroke:#7c3aed,stroke-width:2px,color:#fff
 
 _metadata:
   bloc: 3

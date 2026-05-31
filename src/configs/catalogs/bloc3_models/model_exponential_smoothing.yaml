@@ -24,13 +24,69 @@ code_template: |
 
   # [PARAM: TREND | string]
   TREND = "add"
+  # [/PARAM]
+
+  # [PARAM: SEASONAL | string]
+  SEASONAL = "add"
+  # [/PARAM]
+
+  # [PARAM: SEASONAL_PERIODS | number]
+  SEASONAL_PERIODS = 12
+  # [/PARAM]
+
+  print(f"[MODEL] Entraînement Exponential Smoothing (trend={TREND}, seasonal={SEASONAL}, periods={SEASONAL_PERIODS})...")
+  
+  model = None
+  y_pred = None
+  y_proba = None
+  feature_importances = None
+  training_history = {}
+  task_type = "forecasting"
+  meta = {"framework": "statsmodels", "type": "holt_winters"}
+  full_pipeline = None
+
+  if 'y_train' in locals() and 'X_test' in locals() and ExponentialSmoothing is not None:
+      # Pour statsmodels, on assume que y_train est la série temporelle
+      trend_arg = None if TREND == "none" else TREND
+      seasonal_arg = None if SEASONAL == "none" else SEASONAL
+      periods = int(SEASONAL_PERIODS) if seasonal_arg is not None else None
+      
+      # Prepare series
+      ts = y_train.values if isinstance(y_train, (pd.Series, pd.DataFrame)) else np.array(y_train)
+      
+      hw_model = ExponentialSmoothing(ts, trend=trend_arg, seasonal=seasonal_arg, seasonal_periods=periods)
+      model = hw_model.fit()
+      
+      # Prédiction : X_test sert à définir le nombre de steps à prédire (si c'est un df) ou sinon longueur
+      steps = len(X_test) if isinstance(X_test, (pd.DataFrame, pd.Series, list, np.ndarray)) else 10
+      y_pred = model.forecast(steps)
+      
+      # Pas de feature importances en lissage exponentiel classique
+      
+      if 'preprocessor' in locals() and preprocessor is not None:
+          try: from imblearn.pipeline import Pipeline
+          except: from sklearn.pipeline import Pipeline
+          # Custom pipeline adapter could be needed, here we just keep the model reference
+          full_pipeline = Pipeline(steps=preprocessor.steps + [('model', model)])
+      else:
+          full_pipeline = model
+          
+      training_history = {"status": "success", "aic": getattr(model, "aic", None)}
+
 illustration_mermaid: |
-    graph LR
-      Data([Features]) --> Model((Machine Learning))
-      Model --> Pred([Predictions])
-      style Model fill:#8b5cf6,stroke:#7c3aed,stroke-width:2px,color:#fff
-      style Data fill:#f8fafc,stroke:#94a3b8,stroke-width:1px
-      style Pred fill:#f8fafc,stroke:#94a3b8,stroke-width:1px
+  graph TD
+    subgraph Holt-Winters Exponential Smoothing
+      In([Time Series Data]) --> Level[Level Equation]
+      In --> Trend[Trend Equation]
+      In --> Season[Seasonal Equation]
+      Level --> Smooth[Exponential Smoothing]
+      Trend --> Smooth
+      Season --> Smooth
+      Smooth --> Forecast([Future Forecasts])
+    end
+    style In fill:#f8fafc,stroke:#94a3b8,stroke-width:1px
+    style Forecast fill:#10b981,stroke:#059669,stroke-width:2px,color:#fff
+    style Smooth fill:#8b5cf6,stroke:#7c3aed,stroke-width:2px,color:#fff
 
 _metadata:
   bloc: 3

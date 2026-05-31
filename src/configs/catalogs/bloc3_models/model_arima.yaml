@@ -16,6 +16,8 @@ hyperparameters:
 code_template: |
   import pandas as pd
   import numpy as np
+  import warnings
+
   try:
       from statsmodels.tsa.arima.model import ARIMA
   except ImportError:
@@ -35,32 +37,80 @@ code_template: |
   # [/PARAM]
 
   print(f"[MODEL] Entraînement ARIMA (p={ORDER_P}, d={ORDER_D}, q={ORDER_Q})...")
+  
+  # Default fallback
+  model = None
+  full_pipeline = None
+  y_pred = None
+  y_proba = None
+  feature_importances = None
+  training_history = {}
+  task_type = "forecasting"
+  meta = {"model_name": "ARIMA"}
+
   if 'y_train' in locals() and 'X_test' in locals() and ARIMA is not None:
-      # ARIMA s'entraîne sur y_train uniquement (univarié classique)
+      # ARIMA typically trains on y_train natively (univariate)
+      # We will use X_train as exogenous variables if available and applicable
       y_tr = np.array(y_train)
+      exog_train = None
+      exog_test = None
+      
+      if 'X_train' in locals() and hasattr(X_train, 'shape') and len(X_train.shape) == 2 and X_train.shape[1] > 0:
+          exog_train = np.array(X_train)
+      
+      if hasattr(X_test, 'shape') and len(X_test.shape) == 2 and X_test.shape[1] > 0:
+          exog_test = np.array(X_test)
       
       try:
-          model = ARIMA(y_tr, order=(int(ORDER_P), int(ORDER_D), int(ORDER_Q)))
-          model_fit = model.fit()
-          
-          # Inférence (on prédit autant d'étapes que la taille de X_test)
-          steps = len(X_test) if hasattr(X_test, '__len__') else 10
-          y_pred = model_fit.forecast(steps=steps)
-          
-          y_proba = None
-          feature_importances = None
-          
-          full_pipeline = model_fit
+          with warnings.catch_warnings():
+              warnings.simplefilter("ignore")
+              model = ARIMA(endog=y_tr, exog=exog_train, order=(int(ORDER_P), int(ORDER_D), int(ORDER_Q)))
+              full_pipeline = model.fit()
               
-          training_history = {"status": "success", "aic": model_fit.aic}
-          task_type = "forecasting"
+          # Inference
+          steps = len(X_test) if hasattr(X_test, '__len__') else 10
+          y_pred = full_pipeline.forecast(steps=steps, exog=exog_test)
+          
+          training_history = {
+              "status": "success", 
+              "aic": float(full_pipeline.aic),
+              "bic": float(full_pipeline.bic)
+          }
+      except Exception as e:
+          print(f"[ERREUR] Erreur lors de l'entraînement ARIMA: {e}")
+          training_history = {"status": "error", "error_message": str(e)}
+
 illustration_mermaid: |
-    graph LR
-      Data([Features]) --> Model((Machine Learning))
-      Model --> Pred([Predictions])
-      style Model fill:#8b5cf6,stroke:#7c3aed,stroke-width:2px,color:#fff
-      style Data fill:#f8fafc,stroke:#94a3b8,stroke-width:1px
-      style Pred fill:#f8fafc,stroke:#94a3b8,stroke-width:1px
+    graph TD
+      subgraph Time Series Input
+        Y([y_train - Endogenous])
+        X([X_train - Exogenous Optional])
+      end
+      
+      subgraph ARIMA Process
+        Y --> Diff[Differencing 'd'\nMake Stationary]
+        Diff --> AR[Auto-Regressive 'p'\nPast Values]
+        Diff --> MA[Moving Average 'q'\nPast Errors]
+        X --> Exog[Exogenous\nVariables]
+        
+        AR --> Merge((Sum))
+        MA --> Merge
+        Exog --> Merge
+      end
+      
+      subgraph Output
+        Merge --> Fit[Fitted Model]
+        Fit --> Forecast([Forecast 'steps'])
+      end
+      
+      style AR fill:#8b5cf6,stroke:#7c3aed,stroke-width:2px,color:#fff
+      style MA fill:#8b5cf6,stroke:#7c3aed,stroke-width:2px,color:#fff
+      style Diff fill:#c4b5fd,stroke:#8b5cf6,stroke-width:1px,color:#000
+      style Exog fill:#c4b5fd,stroke:#8b5cf6,stroke-width:1px,color:#000
+      style Fit fill:#a78bfa,stroke:#7c3aed,stroke-width:1px,color:#fff
+      style Y fill:#f8fafc,stroke:#94a3b8,stroke-width:1px
+      style X fill:#f8fafc,stroke:#94a3b8,stroke-width:1px
+      style Forecast fill:#f8fafc,stroke:#94a3b8,stroke-width:1px
 
 _metadata:
   bloc: 3

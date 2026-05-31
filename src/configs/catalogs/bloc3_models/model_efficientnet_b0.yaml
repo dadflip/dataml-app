@@ -29,6 +29,16 @@ code_template: |
   # [/PARAM]
 
   print(f"[MODEL] Fine-Tuning EfficientNet-B0 (epochs={EPOCHS})...")
+  
+  model = None
+  y_pred = None
+  y_proba = None
+  feature_importances = None
+  training_history = {}
+  task_type = "classification"
+  meta = {"framework": "pytorch", "type": "efficientnet_b0"}
+  full_pipeline = None
+
   if 'X_train' in locals() and 'y_train' in locals() and 'X_test' in locals() and torch is not None:
       X_tr_np = np.array(X_train)
       X_te_np = np.array(X_test)
@@ -54,7 +64,9 @@ code_template: |
       optimizer = optim.Adam(model.classifier[1].parameters(), lr=0.001)
       
       model.train()
+      final_loss = 0.0
       for epoch in range(int(EPOCHS)):
+          epoch_loss = 0.0
           for batch_X, batch_y in loader:
               batch_X, batch_y = batch_X.to(device), batch_y.to(device)
               optimizer.zero_grad()
@@ -62,6 +74,8 @@ code_template: |
               loss = criterion(outputs, batch_y)
               loss.backward()
               optimizer.step()
+              epoch_loss += loss.item()
+          final_loss = epoch_loss / len(loader)
               
       model.eval()
       with torch.no_grad():
@@ -71,8 +85,6 @@ code_template: |
           y_pred = np.array([id2label[i] for i in preds_idx])
           y_proba = torch.nn.functional.softmax(logits, dim=-1).cpu().numpy()
           
-      feature_importances = None
-      
       if 'preprocessor' in locals() and preprocessor is not None:
           try: from imblearn.pipeline import Pipeline
           except: from sklearn.pipeline import Pipeline
@@ -80,15 +92,26 @@ code_template: |
       else:
           full_pipeline = model
           
-      training_history = {"status": "success", "device": str(device)}
-      task_type = "classification"
+      training_history = {"status": "success", "loss": final_loss, "device": str(device)}
+
 illustration_mermaid: |
-    graph LR
-      Data([Features]) --> Model((Machine Learning))
-      Model --> Pred([Predictions])
-      style Model fill:#8b5cf6,stroke:#7c3aed,stroke-width:2px,color:#fff
-      style Data fill:#f8fafc,stroke:#94a3b8,stroke-width:1px
-      style Pred fill:#f8fafc,stroke:#94a3b8,stroke-width:1px
+  graph TD
+    subgraph EfficientNet-B0 Architecture
+      In([Image Input]) --> Conv[Conv3x3]
+      Conv --> MBConv1[MBConv1]
+      MBConv1 --> MBConv6_1[MBConv6 x2]
+      MBConv6_1 --> MBConv6_2[MBConv6 x2]
+      MBConv6_2 --> MBConv6_3[MBConv6 x3]
+      MBConv6_3 --> MBConv6_4[MBConv6 x3]
+      MBConv6_4 --> MBConv6_5[MBConv6 x4]
+      MBConv6_5 --> MBConv6_6[MBConv6 x1]
+      MBConv6_6 --> Pool[GlobalAvgPool]
+      Pool --> FC[Linear Fully Connected]
+      FC --> Out([Class Predictions])
+    end
+    style In fill:#f8fafc,stroke:#94a3b8,stroke-width:1px
+    style Out fill:#10b981,stroke:#059669,stroke-width:2px,color:#fff
+    style MBConv6_3 fill:#8b5cf6,stroke:#7c3aed,stroke-width:2px,color:#fff
 
 _metadata:
   bloc: 3

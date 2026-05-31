@@ -67,12 +67,21 @@ code_template: |
       training_history = {"status": "success", "fitted_on": len(X_train)}
       task_type = "classification"
 illustration_mermaid: |
-    graph LR
-      Data([Features]) --> Model((Machine Learning))
-      Model --> Pred([Predictions])
-      style Model fill:#8b5cf6,stroke:#7c3aed,stroke-width:2px,color:#fff
-      style Data fill:#f8fafc,stroke:#94a3b8,stroke-width:1px
-      style Pred fill:#f8fafc,stroke:#94a3b8,stroke-width:1px
+    graph TD
+      In([Input Features]) --> Tree1(Decision Tree 1)
+      Tree1 --> Res1(Compute Residuals)
+      Res1 --> Tree2(Decision Tree 2)
+      Tree2 --> Res2(Compute Residuals)
+      Res2 --> TreeN(Decision Tree N)
+      TreeN --> Sum(Sum Weighted Predictions)
+      Sum --> Out([Class Predictions])
+      
+      style In fill:#f8fafc,stroke:#94a3b8,stroke-width:2px
+      style Tree1 fill:#38bdf8,stroke:#0284c7,stroke-width:2px,color:#fff
+      style Tree2 fill:#38bdf8,stroke:#0284c7,stroke-width:2px,color:#fff
+      style TreeN fill:#38bdf8,stroke:#0284c7,stroke-width:2px,color:#fff
+      style Sum fill:#8b5cf6,stroke:#7c3aed,stroke-width:2px,color:#fff
+      style Out fill:#10b981,stroke:#059669,stroke-width:2px,color:#fff
 
 _metadata:
   bloc: 3

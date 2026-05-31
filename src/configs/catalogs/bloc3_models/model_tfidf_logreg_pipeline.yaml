@@ -24,15 +24,61 @@ code_template: |
   # [/PARAM]
 
   print(f"[MODEL] Entraînement Pipeline TF-IDF + LogReg (max_features={MAX_FEATURES})...")
-  # Note: Ce modèle s'attend à recevoir une matrice 1D (Série) de texte brut, pas un df encodé.
-  # Si X_train est un DataFrame, on essaie de trouver une colonne 'text'
+  model = None
+  full_pipeline = None
+  y_pred = None
+  y_proba = None
+  feature_importances = None
+  training_history = {}
+  task_type = "classification"
+  meta = {"model_name": "TF-IDF + Logistic Regression"}
+
+  if 'X_train' in locals() and 'y_train' in locals() and 'X_test' in locals():
+      if isinstance(X_train, pd.DataFrame):
+          text_col = None
+          for col in X_train.columns:
+              if X_train[col].dtype == object or X_train[col].dtype.name == 'string':
+                  text_col = col
+                  break
+          if text_col is not None:
+              X_tr = X_train[text_col].astype(str)
+              X_te = X_test[text_col].astype(str)
+          else:
+              X_tr = X_train.iloc[:, 0].astype(str)
+              X_te = X_test.iloc[:, 0].astype(str)
+      else:
+          X_tr = pd.Series(X_train).astype(str)
+          X_te = pd.Series(X_test).astype(str)
+          
+      tfidf = TfidfVectorizer(max_features=int(MAX_FEATURES))
+      clf = LogisticRegression(max_iter=1000)
+      
+      model = SklearnPipeline([
+          ('tfidf', tfidf),
+          ('clf', clf)
+      ])
+      
+      model.fit(X_tr, y_train)
+      
+      y_pred = model.predict(X_te)
+      if hasattr(model, "predict_proba"):
+          y_proba = model.predict_proba(X_te)
+          
+      if hasattr(clf, "coef_"):
+          feature_importances = {"coefficients": clf.coef_.tolist()}
+          
+      full_pipeline = model
+      training_history = {"status": "success"}
 illustration_mermaid: |
     graph LR
-      Data([Features]) --> Model((Machine Learning))
-      Model --> Pred([Predictions])
-      style Model fill:#8b5cf6,stroke:#7c3aed,stroke-width:2px,color:#fff
-      style Data fill:#f8fafc,stroke:#94a3b8,stroke-width:1px
-      style Pred fill:#f8fafc,stroke:#94a3b8,stroke-width:1px
+      In([Raw Text Data]) --> TFIDF(TF-IDF Vectorizer)
+      TFIDF --> LR(Logistic Regression)
+      LR --> Pred([Predictions & Probabilities])
+      
+      style In fill:#f8fafc,stroke:#94a3b8,stroke-width:2px
+      style TFIDF fill:#38bdf8,stroke:#0284c7,stroke-width:2px,color:#fff
+      style LR fill:#8b5cf6,stroke:#7c3aed,stroke-width:2px,color:#fff
+      style Pred fill:#10b981,stroke:#059669,stroke-width:2px,color:#fff
 
 _metadata:
   bloc: 3

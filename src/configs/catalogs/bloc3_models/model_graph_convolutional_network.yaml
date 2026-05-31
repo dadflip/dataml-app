@@ -65,13 +65,28 @@ code_template: |
       full_pipeline = model
       training_history = {"status": "success"}
       task_type = "node_classification"
+      meta = {}
 illustration_mermaid: |
-    graph LR
-      Data([Features]) --> Model((Machine Learning))
-      Model --> Pred([Predictions])
-      style Model fill:#8b5cf6,stroke:#7c3aed,stroke-width:2px,color:#fff
-      style Data fill:#f8fafc,stroke:#94a3b8,stroke-width:1px
-      style Pred fill:#f8fafc,stroke:#94a3b8,stroke-width:1px
+  graph TD
+    subgraph Inputs
+      A[Node Features Matrix X] --> GCN1
+      B[Adjacency / Edge Index] --> GCN1
+    end
+    subgraph Architecture GCN
+      GCN1[GCNConv Layer 1] --> Relu1[ReLU Activation]
+      Relu1 --> Drop[Dropout Layer p=0.5]
+      Drop --> GCN2[GCNConv Layer 2]
+    end
+    subgraph Outputs
+      GCN2 --> Out[Logits / Output]
+      Out --> Softmax[Softmax]
+      Softmax --> Pred[Predicted Node Class]
+    end
+    B -.-> GCN2
+    style GCN1 fill:#6366f1,stroke:#4f46e5,stroke-width:2px,color:#fff
+    style GCN2 fill:#6366f1,stroke:#4f46e5,stroke-width:2px,color:#fff
+    style Relu1 fill:#3b82f6,stroke:#2563eb,stroke-width:2px,color:#fff
+    style Drop fill:#3b82f6,stroke:#2563eb,stroke-width:2px,color:#fff
 
 _metadata:
   bloc: 3

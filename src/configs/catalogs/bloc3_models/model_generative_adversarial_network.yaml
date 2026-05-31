@@ -33,6 +33,16 @@ code_template: |
   # [/PARAM]
 
   print(f"[MODEL] Entraînement GAN PyTorch...")
+  
+  model = None
+  y_pred = None
+  y_proba = None
+  feature_importances = None
+  training_history = {}
+  task_type = "generative"
+  meta = {"framework": "pytorch", "type": "gan"}
+  full_pipeline = None
+
   if 'X_train' in locals() and 'X_test' in locals() and torch is not None:
       X_tr_np = np.array(X_train, dtype=np.float32)
       X_te_np = np.array(X_test, dtype=np.float32)
@@ -90,14 +100,25 @@ code_template: |
       else:
           full_pipeline = model
       training_history = {"status": "success", "loss_g": float(loss_g), "loss_d": float(loss_d)}
-      task_type = "generative"
+
 illustration_mermaid: |
-    graph LR
-      Data([Features]) --> Model((Machine Learning))
-      Model --> Pred([Predictions])
-      style Model fill:#8b5cf6,stroke:#7c3aed,stroke-width:2px,color:#fff
-      style Data fill:#f8fafc,stroke:#94a3b8,stroke-width:1px
-      style Pred fill:#f8fafc,stroke:#94a3b8,stroke-width:1px
+  graph TD
+    subgraph Generative Adversarial Network
+      Z([Random Noise z]) --> Gen[Generator G]
+      Gen --> Fake([Fake Data x_tilde])
+      Real([Real Data x]) --> Disc
+      Fake --> Disc[Discriminator D]
+      Disc --> RealScore(Real Score)
+      Disc --> FakeScore(Fake Score)
+      RealScore -.-> LossD[Discriminator Loss]
+      FakeScore -.-> LossD
+      FakeScore -.-> LossG[Generator Loss]
+    end
+    style Z fill:#e2e8f0,stroke:#64748b,stroke-width:1px
+    style Real fill:#f8fafc,stroke:#94a3b8,stroke-width:1px
+    style Fake fill:#fca5a5,stroke:#ef4444,stroke-width:1px
+    style Gen fill:#8b5cf6,stroke:#7c3aed,stroke-width:2px,color:#fff
+    style Disc fill:#f59e0b,stroke:#d97706,stroke-width:2px,color:#fff
 
 _metadata:
   bloc: 3

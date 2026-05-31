@@ -59,12 +59,20 @@ code_template: |
       training_history = {"status": "success", "pipeline_score": model.score(X_test, y_test) if 'y_test' in locals() else None}
       task_type = "classification"
 illustration_mermaid: |
-    graph LR
-      Data([Features]) --> Model((Machine Learning))
+    graph TD
+      In([Input Data]) --> Eval(Genetic Algorithm: Evaluate Pipelines)
+      Eval --> Mutate(Mutate & Cross-over)
+      Mutate --> Eval
+      Eval --> Best([Select Best Pipeline])
+      Best --> Model((Fitted Pipeline))
       Model --> Pred([Predictions])
+      
+      style In fill:#f8fafc,stroke:#94a3b8,stroke-width:2px
+      style Eval fill:#38bdf8,stroke:#0284c7,stroke-width:2px,color:#fff
+      style Mutate fill:#38bdf8,stroke:#0284c7,stroke-width:2px,color:#fff
+      style Best fill:#10b981,stroke:#059669,stroke-width:2px,color:#fff
       style Model fill:#8b5cf6,stroke:#7c3aed,stroke-width:2px,color:#fff
-      style Data fill:#f8fafc,stroke:#94a3b8,stroke-width:1px
-      style Pred fill:#f8fafc,stroke:#94a3b8,stroke-width:1px
+      style Pred fill:#f8fafc,stroke:#94a3b8,stroke-width:2px
 
 _metadata:
   bloc: 3

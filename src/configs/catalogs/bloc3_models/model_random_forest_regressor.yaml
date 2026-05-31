@@ -17,6 +17,7 @@ code_template: |
   import pandas as pd
   import numpy as np
   from sklearn.ensemble import RandomForestRegressor
+  from sklearn.pipeline import Pipeline
 
   # [PARAM: N_ESTIMATORS | number]
   N_ESTIMATORS = 100
@@ -26,39 +27,70 @@ code_template: |
   MAX_DEPTH = 10
   # [/PARAM]
 
-  print(f"[MODEL] Entraînement Random Forest Regressor (n_estimators={N_ESTIMATORS})...")
-  if 'X_train' in locals() and 'y_train' in locals() and 'X_test' in locals():
-      depth = None if MAX_DEPTH <= 0 else int(MAX_DEPTH)
-      
-      model = RandomForestRegressor(n_estimators=int(N_ESTIMATORS), max_depth=depth, n_jobs=-1, random_state=42)
-      model.fit(X_train, y_train)
-      
-      y_pred = model.predict(X_test)
-      y_proba = None
-      
-      feature_importances = None
-      if 'feature_names_out' in locals() and hasattr(model, 'feature_importances_'):
-          if len(model.feature_importances_) == len(feature_names_out):
-              feature_importances = pd.Series(model.feature_importances_, index=feature_names_out)
-              
-      if 'preprocessor' in locals() and preprocessor is not None:
-          try: from imblearn.pipeline import Pipeline
-          except: from sklearn.pipeline import Pipeline
-          full_pipeline = Pipeline(steps=preprocessor.steps + [('model', model)])
+  task_type = "regression"
+  meta = {
+      "model_name": "Random Forest Regressor",
+      "framework": "scikit-learn",
+      "task_type": task_type
+  }
+
+  depth = None if int(MAX_DEPTH) <= 0 else int(MAX_DEPTH)
+  model = RandomForestRegressor(n_estimators=int(N_ESTIMATORS), max_depth=depth, n_jobs=-1, random_state=42)
+
+  if 'preprocessor' in globals() and preprocessor is not None:
+      full_pipeline = Pipeline([
+          ('preprocessor', preprocessor),
+          ('model', model)
+      ])
+  else:
+      full_pipeline = Pipeline([
+          ('model', model)
+      ])
+
+  full_pipeline.fit(X_train, y_train)
+
+  y_pred = full_pipeline.predict(X_test)
+  y_proba = None
+
+  feature_importances = None
+  if hasattr(model, 'feature_importances_'):
+      if 'preprocessor' in globals() and hasattr(preprocessor, 'get_feature_names_out'):
+          try:
+              feature_names = preprocessor.get_feature_names_out()
+              if len(feature_names) == len(model.feature_importances_):
+                  feature_importances = pd.Series(model.feature_importances_, index=feature_names).sort_values(ascending=False).head(20).to_dict()
+          except Exception:
+              pass
       else:
-          try: from imblearn.pipeline import Pipeline
-          except: from sklearn.pipeline import Pipeline
-          full_pipeline = Pipeline(steps=[('model', model)])
-          
-      training_history = {"status": "success", "fitted_on": len(X_train)}
-      task_type = "regression"
+          if hasattr(X_train, 'columns'):
+              feature_importances = pd.Series(model.feature_importances_, index=X_train.columns).sort_values(ascending=False).head(20).to_dict()
+
+  training_history = []
 illustration_mermaid: |
-    graph LR
-      Data([Features]) --> Model((Machine Learning))
-      Model --> Pred([Predictions])
-      style Model fill:#8b5cf6,stroke:#7c3aed,stroke-width:2px,color:#fff
-      style Data fill:#f8fafc,stroke:#94a3b8,stroke-width:1px
-      style Pred fill:#f8fafc,stroke:#94a3b8,stroke-width:1px
+  graph TD
+    subgraph Data Flow
+      Input([Raw Features]) --> Preprocessor[[Data Preprocessing]]
+      Preprocessor --> Bootstrap[Bootstrap Sampling]
+    end
+    subgraph Random Forest Ensemble
+      Bootstrap --> Tree1[Regression Tree 1]
+      Bootstrap --> Tree2[Regression Tree 2]
+      Bootstrap --> TreeN[Regression Tree N]
+      Tree1 --> Split1{Random Feature Split}
+      Tree2 --> Split2{Random Feature Split}
+      TreeN --> SplitN{Random Feature Split}
+    end
+    subgraph Output
+      Split1 --> Pred1(Leaf Node Output)
+      Split2 --> Pred2(Leaf Node Output)
+      SplitN --> PredN(Leaf Node Output)
+      Pred1 --> Mean((Average))
+      Pred2 --> Mean
+      PredN --> Mean
+      Mean --> Pred([Final Prediction])
+    end
+    style Input fill:#f8fafc,stroke:#94a3b8,stroke-width:1px
+    style Pred fill:#f8fafc,stroke:#94a3b8,stroke-width:1px
 
 _metadata:
   bloc: 3

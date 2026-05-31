@@ -21,36 +21,90 @@ code_template: |
   # [/PARAM]
 
   print(f"[MODEL] Entraînement Bayesian Ridge (iter={N_ITER})...")
+  
+  # Default fallback
+  model = None
+  full_pipeline = None
+  y_pred = None
+  y_proba = None
+  feature_importances = None
+  training_history = {}
+  task_type = "regression"
+  meta = {"model_name": "Bayesian Ridge"}
+
   if 'X_train' in locals() and 'y_train' in locals() and 'X_test' in locals():
       model = BayesianRidge(n_iter=int(N_ITER))
-      model.fit(X_train, y_train)
       
-      y_pred = model.predict(X_test)
-      y_proba = None
+      has_preprocessor = 'preprocessor' in locals() and preprocessor is not None
       
-      feature_importances = None
-      if 'feature_names_out' in locals():
-          if len(model.coef_) == len(feature_names_out):
-              feature_importances = pd.Series(np.abs(model.coef_), index=feature_names_out)
-              
-      if 'preprocessor' in locals() and preprocessor is not None:
-          try: from imblearn.pipeline import Pipeline
-          except: from sklearn.pipeline import Pipeline
-          full_pipeline = Pipeline(steps=preprocessor.steps + [('model', model)])
+      if has_preprocessor:
+          try:
+              from imblearn.pipeline import Pipeline
+          except ImportError:
+              from sklearn.pipeline import Pipeline
+          
+          steps = list(preprocessor.steps) if hasattr(preprocessor, 'steps') else [('preprocessor', preprocessor)]
+          steps.append(('model', model))
+          full_pipeline = Pipeline(steps=steps)
       else:
-          try: from imblearn.pipeline import Pipeline
-          except: from sklearn.pipeline import Pipeline
+          try:
+              from imblearn.pipeline import Pipeline
+          except ImportError:
+              from sklearn.pipeline import Pipeline
           full_pipeline = Pipeline(steps=[('model', model)])
           
-      training_history = {"status": "success", "fitted_on": len(X_train), "alpha_": float(model.alpha_), "lambda_": float(model.lambda_)}
-      task_type = "regression"
+      full_pipeline.fit(X_train, y_train)
+      model = full_pipeline.named_steps['model']
+      
+      # We can ask for std (standard deviation) from BayesianRidge predictions
+      y_pred, y_std = full_pipeline.predict(X_test, return_std=True)
+      
+      # Feature importances defined as absolute coefficients
+      if hasattr(model, 'coef_'):
+          if 'feature_names_out' in locals() and feature_names_out is not None:
+              if len(model.coef_) == len(feature_names_out):
+                  feature_importances = pd.Series(np.abs(model.coef_), index=feature_names_out).sort_values(ascending=False)
+              else:
+                  feature_importances = pd.Series(np.abs(model.coef_)).sort_values(ascending=False)
+          else:
+              feature_importances = pd.Series(np.abs(model.coef_)).sort_values(ascending=False)
+              
+      training_history = {
+          "status": "success", 
+          "fitted_on": len(X_train), 
+          "alpha_": float(model.alpha_), 
+          "lambda_": float(model.lambda_)
+      }
+
 illustration_mermaid: |
-    graph LR
-      Data([Features]) --> Model((Machine Learning))
-      Model --> Pred([Predictions])
-      style Model fill:#8b5cf6,stroke:#7c3aed,stroke-width:2px,color:#fff
+    graph TD
+      subgraph Prior Distributions
+        Alpha[Alpha Prior\nGamma Distribution]
+        Lambda[Lambda Prior\nGamma Distribution]
+      end
+      
+      subgraph Bayesian Ridge Logic
+        Data([X_train, y_train]) --> BR[BayesianRidge]
+        Alpha --> BR
+        Lambda --> BR
+        BR -- Update Posteriors --> Params[Weights & Precision]
+      end
+      
+      subgraph Prediction Phase
+        Params --> Infer[Inference]
+        Test([X_test]) --> Infer
+        Infer --> Pred([y_pred])
+        Infer --> Std([y_std\nUncertainty])
+      end
+      
+      style BR fill:#8b5cf6,stroke:#7c3aed,stroke-width:2px,color:#fff
+      style Alpha fill:#c4b5fd,stroke:#8b5cf6,stroke-width:1px,color:#000
+      style Lambda fill:#c4b5fd,stroke:#8b5cf6,stroke-width:1px,color:#000
+      style Infer fill:#a78bfa,stroke:#7c3aed,stroke-width:1px,color:#fff
       style Data fill:#f8fafc,stroke:#94a3b8,stroke-width:1px
       style Pred fill:#f8fafc,stroke:#94a3b8,stroke-width:1px
+      style Test fill:#f8fafc,stroke:#94a3b8,stroke-width:1px
+      style Std fill:#f8fafc,stroke:#94a3b8,stroke-width:1px
 
 _metadata:
   bloc: 3

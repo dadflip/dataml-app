@@ -37,6 +37,16 @@ code_template: |
   # [/PARAM]
 
   print(f"[MODEL] Entraînement GAT PyTorch Geometric...")
+  
+  model = None
+  y_pred = None
+  y_proba = None
+  feature_importances = None
+  training_history = {}
+  task_type = "node_classification"
+  meta = {"framework": "pytorch_geometric", "type": "gat"}
+  full_pipeline = None
+
   if 'X_train' in locals() and 'y_train' in locals() and 'global_edge_index' in dir() and GATConv is not None:
       X_t = torch.tensor(np.array(X_train, dtype=np.float32))
       y_t = torch.tensor(np.array(y_train, dtype=np.int64))
@@ -60,27 +70,40 @@ code_template: |
       optimizer = torch.optim.Adam(model.parameters(), lr=0.005, weight_decay=5e-4)
       criterion = torch.nn.CrossEntropyLoss()
       model.train()
+      
+      final_loss = 0.0
       for epoch in range(int(EPOCHS)):
           optimizer.zero_grad()
           loss = criterion(model(X_t, edge_index), y_t)
           loss.backward()
           optimizer.step()
+          final_loss = loss.item()
+          
       model.eval()
       with torch.no_grad():
           out = model(X_t, edge_index)
           y_pred = out.argmax(dim=1).cpu().numpy()
           y_proba = F.softmax(out, dim=1).cpu().numpy()
-      feature_importances = None
+          
       full_pipeline = model
-      training_history = {"status": "success"}
-      task_type = "node_classification"
+      training_history = {"status": "success", "loss": final_loss}
+
 illustration_mermaid: |
-    graph LR
-      Data([Features]) --> Model((Machine Learning))
-      Model --> Pred([Predictions])
-      style Model fill:#8b5cf6,stroke:#7c3aed,stroke-width:2px,color:#fff
-      style Data fill:#f8fafc,stroke:#94a3b8,stroke-width:1px
-      style Pred fill:#f8fafc,stroke:#94a3b8,stroke-width:1px
+  graph TD
+    subgraph Graph Attention Network
+      In([Node Features]) --> GAT1[GAT Conv Layer 1]
+      Edges([Edge Index]) --> GAT1
+      GAT1 --> Attention[Compute Attention Weights]
+      Attention --> ELU[ELU Activation]
+      ELU --> GAT2[GAT Conv Layer 2]
+      Edges --> GAT2
+      GAT2 --> Out([Node Class Probabilities])
+    end
+    style In fill:#f8fafc,stroke:#94a3b8,stroke-width:1px
+    style Edges fill:#e2e8f0,stroke:#64748b,stroke-width:1px
+    style Out fill:#10b981,stroke:#059669,stroke-width:2px,color:#fff
+    style GAT1 fill:#8b5cf6,stroke:#7c3aed,stroke-width:2px,color:#fff
+    style GAT2 fill:#8b5cf6,stroke:#7c3aed,stroke-width:2px,color:#fff
 
 _metadata:
   bloc: 3

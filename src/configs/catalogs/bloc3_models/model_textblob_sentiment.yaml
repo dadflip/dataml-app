@@ -22,13 +22,52 @@ code_template: |
 
   # [PARAM: TEXT_COL | string]
   TEXT_COL = "text"
+  # [/PARAM]
+
+  print(f"[MODEL] Analyse de sentiment Zero-Shot via TextBlob (col={TEXT_COL})...")
+  model = "TextBlob-Sentiment"
+  full_pipeline = None
+  y_pred = []
+  y_proba = None
+  feature_importances = None
+  training_history = {}
+  task_type = "sentiment_analysis"
+  meta = {"model_name": "TextBlob Sentiment"}
+
+  if 'X_test' in locals() and TextBlob is not None:
+      if isinstance(X_test, pd.DataFrame):
+          if TEXT_COL in X_test.columns:
+              texts = X_test[TEXT_COL].astype(str).tolist()
+          else:
+              texts = X_test.iloc[:, 0].astype(str).tolist()
+      else:
+          texts = [str(x) for x in X_test]
+          
+      for text in texts:
+          blob = TextBlob(text)
+          polarity = blob.sentiment.polarity
+          if polarity > 0.1:
+              y_pred.append("Positive")
+          elif polarity < -0.1:
+              y_pred.append("Negative")
+          else:
+              y_pred.append("Neutral")
+              
+      y_pred = np.array(y_pred)
+      full_pipeline = model
+      training_history = {"status": "success", "processed_texts": len(y_pred)}
 illustration_mermaid: |
-    graph LR
-      Data([Features]) --> Model((Machine Learning))
-      Model --> Pred([Predictions])
-      style Model fill:#8b5cf6,stroke:#7c3aed,stroke-width:2px,color:#fff
-      style Data fill:#f8fafc,stroke:#94a3b8,stroke-width:1px
-      style Pred fill:#f8fafc,stroke:#94a3b8,stroke-width:1px
+    graph TD
+      In([Raw Text]) --> Token(Tokenization & POS Tagging)
+      Token --> Lexicon(Sentiment Lexicon Lookup)
+      Lexicon --> Score(Compute Polarity & Subjectivity)
+      Score --> Threshold(Thresholding)
+      Threshold --> Out([Sentiment Label: Positive/Neutral/Negative])
+      
+      style In fill:#f8fafc,stroke:#94a3b8,stroke-width:2px
+      style Token fill:#38bdf8,stroke:#0284c7,stroke-width:2px,color:#fff
+      style Lexicon fill:#8b5cf6,stroke:#7c3aed,stroke-width:2px,color:#fff
+      style Out fill:#10b981,stroke:#059669,stroke-width:2px,color:#fff
 
 _metadata:
   bloc: 3

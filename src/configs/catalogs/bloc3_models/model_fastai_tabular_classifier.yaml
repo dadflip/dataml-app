@@ -16,7 +16,7 @@ code_template: |
   import pandas as pd
   import numpy as np
   try:
-      from fastai.tabular.all import TabularPandas, Categorify, FillMissing, Normalize, tabular_learner, accuracy
+      from fastai.tabular.all import TabularPandas, Categorify, FillMissing, Normalize, tabular_learner, accuracy, CategoryBlock
   except ImportError:
       tabular_learner = None
       print("[ERREUR] fastai n'est pas installé. Lancez : !pip install fastai")
@@ -26,6 +26,16 @@ code_template: |
   # [/PARAM]
 
   print(f"[MODEL] Entraînement FastAI Tabular (epochs={EPOCHS})...")
+  
+  model = None
+  y_pred = None
+  y_proba = None
+  feature_importances = None
+  training_history = {}
+  task_type = "classification"
+  meta = {"framework": "fastai", "type": "tabular_classifier"}
+  full_pipeline = None
+
   # Note: FastAI fait lui-même son Preprocessing. Idéalement on lui donne le DataFrame original
   if 'X_train' in locals() and 'y_train' in locals() and 'X_test' in locals() and tabular_learner is not None:
       df_train = pd.DataFrame(X_train) if not isinstance(X_train, pd.DataFrame) else X_train.copy()
@@ -57,17 +67,29 @@ code_template: |
       y_proba = preds.numpy()
       feature_importances = None
       
+      model = learn
       full_pipeline = learn
           
       training_history = {"status": "success"}
-      task_type = "classification"
+
 illustration_mermaid: |
-    graph LR
-      Data([Features]) --> Model((Machine Learning))
-      Model --> Pred([Predictions])
-      style Model fill:#8b5cf6,stroke:#7c3aed,stroke-width:2px,color:#fff
-      style Data fill:#f8fafc,stroke:#94a3b8,stroke-width:1px
-      style Pred fill:#f8fafc,stroke:#94a3b8,stroke-width:1px
+  graph TD
+    subgraph FastAI Tabular Classifier
+      In([Tabular Features]) --> Cat[Categorical]
+      In --> Cont[Continuous]
+      Cat --> Emb[Entity Embeddings]
+      Cont --> Norm[Batch Normalization]
+      Emb --> Concat[Concatenation]
+      Norm --> Concat
+      Concat --> Linear1[Linear + ReLU]
+      Linear1 --> Linear2[Linear Output]
+      Linear2 --> Softmax[Softmax]
+      Softmax --> Out([Predicted Class])
+    end
+    style In fill:#f8fafc,stroke:#94a3b8,stroke-width:1px
+    style Out fill:#10b981,stroke:#059669,stroke-width:2px,color:#fff
+    style Emb fill:#c4b5fd,stroke:#8b5cf6,stroke-width:2px
+    style Linear1 fill:#8b5cf6,stroke:#7c3aed,stroke-width:2px,color:#fff
 
 _metadata:
   bloc: 3

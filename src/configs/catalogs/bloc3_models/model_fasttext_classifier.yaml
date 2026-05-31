@@ -31,6 +31,16 @@ code_template: |
   # [/PARAM]
 
   print(f"[MODEL] Entraînement FastText (epoch={EPOCH}, lr={LR})...")
+  
+  model = None
+  y_pred = None
+  y_proba = None
+  feature_importances = None
+  training_history = {}
+  task_type = "classification"
+  meta = {"framework": "fasttext", "type": "fasttext_classifier"}
+  full_pipeline = None
+
   if 'X_train' in locals() and 'y_train' in locals() and 'X_test' in locals() and fasttext is not None:
       # FastText exige un fichier texte d'entraînement au format: __label__NOM texte
       X_tr_text = X_train['text'] if (isinstance(X_train, pd.DataFrame) and 'text' in X_train.columns) else X_train
@@ -39,13 +49,55 @@ code_template: |
       if isinstance(X_te_text, pd.DataFrame): X_te_text = X_te_text.apply(lambda row: ' '.join(row.values.astype(str)), axis=1)
       
       train_file = "fasttext_train.txt"
+      with open(train_file, 'w', encoding='utf-8') as f:
+          for text, label in zip(X_tr_text, y_train):
+              # Replace newlines in text to avoid fasttext format errors
+              clean_text = str(text).replace('\n', ' ').strip()
+              f.write(f"__label__{label} {clean_text}\n")
+              
+      model = fasttext.train_supervised(input=train_file, epoch=int(EPOCH), lr=float(LR), wordNgrams=2)
+      
+      # Prédictions
+      preds = []
+      probas = []
+      for text in X_te_text:
+          clean_text = str(text).replace('\n', ' ').strip()
+          res = model.predict(clean_text)
+          label_pred = res[0][0].replace('__label__', '')
+          proba_pred = res[1][0]
+          preds.append(label_pred)
+          probas.append(proba_pred)
+          
+      y_pred = np.array(preds)
+      # fasttext only returns proba of the predicted class by default easily, we mock a dummy one or return max proba array
+      y_proba = np.array(probas)
+      
+      if 'preprocessor' in locals() and preprocessor is not None:
+          try: from imblearn.pipeline import Pipeline
+          except: from sklearn.pipeline import Pipeline
+          full_pipeline = Pipeline(steps=preprocessor.steps + [('model', model)])
+      else:
+          full_pipeline = model
+          
+      training_history = {"status": "success"}
+
+      # Clean up
+      if os.path.exists(train_file):
+          os.remove(train_file)
+
 illustration_mermaid: |
-    graph LR
-      Data([Features]) --> Model((Machine Learning))
-      Model --> Pred([Predictions])
-      style Model fill:#8b5cf6,stroke:#7c3aed,stroke-width:2px,color:#fff
-      style Data fill:#f8fafc,stroke:#94a3b8,stroke-width:1px
-      style Pred fill:#f8fafc,stroke:#94a3b8,stroke-width:1px
+  graph TD
+    subgraph FastText Classifier Pipeline
+      In([Text Document]) --> Ngrams[Char n-grams extraction]
+      Ngrams --> Emb[Word / n-gram Embeddings]
+      Emb --> Avg[Average Embeddings]
+      Avg --> Linear[Linear Classifier]
+      Linear --> Softmax[Hierarchical Softmax]
+      Softmax --> Out([Predicted Class])
+    end
+    style In fill:#f8fafc,stroke:#94a3b8,stroke-width:1px
+    style Out fill:#10b981,stroke:#059669,stroke-width:2px,color:#fff
+    style Linear fill:#8b5cf6,stroke:#7c3aed,stroke-width:2px,color:#fff
 
 _metadata:
   bloc: 3

@@ -17,6 +17,16 @@ code_template: |
   import numpy as np
   from sklearn.cluster import DBSCAN
 
+  # Default fallback
+  model = None
+  full_pipeline = None
+  y_pred = None
+  y_proba = None
+  feature_importances = None
+  training_history = {}
+  task_type = "clustering"
+  meta = {"model_name": "DBSCAN Clustering"}
+
   # [PARAM: EPS | number]
   EPS = 0.5
   # [/PARAM]
@@ -26,28 +36,44 @@ code_template: |
   # [/PARAM]
 
   print(f"[MODEL] Entraînement DBSCAN (eps={EPS}, min_samples={MIN_SAMPLES})...")
+  
   if 'X_train' in locals() and 'X_test' in locals():
       # DBSCAN n'a pas de méthode predict pour de nouvelles données !
       # Nous allons l'entraîner sur X_test directement pour assigner des labels (mode inférence transductive)
       
       model = DBSCAN(eps=float(EPS), min_samples=int(MIN_SAMPLES))
       
-      # labels_ contient les clusters assignés (-1 = bruit/outlier)
-      y_pred = model.fit_predict(X_test)
-      y_proba = None
-      feature_importances = None
+      has_preprocessor = 'preprocessor' in locals() and preprocessor is not None
       
-      # Le full_pipeline est délicat avec DBSCAN car il ne supporte pas predict()
-      # On wrap le modèle pour lever une erreur propre si on essaie de réutiliser le pipeline plus tard
-      from sklearn.preprocessing import FunctionTransformer
-      def dummy_predict(X):
-          return model.fit_predict(X)
-      wrapped_model = FunctionTransformer(dummy_predict)
-      
-      if 'preprocessor' in locals() and preprocessor is not None:
+      if has_preprocessor:
+          X_test_proc = preprocessor.transform(X_test)
           try: from imblearn.pipeline import Pipeline
           except: from sklearn.pipeline import Pipeline
-          full_pipeline = Pipeline(steps=preprocessor.steps + [('model', wrapped_model)])
+      else:
+          X_test_proc = X_test
+          
+      # labels_ contient les clusters assignés (-1 = bruit/outlier)
+      y_pred = model.fit_predict(X_test_proc)
+      
+      # Le full_pipeline est délicat avec DBSCAN car il ne supporte pas predict()
+      # On crée une classe wrapper personnalisée
+      from sklearn.base import BaseEstimator, ClusterMixin
+      class DBSCANWrapper(BaseEstimator, ClusterMixin):
+          def __init__(self, dbscan_model):
+              self.model = dbscan_model
+          def fit(self, X, y=None):
+              self.model.fit(X)
+              return self
+          def predict(self, X):
+              # Workaround transductif
+              return self.model.fit_predict(X)
+          def fit_predict(self, X, y=None):
+              return self.model.fit_predict(X)
+              
+      wrapped_model = DBSCANWrapper(model)
+      
+      if has_preprocessor:
+          full_pipeline = Pipeline(steps=list(preprocessor.steps) if hasattr(preprocessor, 'steps') else [('preprocessor', preprocessor)] + [('model', wrapped_model)])
       else:
           try: from imblearn.pipeline import Pipeline
           except: from sklearn.pipeline import Pipeline
@@ -57,12 +83,37 @@ code_template: |
       n_noise_ = list(y_pred).count(-1)
       
       training_history = {"status": "success", "estimated_clusters": n_clusters_, "noise_points": n_noise_}
-      task_type = "clustering"
+
 illustration_mermaid: |
-    graph LR
-      Data([Features]) --> Model((Machine Learning))
-      Model --> Pred([Predictions])
-      style Model fill:#8b5cf6,stroke:#7c3aed,stroke-width:2px,color:#fff
+    graph TD
+      subgraph Density Based Logic
+        P[Point P] --> N[Find Neighbors within radius 'eps']
+        N --> C{Neighbors >= min_samples?}
+        C -- Yes --> Core[Mark as Core Point\nStart new Cluster]
+        C -- No --> B{In a Core Point's neighborhood?}
+        B -- Yes --> Border[Mark as Border Point\nJoin Cluster]
+        B -- No --> Noise[Mark as Noise / Outlier\nCluster = -1]
+      end
+      
+      subgraph Clustering Process
+        Data([X_test]) --> DB[DBSCAN Algorithm]
+        DB --> Core
+        Core --> Expand[Expand Cluster\nRecursively to neighbors]
+        Expand --> Border
+        DB --> Noise
+      end
+      
+      subgraph Output
+        Border --> Assign[Assign Cluster ID]
+        Noise --> AssignOutlier[Assign -1]
+        Assign --> Pred([y_pred])
+        AssignOutlier --> Pred
+      end
+      
+      style DB fill:#8b5cf6,stroke:#7c3aed,stroke-width:2px,color:#fff
+      style Core fill:#c4b5fd,stroke:#8b5cf6,stroke-width:1px,color:#000
+      style Border fill:#c4b5fd,stroke:#8b5cf6,stroke-width:1px,color:#000
+      style Noise fill:#f87171,stroke:#ef4444,stroke-width:1px,color:#fff
       style Data fill:#f8fafc,stroke:#94a3b8,stroke-width:1px
       style Pred fill:#f8fafc,stroke:#94a3b8,stroke-width:1px
 

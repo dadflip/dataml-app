@@ -25,13 +25,73 @@ code_template: |
 
   # [PARAM: HIDDEN_LAYERS | string]
   HIDDEN_LAYERS = "256, 128"
+  # [/PARAM]
+
+  # [PARAM: EPOCHS | number]
+  EPOCHS = 20
+  # [/PARAM]
+
+  print(f"[MODEL] Entraînement TensorFlow/Keras DNN (Regression)...")
+  model = None
+  full_pipeline = None
+  y_pred = None
+  y_proba = None
+  feature_importances = None
+  training_history = {}
+  task_type = "regression"
+  meta = {"model_name": "TensorFlow DNN Regressor"}
+
+  if 'X_train' in locals() and 'y_train' in locals() and 'X_test' in locals() and tf is not None:
+      X_tr = np.array(X_train, dtype=np.float32)
+      X_te = np.array(X_test, dtype=np.float32)
+      y_tr = np.array(y_train, dtype=np.float32)
+      
+      layer_sizes = [int(s.strip()) for s in HIDDEN_LAYERS.split(',') if s.strip().isdigit()]
+      if not layer_sizes:
+          layer_sizes = [256, 128]
+          
+      inputs = keras.Input(shape=(X_tr.shape[1],))
+      x = inputs
+      for size in layer_sizes:
+          x = layers.Dense(size, activation='relu')(x)
+          x = layers.BatchNormalization()(x)
+          x = layers.Dropout(0.2)(x)
+          
+      outputs = layers.Dense(1)(x)
+      
+      model = keras.Model(inputs=inputs, outputs=outputs)
+      model.compile(optimizer='adam', loss='mse', metrics=['mae'])
+      
+      history = model.fit(X_tr, y_tr, epochs=int(EPOCHS), batch_size=32, validation_split=0.1, verbose=0)
+      
+      y_pred = model.predict(X_te, verbose=0).flatten()
+      
+      if 'preprocessor' in locals() and preprocessor is not None:
+          try: from imblearn.pipeline import Pipeline
+          except: from sklearn.pipeline import Pipeline
+          full_pipeline = Pipeline(steps=preprocessor.steps + [('model', model)])
+      else:
+          full_pipeline = model
+          
+      training_history = {
+          "status": "success",
+          "loss": float(history.history['loss'][-1]),
+          "val_loss": float(history.history.get('val_loss', [0.0])[-1])
+      }
 illustration_mermaid: |
-    graph LR
-      Data([Features]) --> Model((Machine Learning))
-      Model --> Pred([Predictions])
-      style Model fill:#8b5cf6,stroke:#7c3aed,stroke-width:2px,color:#fff
-      style Data fill:#f8fafc,stroke:#94a3b8,stroke-width:1px
-      style Pred fill:#f8fafc,stroke:#94a3b8,stroke-width:1px
+    graph TD
+      In([Input Features]) --> Dense1(Dense Layer: ReLU)
+      Dense1 --> BN1(Batch Normalization)
+      BN1 --> DO1(Dropout 20%)
+      DO1 --> Dense2(Dense Layer: ReLU)
+      Dense2 --> BN2(Batch Normalization)
+      BN2 --> DO2(Dropout 20%)
+      DO2 --> Out([Output Layer: Linear])
+      Out --> Pred([Predictions])
+      
+      style In fill:#f8fafc,stroke:#94a3b8,stroke-width:2px
+      style Out fill:#8b5cf6,stroke:#7c3aed,stroke-width:2px,color:#fff
+      style Pred fill:#10b981,stroke:#059669,stroke-width:2px,color:#fff
 
 _metadata:
   bloc: 3

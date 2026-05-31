@@ -23,10 +23,48 @@ code_template: |
 
   # [PARAM: MODEL_SIZE | string]
   MODEL_SIZE = "tiny"
+  # [/PARAM]
+
+  print(f"[MODEL] Reconnaissance vocale via Whisper (size={MODEL_SIZE})...")
+  model = "Whisper-STT"
+  full_pipeline = None
+  y_pred = []
+  y_proba = None
+  feature_importances = None
+  training_history = {}
+  task_type = "speech_to_text"
+  meta = {"model_name": f"Whisper {MODEL_SIZE}"}
+
+  if 'X_test' in locals() and pipeline is not None:
+      audios = list(X_test)
+      
+      print("Chargement du modèle Whisper...")
+      model_id = f"openai/whisper-{MODEL_SIZE}"
+      transcriber = pipeline("automatic-speech-recognition", model=model_id)
+      
+      print("Transcription en cours...")
+      for a in audios:
+          try:
+              res = transcriber(a)
+              y_pred.append(res["text"])
+          except Exception as e:
+              y_pred.append(f"Erreur: {str(e)}")
+              
+      y_pred = np.array(y_pred)
+      full_pipeline = model
+      training_history = {"status": "success", "processed": len(y_pred)}
 illustration_mermaid: |
-    graph LR
-      In([Raw Data]) -->|Process| Out([Clean Data])
-      style In fill:#eff6ff,stroke:#94a3b8,stroke-width:2px,stroke-dasharray: 5 5
+    graph TD
+      In([Audio File]) --> Mel(Log-Mel Spectrogram)
+      Mel --> Enc(Transformer Encoder)
+      Enc --> Dec(Transformer Decoder with Cross-Attention)
+      Dec --> Token(Text Token Generation)
+      Token --> Out([Transcribed Text])
+      
+      style In fill:#f8fafc,stroke:#94a3b8,stroke-width:2px
+      style Mel fill:#38bdf8,stroke:#0284c7,stroke-width:2px,color:#fff
+      style Enc fill:#8b5cf6,stroke:#7c3aed,stroke-width:2px,color:#fff
+      style Dec fill:#8b5cf6,stroke:#7c3aed,stroke-width:2px,color:#fff
       style Out fill:#10b981,stroke:#059669,stroke-width:2px,color:#fff
 
 _metadata:

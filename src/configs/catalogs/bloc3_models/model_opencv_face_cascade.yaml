@@ -17,6 +17,12 @@ code_template: |
   import pandas as pd
   import numpy as np
   import json
+  from sklearn.base import BaseEstimator, TransformerMixin
+  try:
+      from imblearn.pipeline import Pipeline
+  except ImportError:
+      from sklearn.pipeline import Pipeline
+
   try:
       import cv2
   except ImportError:
@@ -31,48 +37,88 @@ code_template: |
   MIN_NEIGHBORS = 5
   # [/PARAM]
 
-  print(f"[MODEL] Détection de visages OpenCV Haar Cascades...")
-  if 'X_test' in locals() and cv2 is not None:
-      images = list(X_test)
-      
-      # Chargement de la cascade de face
-      face_cascade = cv2.CascadeClassifier(cv2.data.haarcascades + 'haarcascade_frontalface_default.xml')
-      
-      all_preds = []
-      for img in images:
-          # On suppose img est un numpy array BGR ou RGB
-          if isinstance(img, str):
-              img_arr = cv2.imread(img)
-          else:
-              img_arr = img
-              
-          if img_arr is not None:
-              gray = cv2.cvtColor(img_arr.astype('uint8'), cv2.COLOR_BGR2GRAY) if len(img_arr.shape) == 3 else img_arr
-              faces = face_cascade.detectMultiScale(gray, scaleFactor=float(SCALE_FACTOR), minNeighbors=int(MIN_NEIGHBORS))
-              
-              # faces renvoie des listes [x, y, w, h]
-              faces_list = [{"box": [int(x), int(y), int(x+w), int(y+h)], "class": "face"} for (x, y, w, h) in faces]
-              all_preds.append(json.dumps(faces_list))
-          else:
-              all_preds.append("[]")
-              
-      y_pred = np.array(all_preds)
-      y_proba = None
-      feature_importances = None
-      
-      from sklearn.preprocessing import FunctionTransformer
-      model = FunctionTransformer(lambda X: y_pred)
-      full_pipeline = model
+  print(f"[MODEL] Initialisation Détection de visages OpenCV Haar Cascades (scale={SCALE_FACTOR}, min_neighbors={MIN_NEIGHBORS})...")
+  
+  class HaarCascadeDetector(BaseEstimator, TransformerMixin):
+      def __init__(self, scale_factor=1.1, min_neighbors=5):
+          self.scale_factor = scale_factor
+          self.min_neighbors = min_neighbors
+          self.face_cascade = None
           
+      def fit(self, X, y=None):
+          if cv2 is not None:
+              self.face_cascade = cv2.CascadeClassifier(cv2.data.haarcascades + 'haarcascade_frontalface_default.xml')
+          return self
+          
+      def predict(self, X):
+          if cv2 is None or self.face_cascade is None:
+              return np.array([])
+          
+          all_preds = []
+          for img in X:
+              if isinstance(img, str):
+                  img_arr = cv2.imread(img)
+              else:
+                  img_arr = img
+                  
+              if img_arr is not None:
+                  gray = cv2.cvtColor(img_arr.astype('uint8'), cv2.COLOR_BGR2GRAY) if len(img_arr.shape) == 3 else img_arr
+                  faces = self.face_cascade.detectMultiScale(gray, scaleFactor=float(self.scale_factor), minNeighbors=int(self.min_neighbors))
+                  
+                  faces_list = [{"box": [int(x), int(y), int(x+w), int(y+h)], "class": "face"} for (x, y, w, h) in faces]
+                  all_preds.append(json.dumps(faces_list))
+              else:
+                  all_preds.append("[]")
+          return np.array(all_preds)
+
+  model = HaarCascadeDetector(scale_factor=float(SCALE_FACTOR), min_neighbors=int(MIN_NEIGHBORS))
+
+  if 'preprocessor' in locals() and preprocessor is not None:
+      if hasattr(preprocessor, 'steps'):
+          full_pipeline = Pipeline(steps=preprocessor.steps + [('model', model)])
+      else:
+          full_pipeline = Pipeline(steps=[('preprocessor', preprocessor), ('model', model)])
+  else:
+      full_pipeline = Pipeline(steps=[('model', model)])
+
+  y_pred = None
+  y_proba = None
+  feature_importances = None
+  training_history = {}
+  task_type = "object_detection"
+  meta = {}
+
+  if 'X_test' in locals():
+      print("[MODEL] Exécution de la détection de visages...")
+      # Pseudo-fit since it's pre-trained
+      if 'X_train' in locals() and 'y_train' in locals():
+          full_pipeline.fit(X_train, y_train)
+      else:
+          full_pipeline.fit(X_test)
+          
+      y_pred = full_pipeline.predict(X_test)
       training_history = {"status": "success", "type": "opencv_cascade"}
-      task_type = "object_detection"
 illustration_mermaid: |
-    graph LR
-      Data([Features]) --> Model((Machine Learning))
-      Model --> Pred([Predictions])
-      style Model fill:#8b5cf6,stroke:#7c3aed,stroke-width:2px,color:#fff
-      style Data fill:#f8fafc,stroke:#94a3b8,stroke-width:1px
-      style Pred fill:#f8fafc,stroke:#94a3b8,stroke-width:1px
+  graph TD
+    A[Input Images] --> B(Preprocessing Pipeline)
+    B --> C[OpenCV Haar Cascade Model]
+    
+    subgraph Viola-Jones Framework
+        C --> D[Convert Image to Grayscale]
+        D --> E[Compute Integral Image]
+        E --> F[Scan Multi-Scale Windows]
+        F --> G[Apply Cascaded Weak Classifiers: Haar Features]
+        G --> H{Pass All Stages?}
+        H -- No --> I[Discard Window]
+        H -- Yes --> J[Accept as Face Region]
+    end
+    
+    J --> K[Non-Maximum Suppression / MinNeighbors]
+    K --> L([y_pred: List of Bounding Boxes x,y,w,h])
+    
+    style C fill:#8b5cf6,stroke:#7c3aed,stroke-width:2px,color:#fff
+    style G fill:#f59e0b,stroke:#d97706,stroke-width:2px,color:#fff
+    style L fill:#3b82f6,stroke:#2563eb,stroke-width:2px,color:#fff
 
 _metadata:
   bloc: 3

@@ -15,33 +15,104 @@ code_template: |
   import pandas as pd
   import numpy as np
   import torch
+  import warnings
+  warnings.filterwarnings('ignore')
   try:
-      from transformers import AutoTokenizer, AutoModelForSequenceClassification, Trainer, TrainingArguments
-      from datasets import Dataset
+      from transformers import DistilBertTokenizer, DistilBertForSequenceClassification
+      from torch.utils.data import DataLoader, TensorDataset
+      import torch.optim as optim
   except ImportError:
-      AutoTokenizer = None
-      print("[ERREUR] transformers ou datasets n'est pas installé. Lancez : !pip install transformers datasets")
+      DistilBertTokenizer = None
+      print("[ERREUR] transformers n'est pas installé. Lancez : !pip install transformers")
 
   # [PARAM: EPOCHS | number]
   EPOCHS = 3
   # [/PARAM]
 
   print(f"[MODEL] Fine-tuning DistilBERT (epochs={EPOCHS})...")
-  if 'X_train' in locals() and 'y_train' in locals() and 'X_test' in locals() and AutoTokenizer is not None:
+  
+  model = None
+  y_pred = None
+  y_proba = None
+  feature_importances = None
+  training_history = {}
+  task_type = "classification"
+  meta = {"framework": "transformers", "type": "distilbert_classifier"}
+  full_pipeline = None
+
+  if 'X_train' in locals() and 'y_train' in locals() and 'X_test' in locals() and DistilBertTokenizer is not None:
       classes = np.unique(y_train)
       label2id = {c: i for i, c in enumerate(classes)}
       id2label = {i: c for i, c in enumerate(classes)}
       y_tr_enc = np.array([label2id[y] for y in y_train])
       
+      # Extract text lists
       X_tr_text = X_train['text'].astype(str).tolist() if isinstance(X_train, pd.DataFrame) and 'text' in X_train.columns else [str(x) for x in X_train]
       X_te_text = X_test['text'].astype(str).tolist() if isinstance(X_test, pd.DataFrame) and 'text' in X_test.columns else [str(x) for x in X_test]
 
       model_name = "distilbert-base-uncased"
+      tokenizer = DistilBertTokenizer.from_pretrained(model_name)
+      model = DistilBertForSequenceClassification.from_pretrained(model_name, num_labels=len(classes))
+      
+      # Tokenize
+      train_encodings = tokenizer(X_tr_text, truncation=True, padding=True, max_length=128, return_tensors='pt')
+      test_encodings = tokenizer(X_te_text, truncation=True, padding=True, max_length=128, return_tensors='pt')
+      
+      train_dataset = TensorDataset(train_encodings['input_ids'], train_encodings['attention_mask'], torch.tensor(y_tr_enc, dtype=torch.long))
+      train_loader = DataLoader(train_dataset, batch_size=8, shuffle=True)
+      
+      device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+      model.to(device)
+      
+      optimizer = optim.AdamW(model.parameters(), lr=5e-5)
+      
+      model.train()
+      final_loss = 0.0
+      for epoch in range(int(EPOCHS)):
+          epoch_loss = 0.0
+          for batch in train_loader:
+              optimizer.zero_grad()
+              input_ids, attention_mask, labels = [b.to(device) for b in batch]
+              outputs = model(input_ids, attention_mask=attention_mask, labels=labels)
+              loss = outputs.loss
+              loss.backward()
+              optimizer.step()
+              epoch_loss += loss.item()
+          final_loss = epoch_loss / len(train_loader)
+          
+      model.eval()
+      with torch.no_grad():
+          input_ids = test_encodings['input_ids'].to(device)
+          attention_mask = test_encodings['attention_mask'].to(device)
+          outputs = model(input_ids, attention_mask=attention_mask)
+          logits = outputs.logits
+          preds_idx = torch.argmax(logits, dim=1).cpu().numpy()
+          y_pred = np.array([id2label[i] for i in preds_idx])
+          y_proba = torch.nn.functional.softmax(logits, dim=-1).cpu().numpy()
+          
+      if 'preprocessor' in locals() and preprocessor is not None:
+          try: from imblearn.pipeline import Pipeline
+          except: from sklearn.pipeline import Pipeline
+          full_pipeline = Pipeline(steps=preprocessor.steps + [('model', model)])
+      else:
+          full_pipeline = model
+          
+      training_history = {"status": "success", "loss": final_loss}
+
 illustration_mermaid: |
-    graph LR
-      In([Raw Data]) -->|Process| Out([Clean Data])
-      style In fill:#eff6ff,stroke:#94a3b8,stroke-width:2px,stroke-dasharray: 5 5
-      style Out fill:#10b981,stroke:#059669,stroke-width:2px,color:#fff
+  graph TD
+    subgraph DistilBERT Pipeline
+      In([Text Input]) --> Tokenizer[DistilBert Tokenizer]
+      Tokenizer --> Tokens[Input IDs & Attn Mask]
+      Tokens --> DistilBERT[DistilBERT Base Layers]
+      DistilBERT --> HiddenState[CLS Hidden State]
+      HiddenState --> Classifier[Linear Classification Head]
+      Classifier --> Softmax[Softmax]
+      Softmax --> Out([Predicted Class & Proba])
+    end
+    style In fill:#f8fafc,stroke:#94a3b8,stroke-width:1px
+    style Out fill:#10b981,stroke:#059669,stroke-width:2px,color:#fff
+    style DistilBERT fill:#8b5cf6,stroke:#7c3aed,stroke-width:2px,color:#fff
 
 _metadata:
   bloc: 3

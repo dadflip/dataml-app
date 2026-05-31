@@ -92,12 +92,20 @@ code_template: |
       training_history = {"status": "success", "loss": float(loss)}
       task_type = "generative"
 illustration_mermaid: |
-    graph LR
-      Data([Features]) --> Model((Machine Learning))
-      Model --> Pred([Predictions])
-      style Model fill:#8b5cf6,stroke:#7c3aed,stroke-width:2px,color:#fff
-      style Data fill:#f8fafc,stroke:#94a3b8,stroke-width:1px
-      style Pred fill:#f8fafc,stroke:#94a3b8,stroke-width:1px
+    graph TD
+      In([Input Data]) --> Enc1(Encoder: Dense Layers)
+      Enc1 --> Mu([Latent Mean])
+      Enc1 --> LogVar([Latent Log-Var])
+      Mu --> Reparam(Reparameterization Trick)
+      LogVar --> Reparam
+      Reparam --> Dec1(Decoder: Dense Layers)
+      Dec1 --> Out([Reconstructed Data])
+      
+      style In fill:#f8fafc,stroke:#94a3b8,stroke-width:2px
+      style Enc1 fill:#38bdf8,stroke:#0284c7,stroke-width:2px,color:#fff
+      style Reparam fill:#8b5cf6,stroke:#7c3aed,stroke-width:2px,color:#fff
+      style Dec1 fill:#10b981,stroke:#059669,stroke-width:2px,color:#fff
+      style Out fill:#f8fafc,stroke:#94a3b8,stroke-width:2px
 
 _metadata:
   bloc: 3

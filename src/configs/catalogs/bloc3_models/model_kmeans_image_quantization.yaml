@@ -54,13 +54,24 @@ code_template: |
           
       training_history = {"status": "success", "colors": N_COLORS}
       task_type = "image_transformation"
+      meta = {}
 illustration_mermaid: |
-    graph LR
-      Data([Features]) --> Model((Machine Learning))
-      Model --> Pred([Predictions])
-      style Model fill:#8b5cf6,stroke:#7c3aed,stroke-width:2px,color:#fff
-      style Data fill:#f8fafc,stroke:#94a3b8,stroke-width:1px
-      style Pred fill:#f8fafc,stroke:#94a3b8,stroke-width:1px
+  graph TD
+    subgraph Image Data
+      Img[Original Image HxWx3] --> Reshape[Reshape to N_Pixels x 3]
+    end
+    subgraph Color Quantization
+      Reshape --> KM[K-Means Clustering on RGB]
+      KM --> Centroids[Find K Dominant Colors / Centroids]
+      Centroids --> Assign[Assign each pixel to nearest Centroid color]
+    end
+    subgraph Reconstruction
+      Assign --> ReshapeBack[Reshape back to HxWx3]
+      ReshapeBack --> Out[Quantized Image]
+    end
+    style KM fill:#8b5cf6,stroke:#7c3aed,stroke-width:2px,color:#fff
+    style Centroids fill:#f59e0b,stroke:#d97706,stroke-width:2px,color:#fff
+    style Out fill:#10b981,stroke:#059669,stroke-width:2px,color:#fff
 
 _metadata:
   bloc: 3

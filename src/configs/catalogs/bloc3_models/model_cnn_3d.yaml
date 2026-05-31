@@ -14,6 +14,17 @@ hyperparameters:
 code_template: |
   import pandas as pd
   import numpy as np
+
+  # Default fallback
+  model = None
+  full_pipeline = None
+  y_pred = None
+  y_proba = None
+  feature_importances = None
+  training_history = {}
+  task_type = "classification"
+  meta = {"model_name": "CNN 3D"}
+
   try:
       import torch
       import torch.nn as nn
@@ -27,24 +38,160 @@ code_template: |
   EPOCHS = 5
   # [/PARAM]
 
-  print(f"[MODEL] Entraînement CNN 3D PyTorch...")
+  print(f"[MODEL] Entraînement CNN 3D PyTorch (epochs={EPOCHS})...")
+
   if 'X_train' in locals() and 'y_train' in locals() and 'X_test' in locals() and torch is not None:
-      X_tr_np = np.array(X_train)
-      X_te_np = np.array(X_test)
+      # Use preprocessor if available
+      has_preprocessor = 'preprocessor' in locals() and preprocessor is not None
+      
+      if has_preprocessor:
+          X_train_proc = preprocessor.fit_transform(X_train)
+          X_test_proc = preprocessor.transform(X_test)
+          try:
+              from imblearn.pipeline import Pipeline
+          except ImportError:
+              from sklearn.pipeline import Pipeline
+          full_pipeline = Pipeline(steps=list(preprocessor.steps) if hasattr(preprocessor, 'steps') else [('preprocessor', preprocessor)])
+      else:
+          X_train_proc = X_train
+          X_test_proc = X_test
+          full_pipeline = None
+
+      X_tr_np = np.array(X_train_proc, dtype=np.float32)
+      X_te_np = np.array(X_test_proc, dtype=np.float32)
+
       # CNN 3D attend (N, C, D, H, W)
       if len(X_tr_np.shape) != 5:
-          print("[ERREUR] Les données doivent être en 5D (N, C, D, H, W). Utilisez un preprocessor adapté.")
-          y_pred = np.zeros(len(X_test))
-          y_proba = None
-          feature_importances = None
-          full_pipeline = "CNN 3D Incompatible Input"
+          print("[WARNING] Les données ne sont pas en 5D (N, C, D, H, W). Tentative de reshape...")
+          # Basic reshape logic if tabular (for dummy tests)
+          # Assuming size is e.g. D*H*W with C=1
+          total_features = X_tr_np.shape[1]
+          # Try to make a cube
+          cube_side = int(np.round(total_features ** (1.0 / 3.0)))
+          if cube_side**3 == total_features:
+              X_tr_np = X_tr_np.reshape(-1, 1, cube_side, cube_side, cube_side)
+              X_te_np = X_te_np.reshape(-1, 1, cube_side, cube_side, cube_side)
+          else:
+              print("[ERREUR] Impossible de reshape en 3D cube. Utilisez un preprocessor adapté.")
+              # Fallback dummy dimensions
+              X_tr_np = X_tr_np.reshape(-1, 1, 1, 1, total_features)
+              X_te_np = X_te_np.reshape(-1, 1, 1, 1, total_features)
+
+      in_channels = X_tr_np.shape[1]
+      classes = np.unique(y_train)
+      num_classes = len(classes)
+      label2id = {c: i for i, c in enumerate(classes)}
+      id2label = {i: c for i, c in enumerate(classes)}
+      y_tr_enc = np.array([label2id[y] for y in y_train])
+      
+      dataset = TensorDataset(torch.tensor(X_tr_np), torch.tensor(y_tr_enc, dtype=torch.long))
+      loader = DataLoader(dataset, batch_size=4, shuffle=True) # small batch size for 3D CNN
+
+      class CNN3DClassifier(nn.Module):
+          def __init__(self, in_channels, num_classes):
+              super().__init__()
+              self.features = nn.Sequential(
+                  nn.Conv3d(in_channels, 16, kernel_size=3, padding=1),
+                  nn.ReLU(),
+                  nn.MaxPool3d(kernel_size=2, stride=2),
+                  nn.Conv3d(16, 32, kernel_size=3, padding=1),
+                  nn.ReLU(),
+                  nn.MaxPool3d(kernel_size=2, stride=2)
+              )
+              self.classifier = nn.Sequential(
+                  nn.AdaptiveAvgPool3d((1, 1, 1)),
+                  nn.Flatten(),
+                  nn.Linear(32, num_classes)
+              )
+          def forward(self, x):
+              x = self.features(x)
+              x = self.classifier(x)
+              return x
+
+      model = CNN3DClassifier(in_channels, num_classes)
+      device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+      model = model.to(device)
+      criterion = nn.CrossEntropyLoss()
+      optimizer = optim.Adam(model.parameters(), lr=0.001)
+      
+      model.train()
+      loss_val = 0.0
+      for epoch in range(int(EPOCHS)):
+          for batch_X, batch_y in loader:
+              batch_X, batch_y = batch_X.to(device), batch_y.to(device)
+              optimizer.zero_grad()
+              loss = criterion(model(batch_X), batch_y)
+              loss.backward()
+              optimizer.step()
+              loss_val = float(loss.item())
+              
+      model.eval()
+      with torch.no_grad():
+          # For 3D CNNs memory could be an issue, predict in small batches
+          preds_idx_list = []
+          y_proba_list = []
+          test_loader = DataLoader(TensorDataset(torch.tensor(X_te_np)), batch_size=4, shuffle=False)
+          for batch_X_te, in test_loader:
+              logits = model(batch_X_te.to(device))
+              preds_idx_list.extend(torch.argmax(logits, dim=1).cpu().numpy())
+              y_proba_list.extend(torch.nn.functional.softmax(logits, dim=-1).cpu().numpy())
+              
+          y_pred = np.array([id2label[i] for i in preds_idx_list])
+          y_proba = np.array(y_proba_list)
+          
+      training_history = {"status": "success", "loss": loss_val, "fitted_on": len(X_train)}
+      
+      if not has_preprocessor:
+          full_pipeline = model
+
 illustration_mermaid: |
-    graph LR
-      Data([Features]) --> Model((Machine Learning))
-      Model --> Pred([Predictions])
-      style Model fill:#8b5cf6,stroke:#7c3aed,stroke-width:2px,color:#fff
+    graph TD
+      subgraph Input
+        Data([Volumetric Data: N x C x D x H x W])
+      end
+      
+      subgraph 3D Feature Extraction
+        Conv1[Conv3D<br/>16 filters, 3x3x3]
+        Relu1[ReLU]
+        Pool1[MaxPool3D<br/>2x2x2]
+        
+        Conv2[Conv3D<br/>32 filters, 3x3x3]
+        Relu2[ReLU]
+        Pool2[MaxPool3D<br/>2x2x2]
+      end
+      
+      subgraph Classification
+        AvgPool[AdaptiveAvgPool3D]
+        Flat[Flatten]
+        FC[Linear<br/>Output: Num Classes]
+      end
+      
+      subgraph Output
+        Softmax[Softmax / Logits]
+        Preds([Class Predictions])
+      end
+      
+      Data --> Conv1
+      Conv1 --> Relu1
+      Relu1 --> Pool1
+      Pool1 --> Conv2
+      Conv2 --> Relu2
+      Relu2 --> Pool2
+      Pool2 --> AvgPool
+      AvgPool --> Flat
+      Flat --> FC
+      FC --> Softmax
+      Softmax --> Preds
+
+      style Conv1 fill:#8b5cf6,stroke:#7c3aed,stroke-width:2px,color:#fff
+      style Conv2 fill:#8b5cf6,stroke:#7c3aed,stroke-width:2px,color:#fff
+      style Relu1 fill:#c4b5fd,stroke:#8b5cf6,stroke-width:1px,color:#000
+      style Relu2 fill:#c4b5fd,stroke:#8b5cf6,stroke-width:1px,color:#000
+      style Pool1 fill:#8b5cf6,stroke:#7c3aed,stroke-width:2px,color:#fff
+      style Pool2 fill:#8b5cf6,stroke:#7c3aed,stroke-width:2px,color:#fff
+      style FC fill:#8b5cf6,stroke:#7c3aed,stroke-width:2px,color:#fff
       style Data fill:#f8fafc,stroke:#94a3b8,stroke-width:1px
-      style Pred fill:#f8fafc,stroke:#94a3b8,stroke-width:1px
+      style Preds fill:#f8fafc,stroke:#94a3b8,stroke-width:1px
 
 _metadata:
   bloc: 3

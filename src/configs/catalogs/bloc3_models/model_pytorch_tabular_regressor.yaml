@@ -17,6 +17,8 @@ hyperparameters:
 code_template: |
   import pandas as pd
   import numpy as np
+  from sklearn.pipeline import Pipeline
+  
   try:
       import torch
       import torch.nn as nn
@@ -28,13 +30,153 @@ code_template: |
 
   # [PARAM: HIDDEN_LAYERS | string]
   HIDDEN_LAYERS = "256, 128, 64"
+  # [/PARAM]
+  
+  # [PARAM: EPOCHS | int]
+  EPOCHS = 20
+  # [/PARAM]
+  
+  # [PARAM: LEARNING_RATE | float]
+  LEARNING_RATE = 0.001
+  # [/PARAM]
+
+  task_type = "regression"
+  meta = {
+      "model_name": "PyTorch DNN Regressor",
+      "framework": "pytorch",
+      "task_type": task_type
+  }
+  
+  full_pipeline = None
+  model = None
+  y_pred = None
+  y_proba = None
+  feature_importances = None
+  training_history = []
+
+  if torch is not None:
+      device = torch.device("cuda" if torch.cuda.is_available() else "mps" if torch.backends.mps.is_available() else "cpu")
+      
+      # Prepare data
+      if 'preprocessor' in globals() and preprocessor is not None:
+          X_train_processed = preprocessor.fit_transform(X_train)
+          X_test_processed = preprocessor.transform(X_test)
+      else:
+          X_train_processed = X_train.values if isinstance(X_train, pd.DataFrame) else X_train
+          X_test_processed = X_test.values if isinstance(X_test, pd.DataFrame) else X_test
+          
+      if hasattr(X_train_processed, "toarray"):
+          X_train_processed = X_train_processed.toarray()
+      if hasattr(X_test_processed, "toarray"):
+          X_test_processed = X_test_processed.toarray()
+          
+      X_train_processed = X_train_processed.astype(np.float32)
+      X_test_processed = X_test_processed.astype(np.float32)
+      
+      y_train_arr = y_train.values if isinstance(y_train, pd.Series) else y_train
+      y_test_arr = y_test.values if isinstance(y_test, pd.Series) else y_test
+      
+      y_train_arr = y_train_arr.astype(np.float32).reshape(-1, 1)
+      y_test_arr = y_test_arr.astype(np.float32).reshape(-1, 1)
+      
+      X_train_tensor = torch.tensor(X_train_processed, dtype=torch.float32)
+      y_train_tensor = torch.tensor(y_train_arr, dtype=torch.float32)
+      X_test_tensor = torch.tensor(X_test_processed, dtype=torch.float32)
+      y_test_tensor = torch.tensor(y_test_arr, dtype=torch.float32)
+      
+      dataset = TensorDataset(X_train_tensor, y_train_tensor)
+      dataloader = DataLoader(dataset, batch_size=32, shuffle=True)
+      
+      input_dim = X_train_processed.shape[1]
+      layers_list = [int(x.strip()) for x in HIDDEN_LAYERS.split(',') if x.strip()]
+      
+      layers = []
+      in_dim = input_dim
+      for h in layers_list:
+          layers.append(nn.Linear(in_dim, h))
+          layers.append(nn.ReLU())
+          layers.append(nn.BatchNorm1d(h))
+          layers.append(nn.Dropout(0.2))
+          in_dim = h
+      layers.append(nn.Linear(in_dim, 1))
+      
+      model = nn.Sequential(*layers).to(device)
+      criterion = nn.MSELoss()
+      optimizer = optim.Adam(model.parameters(), lr=LEARNING_RATE)
+      
+      model.train()
+      for epoch in range(EPOCHS):
+          epoch_loss = 0.0
+          for batch_x, batch_y in dataloader:
+              batch_x, batch_y = batch_x.to(device), batch_y.to(device)
+              optimizer.zero_grad()
+              outputs = model(batch_x)
+              loss = criterion(outputs, batch_y)
+              loss.backward()
+              optimizer.step()
+              epoch_loss += loss.item()
+          training_history.append({"epoch": epoch+1, "loss": epoch_loss/len(dataloader)})
+          
+      model.eval()
+      with torch.no_grad():
+          X_test_device = X_test_tensor.to(device)
+          preds = model(X_test_device).cpu().numpy()
+      
+      y_pred = preds.flatten()
+      
+      class PyTorchRegressorWrapper:
+          def __init__(self, model, device):
+              self.model = model
+              self.device = device
+          def predict(self, X):
+              self.model.eval()
+              if hasattr(X, "toarray"): X = X.toarray()
+              X_tensor = torch.tensor(X.astype(np.float32), dtype=torch.float32).to(self.device)
+              with torch.no_grad():
+                  preds = self.model(X_tensor).cpu().numpy()
+              return preds.flatten()
+
+      wrapped_model = PyTorchRegressorWrapper(model, device)
+
+      if 'preprocessor' in globals() and preprocessor is not None:
+          full_pipeline = Pipeline([
+              ('preprocessor', preprocessor),
+              ('model', wrapped_model)
+          ])
+      else:
+          full_pipeline = Pipeline([
+              ('model', wrapped_model)
+          ])
 illustration_mermaid: |
-    graph LR
-      Data([Features]) --> Model((Machine Learning))
-      Model --> Pred([Predictions])
-      style Model fill:#8b5cf6,stroke:#7c3aed,stroke-width:2px,color:#fff
-      style Data fill:#f8fafc,stroke:#94a3b8,stroke-width:1px
-      style Pred fill:#f8fafc,stroke:#94a3b8,stroke-width:1px
+  graph TD
+    subgraph Data Pipeline
+      Input([Raw Features]) --> Preprocessor[[Data Preprocessing]]
+      Preprocessor --> Tensors[(PyTorch Tensors)]
+      Tensors --> Dataloader[[DataLoader Batching]]
+    end
+    subgraph Neural Network Architecture
+      Dataloader --> L1[Linear Layer]
+      L1 --> R1(ReLU)
+      R1 --> B1(BatchNorm + Dropout)
+      B1 --> L2[Linear Layer]
+      L2 --> R2(ReLU)
+      R2 --> B2(BatchNorm + Dropout)
+      B2 --> L3[Linear Layer]
+      L3 --> R3(ReLU)
+      R3 --> B3(BatchNorm + Dropout)
+      B3 --> L_out[Linear Output Layer]
+    end
+    subgraph Loss & Opt
+      L_out --> Loss{MSELoss}
+      Target[(Continuous Labels)] --> Loss
+      Loss --> Opt[[Adam Optimizer]]
+      Opt --> |Updates weights| L1
+    end
+    subgraph Evaluation
+      L_out --> Preds([Continuous Predictions])
+    end
+    style Input fill:#f8fafc,stroke:#94a3b8,stroke-width:1px
+    style Preds fill:#f8fafc,stroke:#94a3b8,stroke-width:1px
 
 _metadata:
   bloc: 3

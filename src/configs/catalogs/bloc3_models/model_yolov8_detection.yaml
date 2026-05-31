@@ -59,12 +59,21 @@ code_template: |
       training_history = {"status": "success", "type": "yolo_detection_zeroshot"}
       task_type = "object_detection"
 illustration_mermaid: |
-    graph LR
-      Data([Features]) --> Model((Machine Learning))
-      Model --> Pred([Predictions])
-      style Model fill:#8b5cf6,stroke:#7c3aed,stroke-width:2px,color:#fff
-      style Data fill:#f8fafc,stroke:#94a3b8,stroke-width:1px
-      style Pred fill:#f8fafc,stroke:#94a3b8,stroke-width:1px
+    graph TD
+      In([Input Image]) --> Backbone(CSPDarknet Backbone)
+      Backbone --> Neck(PANet Neck: Feature Pyramid)
+      Neck --> Head(YOLOv8 Decoupled Head)
+      Head --> Box(Bounding Box Regression)
+      Head --> Cls(Class Probabilities)
+      Box --> NMS(Non-Maximum Suppression)
+      Cls --> NMS
+      NMS --> Out([JSON Object Detections])
+      
+      style In fill:#f8fafc,stroke:#94a3b8,stroke-width:2px
+      style Backbone fill:#38bdf8,stroke:#0284c7,stroke-width:2px,color:#fff
+      style Neck fill:#38bdf8,stroke:#0284c7,stroke-width:2px,color:#fff
+      style Head fill:#8b5cf6,stroke:#7c3aed,stroke-width:2px,color:#fff
+      style Out fill:#10b981,stroke:#059669,stroke-width:2px,color:#fff
 
 _metadata:
   bloc: 3

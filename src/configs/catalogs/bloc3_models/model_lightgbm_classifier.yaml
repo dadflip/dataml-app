@@ -69,13 +69,31 @@ code_template: |
           
       training_history = {"status": "success", "fitted_on": len(X_train)}
       task_type = "classification"
+      meta = {}
 illustration_mermaid: |
-    graph LR
-      Data([Features]) --> Model((Machine Learning))
-      Model --> Pred([Predictions])
-      style Model fill:#8b5cf6,stroke:#7c3aed,stroke-width:2px,color:#fff
-      style Data fill:#f8fafc,stroke:#94a3b8,stroke-width:1px
-      style Pred fill:#f8fafc,stroke:#94a3b8,stroke-width:1px
+  graph TD
+    subgraph Data
+      X[Input Features] --> Bin[Histogram Binning]
+    end
+    subgraph Leaf-wise Tree Growth
+      Bin --> Tree1[Tree 1: Split Node with Max Loss Reduction]
+      Tree1 --> Res1[Compute Residuals]
+      Res1 --> Tree2[Tree 2: Leaf-wise growth]
+      Tree2 --> ResN[...]
+      ResN --> TreeN[Tree N: Deep and Asymmetric]
+    end
+    subgraph Ensemble
+      Tree1 -.-> Sum[Sum Trees Outputs]
+      Tree2 -.-> Sum
+      TreeN -.-> Sum
+      Sum --> Sigmoid[Sigmoid/Softmax]
+      Sigmoid --> Pred[Predicted Class]
+    end
+    style Bin fill:#f59e0b,stroke:#d97706,stroke-width:2px,color:#fff
+    style Tree1 fill:#10b981,stroke:#059669,stroke-width:2px,color:#fff
+    style Tree2 fill:#10b981,stroke:#059669,stroke-width:2px,color:#fff
+    style TreeN fill:#10b981,stroke:#059669,stroke-width:2px,color:#fff
+    style Pred fill:#3b82f6,stroke:#2563eb,stroke-width:2px,color:#fff
 
 _metadata:
   bloc: 3

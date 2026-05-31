@@ -44,13 +44,28 @@ code_template: |
           
       training_history = {"status": "success", "fitted_on": len(X_train), "non_zero_coefs": int(np.sum(model.coef_ != 0))}
       task_type = "regression"
+      meta = {}
 illustration_mermaid: |
-    graph LR
-      Data([Features]) --> Model((Machine Learning))
-      Model --> Pred([Predictions])
-      style Model fill:#8b5cf6,stroke:#7c3aed,stroke-width:2px,color:#fff
-      style Data fill:#f8fafc,stroke:#94a3b8,stroke-width:1px
-      style Pred fill:#f8fafc,stroke:#94a3b8,stroke-width:1px
+  graph TD
+    subgraph Inputs
+      X[Features Matrix X] --> Loss
+      Y[Target Vector Y] --> Loss
+    end
+    subgraph Optimization
+      Loss[Compute MSE Loss]
+      Reg[Add L1 Penalty: alpha * sum|w|]
+      Loss --> Opt[Optimize w to minimize MSE + L1]
+      Reg --> Opt
+      Opt --> Shrink[Shrink weights towards 0]
+      Shrink --> Sparse[Feature Selection: some w = 0]
+    end
+    subgraph Output
+      Sparse --> Weights[Fitted Coefficients]
+      Weights --> Pred[Continuous Predictions]
+    end
+    style Reg fill:#f59e0b,stroke:#d97706,stroke-width:2px,color:#fff
+    style Shrink fill:#8b5cf6,stroke:#7c3aed,stroke-width:2px,color:#fff
+    style Sparse fill:#10b981,stroke:#059669,stroke-width:2px,color:#fff
 
 _metadata:
   bloc: 3

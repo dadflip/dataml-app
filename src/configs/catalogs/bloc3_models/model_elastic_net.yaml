@@ -14,6 +14,7 @@ hyperparameters:
   l1_ratio: "Ratio L1 vs L2 (0 = Ridge, 1 = Lasso)."
 code_template: |
   import pandas as pd
+  import numpy as np
   from sklearn.linear_model import ElasticNet
   
   # [PARAM: ALPHA | number]
@@ -26,6 +27,15 @@ code_template: |
   
   print(f"[MODEL] Entraînement ElasticNet (Alpha={ALPHA}, L1_ratio={L1_RATIO})...")
   
+  model = None
+  y_pred = None
+  y_proba = None
+  feature_importances = None
+  training_history = {}
+  task_type = "regression"
+  meta = {"framework": "sklearn", "type": "elastic_net"}
+  full_pipeline = None
+
   if 'X_train' in locals() and 'X_test' in locals() and 'y_train' in locals():
       model = ElasticNet(alpha=float(ALPHA), l1_ratio=float(L1_RATIO), random_state=42)
       model.fit(X_train, y_train)
@@ -35,20 +45,40 @@ code_template: |
       except Exception:
           y_proba = None
       
-      feature_importances = None
       if hasattr(model, "coef_"):
-          feature_importances = dict(zip(X_train.columns, model.coef_))
+          if 'feature_names_out' in locals() and len(model.coef_) == len(feature_names_out):
+              feature_importances = pd.Series(np.abs(model.coef_), index=feature_names_out)
+          else:
+              # Fallback if X_train is a dataframe
+              if isinstance(X_train, pd.DataFrame):
+                  feature_importances = dict(zip(X_train.columns, model.coef_))
           
-      full_pipeline = model
-      training_history = {"status": "success"}
-      task_type = "regression"
+      if 'preprocessor' in locals() and preprocessor is not None:
+          try: from imblearn.pipeline import Pipeline
+          except: from sklearn.pipeline import Pipeline
+          full_pipeline = Pipeline(steps=preprocessor.steps + [('model', model)])
+      else:
+          try: from imblearn.pipeline import Pipeline
+          except: from sklearn.pipeline import Pipeline
+          full_pipeline = Pipeline(steps=[('model', model)])
+          
+      training_history = {"status": "success", "fitted_on": len(X_train)}
+
 illustration_mermaid: |
-    graph LR
-      Data([Features]) --> Model((Machine Learning))
-      Model --> Pred([Predictions])
-      style Model fill:#8b5cf6,stroke:#7c3aed,stroke-width:2px,color:#fff
-      style Data fill:#f8fafc,stroke:#94a3b8,stroke-width:1px
-      style Pred fill:#f8fafc,stroke:#94a3b8,stroke-width:1px
+  graph TD
+    subgraph ElasticNet Regression
+      In([Input Features]) --> L1[L1 Penalty - Lasso]
+      In --> L2[L2 Penalty - Ridge]
+      In --> Lin[Linear Combination]
+      L1 -.-> Loss[Loss Function Minimization]
+      L2 -.-> Loss
+      Lin -.-> Loss
+      Loss --> Weights[Update Weights]
+      Weights --> Out([Continuous Prediction])
+    end
+    style In fill:#f8fafc,stroke:#94a3b8,stroke-width:1px
+    style Out fill:#10b981,stroke:#059669,stroke-width:2px,color:#fff
+    style Loss fill:#fca5a5,stroke:#ef4444,stroke-width:2px
 
 _metadata:
   bloc: 3

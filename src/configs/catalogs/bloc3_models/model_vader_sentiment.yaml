@@ -25,12 +25,18 @@ code_template: |
   # [PARAM: TEXT_COL | string]
   TEXT_COL = "text"
 illustration_mermaid: |
-    graph LR
-      Data([Features]) --> Model((Machine Learning))
-      Model --> Pred([Predictions])
-      style Model fill:#8b5cf6,stroke:#7c3aed,stroke-width:2px,color:#fff
-      style Data fill:#f8fafc,stroke:#94a3b8,stroke-width:1px
-      style Pred fill:#f8fafc,stroke:#94a3b8,stroke-width:1px
+    graph TD
+      In([Raw Text]) --> Token(VADER Tokenization)
+      Token --> Lexicon(VADER Lexicon lookup)
+      Lexicon --> Rule(Heuristics: Caps, Punctuation, Modifiers)
+      Rule --> Score(Compute Compound Score)
+      Score --> Out([Sentiment Score -1 to 1])
+      
+      style In fill:#f8fafc,stroke:#94a3b8,stroke-width:2px
+      style Token fill:#38bdf8,stroke:#0284c7,stroke-width:2px,color:#fff
+      style Lexicon fill:#8b5cf6,stroke:#7c3aed,stroke-width:2px,color:#fff
+      style Rule fill:#f59e0b,stroke:#d97706,stroke-width:2px,color:#fff
+      style Out fill:#10b981,stroke:#059669,stroke-width:2px,color:#fff
 
 _metadata:
   bloc: 3

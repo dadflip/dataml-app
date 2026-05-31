@@ -16,50 +16,81 @@ code_template: |
   import pandas as pd
   import numpy as np
   from sklearn.decomposition import NMF
+  try:
+      from imblearn.pipeline import Pipeline
+  except ImportError:
+      from sklearn.pipeline import Pipeline
 
   # [PARAM: N_COMPONENTS | number]
   N_COMPONENTS = 10
   # [/PARAM]
 
-  print(f"[MODEL] Entraînement NMF Topic Modeling (n_topics={N_COMPONENTS})...")
-  if 'X_train' in locals() and 'X_test' in locals():
-      model = NMF(n_components=int(N_COMPONENTS), init='nndsvda', random_state=42)
-      
-      X_tr_proc = X_train
-      X_te_proc = X_test
-      
-      if isinstance(X_train, pd.DataFrame) and 'text' in X_train.columns:
-          from sklearn.feature_extraction.text import TfidfVectorizer
-          tv = TfidfVectorizer(max_features=5000)
-          X_tr_proc = tv.fit_transform(X_train['text'].astype(str))
-          X_te_proc = tv.transform(X_test['text'].astype(str))
-          
-      model.fit(X_tr_proc)
-      
-      topic_dist = model.transform(X_te_proc)
-      y_pred = np.argmax(topic_dist, axis=1) # Topic dominant
-      y_proba = None
-      
-      feature_importances = None
-      
-      if 'preprocessor' in locals() and preprocessor is not None:
-          try: from imblearn.pipeline import Pipeline
-          except: from sklearn.pipeline import Pipeline
+  print(f"[MODEL] Initialisation NMF Topic Modeling (n_topics={N_COMPONENTS})...")
+  
+  model = NMF(n_components=int(N_COMPONENTS), init='nndsvda', random_state=42)
+
+  if 'preprocessor' in locals() and preprocessor is not None:
+      if hasattr(preprocessor, 'steps'):
           full_pipeline = Pipeline(steps=preprocessor.steps + [('model', model)])
       else:
-          try: from imblearn.pipeline import Pipeline
-          except: from sklearn.pipeline import Pipeline
-          full_pipeline = Pipeline(steps=[('model', model)])
+          full_pipeline = Pipeline(steps=[('preprocessor', preprocessor), ('model', model)])
+  else:
+      full_pipeline = Pipeline(steps=[('model', model)])
+
+  y_pred = None
+  y_proba = None
+  feature_importances = None
+  training_history = {}
+  task_type = "clustering"
+  meta = {}
+
+  if 'X_train' in locals() and 'X_test' in locals():
+      print("[MODEL] Entraînement du pipeline NMF...")
+      
+      # NMF doesn't take y_train. 
+      # Because full_pipeline.fit in sklearn doesn't strictly need y if steps are unsupervised,
+      # but we provide it safely
+      if 'y_train' in locals() and y_train is not None:
+          full_pipeline.fit(X_train, y_train)
+      else:
+          full_pipeline.fit(X_train)
           
+      # Predictions: Topic dominant
+      topic_dist = full_pipeline.transform(X_test)
+      y_pred = np.argmax(topic_dist, axis=1)
+      y_proba = topic_dist / np.sum(topic_dist, axis=1, keepdims=True) # Pseudo-proba
+      
+      # For feature importances, we can export the topic-word matrix W if we have feature_names
+      if hasattr(model, 'components_'):
+          if 'feature_names_out' in locals() and feature_names_out is not None and model.components_.shape[1] == len(feature_names_out):
+              # Importance of words globally across topics
+              feature_importances = pd.Series(np.sum(model.components_, axis=0), index=feature_names_out)
+              
       training_history = {"status": "success", "reconstruction_err": model.reconstruction_err_}
-      task_type = "clustering"
 illustration_mermaid: |
-    graph LR
-      Data([Features]) --> Model((Machine Learning))
-      Model --> Pred([Predictions])
-      style Model fill:#8b5cf6,stroke:#7c3aed,stroke-width:2px,color:#fff
-      style Data fill:#f8fafc,stroke:#94a3b8,stroke-width:1px
-      style Pred fill:#f8fafc,stroke:#94a3b8,stroke-width:1px
+  graph TD
+    A[Input Text Data] --> B(TF-IDF Preprocessing Pipeline)
+    B --> C[Term-Document Matrix V]
+    C --> D[NMF Algorithm]
+    
+    subgraph Non-Negative Matrix Factorization
+        D --> E[Matrix Factorization: V ≈ W * H]
+        E --> F[Matrix W: Document-Topic Weights]
+        E --> G[Matrix H: Topic-Term Weights]
+        F --> H[Optimize Frobenius Norm or Kullback-Leibler]
+    end
+    
+    X_test[Input Data: X_test] --> I(Preprocessing Pipeline)
+    I --> J[Map to Topic Space via Matrix W]
+    H -.-> J
+    J --> K[Argmax of W matrix]
+    K --> L([y_pred: Dominant Topic])
+    J --> M([y_proba: Topic Distribution])
+    
+    style D fill:#8b5cf6,stroke:#7c3aed,stroke-width:2px,color:#fff
+    style E fill:#f59e0b,stroke:#d97706,stroke-width:2px,color:#fff
+    style L fill:#3b82f6,stroke:#2563eb,stroke-width:2px,color:#fff
+    style M fill:#3b82f6,stroke:#2563eb,stroke-width:2px,color:#fff
 
 _metadata:
   bloc: 3

@@ -17,6 +17,16 @@ code_template: |
   from sklearn.naive_bayes import GaussianNB
 
   print(f"[MODEL] Entraînement Gaussian Naive Bayes...")
+  
+  model = None
+  y_pred = None
+  y_proba = None
+  feature_importances = None
+  training_history = {}
+  task_type = "classification"
+  meta = {"framework": "sklearn", "type": "gaussian_nb"}
+  full_pipeline = None
+
   if 'X_train' in locals() and 'y_train' in locals() and 'X_test' in locals():
       model = GaussianNB()
       # NB nécessite du dense matrix
@@ -40,14 +50,20 @@ code_template: |
           full_pipeline = Pipeline(steps=[('model', model)])
           
       training_history = {"status": "success", "fitted_on": len(X_train)}
-      task_type = "classification"
+
 illustration_mermaid: |
-    graph LR
-      Data([Features]) --> Model((Machine Learning))
-      Model --> Pred([Predictions])
-      style Model fill:#8b5cf6,stroke:#7c3aed,stroke-width:2px,color:#fff
-      style Data fill:#f8fafc,stroke:#94a3b8,stroke-width:1px
-      style Pred fill:#f8fafc,stroke:#94a3b8,stroke-width:1px
+  graph TD
+    subgraph Gaussian Naive Bayes
+      In([Input Features]) --> Prior[Calculate Prior Probabilities]
+      In --> Likelihood[Calculate Gaussian Likelihoods]
+      Prior --> Bayes[Bayes Theorem]
+      Likelihood --> Bayes
+      Bayes --> Max[ArgMax Posterior]
+      Max --> Out([Class Prediction])
+    end
+    style In fill:#f8fafc,stroke:#94a3b8,stroke-width:1px
+    style Out fill:#10b981,stroke:#059669,stroke-width:2px,color:#fff
+    style Bayes fill:#8b5cf6,stroke:#7c3aed,stroke-width:2px,color:#fff
 
 _metadata:
   bloc: 3

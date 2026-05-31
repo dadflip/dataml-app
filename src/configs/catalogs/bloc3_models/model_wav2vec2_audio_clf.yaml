@@ -52,9 +52,17 @@ code_template: |
       training_history = {"status": "success"}
       task_type = "classification"
 illustration_mermaid: |
-    graph LR
-      In([Raw Data]) -->|Process| Out([Clean Data])
-      style In fill:#eff6ff,stroke:#94a3b8,stroke-width:2px,stroke-dasharray: 5 5
+    graph TD
+      In([Raw Audio Signal]) --> CNN(CNN Feature Extractor)
+      CNN --> Trans(Transformer Encoder Context)
+      Trans --> Pool(Mean Pooling)
+      Pool --> FC(Classification Head)
+      FC --> Out([Audio Class Label])
+      
+      style In fill:#f8fafc,stroke:#94a3b8,stroke-width:2px
+      style CNN fill:#38bdf8,stroke:#0284c7,stroke-width:2px,color:#fff
+      style Trans fill:#8b5cf6,stroke:#7c3aed,stroke-width:2px,color:#fff
+      style FC fill:#f59e0b,stroke:#d97706,stroke-width:2px,color:#fff
       style Out fill:#10b981,stroke:#059669,stroke-width:2px,color:#fff
 
 _metadata:

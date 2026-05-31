@@ -16,6 +16,17 @@ hyperparameters:
 code_template: |
   import pandas as pd
   import numpy as np
+
+  # Default fallback
+  model = None
+  full_pipeline = None
+  y_pred = None
+  y_proba = None
+  feature_importances = None
+  training_history = {}
+  task_type = "classification"
+  meta = {"model_name": "CNN 1D"}
+
   try:
       import torch
       import torch.nn as nn
@@ -37,23 +48,44 @@ code_template: |
   EPOCHS = 10
   # [/PARAM]
 
-  print(f"[MODEL] Entraînement CNN 1D PyTorch...")
+  print(f"[MODEL] Entraînement CNN 1D PyTorch (filters={NUM_FILTERS}, kernel={KERNEL_SIZE}, epochs={EPOCHS})...")
+
   if 'X_train' in locals() and 'y_train' in locals() and 'X_test' in locals() and torch is not None:
-      X_tr_np = np.array(X_train)
-      X_te_np = np.array(X_test)
+      # Use preprocessor if available
+      has_preprocessor = 'preprocessor' in locals() and preprocessor is not None
+      
+      if has_preprocessor:
+          X_train_proc = preprocessor.fit_transform(X_train)
+          X_test_proc = preprocessor.transform(X_test)
+          try:
+              from imblearn.pipeline import Pipeline
+          except ImportError:
+              from sklearn.pipeline import Pipeline
+          full_pipeline = Pipeline(steps=list(preprocessor.steps) if hasattr(preprocessor, 'steps') else [('preprocessor', preprocessor)])
+      else:
+          X_train_proc = X_train
+          X_test_proc = X_test
+          full_pipeline = None
+
+      X_tr_np = np.array(X_train_proc, dtype=np.float32)
+      X_te_np = np.array(X_test_proc, dtype=np.float32)
+
       # Conv1D PyTorch attend (N, C, L) -- (Batch, Features/Channels, Time)
       if len(X_tr_np.shape) == 2:
-          X_tr_np = X_tr_np.reshape((X_tr_np.shape[0], X_tr_np.shape[1], 1))
-          X_te_np = X_te_np.reshape((X_te_np.shape[0], X_te_np.shape[1], 1))
+          # Si données tabulaires, on ajoute une dimension spatiale/temporelle
+          X_tr_np = X_tr_np.reshape((X_tr_np.shape[0], 1, X_tr_np.shape[1]))
+          X_te_np = X_te_np.reshape((X_te_np.shape[0], 1, X_te_np.shape[1]))
       elif len(X_tr_np.shape) == 3:
           X_tr_np = np.swapaxes(X_tr_np, 1, 2)
           X_te_np = np.swapaxes(X_te_np, 1, 2)
+
       classes = np.unique(y_train)
       num_classes = len(classes)
       label2id = {c: i for i, c in enumerate(classes)}
       id2label = {i: c for i, c in enumerate(classes)}
       y_tr_enc = np.array([label2id[y] for y in y_train])
-      dataset = TensorDataset(torch.tensor(X_tr_np, dtype=torch.float32), torch.tensor(y_tr_enc, dtype=torch.long))
+      
+      dataset = TensorDataset(torch.tensor(X_tr_np), torch.tensor(y_tr_enc, dtype=torch.long))
       loader = DataLoader(dataset, batch_size=32, shuffle=True)
 
       class CNN1DClassifier(nn.Module):
@@ -63,8 +95,12 @@ code_template: |
               self.relu = nn.ReLU()
               self.pool = nn.AdaptiveMaxPool1d(1)
               self.fc = nn.Linear(out_channels, num_classes)
+              
           def forward(self, x):
-              x = self.pool(self.relu(self.conv(x))).squeeze(2)
+              x = self.conv(x)
+              x = self.relu(x)
+              x = self.pool(x)
+              x = x.squeeze(2)
               return self.fc(x)
 
       model = CNN1DClassifier(X_tr_np.shape[1], int(NUM_FILTERS), int(KERNEL_SIZE), num_classes)
@@ -72,36 +108,65 @@ code_template: |
       model = model.to(device)
       criterion = nn.CrossEntropyLoss()
       optimizer = optim.Adam(model.parameters(), lr=0.001)
+      
       model.train()
       for epoch in range(int(EPOCHS)):
+          epoch_loss = 0.0
           for batch_X, batch_y in loader:
               batch_X, batch_y = batch_X.to(device), batch_y.to(device)
               optimizer.zero_grad()
               loss = criterion(model(batch_X), batch_y)
               loss.backward()
               optimizer.step()
+              epoch_loss += loss.item()
+              
       model.eval()
       with torch.no_grad():
-          logits = model(torch.tensor(X_te_np, dtype=torch.float32).to(device))
+          logits = model(torch.tensor(X_te_np).to(device))
           preds_idx = torch.argmax(logits, dim=1).cpu().numpy()
           y_pred = np.array([id2label[i] for i in preds_idx])
           y_proba = torch.nn.functional.softmax(logits, dim=-1).cpu().numpy()
-      feature_importances = None
-      if 'preprocessor' in locals() and preprocessor is not None:
-          try: from imblearn.pipeline import Pipeline
-          except: from sklearn.pipeline import Pipeline
-          full_pipeline = Pipeline(steps=preprocessor.steps + [('model', model)])
-      else:
+          
+      training_history = {"status": "success", "fitted_on": len(X_train)}
+      
+      # Since we can't cleanly place a PyTorch model in an sklearn pipeline without wrapper (e.g. skorch),
+      # we just keep the preprocessor in full_pipeline and set model separately.
+      if not has_preprocessor:
           full_pipeline = model
-      training_history = {"status": "success"}
-      task_type = "classification"
+
 illustration_mermaid: |
-    graph LR
-      Data([Features]) --> Model((Machine Learning))
-      Model --> Pred([Predictions])
-      style Model fill:#8b5cf6,stroke:#7c3aed,stroke-width:2px,color:#fff
+    graph TD
+      subgraph Input
+        Data([Input Data: N x Channels x Length])
+      end
+      
+      subgraph Neural Network Architecture
+        Conv[Conv1D Layer<br/>Filters: NUM_FILTERS<br/>Kernel: KERNEL_SIZE]
+        Relu[ReLU Activation]
+        Pool[AdaptiveMaxPool1D<br/>Extract max over sequence]
+        Squeeze[Squeeze<br/>Remove spatial dim]
+        FC[Fully Connected Layer<br/>Output: Num Classes]
+      end
+      
+      subgraph Output
+        Softmax[Softmax / Logits]
+        Preds([Class Predictions])
+      end
+      
+      Data --> Conv
+      Conv --> Relu
+      Relu --> Pool
+      Pool --> Squeeze
+      Squeeze --> FC
+      FC --> Softmax
+      Softmax --> Preds
+
+      style Conv fill:#8b5cf6,stroke:#7c3aed,stroke-width:2px,color:#fff
+      style Relu fill:#c4b5fd,stroke:#8b5cf6,stroke-width:1px,color:#000
+      style Pool fill:#8b5cf6,stroke:#7c3aed,stroke-width:2px,color:#fff
+      style FC fill:#8b5cf6,stroke:#7c3aed,stroke-width:2px,color:#fff
       style Data fill:#f8fafc,stroke:#94a3b8,stroke-width:1px
-      style Pred fill:#f8fafc,stroke:#94a3b8,stroke-width:1px
+      style Preds fill:#f8fafc,stroke:#94a3b8,stroke-width:1px
 
 _metadata:
   bloc: 3

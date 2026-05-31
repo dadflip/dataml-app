@@ -16,6 +16,7 @@ code_template: |
   import pandas as pd
   import numpy as np
   from sklearn.ensemble import AdaBoostClassifier
+  from sklearn.tree import DecisionTreeClassifier
 
   # [PARAM: N_ESTIMATORS | number]
   N_ESTIMATORS = 50
@@ -26,36 +27,93 @@ code_template: |
   # [/PARAM]
 
   print(f"[MODEL] Entraînement AdaBoost (n={N_ESTIMATORS}, lr={LEARNING_RATE})...")
+  
+  # Default fallback
+  model = None
+  full_pipeline = None
+  y_pred = None
+  y_proba = None
+  feature_importances = None
+  training_history = {}
+  task_type = "classification"
+  meta = {"model_name": "AdaBoost Classifier"}
+
   if 'X_train' in locals() and 'y_train' in locals() and 'X_test' in locals():
-      model = AdaBoostClassifier(n_estimators=int(N_ESTIMATORS), learning_rate=float(LEARNING_RATE), random_state=42)
-      model.fit(X_train, y_train)
+      # We use a simple Decision Tree as base estimator
+      base_estimator = DecisionTreeClassifier(max_depth=1)
+      model = AdaBoostClassifier(
+          estimator=base_estimator, 
+          n_estimators=int(N_ESTIMATORS), 
+          learning_rate=float(LEARNING_RATE), 
+          random_state=42
+      )
       
-      y_pred = model.predict(X_test)
-      y_proba = model.predict_proba(X_test) if hasattr(model, 'predict_proba') else None
+      # Determine if we have a preprocessor
+      has_preprocessor = 'preprocessor' in locals() and preprocessor is not None
       
-      feature_importances = None
-      if 'feature_names_out' in locals() and hasattr(model, 'feature_importances_'):
-          if len(model.feature_importances_) == len(feature_names_out):
-              feature_importances = pd.Series(model.feature_importances_, index=feature_names_out)
-              
-      if 'preprocessor' in locals() and preprocessor is not None:
-          try: from imblearn.pipeline import Pipeline
-          except: from sklearn.pipeline import Pipeline
-          full_pipeline = Pipeline(steps=preprocessor.steps + [('model', model)])
+      if has_preprocessor:
+          try:
+              from imblearn.pipeline import Pipeline
+          except ImportError:
+              from sklearn.pipeline import Pipeline
+          
+          # Convert preprocessor steps to a list and append model
+          steps = list(preprocessor.steps) if hasattr(preprocessor, 'steps') else [('preprocessor', preprocessor)]
+          steps.append(('model', model))
+          full_pipeline = Pipeline(steps=steps)
       else:
-          try: from imblearn.pipeline import Pipeline
-          except: from sklearn.pipeline import Pipeline
+          try:
+              from imblearn.pipeline import Pipeline
+          except ImportError:
+              from sklearn.pipeline import Pipeline
           full_pipeline = Pipeline(steps=[('model', model)])
           
+      # Fit the pipeline
+      full_pipeline.fit(X_train, y_train)
+      model = full_pipeline.named_steps['model']
+      
+      y_pred = full_pipeline.predict(X_test)
+      if hasattr(full_pipeline, 'predict_proba'):
+          y_proba = full_pipeline.predict_proba(X_test)
+          
+      if hasattr(model, 'feature_importances_'):
+          if 'feature_names_out' in locals() and feature_names_out is not None:
+              if len(model.feature_importances_) == len(feature_names_out):
+                  feature_importances = pd.Series(model.feature_importances_, index=feature_names_out).sort_values(ascending=False)
+              else:
+                  feature_importances = pd.Series(model.feature_importances_).sort_values(ascending=False)
+          else:
+              feature_importances = pd.Series(model.feature_importances_).sort_values(ascending=False)
+              
       training_history = {"status": "success", "fitted_on": len(X_train)}
-      task_type = "classification"
+
 illustration_mermaid: |
-    graph LR
-      Data([Features]) --> Model((Machine Learning))
-      Model --> Pred([Predictions])
-      style Model fill:#8b5cf6,stroke:#7c3aed,stroke-width:2px,color:#fff
+    graph TD
+      subgraph Pipeline
+        Data([X_train]) --> Preproc[Preprocessor]
+        Preproc --> Ada[AdaBoost\nClassifier]
+      end
+      
+      subgraph Ensemble Process
+        Ada --> T1[Tree 1\nWeak Learner]
+        T1 -- Error/Weights --> T2[Tree 2]
+        T2 -- Error/Weights --> TN[...]
+        TN -- Error/Weights --> TM[Tree N]
+      end
+      
+      subgraph Evaluation
+        TM --> Agg[Weighted\nVoting]
+        Agg --> Out([Predictions])
+      end
+      
+      style Ada fill:#8b5cf6,stroke:#7c3aed,stroke-width:2px,color:#fff
+      style T1 fill:#c4b5fd,stroke:#8b5cf6,stroke-width:1px,color:#000
+      style T2 fill:#c4b5fd,stroke:#8b5cf6,stroke-width:1px,color:#000
+      style TN fill:#c4b5fd,stroke:#8b5cf6,stroke-width:1px,color:#000
+      style TM fill:#c4b5fd,stroke:#8b5cf6,stroke-width:1px,color:#000
+      style Agg fill:#a78bfa,stroke:#7c3aed,stroke-width:1px,color:#fff
       style Data fill:#f8fafc,stroke:#94a3b8,stroke-width:1px
-      style Pred fill:#f8fafc,stroke:#94a3b8,stroke-width:1px
+      style Out fill:#f8fafc,stroke:#94a3b8,stroke-width:1px
 
 _metadata:
   bloc: 3

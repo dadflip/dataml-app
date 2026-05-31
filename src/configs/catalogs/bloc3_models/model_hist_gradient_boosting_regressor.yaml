@@ -46,13 +46,29 @@ code_template: |
           
       training_history = {"status": "success", "fitted_on": len(X_train)}
       task_type = "regression"
+      meta = {}
 illustration_mermaid: |
-    graph LR
-      Data([Features]) --> Model((Machine Learning))
-      Model --> Pred([Predictions])
-      style Model fill:#8b5cf6,stroke:#7c3aed,stroke-width:2px,color:#fff
-      style Data fill:#f8fafc,stroke:#94a3b8,stroke-width:1px
-      style Pred fill:#f8fafc,stroke:#94a3b8,stroke-width:1px
+  graph TD
+    subgraph Data Input
+      X[Raw Continuous Features] --> Bin[Histogram Binning]
+    end
+    subgraph Gradient Boosting Trees
+      Bin --> Tree1[Decision Tree 1]
+      Tree1 --> Res1[Compute Residuals]
+      Res1 --> Tree2[Decision Tree 2]
+      Tree2 --> ResN[...]
+      ResN --> TreeN[Decision Tree N]
+    end
+    subgraph Output
+      Tree1 -.-> Sum[Sum Output * Learning Rate]
+      Tree2 -.-> Sum
+      TreeN -.-> Sum
+      Sum --> Pred[Continuous Target Prediction]
+    end
+    style Bin fill:#f59e0b,stroke:#d97706,stroke-width:2px,color:#fff
+    style Tree1 fill:#10b981,stroke:#059669,stroke-width:2px,color:#fff
+    style TreeN fill:#10b981,stroke:#059669,stroke-width:2px,color:#fff
+    style Sum fill:#3b82f6,stroke:#2563eb,stroke-width:2px,color:#fff
 
 _metadata:
   bloc: 3

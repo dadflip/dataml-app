@@ -97,13 +97,25 @@ code_template: |
           
       training_history = {"status": "success", "final_loss": float(loss)}
       task_type = "image_reconstruction"
+      meta = {}
 illustration_mermaid: |
-    graph LR
-      Data([Features]) --> Model((Machine Learning))
-      Model --> Pred([Predictions])
-      style Model fill:#8b5cf6,stroke:#7c3aed,stroke-width:2px,color:#fff
-      style Data fill:#f8fafc,stroke:#94a3b8,stroke-width:1px
-      style Pred fill:#f8fafc,stroke:#94a3b8,stroke-width:1px
+  graph LR
+    subgraph Encoder
+      In[Original Image] --> Conv1[Conv2d Layer]
+      Conv1 --> Pool1[Downsample]
+      Pool1 --> Conv2[Conv2d Layer]
+      Conv2 --> Latent[Latent Representation / Embeddings]
+    end
+    subgraph Decoder
+      Latent --> Deconv1[ConvTranspose2d]
+      Deconv1 --> Up1[Upsample]
+      Up1 --> Deconv2[ConvTranspose2d]
+      Deconv2 --> Out[Reconstructed Image]
+    end
+    Out -.->|MSE Loss| In
+    style Enc fill:#8b5cf6,stroke:#7c3aed,stroke-width:2px,color:#fff
+    style Latent fill:#f59e0b,stroke:#d97706,stroke-width:2px,color:#fff
+    style Dec fill:#10b981,stroke:#059669,stroke-width:2px,color:#fff
 
 _metadata:
   bloc: 3

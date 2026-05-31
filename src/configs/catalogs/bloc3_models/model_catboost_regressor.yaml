@@ -34,51 +34,111 @@ code_template: |
   DEPTH = 6
   # [/PARAM]
 
-  print(f"[MODEL] Entraînement CatBoost Regressor (iter={ITERATIONS}, lr={LEARNING_RATE})...")
+  print(f"[MODEL] Entraînement CatBoost Regressor (iter={ITERATIONS}, lr={LEARNING_RATE}, depth={DEPTH})...")
+  
+  # Default fallback
+  model = None
+  full_pipeline = None
+  y_pred = None
+  y_proba = None
+  feature_importances = None
+  training_history = {}
+  task_type = "regression"
+  meta = {"model_name": "CatBoost Regressor"}
+
   if 'X_train' in locals() and 'y_train' in locals() and 'X_test' in locals() and CatBoostRegressor is not None:
       cat_features = []
+      
+      # Determine cat features without mutating the external reference
       if isinstance(X_train, pd.DataFrame):
-          cat_features = list(X_train.select_dtypes(include=['object', 'category']).columns)
-          for c in cat_features:
-              X_train[c] = X_train[c].fillna("MISSING").astype(str)
-              X_test[c] = X_test[c].fillna("MISSING").astype(str)
+          cat_features_idx = list(np.where(X_train.dtypes == 'object')[0]) + list(np.where(X_train.dtypes == 'category')[0])
+          cat_features_idx = list(set(cat_features_idx))
+          
+          if len(cat_features_idx) > 0:
+              X_train_cb = X_train.copy()
+              X_test_cb = X_test.copy()
+              cat_cols = X_train.columns[cat_features_idx]
+              for c in cat_cols:
+                  X_train_cb[c] = X_train_cb[c].fillna("MISSING").astype(str)
+                  X_test_cb[c] = X_test_cb[c].fillna("MISSING").astype(str)
+              X_train = X_train_cb
+              X_test = X_test_cb
+              cat_features = cat_features_idx
               
       model = CatBoostRegressor(
           iterations=int(ITERATIONS), 
           learning_rate=float(LEARNING_RATE), 
           depth=int(DEPTH),
-          cat_features=cat_features if cat_features else None,
+          cat_features=cat_features if len(cat_features) > 0 else None,
           verbose=0,
           random_seed=42
       )
-      model.fit(X_train, y_train)
       
-      y_pred = model.predict(X_test)
-      y_proba = None
+      has_preprocessor = 'preprocessor' in locals() and preprocessor is not None
       
-      feature_importances = None
-      if 'feature_names_out' in locals() and hasattr(model, 'feature_importances_'):
-          if len(model.feature_importances_) == len(feature_names_out):
-              feature_importances = pd.Series(model.feature_importances_, index=feature_names_out)
-              
-      if 'preprocessor' in locals() and preprocessor is not None:
-          try: from imblearn.pipeline import Pipeline
-          except: from sklearn.pipeline import Pipeline
-          full_pipeline = Pipeline(steps=preprocessor.steps + [('model', model)])
+      if has_preprocessor:
+          try:
+              from imblearn.pipeline import Pipeline
+          except ImportError:
+              from sklearn.pipeline import Pipeline
+          
+          steps = list(preprocessor.steps) if hasattr(preprocessor, 'steps') else [('preprocessor', preprocessor)]
+          steps.append(('model', model))
+          full_pipeline = Pipeline(steps=steps)
       else:
-          try: from imblearn.pipeline import Pipeline
-          except: from sklearn.pipeline import Pipeline
+          try:
+              from imblearn.pipeline import Pipeline
+          except ImportError:
+              from sklearn.pipeline import Pipeline
           full_pipeline = Pipeline(steps=[('model', model)])
           
-      training_history = {"status": "success", "fitted_on": len(X_train)}
-      task_type = "regression"
+      full_pipeline.fit(X_train, y_train)
+      model = full_pipeline.named_steps['model']
+      
+      y_pred = full_pipeline.predict(X_test)
+      
+      if hasattr(model, 'feature_importances_'):
+          if 'feature_names_out' in locals() and feature_names_out is not None:
+              if len(model.feature_importances_) == len(feature_names_out):
+                  feature_importances = pd.Series(model.feature_importances_, index=feature_names_out).sort_values(ascending=False)
+              else:
+                  feature_importances = pd.Series(model.feature_importances_).sort_values(ascending=False)
+          else:
+              feature_importances = pd.Series(model.feature_importances_).sort_values(ascending=False)
+              
+      training_history = {
+          "status": "success", 
+          "fitted_on": len(X_train), 
+          "best_iteration": model.get_best_iteration()
+      }
+
 illustration_mermaid: |
-    graph LR
-      Data([Features]) --> Model((Machine Learning))
-      Model --> Pred([Predictions])
-      style Model fill:#8b5cf6,stroke:#7c3aed,stroke-width:2px,color:#fff
-      style Data fill:#f8fafc,stroke:#94a3b8,stroke-width:1px
+    graph TD
+      subgraph Features Handling
+        Data([X_train]) --> CatSplit{Categorical\nColumns?}
+        CatSplit -- Yes --> TargetEnc[Target Statistics\nEncoding on the fly]
+        CatSplit -- No --> NumSplit[Numeric features]
+      end
+      
+      subgraph CatBoost Oblivious Trees
+        TargetEnc --> Tree1[Oblivious Tree 1\nSymmetric Splits]
+        NumSplit --> Tree1
+        Tree1 -- Residuals --> Tree2[Oblivious Tree 2]
+        Tree2 -- Residuals --> TreeN[Oblivious Tree N]
+      end
+      
+      subgraph Aggregation
+        TreeN --> Sum((Sum of leaves))
+        Sum --> Pred([Predictions])
+      end
+      
+      style TargetEnc fill:#8b5cf6,stroke:#7c3aed,stroke-width:2px,color:#fff
+      style Tree1 fill:#c4b5fd,stroke:#8b5cf6,stroke-width:1px,color:#000
+      style Tree2 fill:#c4b5fd,stroke:#8b5cf6,stroke-width:1px,color:#000
+      style TreeN fill:#c4b5fd,stroke:#8b5cf6,stroke-width:1px,color:#000
+      style Sum fill:#a78bfa,stroke:#7c3aed,stroke-width:1px,color:#fff
       style Pred fill:#f8fafc,stroke:#94a3b8,stroke-width:1px
+      style Data fill:#f8fafc,stroke:#94a3b8,stroke-width:1px
 
 _metadata:
   bloc: 3

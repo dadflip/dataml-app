@@ -16,6 +16,8 @@ hyperparameters:
 code_template: |
   import pandas as pd
   import numpy as np
+  from sklearn.pipeline import Pipeline
+  from sklearn.base import BaseEstimator, ClassifierMixin
   try:
       import torch
       import torch.nn as nn
@@ -34,21 +36,51 @@ code_template: |
   LEARNING_RATE = 0.001
   # [/PARAM]
 
-  print(f"[MODEL] Fine-Tuning ResNet-18 (epochs={EPOCHS}, lr={LEARNING_RATE})...")
-  if 'X_train' in locals() and 'y_train' in locals() and 'X_test' in locals() and torch is not None:
-      # X_train est attendu au format Tensor NCHW (N, 3, H, W)
+  task_type = "classification"
+  meta = {
+      "model_name": "ResNet-18",
+      "framework": "pytorch",
+      "task_type": task_type
+  }
+
+  full_pipeline = None
+  model = None
+  y_pred = None
+  y_proba = None
+  feature_importances = None
+  training_history = []
+
+  if torch is not None:
+      # Assume images are in a column as arrays, or we have an array of shape (N, 3, H, W)
+      # In many tabular frameworks they might need a custom preprocessor to reshape to (N, 3, 224, 224)
       if isinstance(X_train, pd.DataFrame):
-          X_tr_np = np.stack(X_train.iloc[:, 0].values)
-          X_te_np = np.stack(X_test.iloc[:, 0].values)
+          # Just take the first column if it's a dataframe of images
+          X_tr_np = np.stack(X_train.iloc[:, 0].values) if isinstance(X_train.iloc[0, 0], (list, np.ndarray)) else np.array(X_train.values)
+          X_te_np = np.stack(X_test.iloc[:, 0].values) if isinstance(X_test.iloc[0, 0], (list, np.ndarray)) else np.array(X_test.values)
       else:
           X_tr_np = np.array(X_train)
           X_te_np = np.array(X_test)
+          
+      # Fallback reshape if needed
+      if len(X_tr_np.shape) == 2:
+          # Might be flattened images, e.g. 3*224*224
+          try:
+              side = int(np.sqrt(X_tr_np.shape[1]/3))
+              X_tr_np = X_tr_np.reshape(-1, 3, side, side)
+              X_te_np = X_te_np.reshape(-1, 3, side, side)
+          except:
+              pass
+              
+      y_train_arr = y_train.values if isinstance(y_train, pd.Series) else y_train
+      y_test_arr = y_test.values if isinstance(y_test, pd.Series) else y_test
       
-      classes = np.unique(y_train)
+      classes = np.unique(y_train_arr)
       num_classes = len(classes)
       label2id = {c: i for i, c in enumerate(classes)}
       id2label = {i: c for i, c in enumerate(classes)}
-      y_tr_enc = np.array([label2id[y] for y in y_train])
+      
+      y_tr_enc = np.array([label2id[y] for y in y_train_arr])
+      y_te_enc = np.array([label2id.get(y, 0) for y in y_test_arr])
       
       dataset = TensorDataset(torch.tensor(X_tr_np, dtype=torch.float32), torch.tensor(y_tr_enc, dtype=torch.long))
       loader = DataLoader(dataset, batch_size=16, shuffle=True)
@@ -56,21 +88,19 @@ code_template: |
       # Chargement de ResNet18 pré-entraîné
       model = models.resnet18(pretrained=True)
       
-      # On gèle les couches de convolution si on veut juste entraîner la tête (optionnel, ici on laisse tout ouvert)
-      # for param in model.parameters(): param.requires_grad = False
-      
       # Remplacement de la couche de classification
       num_ftrs = model.fc.in_features
       model.fc = nn.Linear(num_ftrs, num_classes)
       
-      device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+      device = torch.device("cuda" if torch.cuda.is_available() else "mps" if torch.backends.mps.is_available() else "cpu")
       model = model.to(device)
       
       criterion = nn.CrossEntropyLoss()
-      optimizer = optim.Adam(model.fc.parameters(), lr=float(LEARNING_RATE)) # On optimise juste la tête
+      optimizer = optim.Adam(model.fc.parameters(), lr=float(LEARNING_RATE))
       
       model.train()
       for epoch in range(int(EPOCHS)):
+          epoch_loss = 0.0
           for batch_X, batch_y in loader:
               batch_X, batch_y = batch_X.to(device), batch_y.to(device)
               optimizer.zero_grad()
@@ -78,6 +108,8 @@ code_template: |
               loss = criterion(outputs, batch_y)
               loss.backward()
               optimizer.step()
+              epoch_loss += loss.item()
+          training_history.append({"epoch": epoch+1, "loss": epoch_loss/len(loader)})
               
       model.eval()
       with torch.no_grad():
@@ -86,25 +118,73 @@ code_template: |
           preds_idx = torch.argmax(logits, dim=1).cpu().numpy()
           y_pred = np.array([id2label[i] for i in preds_idx])
           y_proba = torch.nn.functional.softmax(logits, dim=-1).cpu().numpy()
-          
-      feature_importances = None
-      
-      if 'preprocessor' in locals() and preprocessor is not None:
-          try: from imblearn.pipeline import Pipeline
-          except: from sklearn.pipeline import Pipeline
-          full_pipeline = Pipeline(steps=preprocessor.steps + [('model', model)])
+
+      class ResNetWrapper(BaseEstimator, ClassifierMixin):
+          def __init__(self, model, device, id2label):
+              self.model = model
+              self.device = device
+              self.id2label = id2label
+          def predict(self, X):
+              self.model.eval()
+              X_np = np.stack(X.iloc[:, 0].values) if isinstance(X, pd.DataFrame) else np.array(X)
+              if len(X_np.shape) == 2:
+                  try:
+                      side = int(np.sqrt(X_np.shape[1]/3))
+                      X_np = X_np.reshape(-1, 3, side, side)
+                  except: pass
+              X_tensor = torch.tensor(X_np, dtype=torch.float32).to(self.device)
+              with torch.no_grad():
+                  logits = self.model(X_tensor)
+                  preds_idx = torch.argmax(logits, dim=1).cpu().numpy()
+              return np.array([self.id2label[idx] for idx in preds_idx])
+          def predict_proba(self, X):
+              self.model.eval()
+              X_np = np.stack(X.iloc[:, 0].values) if isinstance(X, pd.DataFrame) else np.array(X)
+              if len(X_np.shape) == 2:
+                  try:
+                      side = int(np.sqrt(X_np.shape[1]/3))
+                      X_np = X_np.reshape(-1, 3, side, side)
+                  except: pass
+              X_tensor = torch.tensor(X_np, dtype=torch.float32).to(self.device)
+              with torch.no_grad():
+                  logits = self.model(X_tensor)
+                  probs = torch.nn.functional.softmax(logits, dim=1).cpu().numpy()
+              return probs
+
+      wrapped_model = ResNetWrapper(model, device, id2label)
+
+      if 'preprocessor' in globals() and preprocessor is not None:
+          full_pipeline = Pipeline([
+              ('preprocessor', preprocessor),
+              ('model', wrapped_model)
+          ])
       else:
-          full_pipeline = model
-          
-      training_history = {"status": "success", "device": str(device)}
-      task_type = "classification"
+          full_pipeline = Pipeline([
+              ('model', wrapped_model)
+          ])
 illustration_mermaid: |
-    graph LR
-      Data([Features]) --> Model((Machine Learning))
-      Model --> Pred([Predictions])
-      style Model fill:#8b5cf6,stroke:#7c3aed,stroke-width:2px,color:#fff
-      style Data fill:#f8fafc,stroke:#94a3b8,stroke-width:1px
-      style Pred fill:#f8fafc,stroke:#94a3b8,stroke-width:1px
+  graph TD
+    subgraph Data Pipeline
+      Input([Raw Images: 3xHxW]) --> Resizer[[Image Preprocessing]]
+      Resizer --> Tensors[(PyTorch Tensors)]
+    end
+    subgraph ResNet18 Architecture
+      Tensors --> Conv1[Conv1 7x7 + MaxPool]
+      Conv1 --> Layer1[Residual Block 1]
+      Layer1 --> Layer2[Residual Block 2]
+      Layer2 --> Layer3[Residual Block 3]
+      Layer3 --> Layer4[Residual Block 4]
+      Layer4 --> AvgPool[AdaptiveAvgPool2D]
+      AvgPool --> Flatten[Flatten]
+      Flatten --> FC[Replaced Fully Connected Layer]
+    end
+    subgraph Output
+      FC --> Softmax(Softmax)
+      Softmax --> Probs([Class Probabilities])
+      Probs --> Pred([Predictions])
+    end
+    style Input fill:#f8fafc,stroke:#94a3b8,stroke-width:1px
+    style Pred fill:#f8fafc,stroke:#94a3b8,stroke-width:1px
 
 _metadata:
   bloc: 3

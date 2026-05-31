@@ -91,9 +91,18 @@ code_template: |
       training_history = {"status": "success"}
       task_type = "classification"
 illustration_mermaid: |
-    graph LR
-      In([Raw Data]) -->|Process| Out([Clean Data])
-      style In fill:#eff6ff,stroke:#94a3b8,stroke-width:2px,stroke-dasharray: 5 5
+    graph TD
+      In([Input Sequence]) --> Emb(Linear Embedding Layer)
+      Emb --> Enc(Transformer Encoder Layer)
+      Enc --> Enc2(Transformer Encoder Layer N)
+      Enc2 --> MeanPool(Mean Pooling across sequence)
+      MeanPool --> FC(Fully Connected Layer)
+      FC --> Out([Output Logits / Softmax])
+      
+      style In fill:#f8fafc,stroke:#94a3b8,stroke-width:2px
+      style Enc fill:#38bdf8,stroke:#0284c7,stroke-width:2px,color:#fff
+      style Enc2 fill:#38bdf8,stroke:#0284c7,stroke-width:2px,color:#fff
+      style FC fill:#8b5cf6,stroke:#7c3aed,stroke-width:2px,color:#fff
       style Out fill:#10b981,stroke:#059669,stroke-width:2px,color:#fff
 
 _metadata:

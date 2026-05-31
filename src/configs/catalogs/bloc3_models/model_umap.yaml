@@ -51,12 +51,15 @@ code_template: |
       training_history = {"status": "success"}
       task_type = "dimensionality_reduction"
 illustration_mermaid: |
-    graph LR
-      Data([Features]) --> Model((Machine Learning))
-      Model --> Pred([Predictions])
-      style Model fill:#8b5cf6,stroke:#7c3aed,stroke-width:2px,color:#fff
-      style Data fill:#f8fafc,stroke:#94a3b8,stroke-width:1px
-      style Pred fill:#f8fafc,stroke:#94a3b8,stroke-width:1px
+    graph TD
+      In([High-Dimensional Features]) --> Graph(Construct Fuzzy Simplicial Graph)
+      Graph --> Opt(Optimize Low-Dimensional Layout)
+      Opt --> Out([Low-Dimensional Projection])
+      
+      style In fill:#f8fafc,stroke:#94a3b8,stroke-width:2px
+      style Graph fill:#38bdf8,stroke:#0284c7,stroke-width:2px,color:#fff
+      style Opt fill:#8b5cf6,stroke:#7c3aed,stroke-width:2px,color:#fff
+      style Out fill:#10b981,stroke:#059669,stroke-width:2px,color:#fff
 
 _metadata:
   bloc: 3

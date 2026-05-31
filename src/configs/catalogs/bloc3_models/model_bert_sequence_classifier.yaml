@@ -16,6 +16,7 @@ code_template: |
   import pandas as pd
   import numpy as np
   import torch
+
   try:
       from transformers import AutoTokenizer, AutoModelForSequenceClassification, Trainer, TrainingArguments
       from datasets import Dataset
@@ -32,22 +33,138 @@ code_template: |
   # [/PARAM]
 
   print(f"[MODEL] Fine-tuning BERT (epochs={EPOCHS}, lr={LEARNING_RATE})...")
+  
+  # Default fallback
+  model = None
+  full_pipeline = None
+  y_pred = None
+  y_proba = None
+  feature_importances = None
+  training_history = {}
+  task_type = "classification"
+  meta = {"model_name": "BERT Sequence Classifier"}
+
   if 'X_train' in locals() and 'y_train' in locals() and 'X_test' in locals() and AutoTokenizer is not None:
-      # Conversion y_train en numérique strict (label encoding si besoin)
+      # Conversion y_train en numérique strict (label encoding)
       classes = np.unique(y_train)
       label2id = {c: i for i, c in enumerate(classes)}
       id2label = {i: c for i, c in enumerate(classes)}
       y_tr_enc = np.array([label2id[y] for y in y_train])
       
-      X_tr_text = X_train['text'].astype(str).tolist() if isinstance(X_train, pd.DataFrame) and 'text' in X_train.columns else [str(x) for x in X_train]
-      X_te_text = X_test['text'].astype(str).tolist() if isinstance(X_test, pd.DataFrame) and 'text' in X_test.columns else [str(x) for x in X_test]
+      # Handle input whether it's DataFrame or list
+      if isinstance(X_train, pd.DataFrame):
+          # Guess the text column
+          text_col = 'text' if 'text' in X_train.columns else X_train.columns[0]
+          X_tr_text = X_train[text_col].astype(str).tolist()
+      else:
+          X_tr_text = [str(x) for x in X_train]
+          
+      if isinstance(X_test, pd.DataFrame):
+          text_col = 'text' if 'text' in X_test.columns else X_test.columns[0]
+          X_te_text = X_test[text_col].astype(str).tolist()
+      else:
+          X_te_text = [str(x) for x in X_test]
 
-      model_name = "bert-base-uncased"
+      model_name = "distilbert-base-uncased" # Used distilbert to be a bit lighter
+      
+      print(f"[MODEL] Chargement du tokenizer {model_name}...")
+      tokenizer = AutoTokenizer.from_pretrained(model_name)
+      
+      print(f"[MODEL] Tokenization...")
+      train_encodings = tokenizer(X_tr_text, truncation=True, padding=True, max_length=128)
+      test_encodings = tokenizer(X_te_text, truncation=True, padding=True, max_length=128)
+      
+      class SimpleDataset(torch.utils.data.Dataset):
+          def __init__(self, encodings, labels=None):
+              self.encodings = encodings
+              self.labels = labels
+          def __getitem__(self, idx):
+              item = {key: torch.tensor(val[idx]) for key, val in self.encodings.items()}
+              if self.labels is not None:
+                  item['labels'] = torch.tensor(self.labels[idx])
+              return item
+          def __len__(self):
+              return len(self.encodings['input_ids'])
+              
+      train_dataset = SimpleDataset(train_encodings, y_tr_enc)
+      test_dataset = SimpleDataset(test_encodings)
+      
+      print(f"[MODEL] Chargement du modèle...")
+      model = AutoModelForSequenceClassification.from_pretrained(
+          model_name, 
+          num_labels=len(classes),
+          id2label=id2label,
+          label2id=label2id
+      )
+      
+      training_args = TrainingArguments(
+          output_dir='./results_bert',
+          num_train_epochs=float(EPOCHS),
+          per_device_train_batch_size=8,
+          learning_rate=float(LEARNING_RATE),
+          weight_decay=0.01,
+          logging_steps=10,
+          report_to="none",
+          save_strategy="no"
+      )
+      
+      trainer = Trainer(
+          model=model,
+          args=training_args,
+          train_dataset=train_dataset
+      )
+      
+      print(f"[MODEL] Lancement du fine-tuning...")
+      try:
+          trainer.train()
+          training_history = {"status": "success", "epochs_trained": float(EPOCHS)}
+      except Exception as e:
+          print(f"[ERREUR] Erreur lors de l'entraînement: {e}")
+          training_history = {"status": "error", "error_message": str(e)}
+          
+      print(f"[MODEL] Inférence sur le set de test...")
+      # Predict on test set
+      predictions = trainer.predict(test_dataset)
+      logits = predictions.predictions
+      # Softmax to get probabilities
+      exp_logits = np.exp(logits - np.max(logits, axis=1, keepdims=True))
+      y_proba = exp_logits / np.sum(exp_logits, axis=1, keepdims=True)
+      y_pred_idx = np.argmax(y_proba, axis=1)
+      y_pred = np.array([id2label[i] for i in y_pred_idx])
+      
+      # Model as pipeline (just the pipeline text classification)
+      from transformers import pipeline
+      full_pipeline = pipeline("text-classification", model=model, tokenizer=tokenizer, device=0 if torch.cuda.is_available() else -1)
+
 illustration_mermaid: |
-    graph LR
-      In([Raw Data]) -->|Process| Out([Clean Data])
-      style In fill:#eff6ff,stroke:#94a3b8,stroke-width:2px,stroke-dasharray: 5 5
-      style Out fill:#10b981,stroke:#059669,stroke-width:2px,color:#fff
+    graph TD
+      subgraph Tokenization
+        Text([Text Inputs]) --> Tok[AutoTokenizer]
+        Tok --> Ids([Input IDs & Attention Mask])
+      end
+      
+      subgraph Transformer BackBone
+        Ids --> Embed[Word & Position\nEmbeddings]
+        Embed --> L1[Transformer Layer 1]
+        L1 --> L2[...]
+        L2 --> LN[Transformer Layer N]
+      end
+      
+      subgraph Classification Head
+        LN --> Pool[CLS Token\nPooling]
+        Pool --> FC[Linear Layer]
+        FC --> SM[Softmax]
+      end
+      
+      SM --> Pred([Predicted Labels])
+      
+      style Text fill:#f8fafc,stroke:#94a3b8,stroke-width:1px
+      style Tok fill:#8b5cf6,stroke:#7c3aed,stroke-width:2px,color:#fff
+      style L1 fill:#a78bfa,stroke:#7c3aed,stroke-width:1px,color:#fff
+      style LN fill:#a78bfa,stroke:#7c3aed,stroke-width:1px,color:#fff
+      style Pool fill:#c4b5fd,stroke:#8b5cf6,stroke-width:1px,color:#000
+      style FC fill:#c4b5fd,stroke:#8b5cf6,stroke-width:1px,color:#000
+      style Pred fill:#f8fafc,stroke:#94a3b8,stroke-width:1px
 
 _metadata:
   bloc: 3

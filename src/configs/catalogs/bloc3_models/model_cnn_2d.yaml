@@ -14,6 +14,17 @@ hyperparameters:
 code_template: |
   import pandas as pd
   import numpy as np
+
+  # Default fallback
+  model = None
+  full_pipeline = None
+  y_pred = None
+  y_proba = None
+  feature_importances = None
+  training_history = {}
+  task_type = "classification"
+  meta = {"model_name": "CNN 2D Custom"}
+
   try:
       import torch
       import torch.nn as nn
@@ -27,29 +38,58 @@ code_template: |
   EPOCHS = 5
   # [/PARAM]
 
-  print(f"[MODEL] Entraînement CNN 2D Custom...")
+  print(f"[MODEL] Entraînement CNN 2D Custom (epochs={EPOCHS})...")
+
   if 'X_train' in locals() and 'y_train' in locals() and 'X_test' in locals() and torch is not None:
-      X_tr_np = np.array(X_train)
-      X_te_np = np.array(X_test)
+      # Use preprocessor if available
+      has_preprocessor = 'preprocessor' in locals() and preprocessor is not None
+      
+      if has_preprocessor:
+          X_train_proc = preprocessor.fit_transform(X_train)
+          X_test_proc = preprocessor.transform(X_test)
+          try:
+              from imblearn.pipeline import Pipeline
+          except ImportError:
+              from sklearn.pipeline import Pipeline
+          full_pipeline = Pipeline(steps=list(preprocessor.steps) if hasattr(preprocessor, 'steps') else [('preprocessor', preprocessor)])
+      else:
+          X_train_proc = X_train
+          X_test_proc = X_test
+          full_pipeline = None
+
+      X_tr_np = np.array(X_train_proc, dtype=np.float32)
+      X_te_np = np.array(X_test_proc, dtype=np.float32)
+
       if len(X_tr_np.shape) == 2:
           side = int(np.sqrt(X_tr_np.shape[1]))
           X_tr_np = X_tr_np.reshape(-1, 1, side, side)
           X_te_np = X_te_np.reshape(-1, 1, side, side)
+
       classes = np.unique(y_train)
       num_classes = len(classes)
       label2id = {c: i for i, c in enumerate(classes)}
       id2label = {i: c for i, c in enumerate(classes)}
       y_tr_enc = np.array([label2id[y] for y in y_train])
-      dataset = TensorDataset(torch.tensor(X_tr_np, dtype=torch.float32), torch.tensor(y_tr_enc, dtype=torch.long))
+      
+      dataset = TensorDataset(torch.tensor(X_tr_np), torch.tensor(y_tr_enc, dtype=torch.long))
       loader = DataLoader(dataset, batch_size=32, shuffle=True)
 
       class CNN2DClassifier(nn.Module):
           def __init__(self, in_channels, num_classes):
               super().__init__()
               self.features = nn.Sequential(
-                  nn.Conv2d(in_channels, 16, 3, padding=1), nn.ReLU(), nn.MaxPool2d(2),
-                  nn.Conv2d(16, 32, 3, padding=1), nn.ReLU(), nn.MaxPool2d(2))
-              self.classifier = nn.Sequential(nn.AdaptiveAvgPool2d(1), nn.Flatten(), nn.Linear(32, num_classes))
+                  nn.Conv2d(in_channels, 16, 3, padding=1), 
+                  nn.ReLU(), 
+                  nn.MaxPool2d(2),
+                  nn.Conv2d(16, 32, 3, padding=1), 
+                  nn.ReLU(), 
+                  nn.MaxPool2d(2)
+              )
+              self.classifier = nn.Sequential(
+                  nn.AdaptiveAvgPool2d(1), 
+                  nn.Flatten(), 
+                  nn.Linear(32, num_classes)
+              )
           def forward(self, x):
               return self.classifier(self.features(x))
 
@@ -58,7 +98,9 @@ code_template: |
       model = model.to(device)
       criterion = nn.CrossEntropyLoss()
       optimizer = optim.Adam(model.parameters(), lr=0.001)
+      
       model.train()
+      loss_val = 0.0
       for epoch in range(int(EPOCHS)):
           for batch_X, batch_y in loader:
               batch_X, batch_y = batch_X.to(device), batch_y.to(device)
@@ -66,28 +108,68 @@ code_template: |
               loss = criterion(model(batch_X), batch_y)
               loss.backward()
               optimizer.step()
+              loss_val = float(loss.item())
+              
       model.eval()
       with torch.no_grad():
-          logits = model(torch.tensor(X_te_np, dtype=torch.float32).to(device))
+          logits = model(torch.tensor(X_te_np).to(device))
           preds_idx = torch.argmax(logits, dim=1).cpu().numpy()
           y_pred = np.array([id2label[i] for i in preds_idx])
           y_proba = torch.nn.functional.softmax(logits, dim=-1).cpu().numpy()
-      feature_importances = None
-      if 'preprocessor' in locals() and preprocessor is not None:
-          try: from imblearn.pipeline import Pipeline
-          except: from sklearn.pipeline import Pipeline
-          full_pipeline = Pipeline(steps=preprocessor.steps + [('model', model)])
-      else:
+          
+      training_history = {"status": "success", "loss": loss_val, "fitted_on": len(X_train)}
+      
+      if not has_preprocessor:
           full_pipeline = model
-      training_history = {"status": "success", "loss": float(loss)}
-      task_type = "classification"
+
 illustration_mermaid: |
-    graph LR
-      Data([Features]) --> Model((Machine Learning))
-      Model --> Pred([Predictions])
-      style Model fill:#8b5cf6,stroke:#7c3aed,stroke-width:2px,color:#fff
+    graph TD
+      subgraph Input
+        Data([Image Data: N x C x H x W])
+      end
+      
+      subgraph Feature Extraction
+        Conv1[Conv2D<br/>16 filters, 3x3]
+        Relu1[ReLU]
+        Pool1[MaxPool2D<br/>2x2]
+        
+        Conv2[Conv2D<br/>32 filters, 3x3]
+        Relu2[ReLU]
+        Pool2[MaxPool2D<br/>2x2]
+      end
+      
+      subgraph Classification
+        AvgPool[AdaptiveAvgPool2D]
+        Flat[Flatten]
+        FC[Linear<br/>Output: Num Classes]
+      end
+      
+      subgraph Output
+        Softmax[Softmax / Logits]
+        Preds([Class Predictions])
+      end
+      
+      Data --> Conv1
+      Conv1 --> Relu1
+      Relu1 --> Pool1
+      Pool1 --> Conv2
+      Conv2 --> Relu2
+      Relu2 --> Pool2
+      Pool2 --> AvgPool
+      AvgPool --> Flat
+      Flat --> FC
+      FC --> Softmax
+      Softmax --> Preds
+
+      style Conv1 fill:#8b5cf6,stroke:#7c3aed,stroke-width:2px,color:#fff
+      style Conv2 fill:#8b5cf6,stroke:#7c3aed,stroke-width:2px,color:#fff
+      style Relu1 fill:#c4b5fd,stroke:#8b5cf6,stroke-width:1px,color:#000
+      style Relu2 fill:#c4b5fd,stroke:#8b5cf6,stroke-width:1px,color:#000
+      style Pool1 fill:#8b5cf6,stroke:#7c3aed,stroke-width:2px,color:#fff
+      style Pool2 fill:#8b5cf6,stroke:#7c3aed,stroke-width:2px,color:#fff
+      style FC fill:#8b5cf6,stroke:#7c3aed,stroke-width:2px,color:#fff
       style Data fill:#f8fafc,stroke:#94a3b8,stroke-width:1px
-      style Pred fill:#f8fafc,stroke:#94a3b8,stroke-width:1px
+      style Preds fill:#f8fafc,stroke:#94a3b8,stroke-width:1px
 
 _metadata:
   bloc: 3

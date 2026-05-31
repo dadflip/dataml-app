@@ -39,13 +39,26 @@ code_template: |
           
       training_history = {"status": "success", "fitted_on": len(X_train)}
       task_type = "regression"
+      meta = {}
 illustration_mermaid: |
-    graph LR
-      Data([Features]) --> Model((Machine Learning))
-      Model --> Pred([Predictions])
-      style Model fill:#8b5cf6,stroke:#7c3aed,stroke-width:2px,color:#fff
-      style Data fill:#f8fafc,stroke:#94a3b8,stroke-width:1px
-      style Pred fill:#f8fafc,stroke:#94a3b8,stroke-width:1px
+  graph TD
+    subgraph Data
+      X[Features X] --> Model
+      Y[Target Y] --> Model
+    end
+    subgraph OLS Regression
+      Model[Ordinary Least Squares] --> Loss[Minimize MSE Loss]
+      Loss --> Weights[Fit Coefficients W]
+      Weights --> Bias[Fit Intercept b]
+    end
+    subgraph Output
+      Weights --> Equation[y = XW + b]
+      Bias --> Equation
+      Equation --> Pred[Continuous Predictions]
+    end
+    style Model fill:#8b5cf6,stroke:#7c3aed,stroke-width:2px,color:#fff
+    style Loss fill:#f59e0b,stroke:#d97706,stroke-width:2px,color:#fff
+    style Pred fill:#10b981,stroke:#059669,stroke-width:2px,color:#fff
 
 _metadata:
   bloc: 3

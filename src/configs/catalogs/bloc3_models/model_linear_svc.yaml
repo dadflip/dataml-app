@@ -45,13 +45,29 @@ code_template: |
           
       training_history = {"status": "success", "fitted_on": len(X_train)}
       task_type = "classification"
+      meta = {}
 illustration_mermaid: |
-    graph LR
-      Data([Features]) --> Model((Machine Learning))
-      Model --> Pred([Predictions])
-      style Model fill:#8b5cf6,stroke:#7c3aed,stroke-width:2px,color:#fff
-      style Data fill:#f8fafc,stroke:#94a3b8,stroke-width:1px
-      style Pred fill:#f8fafc,stroke:#94a3b8,stroke-width:1px
+  graph TD
+    subgraph Data
+      X[Feature Vector]
+      Y[Target Label]
+    end
+    subgraph SVM Optimization
+      X --> Margin[Find Maximum Margin Hyperplane]
+      Y --> Margin
+      Margin --> Penalty[Apply Hinge Loss + L2 Penalty C]
+      Penalty --> Weights[Fit Coefficients W and Bias b]
+    end
+    subgraph Inference
+      Weights --> Dot[Compute W * X + b]
+      Dot --> Sign{Sign > 0?}
+      Sign -->|Yes| Class1[Predict Class 1]
+      Sign -->|No| Class0[Predict Class 0]
+    end
+    style Margin fill:#8b5cf6,stroke:#7c3aed,stroke-width:2px,color:#fff
+    style Penalty fill:#f59e0b,stroke:#d97706,stroke-width:2px,color:#fff
+    style Class1 fill:#10b981,stroke:#059669,stroke-width:2px,color:#fff
+    style Class0 fill:#ef4444,stroke:#dc2626,stroke-width:2px,color:#fff
 
 _metadata:
   bloc: 3

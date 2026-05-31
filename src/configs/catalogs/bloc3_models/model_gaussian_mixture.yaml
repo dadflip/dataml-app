@@ -22,6 +22,16 @@ code_template: |
   # [/PARAM]
 
   print(f"[MODEL] Entraînement Gaussian Mixture (components={N_COMPONENTS})...")
+  
+  model = None
+  y_pred = None
+  y_proba = None
+  feature_importances = None
+  training_history = {}
+  task_type = "clustering"
+  meta = {"framework": "sklearn", "type": "gaussian_mixture"}
+  full_pipeline = None
+
   if 'X_train' in locals() and 'X_test' in locals():
       model = GaussianMixture(n_components=int(N_COMPONENTS), random_state=42)
       model.fit(X_train)
@@ -40,14 +50,20 @@ code_template: |
           full_pipeline = Pipeline(steps=[('model', model)])
           
       training_history = {"status": "success", "converged": model.converged_}
-      task_type = "clustering"
+
 illustration_mermaid: |
-    graph LR
-      Data([Features]) --> Model((Machine Learning))
-      Model --> Pred([Predictions])
-      style Model fill:#8b5cf6,stroke:#7c3aed,stroke-width:2px,color:#fff
-      style Data fill:#f8fafc,stroke:#94a3b8,stroke-width:1px
-      style Pred fill:#f8fafc,stroke:#94a3b8,stroke-width:1px
+  graph TD
+    subgraph Gaussian Mixture Model
+      In([Input Features]) --> EM[Expectation-Maximization]
+      EM --> EStep[E-step: Estimate Probabilities]
+      EStep --> MStep[M-step: Update Means & Covariances]
+      MStep -.-> EM
+      EM --> Proba[Soft Probabilities]
+      Proba --> Out([Cluster Assignment])
+    end
+    style In fill:#f8fafc,stroke:#94a3b8,stroke-width:1px
+    style Out fill:#10b981,stroke:#059669,stroke-width:2px,color:#fff
+    style EM fill:#8b5cf6,stroke:#7c3aed,stroke-width:2px,color:#fff
 
 _metadata:
   bloc: 3

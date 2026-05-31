@@ -27,21 +27,89 @@ code_template: |
   # [/PARAM]
 
   print(f"[MODEL] Fine-Tuning Vision Transformer (ViT) (epochs={EPOCHS})...")
+  model = None
+  full_pipeline = None
+  y_pred = None
+  y_proba = None
+  feature_importances = None
+  training_history = {}
+  task_type = "classification"
+  meta = {"model_name": "Vision Transformer Classifier"}
+
   if 'X_train' in locals() and 'y_train' in locals() and 'X_test' in locals() and ViTForImageClassification is not None:
-      # X_train devrait être une liste de PIL Images ou de numpy arrays RGB
       X_tr_list = list(X_train)
       X_te_list = list(X_test)
       
       classes = np.unique(y_train)
+      num_classes = len(classes)
       label2id = {c: i for i, c in enumerate(classes)}
       id2label = {i: c for i, c in enumerate(classes)}
       y_tr_enc = np.array([label2id[y] for y in y_train])
       
       model_name = "google/vit-base-patch16-224-in21k"
+      feature_extractor = ViTFeatureExtractor.from_pretrained(model_name)
+      model = ViTForImageClassification.from_pretrained(
+          model_name,
+          num_labels=num_classes,
+          id2label=id2label,
+          label2id=label2id
+      )
+      
+      def transform(examples):
+          inputs = feature_extractor([x for x in examples['image']], return_tensors='pt')
+          inputs['labels'] = examples['label']
+          return inputs
+
+      train_ds = Dataset.from_dict({'image': X_tr_list, 'label': y_tr_enc}).with_transform(transform)
+      
+      training_args = TrainingArguments(
+          output_dir="./vit_results",
+          num_train_epochs=int(EPOCHS),
+          per_device_train_batch_size=8,
+          remove_unused_columns=False,
+          logging_steps=10
+      )
+      
+      trainer = Trainer(
+          model=model,
+          args=training_args,
+          train_dataset=train_ds
+      )
+      
+      trainer.train()
+      
+      device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+      model.eval()
+      preds_idx = []
+      probas = []
+      with torch.no_grad():
+          for img in X_te_list:
+              inputs = feature_extractor(img, return_tensors='pt').to(device)
+              outputs = model(**inputs)
+              logits = outputs.logits
+              idx = torch.argmax(logits, dim=-1).item()
+              preds_idx.append(idx)
+              probas.append(torch.nn.functional.softmax(logits, dim=-1).cpu().numpy().flatten())
+              
+      y_pred = np.array([id2label[i] for i in preds_idx])
+      y_proba = np.array(probas)
+      
+      full_pipeline = model
+      training_history = {"status": "success"}
 illustration_mermaid: |
-    graph LR
-      In([Raw Data]) -->|Process| Out([Clean Data])
-      style In fill:#eff6ff,stroke:#94a3b8,stroke-width:2px,stroke-dasharray: 5 5
+    graph TD
+      In([Input Image]) --> Patch(Split Image into Patches)
+      Patch --> Flat(Flatten Patches & Linear Projection)
+      Flat --> Pos(Add Positional Embeddings)
+      Pos --> Trans(Transformer Encoder Blocks)
+      Trans --> Cls(Extract CLS Token State)
+      Cls --> MLP(MLP Head)
+      MLP --> Out([Class Predictions])
+      
+      style In fill:#f8fafc,stroke:#94a3b8,stroke-width:2px
+      style Patch fill:#38bdf8,stroke:#0284c7,stroke-width:2px,color:#fff
+      style Trans fill:#8b5cf6,stroke:#7c3aed,stroke-width:2px,color:#fff
+      style MLP fill:#f59e0b,stroke:#d97706,stroke-width:2px,color:#fff
       style Out fill:#10b981,stroke:#059669,stroke-width:2px,color:#fff
 
 _metadata:

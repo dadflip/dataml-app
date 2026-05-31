@@ -33,6 +33,16 @@ code_template: |
   # [/PARAM]
 
   print(f"[MODEL] Entraînement Denoising Autoencoder (noise={NOISE_FACTOR})...")
+  
+  model = None
+  y_pred = None
+  y_proba = None
+  feature_importances = None
+  training_history = {}
+  task_type = "data_reconstruction"
+  meta = {"framework": "pytorch", "type": "denoising_autoencoder"}
+  full_pipeline = None
+
   if 'X_train' in locals() and 'X_test' in locals() and torch is not None:
       X_tr_np = np.array(X_train, dtype=np.float32)
       X_te_np = np.array(X_test, dtype=np.float32)
@@ -56,33 +66,54 @@ code_template: |
       criterion = nn.MSELoss()
       optimizer = optim.Adam(model.parameters(), lr=0.001)
       model.train()
+      
+      final_loss = 0.0
       for epoch in range(int(EPOCHS)):
+          epoch_loss = 0.0
           for bx, by in loader:
               bx, by = bx.to(device), by.to(device)
               optimizer.zero_grad()
               loss = criterion(model(bx), by)
               loss.backward()
               optimizer.step()
+              epoch_loss += loss.item()
+          final_loss = epoch_loss / len(loader)
+          
       model.eval()
       with torch.no_grad():
-          y_pred = model(torch.tensor(X_te_np).to(device)).cpu().numpy()
-      y_proba = None
-      feature_importances = None
+          # Apply to clean test data, usually autoencoders denoise, so we can test it by denoising test data.
+          # Here we just pass clean test data as a forward pass or noisy if preferred. Let's pass clean.
+          X_te_t = torch.tensor(X_te_np).to(device)
+          y_pred = model(X_te_t).cpu().numpy()
+          
       if 'preprocessor' in locals() and preprocessor is not None:
           try: from imblearn.pipeline import Pipeline
           except: from sklearn.pipeline import Pipeline
           full_pipeline = Pipeline(steps=preprocessor.steps + [('model', model)])
       else:
           full_pipeline = model
-      training_history = {"status": "success", "loss": float(loss)}
-      task_type = "data_reconstruction"
+          
+      training_history = {"status": "success", "loss": final_loss}
+
 illustration_mermaid: |
-    graph LR
-      Data([Features]) --> Model((Machine Learning))
-      Model --> Pred([Predictions])
-      style Model fill:#8b5cf6,stroke:#7c3aed,stroke-width:2px,color:#fff
-      style Data fill:#f8fafc,stroke:#94a3b8,stroke-width:1px
-      style Pred fill:#f8fafc,stroke:#94a3b8,stroke-width:1px
+  graph TD
+    subgraph Denoising Autoencoder
+      In([Input Features x]) --> AddNoise(Add Gaussian Noise)
+      AddNoise --> NoisyIn[Noisy Input x_tilde]
+      NoisyIn --> Enc1[Linear 64 + ReLU]
+      Enc1 --> Enc2[Linear 32]
+      Enc2 --> Latent[Latent Space z]
+      Latent --> Dec1[Linear 64 + ReLU]
+      Dec1 --> Dec2[Linear Out + Sigmoid]
+      Dec2 --> Out([Reconstructed x_hat])
+      
+      Out -.-> Loss{MSE Loss}
+      In -.-> Loss
+    end
+    style In fill:#f8fafc,stroke:#94a3b8,stroke-width:1px
+    style Out fill:#f8fafc,stroke:#94a3b8,stroke-width:1px
+    style Loss fill:#fca5a5,stroke:#ef4444,stroke-width:2px
+    style Latent fill:#c4b5fd,stroke:#8b5cf6,stroke-width:2px
 
 _metadata:
   bloc: 3

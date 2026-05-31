@@ -57,13 +57,28 @@ code_template: |
           
       training_history = {"status": "success", "anomalies_found": int(np.sum(y_pred))}
       task_type = "anomaly_detection"
+      meta = {}
 illustration_mermaid: |
-    graph LR
-      Data([Features]) --> Model((Machine Learning))
-      Model --> Pred([Predictions])
-      style Model fill:#8b5cf6,stroke:#7c3aed,stroke-width:2px,color:#fff
-      style Data fill:#f8fafc,stroke:#94a3b8,stroke-width:1px
-      style Pred fill:#f8fafc,stroke:#94a3b8,stroke-width:1px
+  graph TD
+    subgraph Data
+      Points[Data Points]
+    end
+    subgraph Isolation Process
+      Points --> Root[Root Node]
+      Root --> |Random Split| Node1[Node]
+      Root --> |Random Split| Node2[Node]
+      Node1 --> Leaf1[Leaf: Outlier isolated quickly]
+      Node2 --> |More Splits| Leaf2[Leaf: Inlier deeper in tree]
+    end
+    subgraph Scoring
+      Leaf1 --> Score1[Short Path Length = High Anomaly Score]
+      Leaf2 --> Score2[Long Path Length = Low Anomaly Score]
+      Score1 --> Pred[Thresholding]
+      Score2 --> Pred
+    end
+    style Root fill:#3b82f6,stroke:#2563eb,stroke-width:2px,color:#fff
+    style Leaf1 fill:#ef4444,stroke:#dc2626,stroke-width:2px,color:#fff
+    style Leaf2 fill:#10b981,stroke:#059669,stroke-width:2px,color:#fff
 
 _metadata:
   bloc: 3

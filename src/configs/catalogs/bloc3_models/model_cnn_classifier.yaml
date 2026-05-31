@@ -15,6 +15,17 @@ hyperparameters:
 code_template: |
   import pandas as pd
   import numpy as np
+
+  # Default fallback
+  model = None
+  full_pipeline = None
+  y_pred = None
+  y_proba = None
+  feature_importances = None
+  training_history = {}
+  task_type = "classification"
+  meta = {"model_name": "Basic CNN Classifier"}
+
   try:
       import torch
       import torch.nn as nn
@@ -33,20 +44,36 @@ code_template: |
   # [/PARAM]
 
   print(f"[MODEL] Entraînement Basic CNN PyTorch (epochs={EPOCHS}, lr={LEARNING_RATE})...")
+  
   if 'X_train' in locals() and 'y_train' in locals() and 'X_test' in locals() and torch is not None:
-      # On suppose que le bloc 2 a transformé les images en tenseurs plats ou (N, C, H, W)
-      # Pour simplifier, on force un reshape (N, 1, 28, 28) si c'est du 1D (ex: MNIST flatten)
-      if isinstance(X_train, pd.DataFrame):
-          col = X_train.columns[0]
-          if isinstance(X_train[col].iloc[0], np.ndarray):
-              X_tr_np = np.stack(X_train[col].values)
-              X_te_np = np.stack(X_test[col].values)
-          else:
-              X_tr_np = X_train.values
-              X_te_np = X_test.values
+      # Use preprocessor if available
+      has_preprocessor = 'preprocessor' in locals() and preprocessor is not None
+      
+      if has_preprocessor:
+          X_train_proc = preprocessor.fit_transform(X_train)
+          X_test_proc = preprocessor.transform(X_test)
+          try:
+              from imblearn.pipeline import Pipeline
+          except ImportError:
+              from sklearn.pipeline import Pipeline
+          full_pipeline = Pipeline(steps=list(preprocessor.steps) if hasattr(preprocessor, 'steps') else [('preprocessor', preprocessor)])
       else:
-          X_tr_np = np.array(X_train)
-          X_te_np = np.array(X_test)
+          X_train_proc = X_train
+          X_test_proc = X_test
+          full_pipeline = None
+
+      # Convert X to float32 NumPy arrays
+      if isinstance(X_train_proc, pd.DataFrame):
+          col = X_train_proc.columns[0]
+          if isinstance(X_train_proc[col].iloc[0], np.ndarray):
+              X_tr_np = np.stack(X_train_proc[col].values).astype(np.float32)
+              X_te_np = np.stack(X_test_proc[col].values).astype(np.float32)
+          else:
+              X_tr_np = X_train_proc.values.astype(np.float32)
+              X_te_np = X_test_proc.values.astype(np.float32)
+      else:
+          X_tr_np = np.array(X_train_proc, dtype=np.float32)
+          X_te_np = np.array(X_test_proc, dtype=np.float32)
       
       if len(X_tr_np.shape) == 2:
           # tentative de reshape carré (ex: 784 -> 28x28)
@@ -60,7 +87,7 @@ code_template: |
       id2label = {i: c for i, c in enumerate(classes)}
       y_tr_enc = np.array([label2id[y] for y in y_train])
       
-      dataset = TensorDataset(torch.tensor(X_tr_np, dtype=torch.float32), torch.tensor(y_tr_enc, dtype=torch.long))
+      dataset = TensorDataset(torch.tensor(X_tr_np), torch.tensor(y_tr_enc, dtype=torch.long))
       loader = DataLoader(dataset, batch_size=32, shuffle=True)
       
       class SimpleCNN(nn.Module):
@@ -86,6 +113,7 @@ code_template: |
       optimizer = optim.Adam(model.parameters(), lr=float(LEARNING_RATE))
       
       model.train()
+      loss_val = 0.0
       for epoch in range(int(EPOCHS)):
           for batch_X, batch_y in loader:
               optimizer.zero_grad()
@@ -93,31 +121,49 @@ code_template: |
               loss = criterion(outputs, batch_y)
               loss.backward()
               optimizer.step()
+              loss_val = float(loss.item())
               
       model.eval()
       with torch.no_grad():
-          X_te_t = torch.tensor(X_te_np, dtype=torch.float32)
+          X_te_t = torch.tensor(X_te_np)
           logits = model(X_te_t)
           preds_idx = torch.argmax(logits, dim=1).numpy()
           y_pred = np.array([id2label[i] for i in preds_idx])
           y_proba = torch.nn.functional.softmax(logits, dim=-1).numpy()
           
-      feature_importances = None
-      
-      if 'preprocessor' in locals() and preprocessor is not None:
-          try: from imblearn.pipeline import Pipeline
-          except: from sklearn.pipeline import Pipeline
-          full_pipeline = Pipeline(steps=preprocessor.steps + [('model', model)])
-      else:
+      if not has_preprocessor:
           full_pipeline = model
           
-      training_history = {"status": "success", "fitted_on": len(X_train), "final_loss": float(loss)}
-      task_type = "classification"
+      training_history = {"status": "success", "fitted_on": len(X_train), "final_loss": loss_val}
+
 illustration_mermaid: |
-    graph LR
-      Data([Features]) --> Model((Machine Learning))
-      Model --> Pred([Predictions])
-      style Model fill:#8b5cf6,stroke:#7c3aed,stroke-width:2px,color:#fff
+    graph TD
+      subgraph Input Data
+        Data([Image Tensor\n(N, C, H, W)])
+      end
+      
+      subgraph CNN Layers
+        Data --> C1[Conv2D\n16 filters, 3x3]
+        C1 --> R1[ReLU + MaxPool2D]
+        R1 --> C2[Conv2D\n32 filters, 3x3]
+        C2 --> R2[ReLU + MaxPool2D]
+      end
+      
+      subgraph Classification
+        R2 --> Flat[Flatten]
+        Flat --> FC[LazyLinear Layer\nNum Classes]
+      end
+      
+      subgraph Output
+        FC --> SM[Softmax]
+        SM --> Pred([Predictions])
+      end
+      
+      style C1 fill:#8b5cf6,stroke:#7c3aed,stroke-width:2px,color:#fff
+      style C2 fill:#8b5cf6,stroke:#7c3aed,stroke-width:2px,color:#fff
+      style R1 fill:#c4b5fd,stroke:#8b5cf6,stroke-width:1px,color:#000
+      style R2 fill:#c4b5fd,stroke:#8b5cf6,stroke-width:1px,color:#000
+      style FC fill:#a78bfa,stroke:#7c3aed,stroke-width:1px,color:#fff
       style Data fill:#f8fafc,stroke:#94a3b8,stroke-width:1px
       style Pred fill:#f8fafc,stroke:#94a3b8,stroke-width:1px
 

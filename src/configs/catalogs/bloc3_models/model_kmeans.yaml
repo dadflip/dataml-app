@@ -41,13 +41,26 @@ code_template: |
           
       training_history = {"status": "success", "inertia": float(model.inertia_)}
       task_type = "clustering"
+      meta = {}
 illustration_mermaid: |
-    graph LR
-      Data([Features]) --> Model((Machine Learning))
-      Model --> Pred([Predictions])
-      style Model fill:#8b5cf6,stroke:#7c3aed,stroke-width:2px,color:#fff
-      style Data fill:#f8fafc,stroke:#94a3b8,stroke-width:1px
-      style Pred fill:#f8fafc,stroke:#94a3b8,stroke-width:1px
+  graph TD
+    subgraph Initialization
+      Data[Input Data Points] --> Init[Initialize K Centroids]
+    end
+    subgraph Iteration
+      Init --> Assign[Assign points to nearest centroid]
+      Assign --> Update[Recompute centroid means]
+      Update --> Check{Centroids moved?}
+      Check -->|Yes| Assign
+    end
+    subgraph Output
+      Check -->|No| Converge[Algorithm Converged]
+      Converge --> Out[Final Cluster Labels]
+    end
+    style Init fill:#3b82f6,stroke:#2563eb,stroke-width:2px,color:#fff
+    style Assign fill:#8b5cf6,stroke:#7c3aed,stroke-width:2px,color:#fff
+    style Update fill:#8b5cf6,stroke:#7c3aed,stroke-width:2px,color:#fff
+    style Converge fill:#10b981,stroke:#059669,stroke-width:2px,color:#fff
 
 _metadata:
   bloc: 3

@@ -14,6 +14,17 @@ hyperparameters:
 code_template: |
   import pandas as pd
   import numpy as np
+
+  # Default fallback
+  model = None
+  full_pipeline = None
+  y_pred = None
+  y_proba = None
+  feature_importances = None
+  training_history = {}
+  task_type = "forecasting"
+  meta = {"model_name": "Chronos Zero-Shot Forecaster"}
+
   try:
       import torch
       from chronos import ChronosPipeline # Nécessite pip install git+https://github.com/amazon-science/chronos-forecasting.git
@@ -34,29 +45,57 @@ code_template: |
       pipeline = ChronosPipeline.from_pretrained(
           "amazon/chronos-t5-tiny",
           device_map="auto",
-          torch_dtype=torch.bfloat16,
+          torch_dtype=torch.bfloat16 if torch.cuda.is_available() else torch.float32,
       )
       
       print("Inférence (génération des trajectoires)...")
       # forecast shape: [1, num_samples, prediction_length]
-      forecast = pipeline.predict(context.unsqueeze(0), int(PREDICTION_LENGTH))
+      # Predict without gradients
+      with torch.no_grad():
+          forecast = pipeline.predict(context.unsqueeze(0), int(PREDICTION_LENGTH))
       
       # On prend la médiane des trajectoires
-      median_forecast = np.quantile(forecast[0].numpy(), 0.5, axis=0)
+      median_forecast = np.quantile(forecast[0].float().numpy(), 0.5, axis=0)
       
       y_pred = median_forecast
-      y_proba = None
-      feature_importances = None
       
       full_pipeline = pipeline
+      model = pipeline
           
       training_history = {"status": "success", "type": "zero_shot_llm_timeseries"}
-      task_type = "forecasting"
+
 illustration_mermaid: |
-    graph LR
-      In([Raw Data]) -->|Process| Out([Clean Data])
-      style In fill:#eff6ff,stroke:#94a3b8,stroke-width:2px,stroke-dasharray: 5 5
-      style Out fill:#10b981,stroke:#059669,stroke-width:2px,color:#fff
+    graph TD
+      subgraph Context
+        Y([y_train\nHistorical Context]) --> Scale[Scaling Layer\n(Internal)]
+        Scale --> Quant[Quantization\nContinuous -> Discrete Tokens]
+      end
+      
+      subgraph LLM Architecture (T5)
+        Quant --> Embed[Token Embeddings]
+        Embed --> Enc[T5 Encoder]
+        Enc --> Dec[T5 Decoder]
+        Dec --> Logits[Vocabulary Logits\n(100K+ Tokens)]
+      end
+      
+      subgraph Generation
+        Logits --> Sample[Autoregressive Sampling\nN Trajectories]
+        Sample --> Dequant[Dequantization\nTokens -> Continuous]
+        Dequant --> Unscale[Unscaling]
+      end
+      
+      subgraph Output
+        Unscale --> AllTraj([Sampled Trajectories])
+        AllTraj --> Quantile[Calculate Median/Quantiles]
+        Quantile --> Pred([y_pred])
+      end
+      
+      style Enc fill:#8b5cf6,stroke:#7c3aed,stroke-width:2px,color:#fff
+      style Dec fill:#8b5cf6,stroke:#7c3aed,stroke-width:2px,color:#fff
+      style Quant fill:#c4b5fd,stroke:#8b5cf6,stroke-width:1px,color:#000
+      style Dequant fill:#c4b5fd,stroke:#8b5cf6,stroke-width:1px,color:#000
+      style Y fill:#f8fafc,stroke:#94a3b8,stroke-width:1px
+      style Pred fill:#f8fafc,stroke:#94a3b8,stroke-width:1px
 
 _metadata:
   bloc: 3

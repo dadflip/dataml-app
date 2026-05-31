@@ -59,16 +59,32 @@ code_template: |
           
       training_history = {"status": "success", "perplexity": model.perplexity(X_te_proc)}
       task_type = "clustering" # Topic modeling vu comme clustering doux
+      meta = {}
       print("[MODEL] LDA entraîné avec succès.")
   else:
       print("[ERREUR] Données d'entraînement introuvables.")
 illustration_mermaid: |
-    graph LR
-      Data([Features]) --> Model((Machine Learning))
-      Model --> Pred([Predictions])
-      style Model fill:#8b5cf6,stroke:#7c3aed,stroke-width:2px,color:#fff
-      style Data fill:#f8fafc,stroke:#94a3b8,stroke-width:1px
-      style Pred fill:#f8fafc,stroke:#94a3b8,stroke-width:1px
+  graph TD
+    subgraph Data Input
+      Doc[Corpus of Documents] --> CV[Count Vectorizer]
+      CV --> Matrix[Document-Term Matrix]
+    end
+    subgraph LDA Generative Process
+      Matrix --> Alpha[Dirichlet Prior Alpha: Doc-Topic dist]
+      Matrix --> Beta[Dirichlet Prior Beta: Topic-Word dist]
+      Alpha --> TopicDist[Infer Topic Mixture per Document]
+      Beta --> WordDist[Infer Word Probabilities per Topic]
+      TopicDist --> Opt[Variational Inference Optimization]
+      WordDist --> Opt
+    end
+    subgraph Output
+      Opt --> Preds[Dominant Topic per Document]
+      Opt --> Probas[Topic Probabilities Distribution]
+    end
+    style CV fill:#f59e0b,stroke:#d97706,stroke-width:2px,color:#fff
+    style TopicDist fill:#8b5cf6,stroke:#7c3aed,stroke-width:2px,color:#fff
+    style WordDist fill:#8b5cf6,stroke:#7c3aed,stroke-width:2px,color:#fff
+    style Preds fill:#10b981,stroke:#059669,stroke-width:2px,color:#fff
 
 _metadata:
   bloc: 3

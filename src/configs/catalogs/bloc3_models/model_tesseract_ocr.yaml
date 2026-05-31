@@ -25,13 +25,47 @@ code_template: |
 
   # [PARAM: LANG | string]
   LANG = "fra"
+  # [/PARAM]
+
+  print(f"[MODEL] Extraction de texte via Tesseract OCR (lang={LANG})...")
+  model = "Tesseract-OCR"
+  full_pipeline = None
+  y_pred = []
+  y_proba = None
+  feature_importances = None
+  training_history = {}
+  task_type = "ocr"
+  meta = {"model_name": "Tesseract OCR"}
+
+  if 'X_test' in locals() and pytesseract is not None:
+      # Assume X_test is a list of image paths or PIL Image objects
+      for img_input in X_test:
+          try:
+              if isinstance(img_input, str):
+                  img = Image.open(img_input)
+              else:
+                  img = img_input # Assuming it's already a PIL image
+                  
+              text = pytesseract.image_to_string(img, lang=LANG)
+              y_pred.append(text)
+          except Exception as e:
+              print(f"Erreur sur l'image {img_input}: {e}")
+              y_pred.append("")
+              
+      y_pred = np.array(y_pred)
+      full_pipeline = model
+      training_history = {"status": "success", "processed_images": len(y_pred)}
 illustration_mermaid: |
-    graph LR
-      Data([Features]) --> Model((Machine Learning))
-      Model --> Pred([Predictions])
-      style Model fill:#8b5cf6,stroke:#7c3aed,stroke-width:2px,color:#fff
-      style Data fill:#f8fafc,stroke:#94a3b8,stroke-width:1px
-      style Pred fill:#f8fafc,stroke:#94a3b8,stroke-width:1px
+    graph TD
+      In([Input Images]) --> Pre(Image Preprocessing: Binarization / Deskew)
+      Pre --> Engine(Tesseract OCR Engine)
+      Engine --> Extract(Text Extraction & Layout Analysis)
+      Extract --> Out([Raw Text Output])
+      
+      style In fill:#f8fafc,stroke:#94a3b8,stroke-width:2px
+      style Pre fill:#38bdf8,stroke:#0284c7,stroke-width:2px,color:#fff
+      style Engine fill:#8b5cf6,stroke:#7c3aed,stroke-width:2px,color:#fff
+      style Out fill:#10b981,stroke:#059669,stroke-width:2px,color:#fff
 
 _metadata:
   bloc: 3

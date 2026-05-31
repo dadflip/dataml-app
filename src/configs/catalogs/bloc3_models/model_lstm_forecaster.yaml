@@ -16,14 +16,21 @@ hyperparameters:
 code_template: |
   import pandas as pd
   import numpy as np
+  from sklearn.base import BaseEstimator, RegressorMixin
+  try:
+      from imblearn.pipeline import Pipeline
+  except ImportError:
+      from sklearn.pipeline import Pipeline
+
   try:
       import torch
       import torch.nn as nn
       import torch.optim as optim
       from torch.utils.data import DataLoader, TensorDataset
+      TORCH_AVAILABLE = True
   except ImportError:
-      torch = None
-      print("[ERREUR] torch n'est pas installé. Lancez : !pip install torch")
+      TORCH_AVAILABLE = False
+      print("[ERREUR] torch n'est pas installé.")
 
   # [PARAM: HIDDEN_SIZE | number]
   HIDDEN_SIZE = 50
@@ -37,73 +44,117 @@ code_template: |
   EPOCHS = 20
   # [/PARAM]
 
-  print(f"[MODEL] Entraînement PyTorch LSTM (hidden={HIDDEN_SIZE}, layers={NUM_LAYERS}, epochs={EPOCHS})...")
-  if 'X_train' in locals() and 'y_train' in locals() and 'X_test' in locals() and torch is not None:
-      # Conversion pour PyTorch (on suppose un shape (N, Features)) -> (N, 1, Features)
-      X_tr_np = X_train.values if isinstance(X_train, pd.DataFrame) else np.array(X_train)
-      X_te_np = X_test.values if isinstance(X_test, pd.DataFrame) else np.array(X_test)
-      y_tr_np = y_train.values if hasattr(y_train, 'values') else np.array(y_train)
-      
-      X_tr_t = torch.tensor(X_tr_np, dtype=torch.float32).unsqueeze(1)
-      X_te_t = torch.tensor(X_te_np, dtype=torch.float32).unsqueeze(1)
-      y_tr_t = torch.tensor(y_tr_np, dtype=torch.float32).unsqueeze(1)
-      
-      dataset = TensorDataset(X_tr_t, y_tr_t)
-      loader = DataLoader(dataset, batch_size=32, shuffle=False) # Important: shuffle=False pour Time Series
-      
-      class LSTMModel(nn.Module):
-          def __init__(self, input_size, hidden_size, num_layers):
+  y_pred = None
+  y_proba = None
+  feature_importances = None
+  training_history = {}
+  task_type = "regression"
+  meta = {}
+
+  if TORCH_AVAILABLE:
+      class LSTMForecasterTorch(nn.Module):
+          def __init__(self, input_dim, hidden_dim, num_layers):
               super().__init__()
-              self.lstm = nn.LSTM(input_size, hidden_size, num_layers, batch_first=True)
-              self.fc = nn.Linear(hidden_size, 1)
+              self.lstm = nn.LSTM(input_dim, hidden_dim, num_layers, batch_first=True, dropout=0.2 if num_layers>1 else 0)
+              self.fc = nn.Linear(hidden_dim, 1)
               
           def forward(self, x):
               out, _ = self.lstm(x)
               out = self.fc(out[:, -1, :])
               return out
               
-      input_size = X_tr_np.shape[1] if len(X_tr_np.shape) > 1 else 1
-      model = LSTMModel(input_size, int(HIDDEN_SIZE), int(NUM_LAYERS))
-      
-      criterion = nn.MSELoss()
-      optimizer = optim.Adam(model.parameters(), lr=0.01)
-      
-      model.train()
-      for epoch in range(int(EPOCHS)):
-          for batch_X, batch_y in loader:
-              optimizer.zero_grad()
-              outputs = model(batch_X)
-              loss = criterion(outputs, batch_y)
-              loss.backward()
-              optimizer.step()
+      class SklearnLSTMRegressor(BaseEstimator, RegressorMixin):
+          def __init__(self, hidden_size=50, num_layers=2, epochs=20):
+              self.hidden_size = hidden_size
+              self.num_layers = num_layers
+              self.epochs = epochs
+              self.model = None
+              self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+              self.final_loss = None
               
-      model.eval()
-      with torch.no_grad():
-          y_pred = model(X_te_t).numpy().flatten()
-          
-      y_proba = None
-      feature_importances = None
-      
-      # Wrapper Pipeline sklearn si besoin
+          def fit(self, X, y):
+              X_np = np.array(X)
+              y_np = np.array(y)
+              
+              if len(X_np.shape) == 2:
+                  X_np = X_np.reshape((X_np.shape[0], 1, X_np.shape[1]))
+                  
+              input_size = X_np.shape[2]
+              
+              X_t = torch.tensor(X_np, dtype=torch.float32)
+              y_t = torch.tensor(y_np, dtype=torch.float32).unsqueeze(1)
+              
+              dataset = TensorDataset(X_t, y_t)
+              loader = DataLoader(dataset, batch_size=32, shuffle=False)
+              
+              self.model = LSTMForecasterTorch(input_size, self.hidden_size, self.num_layers).to(self.device)
+              criterion = nn.MSELoss()
+              optimizer = optim.Adam(self.model.parameters(), lr=0.01)
+              
+              self.model.train()
+              for epoch in range(self.epochs):
+                  for batch_X, batch_y in loader:
+                      batch_X, batch_y = batch_X.to(self.device), batch_y.to(self.device)
+                      optimizer.zero_grad()
+                      outputs = self.model(batch_X)
+                      loss = criterion(outputs, batch_y)
+                      loss.backward()
+                      optimizer.step()
+                      self.final_loss = loss.item()
+              return self
+              
+          def predict(self, X):
+              self.model.eval()
+              X_np = np.array(X)
+              if len(X_np.shape) == 2:
+                  X_np = X_np.reshape((X_np.shape[0], 1, X_np.shape[1]))
+                  
+              with torch.no_grad():
+                  X_t = torch.tensor(X_np, dtype=torch.float32).to(self.device)
+                  preds = self.model(X_t).cpu().numpy()
+                  
+              return preds.flatten()
+
+      model = SklearnLSTMRegressor(hidden_size=int(HIDDEN_SIZE), num_layers=int(NUM_LAYERS), epochs=int(EPOCHS))
+
       if 'preprocessor' in locals() and preprocessor is not None:
-          try: from imblearn.pipeline import Pipeline
-          except: from sklearn.pipeline import Pipeline
-          full_pipeline = Pipeline(steps=preprocessor.steps + [('model', model)])
+          if hasattr(preprocessor, 'steps'):
+              full_pipeline = Pipeline(steps=preprocessor.steps + [('model', model)])
+          else:
+              full_pipeline = Pipeline(steps=[('preprocessor', preprocessor), ('model', model)])
       else:
-          full_pipeline = model
-          
-      training_history = {"status": "success", "fitted_on": len(X_train), "final_loss": float(loss)}
-      task_type = "regression" # Utilisé en régression / forecasting
-      print("[MODEL] Modèle LSTM entraîné avec succès.")
+          full_pipeline = Pipeline(steps=[('model', model)])
+
+      if 'X_train' in locals() and 'y_train' in locals() and 'X_test' in locals():
+          print(f"[MODEL] Entraînement LSTM Regressor ({EPOCHS} epochs, dim={HIDDEN_SIZE}, layers={NUM_LAYERS})...")
+          full_pipeline.fit(X_train, y_train)
+          y_pred = full_pipeline.predict(X_test)
+          training_history = {"status": "success", "final_loss": model.final_loss, "epochs": EPOCHS}
   else:
-      print("[ERREUR] Données ou torch introuvables.")
+      print("[MODEL] PyTorch non disponible, impossible d'entraîner le modèle LSTM Forecaster.")
+      model = None
+      full_pipeline = None
+
 illustration_mermaid: |
-    graph LR
-      Data([Features]) --> Model((Machine Learning))
-      Model --> Pred([Predictions])
-      style Model fill:#8b5cf6,stroke:#7c3aed,stroke-width:2px,color:#fff
-      style Data fill:#f8fafc,stroke:#94a3b8,stroke-width:1px
-      style Pred fill:#f8fafc,stroke:#94a3b8,stroke-width:1px
+  graph TD
+    A[Sequential Input X: T Timesteps] --> B(Preprocessing Pipeline)
+    B --> C[PyTorch LSTM Forecaster Component]
+    
+    subgraph LSTM Layers
+      C --> D[LSTM Layer 1: Learn Short-Term Trends]
+      D --> E[LSTM Layer N: Learn Long-Term Seasons]
+      E --> F[Extract Last Hidden State h_T]
+    end
+    
+    F --> G[Fully Connected Linear Layer]
+    G --> H[MSE Loss Backpropagation]
+    H -.-> D
+    H -.-> E
+    G --> I([y_pred: Continuous Value Forecaset])
+    
+    style C fill:#8b5cf6,stroke:#7c3aed,stroke-width:2px,color:#fff
+    style G fill:#ec4899,stroke:#db2777,stroke-width:2px,color:#fff
+    style I fill:#3b82f6,stroke:#2563eb,stroke-width:2px,color:#fff
 
 _metadata:
   bloc: 3

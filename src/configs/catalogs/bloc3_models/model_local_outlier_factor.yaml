@@ -16,6 +16,11 @@ code_template: |
   import pandas as pd
   import numpy as np
   from sklearn.neighbors import LocalOutlierFactor
+  from sklearn.base import BaseEstimator, OutlierMixin
+  try:
+      from imblearn.pipeline import Pipeline
+  except ImportError:
+      from sklearn.pipeline import Pipeline
 
   # [PARAM: N_NEIGHBORS | number]
   N_NEIGHBORS = 20
@@ -25,48 +30,84 @@ code_template: |
   CONTAMINATION = 0.05
   # [/PARAM]
 
-  print(f"[MODEL] Entraînement Local Outlier Factor (k={N_NEIGHBORS}, cont={CONTAMINATION})...")
-  if 'X_train' in locals() and 'X_test' in locals():
-      # LOF en mode "novelty=True" permet le predict sur X_test, sinon c'est transductif
-      model = LocalOutlierFactor(n_neighbors=int(N_NEIGHBORS), contamination=float(CONTAMINATION), novelty=True)
-      model.fit(X_train)
-      
-      # -1 = Anomalie, 1 = Normal
-      preds = model.predict(X_test)
-      y_pred = np.where(preds == -1, 1, 0) # 1 = Anomalie
-      
-      y_proba = model.decision_function(X_test)
-      feature_importances = None
-      
-      from sklearn.base import BaseEstimator, ClassifierMixin
-      class LOFWrapper(BaseEstimator, ClassifierMixin):
-          def __init__(self, model): self.model = model
-          def fit(self, X, y=None): return self
-          def predict(self, X): 
-              return np.where(self.model.predict(X) == -1, 1, 0)
-          def predict_proba(self, X):
-              return self.model.decision_function(X)
-              
-      wrapped_model = LOFWrapper(model)
-      
-      if 'preprocessor' in locals() and preprocessor is not None:
-          try: from imblearn.pipeline import Pipeline
-          except: from sklearn.pipeline import Pipeline
-          full_pipeline = Pipeline(steps=preprocessor.steps + [('model', wrapped_model)])
-      else:
-          try: from imblearn.pipeline import Pipeline
-          except: from sklearn.pipeline import Pipeline
-          full_pipeline = Pipeline(steps=[('model', wrapped_model)])
+  print(f"[MODEL] Initialisation Local Outlier Factor (k={N_NEIGHBORS}, cont={CONTAMINATION})...")
+
+  class LOFAnomalyWrapper(BaseEstimator, OutlierMixin):
+      def __init__(self, n_neighbors=20, contamination=0.1):
+          self.n_neighbors = n_neighbors
+          self.contamination = contamination
+          self.model = LocalOutlierFactor(
+              n_neighbors=self.n_neighbors, 
+              contamination=self.contamination, 
+              novelty=True
+          )
           
+      def fit(self, X, y=None):
+          self.model.fit(X)
+          return self
+          
+      def predict(self, X):
+          preds = self.model.predict(X)
+          return np.where(preds == -1, 1, 0)
+          
+      def decision_function(self, X):
+          return self.model.decision_function(X)
+          
+      def predict_proba(self, X):
+          scores = -self.model.decision_function(X) 
+          scores = np.clip(scores, 0, None)
+          proba = 1 / (1 + np.exp(-scores)) # Pseudo-probability of anomaly
+          return np.column_stack([1 - proba, proba])
+
+  model = LOFAnomalyWrapper(n_neighbors=int(N_NEIGHBORS), contamination=float(CONTAMINATION))
+
+  if 'preprocessor' in locals() and preprocessor is not None:
+      if hasattr(preprocessor, 'steps'):
+          full_pipeline = Pipeline(steps=preprocessor.steps + [('model', model)])
+      else:
+          full_pipeline = Pipeline(steps=[('preprocessor', preprocessor), ('model', model)])
+  else:
+      full_pipeline = Pipeline(steps=[('model', model)])
+
+  y_pred = None
+  y_proba = None
+  feature_importances = None
+  training_history = {}
+  task_type = "anomaly_detection"
+  meta = {}
+
+  if 'X_train' in locals() and 'X_test' in locals():
+      print("[MODEL] Entraînement du pipeline avec LOF...")
+      full_pipeline.fit(X_train)
+      y_pred = full_pipeline.predict(X_test)
+      y_proba = full_pipeline.predict_proba(X_test)
+      
       training_history = {"status": "success", "anomalies_found": int(np.sum(y_pred))}
-      task_type = "anomaly_detection"
 illustration_mermaid: |
-    graph LR
-      Data([Features]) --> Model((Machine Learning))
-      Model --> Pred([Predictions])
-      style Model fill:#8b5cf6,stroke:#7c3aed,stroke-width:2px,color:#fff
-      style Data fill:#f8fafc,stroke:#94a3b8,stroke-width:1px
-      style Pred fill:#f8fafc,stroke:#94a3b8,stroke-width:1px
+  graph TD
+    A[Input Data: X_train] --> B(Preprocessing Pipeline)
+    B --> C[Local Outlier Factor Model]
+    
+    subgraph LOF Process
+        C --> D[Compute k-nearest neighbors]
+        D --> E[Calculate Local Reachability Density]
+        E --> F[Compare Density with Neighbors]
+        F --> G[Assign LOF Score to X_train]
+    end
+    
+    G --> H[Fitted LOF Space]
+    
+    X_test[Input Data: X_test] --> I(Preprocessing Pipeline)
+    I --> J[Map X_test into LOF Space]
+    H -.-> J
+    J --> K{Is Density << Neighbors?}
+    K -- Yes --> L[Novelty / Anomaly class 1]
+    K -- No --> M[Normal class 0]
+    
+    style C fill:#8b5cf6,stroke:#7c3aed,stroke-width:2px,color:#fff
+    style H fill:#10b981,stroke:#059669,stroke-width:2px,color:#fff
+    style L fill:#ef4444,stroke:#dc2626,stroke-width:2px,color:#fff
+    style M fill:#3b82f6,stroke:#2563eb,stroke-width:2px,color:#fff
 
 _metadata:
   bloc: 3

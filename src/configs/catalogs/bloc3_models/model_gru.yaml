@@ -89,13 +89,29 @@ code_template: |
           full_pipeline = model
       training_history = {"status": "success", "loss": float(loss)}
       task_type = "classification"
+      meta = {}
 illustration_mermaid: |
-    graph LR
-      Data([Features]) --> Model((Machine Learning))
-      Model --> Pred([Predictions])
-      style Model fill:#8b5cf6,stroke:#7c3aed,stroke-width:2px,color:#fff
-      style Data fill:#f8fafc,stroke:#94a3b8,stroke-width:1px
-      style Pred fill:#f8fafc,stroke:#94a3b8,stroke-width:1px
+  graph TD
+    subgraph Input Sequence
+      X1[Time t=1] --> X2[Time t=2]
+      X2 --> X3[Time t=T]
+    end
+    subgraph GRU Layers
+      X1 --> GRU1[GRU Cell]
+      X2 --> GRU2[GRU Cell]
+      X3 --> GRU3[GRU Cell]
+      GRU1 -->|Hidden State| GRU2
+      GRU2 -->|Hidden State| GRU3
+    end
+    subgraph Output
+      GRU3 --> FC[Fully Connected Layer]
+      FC --> Softmax[Softmax]
+      Softmax --> Pred[Class Prediction]
+    end
+    style GRU1 fill:#8b5cf6,stroke:#7c3aed,stroke-width:2px,color:#fff
+    style GRU2 fill:#8b5cf6,stroke:#7c3aed,stroke-width:2px,color:#fff
+    style GRU3 fill:#8b5cf6,stroke:#7c3aed,stroke-width:2px,color:#fff
+    style FC fill:#ec4899,stroke:#db2777,stroke-width:2px,color:#fff
 
 _metadata:
   bloc: 3

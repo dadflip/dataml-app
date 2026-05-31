@@ -55,10 +55,17 @@ code_template: |
       training_history = {"status": "success"}
       task_type = "video_processing"
 illustration_mermaid: |
-    graph LR
-      Source[(Source)] -->|Load| Node([Extract Data])
-      style Source fill:#3b82f6,stroke:#2563eb,stroke-width:2px,color:#fff
-      style Node fill:#eff6ff,stroke:#3b82f6,stroke-width:2px
+    graph TD
+      In([Input Video File]) --> OpenCV(cv2.VideoCapture)
+      OpenCV --> Meta(Read Total Frames)
+      Meta --> Math(Compute Steps: Total / N_Frames)
+      Math --> Extract(Extract N Frames at equal intervals)
+      Extract --> Out([Array of N Images])
+      
+      style In fill:#f8fafc,stroke:#94a3b8,stroke-width:2px
+      style OpenCV fill:#38bdf8,stroke:#0284c7,stroke-width:2px,color:#fff
+      style Extract fill:#8b5cf6,stroke:#7c3aed,stroke-width:2px,color:#fff
+      style Out fill:#10b981,stroke:#059669,stroke-width:2px,color:#fff
 
 _metadata:
   bloc: 3

@@ -83,12 +83,35 @@ code_template: |
       training_history = {"status": "success", "device": str(device)}
       task_type = "classification"
 illustration_mermaid: |
-    graph LR
-      Data([Features]) --> Model((Machine Learning))
-      Model --> Pred([Predictions])
-      style Model fill:#8b5cf6,stroke:#7c3aed,stroke-width:2px,color:#fff
-      style Data fill:#f8fafc,stroke:#94a3b8,stroke-width:1px
-      style Pred fill:#f8fafc,stroke:#94a3b8,stroke-width:1px
+  graph TD
+    A[Input Images: X_train] --> B(Preprocessing Pipeline)
+    B --> C[MobileNetV2 Fine-Tuning Component]
+    
+    subgraph MobileNet V2 Backbone
+      C --> D[Initial Conv2D]
+      D --> E[Inverted Residual Blocks: Depthwise Separable Convs]
+      E --> F[Feature Extraction Layers]
+      F --> G[Global Average Pooling]
+    end
+    
+    subgraph Custom Classification Head
+      G --> H[Replaced Linear Layer: num_classes]
+    end
+    
+    H --> I[CrossEntropy Loss]
+    I -.->|Adam Optimizer| H
+    
+    X_test[Input Images: X_test] --> J(Preprocessing Pipeline)
+    J --> K[Forward Pass on Tuned Model]
+    H -.-> K
+    K --> L([y_pred: Class Labels])
+    K --> M([y_proba: Softmax Probas])
+    
+    style C fill:#8b5cf6,stroke:#7c3aed,stroke-width:2px,color:#fff
+    style E fill:#f59e0b,stroke:#d97706,stroke-width:2px,color:#fff
+    style H fill:#ec4899,stroke:#db2777,stroke-width:2px,color:#fff
+    style L fill:#3b82f6,stroke:#2563eb,stroke-width:2px,color:#fff
+    style M fill:#3b82f6,stroke:#2563eb,stroke-width:2px,color:#fff
 
 _metadata:
   bloc: 3

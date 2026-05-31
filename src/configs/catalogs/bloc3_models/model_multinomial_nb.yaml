@@ -15,39 +15,70 @@ code_template: |
   import pandas as pd
   import numpy as np
   from sklearn.naive_bayes import MultinomialNB
+  try:
+      from imblearn.pipeline import Pipeline
+  except ImportError:
+      from sklearn.pipeline import Pipeline
 
   # [PARAM: ALPHA | number]
   ALPHA = 1.0
   # [/PARAM]
 
-  print(f"[MODEL] Entraînement Multinomial Naive Bayes (alpha={ALPHA})...")
-  if 'X_train' in locals() and 'y_train' in locals() and 'X_test' in locals():
-      model = MultinomialNB(alpha=float(ALPHA))
-      model.fit(X_train, y_train)
-      
-      y_pred = model.predict(X_test)
-      y_proba = model.predict_proba(X_test) if hasattr(model, 'predict_proba') else None
-      
-      feature_importances = None
-              
-      if 'preprocessor' in locals() and preprocessor is not None:
-          try: from imblearn.pipeline import Pipeline
-          except: from sklearn.pipeline import Pipeline
+  print(f"[MODEL] Initialisation Multinomial Naive Bayes (alpha={ALPHA})...")
+  
+  model = MultinomialNB(alpha=float(ALPHA))
+
+  if 'preprocessor' in locals() and preprocessor is not None:
+      if hasattr(preprocessor, 'steps'):
           full_pipeline = Pipeline(steps=preprocessor.steps + [('model', model)])
       else:
-          try: from imblearn.pipeline import Pipeline
-          except: from sklearn.pipeline import Pipeline
-          full_pipeline = Pipeline(steps=[('model', model)])
+          full_pipeline = Pipeline(steps=[('preprocessor', preprocessor), ('model', model)])
+  else:
+      full_pipeline = Pipeline(steps=[('model', model)])
+
+  y_pred = None
+  y_proba = None
+  feature_importances = None
+  training_history = {}
+  task_type = "classification"
+  meta = {}
+
+  if 'X_train' in locals() and 'y_train' in locals() and 'X_test' in locals():
+      print("[MODEL] Entraînement du pipeline avec Multinomial NB...")
+      full_pipeline.fit(X_train, y_train)
+      y_pred = full_pipeline.predict(X_test)
+      if hasattr(full_pipeline, "predict_proba"):
+          y_proba = full_pipeline.predict_proba(X_test)
           
+      if hasattr(model, 'feature_log_prob_'):
+          # On peut approximer l'importance par la probabilité log des features
+          if 'feature_names_out' in locals() and feature_names_out is not None and model.feature_log_prob_.shape[1] == len(feature_names_out):
+              feature_importances = pd.Series(np.exp(model.feature_log_prob_[0]), index=feature_names_out)
+              
       training_history = {"status": "success", "fitted_on": len(X_train)}
-      task_type = "classification"
 illustration_mermaid: |
-    graph LR
-      Data([Features]) --> Model((Machine Learning))
-      Model --> Pred([Predictions])
-      style Model fill:#8b5cf6,stroke:#7c3aed,stroke-width:2px,color:#fff
-      style Data fill:#f8fafc,stroke:#94a3b8,stroke-width:1px
-      style Pred fill:#f8fafc,stroke:#94a3b8,stroke-width:1px
+  graph TD
+    A[Input Variables X] --> B(Preprocessing Pipeline TF-IDF/Count)
+    B --> C[Multinomial NB Model]
+    
+    subgraph Naive Bayes Theorem
+        C --> D[Compute Prior Probabilities P_y]
+        D --> E[Compute Feature Likelihoods P_x|y]
+        E --> F[Apply Laplace Smoothing alpha]
+        F --> G[Bayes Rule: P_y|x proportional to P_y * Prod_i P_x_i|y]
+    end
+    
+    X_test[Input Data: X_test] --> H(Preprocessing Pipeline)
+    H --> I[Apply Learned Log-Probabilities]
+    G -.-> I
+    I --> J[Argmax over Classes]
+    J --> K([y_pred: Class Labels])
+    I --> L([y_proba: Class Probabilities])
+    
+    style C fill:#8b5cf6,stroke:#7c3aed,stroke-width:2px,color:#fff
+    style G fill:#f59e0b,stroke:#d97706,stroke-width:2px,color:#fff
+    style K fill:#3b82f6,stroke:#2563eb,stroke-width:2px,color:#fff
+    style L fill:#3b82f6,stroke:#2563eb,stroke-width:2px,color:#fff
 
 _metadata:
   bloc: 3

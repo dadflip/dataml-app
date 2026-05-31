@@ -60,11 +60,26 @@ code_template: |
               
           training_history = {"status": "success", "type": "zero_shot_generative"}
           task_type = "text_generation"
+          meta = {}
 illustration_mermaid: |
-    graph LR
-      In([Raw Data]) -->|Process| Out([Clean Data])
-      style In fill:#eff6ff,stroke:#94a3b8,stroke-width:2px,stroke-dasharray: 5 5
-      style Out fill:#10b981,stroke:#059669,stroke-width:2px,color:#fff
+  graph TD
+    subgraph Data
+      T[Input Long Text]
+    end
+    subgraph BART Architecture
+      Enc[Encoder Layers]
+      Dec[Decoder Layers]
+      T --> Tokenizer[Tokenizer]
+      Tokenizer --> Enc
+      Enc --> Dec
+      Dec --> Gen[Autoregressive Generation]
+    end
+    subgraph Output
+      Gen --> OutText[Summary Text]
+    end
+    style Enc fill:#8b5cf6,stroke:#7c3aed,stroke-width:2px,color:#fff
+    style Dec fill:#8b5cf6,stroke:#7c3aed,stroke-width:2px,color:#fff
+    style Tokenizer fill:#f59e0b,stroke:#d97706,stroke-width:2px,color:#fff
 
 _metadata:
   bloc: 3

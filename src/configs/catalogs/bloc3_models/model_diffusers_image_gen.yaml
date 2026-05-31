@@ -14,24 +14,45 @@ hyperparameters:
 code_template: |
   import pandas as pd
   import numpy as np
+
+  # [PARAM: NUM_INFERENCE_STEPS | number]
+  NUM_INFERENCE_STEPS = 20
+  # [/PARAM]
+
   print("[MODEL] Dummy export pour Stable Diffusion.")
   # Le téléchargement des poids de SD1.5/2.0 fait plusieurs Gigaoctets et fera crasher un CPU instantanément.
   # Placeholder structurel fourni pour intégration sur machines adaptées.
-  
+
+  model = "StableDiffusionPipeline_Placeholder"
+  y_pred = None
+  y_proba = None
+  feature_importances = None
+  training_history = {}
+  task_type = "text_to_image"
+  meta = {"framework": "diffusers", "type": "stable_diffusion"}
+  full_pipeline = model
+
   if 'X_test' in locals():
       # X_test contient des prompts textes
-      y_pred = np.array(["Image Generated (Placeholder)"] * len(X_test))
-      y_proba = None
-      feature_importances = None
+      y_pred = np.array([f"Image Gen for: {str(p)[:30]}..." for p in X_test])
       
-      full_pipeline = "Stable Diffusion Placeholder"
 illustration_mermaid: |
-    graph LR
-      Data([Features]) --> Model((Machine Learning))
-      Model --> Pred([Predictions])
-      style Model fill:#8b5cf6,stroke:#7c3aed,stroke-width:2px,color:#fff
-      style Data fill:#f8fafc,stroke:#94a3b8,stroke-width:1px
-      style Pred fill:#f8fafc,stroke:#94a3b8,stroke-width:1px
+  graph TD
+    subgraph Stable Diffusion Pipeline
+      Prompt([Text Prompt]) --> TextEnc[CLIP Text Encoder]
+      TextEnc --> TextEmb[Text Embeddings]
+      
+      Noise([Random Latent Noise]) --> UNet[U-Net Denoising]
+      TextEmb -.-> UNet
+      
+      UNet --> Denoised[Denoised Latent]
+      Denoised --> VAE[VAE Decoder]
+      VAE --> Image([Generated Image RGB])
+    end
+    style Prompt fill:#f8fafc,stroke:#94a3b8,stroke-width:1px
+    style Noise fill:#e2e8f0,stroke:#64748b,stroke-width:1px
+    style Image fill:#10b981,stroke:#059669,stroke-width:2px,color:#fff
+    style UNet fill:#8b5cf6,stroke:#7c3aed,stroke-width:2px,color:#fff
 
 _metadata:
   bloc: 3

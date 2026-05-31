@@ -16,43 +16,71 @@ code_template: |
   import pandas as pd
   import numpy as np
   from sklearn.linear_model import RidgeClassifier
+  from sklearn.pipeline import Pipeline
 
   # [PARAM: ALPHA | number]
   ALPHA = 1.0
   # [/PARAM]
 
-  print(f"[MODEL] Entraînement Ridge Classifier (alpha={ALPHA})...")
-  if 'X_train' in locals() and 'y_train' in locals() and 'X_test' in locals():
-      model = RidgeClassifier(alpha=ALPHA, random_state=42)
-      model.fit(X_train, y_train)
-      
-      y_pred = model.predict(X_test)
-      y_proba = None # RidgeClassifier ne supporte pas predict_proba nativement
-      
-      feature_importances = None
-      if 'feature_names_out' in locals():
-          coefs = np.abs(model.coef_).mean(axis=0) if model.coef_.ndim > 1 else np.abs(model.coef_[0])
-          if len(coefs) == len(feature_names_out):
-              feature_importances = pd.Series(coefs, index=feature_names_out)
-              
-      if 'preprocessor' in locals() and preprocessor is not None:
-          try: from imblearn.pipeline import Pipeline
-          except: from sklearn.pipeline import Pipeline
-          full_pipeline = Pipeline(steps=preprocessor.steps + [('model', model)])
+  task_type = "classification"
+  meta = {
+      "model_name": "Ridge Classifier",
+      "framework": "scikit-learn",
+      "task_type": task_type
+  }
+
+  model = RidgeClassifier(alpha=float(ALPHA), random_state=42)
+
+  if 'preprocessor' in globals() and preprocessor is not None:
+      full_pipeline = Pipeline([
+          ('preprocessor', preprocessor),
+          ('model', model)
+      ])
+  else:
+      full_pipeline = Pipeline([
+          ('model', model)
+      ])
+
+  full_pipeline.fit(X_train, y_train)
+
+  y_pred = full_pipeline.predict(X_test)
+  y_proba = None # RidgeClassifier ne supporte pas predict_proba nativement
+
+  feature_importances = None
+  if hasattr(model, 'coef_'):
+      coefs = np.abs(model.coef_).mean(axis=0) if model.coef_.ndim > 1 else np.abs(model.coef_[0])
+      if 'preprocessor' in globals() and hasattr(preprocessor, 'get_feature_names_out'):
+          try:
+              feature_names = preprocessor.get_feature_names_out()
+              if len(feature_names) == len(coefs):
+                  feature_importances = pd.Series(coefs, index=feature_names).sort_values(ascending=False).head(20).to_dict()
+          except Exception:
+              pass
       else:
-          try: from imblearn.pipeline import Pipeline
-          except: from sklearn.pipeline import Pipeline
-          full_pipeline = Pipeline(steps=[('model', model)])
-          
-      training_history = {"status": "success", "fitted_on": len(X_train)}
-      task_type = "classification"
+          if hasattr(X_train, 'columns'):
+              feature_importances = pd.Series(coefs, index=X_train.columns).sort_values(ascending=False).head(20).to_dict()
+
+  training_history = []
 illustration_mermaid: |
-    graph LR
-      Data([Features]) --> Model((Machine Learning))
-      Model --> Pred([Predictions])
-      style Model fill:#8b5cf6,stroke:#7c3aed,stroke-width:2px,color:#fff
-      style Data fill:#f8fafc,stroke:#94a3b8,stroke-width:1px
-      style Pred fill:#f8fafc,stroke:#94a3b8,stroke-width:1px
+  graph TD
+    subgraph Data Pipeline
+      Input([Raw Features]) --> Preprocessor[[Data Preprocessing]]
+      Preprocessor --> Features[Scaled Features]
+    end
+    subgraph Ridge Optimization
+      Features --> LinearCombo[Linear Combination: W*X + b]
+      Target[(Labels: -1, 1)] --> Loss{Squared Error Loss}
+      LinearCombo --> Loss
+      Loss --> L2[+ L2 Penalty: alpha * ||W||^2]
+      L2 --> Opt((Analytical Solver))
+    end
+    subgraph Output
+      Opt --> Weights[Optimized Weights W]
+      Weights --> Predict[Sign(W*X + b)]
+      Predict --> Pred([Class Predictions])
+    end
+    style Input fill:#f8fafc,stroke:#94a3b8,stroke-width:1px
+    style Pred fill:#f8fafc,stroke:#94a3b8,stroke-width:1px
 
 _metadata:
   bloc: 3

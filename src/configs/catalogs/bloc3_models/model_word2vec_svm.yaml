@@ -21,16 +21,73 @@ code_template: |
       print("[ERREUR] spacy n'est pas installé. Lancez : !pip install spacy")
 
   from sklearn.svm import LinearSVC
+  from sklearn.pipeline import Pipeline as SklearnPipeline
+  from sklearn.base import BaseEstimator, TransformerMixin
 
   # [PARAM: SPACY_MODEL | string]
   SPACY_MODEL = "en_core_web_md"
+  # [/PARAM]
+
+  print(f"[MODEL] Word2Vec + SVM via Spacy (model={SPACY_MODEL})...")
+  model = None
+  full_pipeline = None
+  y_pred = None
+  y_proba = None
+  feature_importances = None
+  training_history = {}
+  task_type = "classification"
+  meta = {"model_name": "Word2Vec + SVM"}
+
+  if 'X_train' in locals() and 'y_train' in locals() and 'X_test' in locals() and spacy is not None:
+      try:
+          nlp = spacy.load(SPACY_MODEL)
+      except OSError:
+          print(f"[ERREUR] Le modèle spacy '{SPACY_MODEL}' n'est pas téléchargé. Lancez: python -m spacy download {SPACY_MODEL}")
+          nlp = None
+          
+      if nlp is not None:
+          class SpacyVectorTransformer(BaseEstimator, TransformerMixin):
+              def fit(self, X, y=None):
+                  return self
+              def transform(self, X):
+                  if isinstance(X, pd.DataFrame):
+                      X = X.iloc[:, 0]
+                  docs = list(nlp.pipe(X.astype(str)))
+                  return np.array([doc.vector for doc in docs])
+                  
+          svc = LinearSVC(random_state=42, max_iter=2000)
+          
+          model = SklearnPipeline([
+              ('spacy_vec', SpacyVectorTransformer()),
+              ('svc', svc)
+          ])
+          
+          model.fit(X_train, y_train)
+          y_pred = model.predict(X_test)
+          if hasattr(model, "predict_proba"):
+              y_proba = model.predict_proba(X_test)
+          elif hasattr(model, "decision_function"):
+              df = model.decision_function(X_test)
+              if len(df.shape) == 1:
+                  p1 = 1 / (1 + np.exp(-df))
+                  y_proba = np.vstack([1 - p1, p1]).T
+                  
+          if hasattr(svc, "coef_"):
+              feature_importances = {"coefficients": svc.coef_.tolist()}
+              
+          full_pipeline = model
+          training_history = {"status": "success"}
 illustration_mermaid: |
-    graph LR
-      Data([Features]) --> Model((Machine Learning))
-      Model --> Pred([Predictions])
-      style Model fill:#8b5cf6,stroke:#7c3aed,stroke-width:2px,color:#fff
-      style Data fill:#f8fafc,stroke:#94a3b8,stroke-width:1px
-      style Pred fill:#f8fafc,stroke:#94a3b8,stroke-width:1px
+    graph TD
+      In([Raw Text]) --> Spacy(spaCy Pipeline: Tokenize & Embed)
+      Spacy --> Mean(Mean Vector Aggregation)
+      Mean --> SVM(Linear Support Vector Machine)
+      SVM --> Out([Class Predictions])
+      
+      style In fill:#f8fafc,stroke:#94a3b8,stroke-width:2px
+      style Spacy fill:#38bdf8,stroke:#0284c7,stroke-width:2px,color:#fff
+      style SVM fill:#8b5cf6,stroke:#7c3aed,stroke-width:2px,color:#fff
+      style Out fill:#10b981,stroke:#059669,stroke-width:2px,color:#fff
 
 _metadata:
   bloc: 3

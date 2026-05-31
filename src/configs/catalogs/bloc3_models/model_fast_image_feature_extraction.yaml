@@ -34,6 +34,15 @@ code_template: |
 
   print(f"[MODEL] Démarrage de la classification ultra-rapide (Feature Extraction)...")
 
+  model = None
+  y_pred = None
+  y_proba = None
+  feature_importances = None
+  training_history = {}
+  task_type = "classification"
+  meta = {"framework": "pytorch+sklearn", "type": "transfer_learning"}
+  full_pipeline = None
+
   if 'X_train' in locals() and 'y_train' in locals() and 'X_test' in locals() and torch is not None:
       start_time = time.time()
       
@@ -80,19 +89,19 @@ code_template: |
       device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
       print(f"[MODEL] Chargement de MobileNetV2 sur {device}...")
       weights = models.MobileNet_V2_Weights.IMAGENET1K_V1
-      model = models.mobilenet_v2(weights=weights)
+      feature_extractor = models.mobilenet_v2(weights=weights)
       
       # Remplacer la tête de classification par une couche Identity pour juste récupérer les features (1280 dimensions)
-      model.classifier = nn.Identity()
-      model = model.to(device)
-      model.eval()
+      feature_extractor.classifier = nn.Identity()
+      feature_extractor = feature_extractor.to(device)
+      feature_extractor.eval()
       
       def extract_features(loader):
           features = []
           with torch.no_grad():
               for i, batch in enumerate(loader):
                   batch = batch.to(device)
-                  out = model(batch)
+                  out = feature_extractor(batch)
                   features.append(out.cpu().numpy())
                   if (i+1) % 10 == 0:
                       print(f"        Extraction en cours... {i+1}/{len(loader)} batches")
@@ -110,20 +119,31 @@ code_template: |
       
       print(f"[MODEL] Prédiction sur le test set...")
       y_pred = classifier.predict(X_test_features)
+      y_proba = classifier.predict_proba(X_test_features) if hasattr(classifier, 'predict_proba') else None
       
-      model_instance = classifier
+      model = classifier
+      full_pipeline = {"extractor": feature_extractor, "classifier": classifier}
       duration = time.time() - start_time
+      training_history = {"status": "success", "duration_seconds": duration}
       print(f"[MODEL] Processus terminé en {duration:.2f}s !")
   else:
       print("[AVERTISSEMENT] X_train, y_train, ou X_test manquants, ou torch non disponible.")
 
 illustration_mermaid: |
-    graph LR
-      Data([Features]) --> Model((Machine Learning))
-      Model --> Pred([Predictions])
-      style Model fill:#8b5cf6,stroke:#7c3aed,stroke-width:2px,color:#fff
-      style Data fill:#f8fafc,stroke:#94a3b8,stroke-width:1px
-      style Pred fill:#f8fafc,stroke:#94a3b8,stroke-width:1px
+  graph TD
+    subgraph Fast Image Feature Extraction Pipeline
+      In([Image Inputs]) --> Resize[Resize & Crop]
+      Resize --> Norm[Normalize]
+      Norm --> MobileNet[MobileNetV2 CNN]
+      MobileNet --> Flatten[Global Avg Pooling Layer]
+      Flatten --> Features[1280-dim Feature Vector]
+      Features --> LR[Logistic Regression Classifier]
+      LR --> Out([Predicted Class])
+    end
+    style In fill:#f8fafc,stroke:#94a3b8,stroke-width:1px
+    style Out fill:#10b981,stroke:#059669,stroke-width:2px,color:#fff
+    style MobileNet fill:#8b5cf6,stroke:#7c3aed,stroke-width:2px,color:#fff
+    style LR fill:#8b5cf6,stroke:#7c3aed,stroke-width:2px,color:#fff
 
 _metadata:
   bloc: 3

@@ -43,13 +43,27 @@ code_template: |
           
       training_history = {"status": "success", "fitted_on": len(X_train)}
       task_type = "classification"
+      meta = {}
 illustration_mermaid: |
-    graph LR
-      Data([Features]) --> Model((Machine Learning))
-      Model --> Pred([Predictions])
-      style Model fill:#8b5cf6,stroke:#7c3aed,stroke-width:2px,color:#fff
-      style Data fill:#f8fafc,stroke:#94a3b8,stroke-width:1px
-      style Pred fill:#f8fafc,stroke:#94a3b8,stroke-width:1px
+  graph TD
+    subgraph Space
+      Train[Training Points stored in memory]
+      New[New Query Point]
+    end
+    subgraph Distance Computation
+      New --> Dist[Compute distance to all Training Points]
+      Dist --> Sort[Sort by Distance]
+    end
+    subgraph Voting
+      Sort --> TopK[Select Top K Nearest Neighbors]
+      TopK --> Vote[Majority Class Vote]
+    end
+    subgraph Output
+      Vote --> Pred[Predicted Class]
+    end
+    style Dist fill:#3b82f6,stroke:#2563eb,stroke-width:2px,color:#fff
+    style TopK fill:#8b5cf6,stroke:#7c3aed,stroke-width:2px,color:#fff
+    style Vote fill:#10b981,stroke:#059669,stroke-width:2px,color:#fff
 
 _metadata:
   bloc: 3
