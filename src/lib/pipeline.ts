@@ -690,57 +690,66 @@ export async function loadAllPipelines(): Promise<PipelineTemplate[]> {
 }
 
 export function buildPipelineYaml(
-  cells: NotebookCell[],
-  pipelineName = "Recette Custom",
-  pipelineDesc = "Généré depuis l'interface graphique."
-): string {
-  const nodes: PipelineNode[] = cells.map((c, i) => {
-    const node_id = `${c.blockId}_${i}`;
-    const depends_on = i > 0 ? [`${cells[i - 1].blockId}_${i - 1}`] : undefined;
-    
-    const node: any = {
-      node_id,
-      block_id: c.blockId,
-    };
-    if (depends_on) {
-      node.depends_on = depends_on;
-    }
-    if (c.overrides && Object.keys(c.overrides).length > 0) {
-      // Ensure values that look like numbers are kept as numbers if needed,
-      // but yaml.dump usually handles basic JS objects well.
-      node.params = { ...c.overrides };
-    }
-    return node as PipelineNode;
-  });
-
-  const pipeline = {
-    id: "pipeline_custom_" + Math.random().toString(36).slice(2, 8),
-    name: pipelineName,
-    description: pipelineDesc,
-    category: "Custom",
-    nodes
-  };
-
-  return yaml.dump(pipeline, { indent: 2 });
+function escapeHtml(unsafe: string) {
+  if (!unsafe) return '';
+  return unsafe
+    .toString()
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#039;");
 }
 
 export function buildHtmlReport(cells: NotebookCell[], outputs: Record<string, any>): string {
-  const jsonCells = cells.map(c => {
-    return {
-      uid: c.uid,
-      name: c.name,
-      type: c.type,
-      code: applyParamOverrides(c.code, c.overrides),
-      output: outputs[c.uid] || null
-    };
-  });
+  const cellsHtml = cells.map((cell, index) => {
+    const code = applyParamOverrides(cell.code, cell.overrides);
+    const output = outputs[cell.uid];
 
-  const html = `<!DOCTYPE html>
-<html>
+    let cellContent = '';
+
+    if (cell.type === 'markdown') {
+      cellContent = `<div class="markdown-cell"><pre style="font-family: inherit; font-size: 1rem; background: transparent; border: none; white-space: pre-wrap; padding: 0;">${escapeHtml(code)}</pre></div>`;
+    } else {
+      let outHtml = '';
+      if (output) {
+        outHtml += `<div class="output">`;
+        if (output.stdout) {
+          outHtml += `<pre class="output-text">${escapeHtml(output.stdout)}</pre>`;
+        }
+        if (output.stderr) {
+          outHtml += `<pre class="output-error">${escapeHtml(output.stderr)}</pre>`;
+        }
+        if (output.displays) {
+          output.displays.forEach((d: any) => {
+            if (d.metadata?.renderAs === 'image') {
+              outHtml += `<div class="output-img"><img src="data:${d.mime};base64,${d.data}" /></div>`;
+            } else if (d.metadata?.renderAs === 'html') {
+              outHtml += `<div style="background: white; color: black; padding: 1rem; border-radius: 4px;">${d.data}</div>`;
+            } else {
+              outHtml += `<pre class="output-text">${escapeHtml(d.data)}</pre>`;
+            }
+          });
+        }
+        outHtml += `</div>`;
+      }
+
+      cellContent = `
+        <div class="code-cell">
+          <div class="cell-header">[${index + 1}] ${escapeHtml(cell.name)}</div>
+          <pre class="code-pre"><code class="language-python">${escapeHtml(code)}</code></pre>
+          ${outHtml}
+        </div>
+      `;
+    }
+
+    return `<div class="cell">${cellContent}</div>`;
+  }).join('\n');
+
+  return `<html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:w="urn:schemas-microsoft-com:office:word" xmlns="http://www.w3.org/TR/REC-html40">
 <head>
   <meta charset="utf-8">
   <title>Rapport d'exécution</title>
-  <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/github.min.css">
   <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/languages/python.min.js"></script>
@@ -764,89 +773,13 @@ export function buildHtmlReport(cells: NotebookCell[], outputs: Record<string, a
   <h1>Rapport d'exécution du Pipeline</h1>
   <p><em>Généré automatiquement par Dataml-App</em></p>
   <hr>
-  <div id="content"></div>
+  <div id="content">
+    ${cellsHtml}
+  </div>
   <script>
-    const data = ${JSON.stringify(jsonCells)};
-    
-    const content = document.getElementById('content');
-    
-    data.forEach((cell, index) => {
-      const div = document.createElement('div');
-      div.className = 'cell ' + (cell.type === 'markdown' ? 'markdown-cell' : 'code-cell');
-      
-      if (cell.type === 'markdown') {
-        div.innerHTML = marked.parse(cell.code);
-      } else {
-        const header = document.createElement('div');
-        header.className = 'cell-header';
-        header.textContent = '[' + (index + 1) + '] ' + cell.name;
-        div.appendChild(header);
-      
-        const pre = document.createElement('pre');
-        pre.className = 'code-pre';
-        const code = document.createElement('code');
-        code.className = 'language-python';
-        code.textContent = cell.code;
-        pre.appendChild(code);
-        div.appendChild(pre);
-        
-        if (cell.output) {
-          const outDiv = document.createElement('div');
-          outDiv.className = 'output';
-          
-          if (cell.output.stdout) {
-            const outPre = document.createElement('pre');
-            outPre.className = 'output-text';
-            outPre.textContent = cell.output.stdout;
-            outDiv.appendChild(outPre);
-          }
-          if (cell.output.stderr) {
-            const errPre = document.createElement('pre');
-            errPre.className = 'output-error';
-            errPre.textContent = cell.output.stderr;
-            outDiv.appendChild(errPre);
-          }
-          
-          if (cell.output.displays) {
-            cell.output.displays.forEach(d => {
-              if (d.metadata?.renderAs === 'image') {
-                const imgContainer = document.createElement('div');
-                imgContainer.className = 'output-img';
-                const img = document.createElement('img');
-                img.src = 'data:' + d.mime + ';base64,' + d.data;
-                imgContainer.appendChild(img);
-                outDiv.appendChild(imgContainer);
-              } else if (d.metadata?.renderAs === 'html') {
-                const h = document.createElement('div');
-                h.style.background = 'white';
-                h.style.color = 'black';
-                h.style.padding = '1rem';
-                h.style.borderRadius = '4px';
-                h.innerHTML = d.data;
-                outDiv.appendChild(h);
-              } else {
-                const outPre = document.createElement('pre');
-                outPre.className = 'output-text';
-                outPre.textContent = d.data;
-                outDiv.appendChild(outPre);
-              }
-            });
-          }
-          
-          if (outDiv.childNodes.length > 0) {
-            div.appendChild(outDiv);
-          }
-        }
-      }
-      
-      content.appendChild(div);
-    });
-    
-    hljs.highlightAll();
+    if (typeof hljs !== 'undefined') hljs.highlightAll();
   </script>
 </body>
 </html>`;
-
-  return html;
 }
 

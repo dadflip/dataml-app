@@ -1,0 +1,27 @@
+id: model_logistic_regression_precomputed
+name: 'Model: Logistic Regression (Precomputed Features)'
+description: "Régression Logistique appliquée directement sur la matrice de noyau pré-calculée. Chaque image est représentée par sa similarité avec toutes les images d'entraînement."
+category: Custom
+tags:
+- model
+- classification
+- logistic-regression
+- precomputed
+- custom
+applies_to:
+- Tabulaire
+- Images
+when_to_use: "Quand vous voulez un modèle probabiliste très rapide sur des distances pré-calculées."
+pros:
+- "Fournit d'excellentes probabilités calibrées."
+- "Entraînement très rapide via LBFGS."
+cons:
+- "Peut surapprendre (overfit) si la régularisation n'est pas bien ajustée."
+hyperparameters:
+  c_param: "Paramètre inverse de régularisation C (ex: 1.0)."
+  distance_keys: "Matrices à utiliser (ex: 'Dsiftint', 'Dhsv', 'Dsiftbdy', 'Dhog')."
+code_template: "import pandas as pd\nimport numpy as np\nfrom sklearn.linear_model import LogisticRegression\n\n# [PARAM: C_PARAM | number]\nC_PARAM = 1.0\n# [/PARAM]\n\n# [PARAM: DISTANCE_KEYS | expr]\nDISTANCE_KEYS = ['Dsiftint', 'Dhsv', 'Dsiftbdy', 'Dhog']\n# [/PARAM]\n\nprint(f\"[MODEL] Entraînement Logistic Regression (C={C_PARAM}, Matrices={DISTANCE_KEYS})...\")\n\nif 'X_train' in locals() and 'X_test' in locals() and 'y_train' in locals():\n    if 'OXFORD_DISTANCES' not in globals():\n        print(\"[ERREUR] OXFORD_DISTANCES introuvable.\")\n    else:\n        keys = [k.strip() for k in DISTANCE_KEYS]\n        mats = [globals()['OXFORD_DISTANCES'][k] for k in keys]\n        full_dist_mat = np.mean(mats, axis=0)\n        \n        # Heuristique pour transformer les distances en similarités (features)\n        gamma_val = 1.0 / np.mean(full_dist_mat)\n        full_feature_mat = np.exp(-gamma_val * full_dist_mat)\n    \n        train_idx = X_train.index.to_numpy()\n        test_idx = X_test.index.to_numpy()\n        \n        # Lignes : train, Colonnes : train (Chaque colonne est une feature de similarité à une image d'entraînement)\n        X_train_features = full_feature_mat[train_idx][:, train_idx]\n        X_test_features = full_feature_mat[test_idx][:, train_idx]\n    \n        model = LogisticRegression(C=float(C_PARAM), max_iter=1000, solver='lbfgs', n_jobs=-1)\n        model.fit(X_train_features, y_train)\n        \n        y_pred = model.predict(X_test_features)\n        try:\n            y_proba = model.predict_proba(X_test_features)\n        except Exception:\n            y_proba = None\n            \n        feature_importances = None\n        full_pipeline = model\n        \n        training_history = {\"status\": \"success\", \"metric\": \"precomputed_lr\"}\n        task_type = \"classification\"\n        print(\"[MODEL] Logistic Regression sur Kernel entraînée avec succès.\")\nelse:\n    print(\"[ERREUR] Données manquantes.\")\n"
+illustration_svg: <svg viewBox="0 0 400 200" xmlns="http://www.w3.org/2000/svg"><rect width="400" height="200" fill="#0f172a"/><path d="M 80 150 Q 200 150 200 100 T 320 50" fill="none" stroke="#eab308" stroke-width="4"/><circle cx="200" cy="100" r="6" fill="white"/><text x="200" y="80" fill="white" font-weight="bold" font-family="sans-serif" text-anchor="middle">Sigmoid</text></svg>
+_metadata:
+  bloc: -1
+  section: 0_custom_project
