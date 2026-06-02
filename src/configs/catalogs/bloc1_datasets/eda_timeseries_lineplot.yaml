@@ -1,6 +1,19 @@
 id: eda_timeseries_lineplot
 name: 'EDA: Série Temporelle'
-description: Trace l'évolution temporelle globale.
+description: Trace l'évolution temporelle globale d'une variable cible pour identifier rapidement les tendances et anomalies.
+when_to_use: À utiliser comme première étape dans toute analyse de données temporelles pour visualiser la dynamique de la variable cible au fil du temps.
+use_cases:
+  - Suivi des revenus journaliers d'une entreprise sur plusieurs années.
+  - Visualisation de l'évolution de la température moyenne mensuelle.
+  - Détection de pics anormaux de trafic sur un site web.
+pros:
+  - Simple, direct et facile à interpréter.
+  - Permet de repérer instantanément les grandes tendances (hausse, baisse) et la saisonnalité visuelle.
+  - Très efficace pour repérer des valeurs aberrantes macroscopiques.
+cons:
+  - Peut devenir illisible (effet "plat de spaghettis") si la série est très longue et très bruitée.
+  - Ne fournit pas d'analyse statistique approfondie.
+  - Nécessite une conversion explicite de la colonne de temps au format datetime.
 category: 3. Exploratory Data Analysis
 tags:
 - eda
@@ -28,13 +41,22 @@ code_template: |
       print("[EDA] TIME_COL ou target_name introuvable.")
 illustration_mermaid: |
     graph TD
-      DF([DataFrame]) --> Check{Check TIME_COL & target_name}
-      Check -- Valid --> ToDate[pd.to_datetime]
-      ToDate --> Plot[sns.lineplot]
-      Plot --> Show[plt.show]
-      Check -- Missing --> Err[Print Error]
+      DF[/ df /] --> Params[/ TIME_COL, target_name /]
+      Params --> Check{ check_cols }
+      Check -- Valid --> ToDate{ pd.to_datetime }
+      ToDate --> Plot{ sns.lineplot }
+      Plot --> Show{ plt.show }
+      Plot --> Fig([ fig ])
+      Check -- Missing --> Err([ Error ])
+      
+      style DF fill:#fbbf24,stroke:#d97706,stroke-width:2px,color:#000
+      style Params fill:#fbbf24,stroke:#d97706,stroke-width:2px,color:#000
+      style Check fill:#3b82f6,stroke:#2563eb,stroke-width:2px,color:#fff
       style ToDate fill:#3b82f6,stroke:#2563eb,stroke-width:2px,color:#fff
-      style Plot fill:#8b5cf6,stroke:#7c3aed,stroke-width:2px,color:#fff
+      style Plot fill:#3b82f6,stroke:#2563eb,stroke-width:2px,color:#fff
+      style Show fill:#3b82f6,stroke:#2563eb,stroke-width:2px,color:#fff
+      style Fig fill:#10b981,stroke:#059669,stroke-width:2px,color:#fff
+      style Err fill:#8b5cf6,stroke:#7c3aed,stroke-width:2px,color:#fff
 _metadata:
   bloc: 1
   section: 3_eda

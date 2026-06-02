@@ -1,14 +1,22 @@
 id: "model_huber_regressor"
 name: "Model: Huber Regressor"
-description: "Régression linéaire robuste aux outliers, optimisant la perte de Huber."
+description: "Modèle de régression linéaire robuste qui optimise la perte de Huber, une fonction de coût hybride moins pénalisante pour les valeurs extrêmes (outliers) que l'erreur quadratique standard."
 category: "Modèles Linéaires"
 tags: ["model", "regression", "tabular", "sklearn", "linear", "robust"]
 applies_to: ["Tabulaire"]
-when_to_use: "Quand votre cible (y) comporte des valeurs aberrantes (outliers) extrêmes."
+when_to_use: "Idéal lorsque la variable cible contient des valeurs aberrantes importantes qui fausseraient fortement une régression linéaire classique (Moindres Carrés Ordinaires)."
+use_cases:
+  - "Prédiction de prix (ex: immobilier) avec quelques biens au prix exorbitant."
+  - "Modélisation de données de capteurs présentant des pics d'erreurs ponctuels."
+  - "Analyse financière avec des événements extrêmes rares."
 pros:
-  - "Ne se laisse pas biaiser par quelques points extrêmes."
+  - "Très résistant à l'influence des valeurs aberrantes massives."
+  - "Produit un modèle linéaire interprétable (coefficients directement exploitables)."
+  - "Optimise une fonction continûment dérivable (contrairement à l'erreur absolue pure L1)."
 cons:
-  - "Paramètre epsilon parfois difficile à régler."
+  - "Le réglage du paramètre 'epsilon' (seuil séparant inliers et outliers) peut s'avérer délicat et nécessite une validation croisée."
+  - "Ne capture pas les relations non linéaires."
+  - "Sensible aux fortes colinéarités entre les variables prédictives, bien qu'il inclue une régularisation Ridge par défaut."
 hyperparameters:
   epsilon: "Seuil à partir duquel un résidu est traité comme un outlier (ex: 1.35)."
 code_template: |
@@ -45,29 +53,87 @@ code_template: |
       training_history = {"status": "success", "fitted_on": len(X_train), "outliers_detected": int(np.sum(model.outliers_))}
       task_type = "regression"
       meta = {}
+math_theory: |
+  The Huber Regressor optimizes a robust loss function that combines the advantages of squared error (L2) and absolute error (L1). It is less sensitive to outliers than ordinary least squares.
+  
+  1. **Residuals**: For a linear model $\hat{y} = \textcolor{#3b82f6}{X \beta}$, the residual is $r_i = \textcolor{#10b981}{y_i} - \textcolor{#3b82f6}{X_i \beta}$.
+  
+  2. **Huber Loss**: The loss function behaves quadratically for small residuals and linearly for large residuals, controlled by a threshold parameter $\textcolor{#fbbf24}{\epsilon}$:
+  $$ \mathcal{L}_\epsilon(r) = \begin{cases} 
+  \frac{1}{2} r^2 & \text{if } |r| \le \textcolor{#fbbf24}{\epsilon} \quad \text{(L2 behavior)} \\
+  \textcolor{#fbbf24}{\epsilon} |r| - \frac{1}{2} \textcolor{#fbbf24}{\epsilon}^2 & \text{if } |r| > \textcolor{#fbbf24}{\epsilon} \quad \text{(L1 behavior)}
+  \end{cases} $$
+  
+  3. **Objective**: The model minimizes the Huber loss over all samples plus an L2 penalty (Ridge regularization) on the coefficients:
+  $$ \min_{\textcolor{#3b82f6}{\beta}} \sum_{i=1}^n \mathcal{L}_\epsilon(\textcolor{#10b981}{y_i} - \textcolor{#3b82f6}{X_i \beta}) + \textcolor{#8b5cf6}{\alpha} \|\textcolor{#3b82f6}{\beta}\|_2^2 $$
+  This ensures smooth differentiability everywhere while severely limiting the influence of large outliers (where the gradient is capped at $\pm \textcolor{#fbbf24}{\epsilon}$).
+math_illustration_svg: |
+  <svg viewBox="0 0 800 400" xmlns="http://www.w3.org/2000/svg">
+    <!-- Axes for Loss Graph -->
+    <path d="M100 300 L700 300" stroke="#94a3b8" stroke-width="2" marker-end="url(#arrow)"/>
+    <path d="M400 350 L400 50" stroke="#94a3b8" stroke-width="2" marker-end="url(#arrow)"/>
+    <text x="710" y="305" font-family="sans-serif" font-size="16" fill="#475569">Residual r</text>
+    <text x="390" y="40" font-family="sans-serif" font-size="16" fill="#475569" text-anchor="end">Loss L(r)</text>
+
+    <!-- Threshold epsilon lines -->
+    <line x1="250" y1="310" x2="250" y2="50" stroke="#fbbf24" stroke-width="2" stroke-dasharray="5,5"/>
+    <line x1="550" y1="310" x2="550" y2="50" stroke="#fbbf24" stroke-width="2" stroke-dasharray="5,5"/>
+    <text x="250" y="330" font-family="sans-serif" font-size="16" font-weight="bold" fill="#fbbf24" text-anchor="middle">-ε</text>
+    <text x="550" y="330" font-family="sans-serif" font-size="16" font-weight="bold" fill="#fbbf24" text-anchor="middle">+ε</text>
+
+    <!-- L2 Squared Error (Dashed) -->
+    <path d="M150 100 Q400 650 650 100" fill="none" stroke="#ef4444" stroke-width="2" stroke-dasharray="4,4"/>
+    <text x="660" y="100" font-family="sans-serif" font-size="14" fill="#ef4444">L2 (Squared)</text>
+
+    <!-- L1 Absolute Error (Dashed) -->
+    <path d="M150 50 L400 300 L650 50" fill="none" stroke="#10b981" stroke-width="2" stroke-dasharray="4,4"/>
+    <text x="660" y="50" font-family="sans-serif" font-size="14" fill="#10b981">L1 (Absolute)</text>
+
+    <!-- Huber Loss -->
+    <!-- Quadratic part from x=250 to 550, vertex at (400,300)
+         Quadratic curve passes through (250, 187.5) and (550, 187.5)
+         Linear parts match tangent. Slope = epsilon = 0.75 -->
+    <path d="M100 75 L250 187.5" fill="none" stroke="#3b82f6" stroke-width="5"/>
+    <path d="M250 187.5 Q400 350 550 187.5" fill="none" stroke="#3b82f6" stroke-width="5"/>
+    <path d="M550 187.5 L700 75" fill="none" stroke="#3b82f6" stroke-width="5"/>
+
+    <text x="470" y="160" font-family="sans-serif" font-size="18" font-weight="bold" fill="#3b82f6">Huber Loss</text>
+
+    <!-- Annotations -->
+    <rect x="360" y="230" width="80" height="30" fill="#eff6ff" stroke="#3b82f6" stroke-width="2" rx="4"/>
+    <text x="400" y="250" font-family="sans-serif" font-size="14" font-weight="bold" fill="#3b82f6" text-anchor="middle">L2 Zone</text>
+    
+    <rect x="180" y="110" width="80" height="30" fill="#eff6ff" stroke="#3b82f6" stroke-width="2" rx="4"/>
+    <text x="220" y="130" font-family="sans-serif" font-size="14" font-weight="bold" fill="#3b82f6" text-anchor="middle">L1 Zone</text>
+    
+    <rect x="540" y="110" width="80" height="30" fill="#eff6ff" stroke="#3b82f6" stroke-width="2" rx="4"/>
+    <text x="580" y="130" font-family="sans-serif" font-size="14" font-weight="bold" fill="#3b82f6" text-anchor="middle">L1 Zone</text>
+
+    <defs>
+      <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto"><path d="M0 0 L10 5 L0 10 z" fill="#94a3b8"/></marker>
+    </defs>
+  </svg>
 illustration_mermaid: |
-  graph TD
-    subgraph Data
-      X[Features X]
-      Y[Target Y with Outliers]
-    end
-    subgraph Robust Loss Optimization
-      Loss[Compute Huber Loss]
-      Cond{Error > Epsilon?}
-      Cond -->|Yes| L1[L1 Loss / Absolute Error]
-      Cond -->|No| L2[L2 Loss / Squared Error]
-      L1 --> Opt[Update Weights Robustly]
-      L2 --> Opt
-    end
-    subgraph Output
-      Opt --> Weights[Fitted Coefficients]
-      Weights --> Pred[Predictions]
-    end
-    X --> Loss
-    Y --> Loss
-    style L1 fill:#f59e0b,stroke:#d97706,stroke-width:2px,color:#fff
-    style L2 fill:#10b981,stroke:#059669,stroke-width:2px,color:#fff
+  flowchart LR
+    X[/"Features X"/] --> Loss{"Compute Huber Loss"}
+    Y[/"Target Y with Outliers"/] --> Loss
+    Loss --> Cond{"Error > Epsilon?"}
+    Cond -->|Yes| L1{"L1 Loss / Absolute Error"}
+    Cond -->|No| L2{"L2 Loss / Squared Error"}
+    L1 --> Opt{"Update Weights Robustly"}
+    L2 --> Opt
+    Opt --> Weights(["Fitted Coefficients"])
+    Weights --> Pred(["Predictions"])
+
+    style X fill:#fbbf24,stroke:#d97706,stroke-width:2px,color:#000
+    style Y fill:#fbbf24,stroke:#d97706,stroke-width:2px,color:#000
+    style Loss fill:#3b82f6,stroke:#2563eb,stroke-width:2px,color:#fff
+    style Cond fill:#3b82f6,stroke:#2563eb,stroke-width:2px,color:#fff
+    style L1 fill:#3b82f6,stroke:#2563eb,stroke-width:2px,color:#fff
+    style L2 fill:#3b82f6,stroke:#2563eb,stroke-width:2px,color:#fff
     style Opt fill:#3b82f6,stroke:#2563eb,stroke-width:2px,color:#fff
+    style Weights fill:#10b981,stroke:#059669,stroke-width:2px,color:#fff
+    style Pred fill:#10b981,stroke:#059669,stroke-width:2px,color:#fff
 
 _metadata:
   bloc: 3

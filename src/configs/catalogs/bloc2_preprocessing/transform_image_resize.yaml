@@ -1,14 +1,49 @@
 id: "transform_image_resize"
 name: "Transform: Image Resize"
-description: "Redimensionne les images (PIL)."
+description: "Redimensionne uniformément les images à une taille spécifique (hauteur et largeur) en utilisant des algorithmes d'interpolation. C'est une étape de standardisation essentielle car les réseaux de neurones (comme les CNN) exigent généralement des tenseurs d'entrée de dimensions fixes."
+math_theory: |
+  Le redimensionnement d'une image $I$ de dimensions $\textcolor{#3b82f6}{H_{in}} \times \textcolor{#3b82f6}{W_{in}}$ vers une nouvelle taille $\textcolor{#10b981}{H_{out}} \times \textcolor{#10b981}{W_{out}}$ se fait souvent par interpolation bilinéaire.
+  Pour trouver la valeur d'un pixel cible aux coordonnées $(x, y)$, on le mappe vers les coordonnées fractionnaires de l'image source :
+  $$ x_{src} = x \cdot \frac{\textcolor{#3b82f6}{W_{in}}}{\textcolor{#10b981}{W_{out}}}, \quad y_{src} = y \cdot \frac{\textcolor{#3b82f6}{H_{in}}}{\textcolor{#10b981}{H_{out}}} $$
+  La valeur est ensuite calculée comme une somme pondérée des 4 pixels voisins les plus proches :
+  $$ \textcolor{#10b981}{I_{out}}(x, y) = \sum_{i=0}^1 \sum_{j=0}^1 w_{ij} \cdot \textcolor{#3b82f6}{I_{in}}(\lfloor x_{src} \rfloor + i, \lfloor y_{src} \rfloor + j) $$
+  où les poids $w_{ij}$ dépendent des distances fractionnaires aux voisins.
+math_illustration_svg: |
+  <svg viewBox="0 0 400 200" xmlns="http://www.w3.org/2000/svg">
+    <defs>
+      <marker id="arrow" viewBox="0 0 10 10" refX="5" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+        <path d="M 0 0 L 10 5 L 0 10 z" fill="#fbbf24"/>
+      </marker>
+    </defs>
+    <g transform="translate(40, 30)">
+      <rect x="0" y="0" width="120" height="90" fill="none" stroke="#3b82f6" stroke-width="2" rx="2"/>
+      <path d="M 30 0 L 30 90 M 60 0 L 60 90 M 90 0 L 90 90" fill="none" stroke="#3b82f6" stroke-width="0.5" stroke-dasharray="4"/>
+      <path d="M 0 30 L 120 30 M 0 60 L 120 60" fill="none" stroke="#3b82f6" stroke-width="0.5" stroke-dasharray="4"/>
+      <text x="60" y="115" fill="#3b82f6" font-family="sans-serif" font-size="14" text-anchor="middle" font-weight="bold">H_in x W_in</text>
+      
+      <path d="M 140 45 L 200 45" fill="none" stroke="#fbbf24" stroke-width="2" marker-end="url(#arrow)"/>
+      <text x="170" y="35" fill="#ef4444" font-family="sans-serif" font-size="14" text-anchor="middle" font-weight="bold">Resize</text>
+      
+      <g transform="translate(220, 15)">
+        <rect x="0" y="0" width="80" height="60" fill="none" stroke="#10b981" stroke-width="2" rx="2"/>
+        <path d="M 40 0 L 40 60 M 0 30 L 80 30" fill="none" stroke="#10b981" stroke-width="0.5" stroke-dasharray="4"/>
+        <text x="40" y="100" fill="#10b981" font-family="sans-serif" font-size="14" text-anchor="middle" font-weight="bold">H_out x W_out</text>
+      </g>
+    </g>
+  </svg>
 category: "4.1 Preprocessing"
 tags: ["transform", "image", "multimedia", "torchvision", "pipeline"]
 applies_to: ["Images"]
-when_to_use: "Forcer la même taille."
+when_to_use: "Obligatoire avant de regrouper (batcher) des images hétérogènes pour les passer dans un modèle de Deep Learning qui nécessite une taille d'entrée fixe (ex: 224x224 pour ResNet)."
+use_cases:
+  - "Préparation d'un dataset d'images de tailles variables issues du web."
+  - "Réduction de la résolution globale pour accélérer les temps d'entraînement et réduire l'empreinte mémoire."
 pros:
-  - "Standardise la taille."
+  - "Standardise le format des données pour permettre le calcul vectorisé par batch."
+  - "Permet de contrôler le compromis entre résolution spatiale et consommation mémoire."
 cons:
-  - "Déforme l'image."
+  - "Si le ratio d'aspect initial n'est pas respecté, cela crée des déformations (étirement/écrasement) qui peuvent perturber le modèle."
+  - "Une réduction drastique de taille détruit des détails fins (haute fréquence)."
 hyperparameters:
   img_col: "Colonne images"
   size: "Taille"
@@ -46,16 +81,21 @@ code_template: |
       print(f"[AVERTISSEMENT] Colonne '{IMG_COL}' introuvable.")
 
 illustration_mermaid: |
-  graph TD
-    A[Image DataFrame] --> B{Does IMG_COL exist?}
-    B -- Yes --> C[Initialize T.Resize with SIZE]
-    B -- No --> D[Skip and Warn]
-    C --> E[Apply resize to each PIL Image]
-    E --> F[Update pipeline_steps & df]
-    D --> F
-    F --> G[Resized Images]
-    style A fill:#eff6ff,stroke:#94a3b8,stroke-width:2px
-    style G fill:#10b981,stroke:#059669,stroke-width:2px,color:#fff
+  flowchart LR
+    A(["📊 df (Images)"]) --> B{"⚙️ Vérifier Colonne"}
+    B -- "Oui" --> C[/"📄 Taille cible"/]
+    C --> D{"⚙️ T.Resize"}
+    B -- "Non" --> E{"⚙️ Skip & Warn"}
+    D --> F(["📊 df (Images redimensionnées)"])
+    E --> F
+    F --> G(["ℹ️ pipeline_steps"])
+    style A fill:#10b981,stroke:#059669,stroke-width:2px,color:#fff
+    style B fill:#3b82f6,stroke:#2563eb,stroke-width:2px,color:#fff
+    style C fill:#fbbf24,stroke:#d97706,stroke-width:2px,color:#000
+    style D fill:#3b82f6,stroke:#2563eb,stroke-width:2px,color:#fff
+    style E fill:#3b82f6,stroke:#2563eb,stroke-width:2px,color:#fff
+    style F fill:#10b981,stroke:#059669,stroke-width:2px,color:#fff
+    style G fill:#8b5cf6,stroke:#7c3aed,stroke-width:2px,color:#fff
 
 _metadata:
   bloc: 2

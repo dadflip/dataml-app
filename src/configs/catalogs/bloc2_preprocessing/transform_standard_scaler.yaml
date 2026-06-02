@@ -1,16 +1,53 @@
 id: "transform_standard_scaler"
 name: "Transform: Standard Scaler"
-description: "Centre et réduit les variables numériques (Z-score)."
+description: "Centre et reduit les variables numeriques en appliquant la standardisation Z-score. Chaque variable est transformee pour avoir une moyenne de 0 et un ecart-type de 1. C'est l'etape de preprocessing la plus courante pour les algorithmes sensibles a l'echelle des donnees."
+math_theory: |
+  Pour chaque variable \textcolor{#fbbf24}{x_j}, la standardisation (Z-score) est definie par :
+  $$ \textcolor{#10b981}{z_{ij}} = \frac{\textcolor{#fbbf24}{x_{ij}} - \textcolor{#3b82f6}{\mu_j}}{\textcolor{#8b5cf6}{\sigma_j}} $$
+  ou $\textcolor{#3b82f6}{\mu_j} = \frac{1}{N} \sum_{i=1}^{N} \textcolor{#fbbf24}{x_{ij}}$ est la moyenne et $\textcolor{#8b5cf6}{\sigma_j} = \sqrt{\frac{1}{N} \sum_{i=1}^{N} (\textcolor{#fbbf24}{x_{ij}} - \textcolor{#3b82f6}{\mu_j})^2}$ est l'ecart-type de la variable $j$.
+
+  Apres transformation : $\mathbb{E}[\textcolor{#10b981}{z_j}] = 0$ et $\text{Var}(\textcolor{#10b981}{z_j}) = 1$.
+  Cette transformation est essentielle pour les algorithmes bases sur la distance (KNN, SVM, K-Means) et ceux utilisant la descente de gradient (reseaux de neurones, regression logistique), car elle place toutes les variables sur la meme echelle.
+math_illustration_svg: |
+  <svg viewBox="0 0 400 200" xmlns="http://www.w3.org/2000/svg">
+    <rect width="100%" height="100%" fill="transparent" />
+    <!-- Original distribution -->
+    <path d="M 50 150 Q 100 50 150 150" fill="none" stroke="#fbbf24" stroke-width="3" />
+    <text x="75" y="170" fill="#fbbf24" font-family="monospace" font-size="12">Original (mu, sigma)</text>
+    <!-- Arrow -->
+    <path d="M 170 120 L 230 120" stroke="#64748b" stroke-width="2" marker-end="url(#arrow)" />
+    <text x="180" y="110" fill="#64748b" font-family="monospace" font-size="12">Scaler</text>
+    <!-- Standardized distribution -->
+    <path d="M 250 150 Q 300 20 350 150" fill="none" stroke="#10b981" stroke-width="3" />
+    <text x="260" y="170" fill="#10b981" font-family="monospace" font-size="12">Standardized (0, 1)</text>
+    <line x1="100" y1="150" x2="100" y2="50" stroke="#3b82f6" stroke-width="1" stroke-dasharray="3,3" />
+    <text x="95" y="40" fill="#3b82f6" font-family="monospace" font-size="12">μ</text>
+    <line x1="300" y1="150" x2="300" y2="20" stroke="#3b82f6" stroke-width="1" stroke-dasharray="3,3" />
+    <text x="295" y="10" fill="#3b82f6" font-family="monospace" font-size="12">μ=0</text>
+    <defs>
+      <marker id="arrow" viewBox="0 0 10 10" refX="5" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+        <path d="M 0 0 L 10 5 L 0 10 z" fill="#64748b" />
+      </marker>
+    </defs>
+  </svg>
 category: "4.1 Preprocessing"
 tags: ["transform", "scaling", "tabular", "sklearn", "pipeline"]
 applies_to: ["Tabulaire"]
-when_to_use: "Pour modèles sensibles à l'échelle (Réseaux de Neurones, SVM)."
+when_to_use: "A utiliser systematiquement avant tout modele sensible a l'echelle des variables : reseaux de neurones, SVM, KNN, regression logistique avec regularisation, ACP."
+use_cases:
+  - "Normalisation des features avant un reseau de neurones pour accelerer la convergence de la descente de gradient."
+  - "Mise a l'echelle avant un SVM a noyau RBF (tres sensible aux differences d'echelle)."
+  - "Preparation des donnees pour une Analyse en Composantes Principales (ACP)."
 pros:
-  - "Accélère la convergence."
+  - "Accelere significativement la convergence des algorithmes d'optimisation (descente de gradient)."
+  - "Indispensable pour les algorithmes bases sur la distance (KNN, K-Means, SVM)."
+  - "Integre nativement au pipeline sklearn, tres simple a deployer."
 cons:
-  - "Sensible aux valeurs aberrantes."
+  - "Tres sensible aux valeurs aberrantes (outliers) qui deforment la moyenne et l'ecart-type."
+  - "Suppose implicitement que les donnees suivent une distribution approximativement gaussienne."
+  - "Ne borne pas les valeurs dans un intervalle fixe (contrairement a MinMaxScaler)."
 hyperparameters:
-  with_mean: "Centrer les données."
+  with_mean: "Centrer les donnees."
 code_template: |
   import pandas as pd
   import numpy as np
@@ -50,16 +87,21 @@ code_template: |
   if 'task_type' not in locals(): task_type = "classification"
   if 'meta' not in locals(): meta = {}
 illustration_mermaid: |
-  graph TD
-    A[Raw Data] --> B{Are there numeric columns?}
-    B -- Yes --> C[Initialize StandardScaler]
-    C --> D[Create ColumnTransformer]
-    D --> E[Add to Pipeline Steps]
-    B -- No --> F[Skip StandardScaler]
-    E --> G[Update Data Contract Variables]
-    F --> G
-    style A fill:#eff6ff,stroke:#3b82f6,stroke-width:2px
-    style G fill:#10b981,stroke:#059669,stroke-width:2px
+  flowchart LR
+    A(["📊 df"]) --> B[/"📄 WITH_MEAN"/]
+    B --> C{"⚙️ Extraire Cols Num."}
+    C -- "Oui" --> D{"⚙️ StandardScaler (Z-score)"}
+    C -- "Non" --> E{"⚙️ Skip"}
+    D --> F(["📊 df (centre et reduit)"])
+    E --> F
+    F --> G(["ℹ️ pipeline_steps"])
+    style A fill:#10b981,stroke:#059669,stroke-width:2px,color:#fff
+    style B fill:#fbbf24,stroke:#d97706,stroke-width:2px,color:#000
+    style C fill:#3b82f6,stroke:#2563eb,stroke-width:2px,color:#fff
+    style D fill:#3b82f6,stroke:#2563eb,stroke-width:2px,color:#fff
+    style E fill:#3b82f6,stroke:#2563eb,stroke-width:2px,color:#fff
+    style F fill:#10b981,stroke:#059669,stroke-width:2px,color:#fff
+    style G fill:#8b5cf6,stroke:#7c3aed,stroke-width:2px,color:#fff
 
 _metadata:
   bloc: 2

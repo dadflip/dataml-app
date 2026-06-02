@@ -1,14 +1,45 @@
 id: "transform_image_random_flip"
 name: "Transform: Image Random Flip"
-description: "Data Augmentation."
+description: "Applique un retournement horizontal aléatoire (Random Horizontal Flip) aux images avec une probabilité donnée. Cette technique d'augmentation de données enrichit le jeu de données d'entraînement en générant de nouvelles perspectives, ce qui aide le modèle à généraliser l'apprentissage sans mémoriser l'orientation stricte."
+math_theory: |
+  Le retournement horizontal agit sur la matrice des pixels de taille $\textcolor{#3b82f6}{H} \times \textcolor{#3b82f6}{W} \times C$. Pour un pixel de coordonnées spatiales $(x, y)$, la nouvelle valeur est donnée par une réflexion sur l'axe vertical central :
+  $$ \textcolor{#10b981}{I_{new}}(x, y, c) = \textcolor{#3b82f6}{I_{orig}}(\textcolor{#3b82f6}{W} - 1 - x, y, c) $$
+  L'application de ce retournement suit une distribution de Bernoulli $\textcolor{#fbbf24}{Z} \sim \mathcal{B}(\textcolor{#ef4444}{p})$ où $\textcolor{#ef4444}{p}$ est la probabilité définie par l'utilisateur :
+  $$ T(I) = \textcolor{#fbbf24}{Z} \cdot \textcolor{#10b981}{I_{new}} + (1 - \textcolor{#fbbf24}{Z}) \cdot \textcolor{#3b82f6}{I_{orig}} $$
+math_illustration_svg: |
+  <svg viewBox="0 0 400 200" xmlns="http://www.w3.org/2000/svg">
+    <defs>
+      <marker id="arrow" viewBox="0 0 10 10" refX="5" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+        <path d="M 0 0 L 10 5 L 0 10 z" fill="#fbbf24"/>
+      </marker>
+    </defs>
+    <g transform="translate(70, 40)">
+      <rect x="0" y="0" width="80" height="80" fill="none" stroke="#3b82f6" stroke-width="2" rx="4"/>
+      <path d="M 20 60 L 60 20 L 60 40 M 60 20 L 40 20" fill="none" stroke="#3b82f6" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>
+      <text x="40" y="105" fill="#3b82f6" font-family="sans-serif" font-size="14" text-anchor="middle" font-weight="bold">I_orig</text>
+      
+      <path d="M 100 40 L 160 40" fill="none" stroke="#fbbf24" stroke-width="2" marker-end="url(#arrow)"/>
+      <text x="130" y="30" fill="#ef4444" font-family="sans-serif" font-size="14" text-anchor="middle" font-weight="bold">p (Flip)</text>
+      <text x="130" y="55" fill="#fbbf24" font-family="sans-serif" font-size="12" text-anchor="middle">Z ~ B(p)</text>
+      
+      <rect x="180" y="0" width="80" height="80" fill="none" stroke="#10b981" stroke-width="2" rx="4"/>
+      <path d="M 240 60 L 200 20 L 200 40 M 200 20 L 220 20" fill="none" stroke="#10b981" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>
+      <text x="220" y="105" fill="#10b981" font-family="sans-serif" font-size="14" text-anchor="middle" font-weight="bold">I_new</text>
+    </g>
+  </svg>
 category: "4.1 Preprocessing"
 tags: ["transform", "image", "multimedia", "torchvision", "pipeline"]
 applies_to: ["Images"]
-when_to_use: "Augmentation."
+when_to_use: "À utiliser prioritairement durant l'entraînement de réseaux de neurones (CNN) sur des images naturelles, lorsque la symétrie horizontale n'affecte pas la sémantique de l'objet (ex: chats, voitures, paysages)."
+use_cases:
+  - "Entraînement de modèles de classification d'images pour augmenter artificiellement la taille du dataset."
+  - "Régularisation lors de l'apprentissage de détecteurs d'objets pour éviter le surapprentissage (overfitting)."
 pros:
-  - "Évite overfitting."
+  - "Augmente artificiellement la taille du jeu de données d'entraînement très facilement."
+  - "Réduit le surapprentissage (overfitting) de manière prouvée et efficace."
+  - "Extrêmement rapide à calculer, n'impactant quasiment pas les temps de chargement."
 cons:
-  - "Aléatoire."
+  - "Ne doit pas être utilisé si le sens de lecture ou la latéralité est critique (ex: classification de chiffres, lettres, ou imagerie médicale où droite/gauche a un sens clinique)."
 hyperparameters:
   img_col: "Colonne images"
   p: "Proba"
@@ -46,16 +77,21 @@ code_template: |
       print(f"[AVERTISSEMENT] Colonne '{IMG_COL}' introuvable.")
 
 illustration_mermaid: |
-  graph TD
-    A[Image DataFrame] --> B{Does IMG_COL exist?}
-    B -- Yes --> C[Initialize T.RandomHorizontalFlip]
-    B -- No --> D[Skip and Warn]
-    C --> E[Apply flip to each PIL Image]
-    E --> F[Update pipeline_steps & df]
-    D --> F
-    F --> G[Flipped Images]
-    style A fill:#eff6ff,stroke:#94a3b8,stroke-width:2px
-    style G fill:#10b981,stroke:#059669,stroke-width:2px,color:#fff
+  flowchart LR
+    A(["📊 df"]) --> B{"⚙️ Vérifier Colonne"}
+    B -- "Oui" --> C[/"📄 p (Probabilité)"/]
+    C --> D{"⚙️ RandomHorizontalFlip"}
+    B -- "Non" --> E{"⚙️ Skip & Warn"}
+    D --> F(["📊 df (Images modifiées)"])
+    E --> F
+    F --> G(["ℹ️ pipeline_steps"])
+    style A fill:#10b981,stroke:#059669,stroke-width:2px,color:#fff
+    style B fill:#3b82f6,stroke:#2563eb,stroke-width:2px,color:#fff
+    style C fill:#fbbf24,stroke:#d97706,stroke-width:2px,color:#000
+    style D fill:#3b82f6,stroke:#2563eb,stroke-width:2px,color:#fff
+    style E fill:#3b82f6,stroke:#2563eb,stroke-width:2px,color:#fff
+    style F fill:#10b981,stroke:#059669,stroke-width:2px,color:#fff
+    style G fill:#8b5cf6,stroke:#7c3aed,stroke-width:2px,color:#fff
 
 _metadata:
   bloc: 2

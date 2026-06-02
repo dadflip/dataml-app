@@ -1,6 +1,16 @@
 id: extract_gcs
 name: 'Extract: Google Cloud Storage'
 description: Télécharge un fichier depuis un bucket GCP Storage.
+when_to_use: Recommandé lors de l'intégration avec des pipelines data hébergés sur Google Cloud Platform, pour ingérer des fichiers stockés dans un bucket GCS.
+use_cases:
+  - Récupération de datasets ML préparés sur Google Cloud.
+  - Synchronisation de fichiers de données entre services GCP et locaux.
+pros:
+  - Très rapide et hautement disponible.
+  - Sécurité robuste grâce aux credentials IAM Google Cloud.
+cons:
+  - Nécessite la configuration du fichier de credentials GOOGLE_APPLICATION_CREDENTIALS.
+  - Dépendance réseau à GCP.
 category: 1. Extract
 tags:
 - extract
@@ -47,13 +57,22 @@ code_template: |
   task_type = "unknown"
   meta = {"source": "gcs", "path": DEST_PATH}
 illustration_mermaid: |
-    flowchart TD
-    A([FILE_PATH]) --> B[Load EXTRACT_GCS]
-    B --> df([df])
-    
-    style A fill:#3b82f6,color:#fff
-    style B fill:#10b981,color:#fff
-    style df fill:#f59e0b,color:#fff
+    flowchart LR
+        A[/"📄 gs://BUCKET/BLOB"/] --> B{"Extract GCS()"}
+        C[/"🎯 TARGET_COL"/] --> D{"Check TARGET_COL"}
+        B --> E(["📊 df (Local File/DataFrame)"])
+        E --> D
+        D --> F(["🎯 target_name"])
+        D --> G(["⚙️ task_type"])
+        D --> H(["ℹ️ meta (...)"])
+        style A fill:#fbbf24,stroke:#d97706,stroke-width:2px,color:#000
+        style C fill:#fbbf24,stroke:#d97706,stroke-width:2px,color:#000
+        style B fill:#3b82f6,stroke:#2563eb,stroke-width:2px,color:#fff
+        style D fill:#3b82f6,stroke:#2563eb,stroke-width:2px,color:#fff
+        style E fill:#10b981,stroke:#059669,stroke-width:2px,color:#fff
+        style F fill:#8b5cf6,stroke:#7c3aed,stroke-width:2px,color:#fff
+        style G fill:#8b5cf6,stroke:#7c3aed,stroke-width:2px,color:#fff
+        style H fill:#8b5cf6,stroke:#7c3aed,stroke-width:2px,color:#fff
 
 
 

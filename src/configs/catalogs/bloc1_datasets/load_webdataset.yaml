@@ -1,6 +1,18 @@
 id: "load_webdataset"
 name: "Load: WebDataset (.tar streaming)"
-description: "Charge de très gros datasets encapsulés dans des fichiers .tar de manière distribuée (standard PyTorch)."
+description: "Charge de très gros datasets encapsulés dans des fichiers .tar de manière distribuée, selon le standard WebDataset de PyTorch."
+when_to_use: "À utiliser pour la lecture en streaming de jeux de données massifs (images, textes, etc.) où le chargement en mémoire globale est impossible."
+use_cases:
+  - "Entraînement de modèles de Deep Learning sur des ensembles de données de plusieurs téraoctets."
+  - "Traitement de grands corpus d'images (comme LAION-5B) ou de textes."
+  - "Pipelines de données distribués et parallèles sous PyTorch."
+pros:
+  - "Extrêmement performant pour le streaming séquentiel de grandes quantités de données."
+  - "Gère de multiples types de données (texte, image, binaire) de manière robuste."
+  - "Évite de surcharger la RAM du système."
+cons:
+  - "Nécessite que les données soient préalablement formatées en archives tar WebDataset."
+  - "La représentation sous forme de DataFrame n'est qu'un aperçu tronqué."
 category: "2. Load"
 tags: ["load", "webdataset", "pytorch", "streaming"]
 code_template: |
@@ -71,21 +83,22 @@ output_variables:
   - task_type
   - meta
 illustration_mermaid: |
-  flowchart TD
-      A([URL_OR_PATH]) --> B{Valid URL/Path?}
-      B -- Yes --> C[wds.WebDataset]
-      B -- No --> D[Empty DataFrame]
-      C --> E[Stream samples]
-      E --> F[Extract up to 1000 records]
-      F --> G[Format scalars & shape info]
-      G --> H[Create DataFrame]
-      H --> I([df, target_name, task_type, meta])
-      D --> I
-
-      style A fill:#3b82f6,color:#fff
-      style C fill:#10b981,color:#fff
-      style F fill:#10b981,color:#fff
-      style I fill:#f59e0b,color:#fff
+  flowchart LR
+      A[/"🌐 URL_OR_PATH"/] --> B{"wds.WebDataset()"}
+      C[/"🎯 'cls' / 'label'"/] --> D{"Infer target"}
+      B --> E(["📊 df (Samples)"])
+      E --> D
+      D --> F(["🎯 target_name"])
+      D --> G(["⚙️ task_type"])
+      D --> H(["ℹ️ meta (stats)"])
+      style A fill:#fbbf24,stroke:#d97706,stroke-width:2px,color:#000
+      style C fill:#fbbf24,stroke:#d97706,stroke-width:2px,color:#000
+      style B fill:#3b82f6,stroke:#2563eb,stroke-width:2px,color:#fff
+      style D fill:#3b82f6,stroke:#2563eb,stroke-width:2px,color:#fff
+      style E fill:#10b981,stroke:#059669,stroke-width:2px,color:#fff
+      style F fill:#8b5cf6,stroke:#7c3aed,stroke-width:2px,color:#fff
+      style G fill:#8b5cf6,stroke:#7c3aed,stroke-width:2px,color:#fff
+      style H fill:#8b5cf6,stroke:#7c3aed,stroke-width:2px,color:#fff
 
 
 _metadata:

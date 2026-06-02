@@ -1,16 +1,57 @@
 id: "model_multinomial_nb"
 name: "Model: Multinomial Naive Bayes"
-description: "Idéal pour la classification de texte (avec TF-IDF ou CountVectorizer)."
+description: "Classificateur probabiliste reposant sur le théorème de Bayes avec hypothèse naïve d'indépendance, spécifiquement adapté aux caractéristiques distribuées de façon multinomiale."
 category: "Modèles Probabilistes"
 tags: ["model", "classification", "tabular", "nlp", "sklearn", "bayes"]
 applies_to: ["Tabulaire", "Texte"]
-when_to_use: "Variables représentant des comptages ou des fréquences discrètes."
+when_to_use: "À appliquer préférentiellement pour des tâches de classification de textes ou lorsque les caractéristiques représentent des comptages entiers ou des fréquences fractionnaires (ex. TF-IDF)."
+use_cases:
+  - "Détection de spam ou classification d'emails à partir des mots contenus."
+  - "Analyse de sentiment basique sur des critiques ou des flux de réseaux sociaux."
+  - "Catégorisation automatique de documents ou articles d'actualité."
 pros:
-  - "Très rapide, fonctionne bien sur le texte."
+  - "Exécution extrêmement rapide avec une complexité d'entraînement très faible, idéal pour le temps réel."
+  - "Très performant avec de larges matrices creuses typiques du traitement du langage naturel (NLP)."
+  - "Intègre un lissage (Laplace) permettant de traiter nativement les termes non vus."
 cons:
-  - "Incompatible avec les features négatives."
+  - "L'hypothèse d'indépendance conditionnelle entre les variables est souvent irréaliste."
+  - "Totalement incompatible avec des valeurs négatives dans les caractéristiques."
 hyperparameters:
   alpha: "Paramètre de lissage de Laplace (ex: 1.0)."
+math_theory: |
+  Le Multinomial Naive Bayes repose sur le théorème de Bayes et une hypothèse d'indépendance conditionnelle. Il calcule la probabilité qu'un document (ou observation) $\textcolor{#10b981}{x}$ appartienne à la classe $\textcolor{#ef4444}{y}$ :
+  $$ P(\textcolor{#ef4444}{y} | \textcolor{#10b981}{x}) \propto \textcolor{#3b82f6}{P(y)} \prod_{i=1}^{n} \textcolor{#fbbf24}{P(x_i | y)} $$
+  Pour gérer les fréquences nulles, un lissage de Laplace $\textcolor{#8b5cf6}{\alpha}$ est appliqué lors de l'estimation de la vraisemblance $\textcolor{#fbbf24}{P(x_i | y)}$ :
+  $$ \textcolor{#fbbf24}{P(x_i | y)} = \frac{N_{yi} + \textcolor{#8b5cf6}{\alpha}}{N_y + \textcolor{#8b5cf6}{\alpha} n} $$
+math_illustration_svg: |
+  <svg viewBox="0 0 500 250" xmlns="http://www.w3.org/2000/svg">
+    <rect width="100%" height="100%" fill="#1e1e1e" rx="10"/>
+    <text x="250" y="30" fill="#ffffff" font-family="sans-serif" font-size="16" font-weight="bold" text-anchor="middle">Multinomial Naive Bayes</text>
+    
+    <path d="M 100 80 L 150 120 L 100 160" stroke="#3b82f6" stroke-width="2" fill="none"/>
+    <path d="M 150 120 L 350 120" stroke="#8b5cf6" stroke-width="3" fill="none" stroke-dasharray="5,5"/>
+    <path d="M 350 120 L 400 80 M 350 120 L 400 160" stroke="#fbbf24" stroke-width="2" fill="none"/>
+    
+    <circle cx="100" cy="80" r="20" fill="#ef4444"/>
+    <text x="100" y="85" fill="#fff" font-family="sans-serif" font-size="14" text-anchor="middle">y_0</text>
+    <circle cx="100" cy="160" r="20" fill="#ef4444"/>
+    <text x="100" y="165" fill="#fff" font-family="sans-serif" font-size="14" text-anchor="middle">y_1</text>
+    
+    <circle cx="150" cy="120" r="25" fill="#3b82f6"/>
+    <text x="150" y="125" fill="#fff" font-family="sans-serif" font-size="14" text-anchor="middle">P(y)</text>
+    
+    <circle cx="350" cy="120" r="25" fill="#8b5cf6"/>
+    <text x="350" y="125" fill="#fff" font-family="sans-serif" font-size="16" text-anchor="middle">α</text>
+    
+    <circle cx="400" cy="80" r="25" fill="#fbbf24"/>
+    <text x="400" y="85" fill="#000" font-family="sans-serif" font-size="14" text-anchor="middle">P(x|y)</text>
+    <circle cx="400" cy="160" r="25" fill="#10b981"/>
+    <text x="400" y="165" fill="#fff" font-family="sans-serif" font-size="14" text-anchor="middle">x</text>
+    
+    <text x="250" y="110" fill="#fff" font-family="sans-serif" font-size="14" text-anchor="middle">Laplace Smoothing</text>
+    <rect x="180" y="180" width="140" height="40" rx="5" fill="#333333" stroke="#8b5cf6" stroke-width="2"/>
+    <text x="250" y="205" fill="#fff" font-family="sans-serif" font-size="14" text-anchor="middle">N_yi + α / (N_y + α n)</text>
+  </svg>
 code_template: |
   import pandas as pd
   import numpy as np
@@ -57,28 +98,42 @@ code_template: |
               
       training_history = {"status": "success", "fitted_on": len(X_train)}
 illustration_mermaid: |
-  graph TD
-    A[Input Variables X] --> B(Preprocessing Pipeline TF-IDF/Count)
-    B --> C[Multinomial NB Model]
+  flowchart LR
+    A[/ "Input Variables (X_train, y_train)" /]
+    B{"Preprocessing Pipeline"}
+    C{"Multinomial NB Algorithm"}
+    D{"Compute Priors P(y)"}
+    E{"Compute Likelihoods P(x|y)"}
+    F{"Apply Laplace Smoothing"}
+    G(["Learned Log-Probabilities"])
+    H[/ "Test Data (X_test)" /]
+    I{"Predict Classes"}
+    J(["y_pred: Class Labels"])
+    K(["y_proba: Probabilities"])
+
+    A --> B
+    B --> C
+    C --> D
+    D --> E
+    E --> F
+    F --> G
     
-    subgraph Naive Bayes Theorem
-        C --> D[Compute Prior Probabilities P_y]
-        D --> E[Compute Feature Likelihoods P_x|y]
-        E --> F[Apply Laplace Smoothing alpha]
-        F --> G[Bayes Rule: P_y|x proportional to P_y * Prod_i P_x_i|y]
-    end
-    
-    X_test[Input Data: X_test] --> H(Preprocessing Pipeline)
-    H --> I[Apply Learned Log-Probabilities]
+    H --> I
     G -.-> I
-    I --> J[Argmax over Classes]
-    J --> K([y_pred: Class Labels])
-    I --> L([y_proba: Class Probabilities])
-    
-    style C fill:#8b5cf6,stroke:#7c3aed,stroke-width:2px,color:#fff
-    style G fill:#f59e0b,stroke:#d97706,stroke-width:2px,color:#fff
-    style K fill:#3b82f6,stroke:#2563eb,stroke-width:2px,color:#fff
-    style L fill:#3b82f6,stroke:#2563eb,stroke-width:2px,color:#fff
+    I --> J
+    I --> K
+
+    style A fill:#fbbf24,stroke:#d97706,stroke-width:2px,color:#000
+    style H fill:#fbbf24,stroke:#d97706,stroke-width:2px,color:#000
+    style B fill:#3b82f6,stroke:#2563eb,stroke-width:2px,color:#fff
+    style C fill:#3b82f6,stroke:#2563eb,stroke-width:2px,color:#fff
+    style D fill:#3b82f6,stroke:#2563eb,stroke-width:2px,color:#fff
+    style E fill:#3b82f6,stroke:#2563eb,stroke-width:2px,color:#fff
+    style F fill:#3b82f6,stroke:#2563eb,stroke-width:2px,color:#fff
+    style I fill:#3b82f6,stroke:#2563eb,stroke-width:2px,color:#fff
+    style G fill:#10b981,stroke:#059669,stroke-width:2px,color:#fff
+    style J fill:#10b981,stroke:#059669,stroke-width:2px,color:#fff
+    style K fill:#10b981,stroke:#059669,stroke-width:2px,color:#fff
 
 _metadata:
   bloc: 3

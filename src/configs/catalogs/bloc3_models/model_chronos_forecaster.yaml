@@ -1,14 +1,25 @@
 id: "model_chronos_forecaster"
 name: "Model: Chronos Zero-Shot Forecaster (Amazon)"
-description: "Modèle de prédiction Time Series basé sur une architecture LLM (HuggingFace). Tokenise les valeurs numériques !"
+description: |
+  Modèle Zero-Shot pour séries temporelles basé sur l'architecture LLM T5 (Amazon).
+  Il tokenise les valeurs continues des séries temporelles en symboles discrets
+  et génère des trajectoires futures de manière autorégressive, sans nécessiter d'entraînement local.
 category: "Modèles Séries Temporelles"
 tags: ["model", "time-series", "forecasting", "transformers", "huggingface", "zero-shot"]
 applies_to: ["Séries Temporelles"]
-when_to_use: "Quand vous voulez prédire une série temporelle sans aucun entraînement, via un LLM pré-entraîné."
+when_to_use: |
+  Pour générer des prévisions robustes rapidement sur des données uni-variées
+  lorsque vous ne disposez pas de données suffisantes pour entraîner un modèle de A à Z.
+use_cases:
+  - "Prévisions rapides de ventes sur de nouveaux produits (Cold-start forecasting)."
+  - "Génération de trajectoires d'évolution pour des séries peu fournies."
+  - "Baseline universelle pour comparer d'autres modèles de prévision."
 pros:
-  - "Zéro-Shot. Aucune phase d'entraînement locale."
+  - "Approche Zero-Shot : prédictions immédiates sans phase d'entraînement."
+  - "S'appuie sur la généralisation puissante des LLMs pré-entraînés."
 cons:
-  - "Lent (c'est un LLM). Requiert PyTorch."
+  - "Lent (il s'agit d'un Large Language Model)."
+  - "Nécessite PyTorch et une infrastructure avec GPU pour des performances acceptables."
 hyperparameters:
   prediction_length: "Horizon de prédiction (ex: 12)."
 code_template: |
@@ -65,38 +76,86 @@ code_template: |
       training_history = {"status": "success", "type": "zero_shot_llm_timeseries"}
 
 illustration_mermaid: |
-    graph TD
-      subgraph Context
-        Y([y_train\nHistorical Context]) --> Scale[Scaling Layer\n(Internal)]
-        Scale --> Quant[Quantization\nContinuous -> Discrete Tokens]
-      end
-      
-      subgraph LLM Architecture (T5)
-        Quant --> Embed[Token Embeddings]
-        Embed --> Enc[T5 Encoder]
-        Enc --> Dec[T5 Decoder]
-        Dec --> Logits[Vocabulary Logits\n(100K+ Tokens)]
-      end
-      
-      subgraph Generation
-        Logits --> Sample[Autoregressive Sampling\nN Trajectories]
-        Sample --> Dequant[Dequantization\nTokens -> Continuous]
-        Dequant --> Unscale[Unscaling]
-      end
-      
-      subgraph Output
-        Unscale --> AllTraj([Sampled Trajectories])
-        AllTraj --> Quantile[Calculate Median/Quantiles]
-        Quantile --> Pred([y_pred])
-      end
-      
-      style Enc fill:#8b5cf6,stroke:#7c3aed,stroke-width:2px,color:#fff
-      style Dec fill:#8b5cf6,stroke:#7c3aed,stroke-width:2px,color:#fff
-      style Quant fill:#c4b5fd,stroke:#8b5cf6,stroke-width:1px,color:#000
-      style Dequant fill:#c4b5fd,stroke:#8b5cf6,stroke-width:1px,color:#000
-      style Y fill:#f8fafc,stroke:#94a3b8,stroke-width:1px
-      style Pred fill:#f8fafc,stroke:#94a3b8,stroke-width:1px
+  flowchart LR
+    Y[/"y_train (Contexte)"/]
+    Scale{"Scaling"}
+    Quant{"Quantization\n(Continu -> Tokens)"}
+    Embed{"Token Embeddings"}
+    T5{"Architecture T5\n(Encodeur-Décodeur)"}
+    Logits(["Logits (Vocabulaire)"])
+    Sample{"Échantillonnage Autorégressif"}
+    Dequant{"Dequantization\n(Tokens -> Continu)"}
+    Unscale{"Unscaling"}
+    Traj(["Trajectoires Échantillonnées"])
+    Median{"Calcul Médiane/Quantiles"}
+    Pred(["Prédictions (y_pred)"])
 
+    Y --> Scale
+    Scale --> Quant
+    Quant --> Embed
+    Embed --> T5
+    T5 --> Logits
+    Logits --> Sample
+    Sample --> Dequant
+    Dequant --> Unscale
+    Unscale --> Traj
+    Traj --> Median
+    Median --> Pred
+
+    style Y fill:#fbbf24,stroke:#d97706,stroke-width:2px,color:#000
+    style Scale fill:#3b82f6,stroke:#2563eb,stroke-width:2px,color:#fff
+    style Quant fill:#3b82f6,stroke:#2563eb,stroke-width:2px,color:#fff
+    style Embed fill:#3b82f6,stroke:#2563eb,stroke-width:2px,color:#fff
+    style T5 fill:#3b82f6,stroke:#2563eb,stroke-width:2px,color:#fff
+    style Logits fill:#10b981,stroke:#059669,stroke-width:2px,color:#fff
+    style Sample fill:#3b82f6,stroke:#2563eb,stroke-width:2px,color:#fff
+    style Dequant fill:#3b82f6,stroke:#2563eb,stroke-width:2px,color:#fff
+    style Unscale fill:#3b82f6,stroke:#2563eb,stroke-width:2px,color:#fff
+    style Traj fill:#10b981,stroke:#059669,stroke-width:2px,color:#fff
+    style Median fill:#3b82f6,stroke:#2563eb,stroke-width:2px,color:#fff
+    style Pred fill:#10b981,stroke:#059669,stroke-width:2px,color:#fff
+
+math_theory: |
+  Chronos modélise la prévision temporelle comme une tâche de génération de langage.
+  La série continue $Y = \{y_1, \dots, y_t\}$ est quantifiée en une séquence de tokens discrets $T = \{\textcolor{#3b82f6}{t_1}, \dots, \textcolor{#3b82f6}{t_t}\}$ issus d'un vocabulaire fini $\textcolor{#10b981}{V}$.
+  Un modèle de langage pré-entraîné (architecture T5) apprend la distribution du prochain token de manière autorégressive :
+  $$ P(\textcolor{#3b82f6}{t_{t+1}} | \textcolor{#3b82f6}{t_1}, \dots, \textcolor{#3b82f6}{t_t}) = \text{Transformer}(\textcolor{#3b82f6}{t_{1:t}} ; \textcolor{#fbbf24}{\theta}) $$
+  
+  Où :
+  - $\textcolor{#3b82f6}{t_i}$ représente le signal temporel discrétisé.
+  - $\textcolor{#10b981}{V}$ est l'espace du vocabulaire, permettant au modèle de traiter la série comme du texte.
+  - $\textcolor{#fbbf24}{\theta}$ rassemble les poids du Transformer encodeur-décodeur.
+math_illustration_svg: |
+  <svg viewBox="0 0 800 400" xmlns="http://www.w3.org/2000/svg">
+    <rect width="800" height="400" fill="#f8fafc" rx="10"/>
+    <path d="M 50 150 Q 100 100, 150 180 T 250 120" fill="none" stroke="#6b7280" stroke-width="3"/>
+    <text x="100" y="90" font-family="Arial" font-size="14" font-weight="bold" fill="#4b5563">Série Continue y(t)</text>
+    <line x1="260" y1="150" x2="330" y2="150" stroke="#1f2937" stroke-width="2" marker-end="url(#arrow)"/>
+    <text x="295" y="140" font-family="Arial" font-size="12" text-anchor="middle" fill="#1f2937">Quantification</text>
+    <rect x="350" y="130" width="30" height="40" fill="#3b82f6" fill-opacity="0.2" stroke="#3b82f6" stroke-width="2" rx="4"/>
+    <text x="365" y="155" font-family="Arial" font-size="12" font-weight="bold" text-anchor="middle" fill="#3b82f6">t1</text>
+    <rect x="390" y="130" width="30" height="40" fill="#3b82f6" fill-opacity="0.2" stroke="#3b82f6" stroke-width="2" rx="4"/>
+    <text x="405" y="155" font-family="Arial" font-size="12" font-weight="bold" text-anchor="middle" fill="#3b82f6">t2</text>
+    <text x="440" y="155" font-family="Arial" font-size="14" font-weight="bold" fill="#3b82f6">...</text>
+    <rect x="470" y="130" width="30" height="40" fill="#3b82f6" fill-opacity="0.2" stroke="#3b82f6" stroke-width="2" rx="4"/>
+    <text x="485" y="155" font-family="Arial" font-size="12" font-weight="bold" text-anchor="middle" fill="#3b82f6">t_t</text>
+    <rect x="320" y="220" width="220" height="120" fill="#fbbf24" fill-opacity="0.1" stroke="#fbbf24" stroke-width="3" rx="10"/>
+    <text x="430" y="250" font-family="Arial" font-size="16" font-weight="bold" text-anchor="middle" fill="#fbbf24">Transformer (T5)</text>
+    <text x="430" y="275" font-family="Arial" font-size="14" text-anchor="middle" fill="#fbbf24">Poids θ</text>
+    <text x="430" y="310" font-family="Arial" font-size="12" text-anchor="middle" fill="#fbbf24">Attention Mécanisme</text>
+    <line x1="430" y1="180" x2="430" y2="210" stroke="#1f2937" stroke-width="2" marker-end="url(#arrow)"/>
+    <line x1="550" y1="280" x2="620" y2="280" stroke="#1f2937" stroke-width="2" marker-end="url(#arrow)"/>
+    <rect x="640" y="240" width="120" height="80" fill="#10b981" fill-opacity="0.1" stroke="#10b981" stroke-width="2" rx="5"/>
+    <text x="700" y="260" font-family="Arial" font-size="14" font-weight="bold" text-anchor="middle" fill="#10b981">Vocabulaire V</text>
+    <text x="700" y="285" font-family="Arial" font-size="12" text-anchor="middle" fill="#10b981">Prob. P(t_{t+1})</text>
+    <rect x="650" y="295" width="40" height="15" fill="#3b82f6" fill-opacity="0.5"/>
+    <rect x="710" y="295" width="20" height="15" fill="#3b82f6" fill-opacity="0.2"/>
+    <defs>
+      <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+        <path d="M 0 0 L 10 5 L 0 10 z" fill="#1f2937"/>
+      </marker>
+    </defs>
+  </svg>
 _metadata:
   bloc: 3
   section: "3_nlp_and_timeseries"

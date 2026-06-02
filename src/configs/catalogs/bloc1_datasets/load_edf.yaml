@@ -1,6 +1,22 @@
 id: load_edf
 name: 'Load: Signaux EDF/EEG'
-description: 'Charge des données biomédicales temporelles (ex: Électroencéphalogramme) au format European Data Format.'
+description: >
+  Charge des données de signaux biomédicaux continus encodés dans le format standard EDF (European Data Format). 
+  Il s'appuie sur la bibliothèque spécialisée 'mne' pour importer efficacement les signaux physiologiques multicanaux (comme les EEG, ECG, ou EMG) ainsi que leurs métadonnées temporelles. 
+  Les données brutes sont ensuite converties en DataFrame tabulaire pour faciliter les opérations de traitement du signal classique ou d'apprentissage automatique.
+when_to_use: >
+  À privilégier absolument dès que vous traitez des séries temporelles biomédicales issues d'équipements médicaux (électroencéphalogrammes, polysomnographies, etc.) utilisant le standard ouvert EDF.
+use_cases:
+  - "Détection de crises d'épilepsie à partir de tracés EEG multicanaux."
+  - "Classification de stades de sommeil à partir d'enregistrements polysomnographiques nocturnes."
+  - "Filtrage, extraction de caractéristiques fréquentielles et analyse de signaux physiologiques (ECG, EMG)."
+pros:
+  - "Gère de manière transparente les spécificités du format biomédical standard EDF."
+  - "S'intègre parfaitement avec l'écosystème 'mne-python' pour un traitement avancé en aval."
+  - "Permet de manipuler des signaux complexes sous la forme simplifiée et familière d'un DataFrame pandas."
+cons:
+  - "Le chargement d'enregistrements longue durée à haute fréquence d'échantillonnage peut nécessiter beaucoup de mémoire."
+  - "Oblige l'installation d'une dépendance lourde (mne) dédiée aux neurosciences."
 category: 2. Load
 tags:
 - load
@@ -43,13 +59,22 @@ code_template: |
   task_type = "signal_processing"
   meta = {"format": "edf", "channels": n_channels, "time_points": n_times}
 illustration_mermaid: |
-  flowchart TD
-      A([FILE_PATH]) --> B[Load EDF]
-      B --> df([df])
-      
-      style A fill:#3b82f6,color:#fff
-      style B fill:#10b981,color:#fff
-      style df fill:#f59e0b,color:#fff
+  flowchart LR
+      A[/"📄 File Path (EDF)"/] --> B{"mne.io.read_raw_edf()"}
+      C[/"🎯 TARGET_COL"/] --> D{"Check TARGET_COL"}
+      B --> E(["📊 df (signals)"])
+      E --> D
+      D --> F(["🎯 target_name = ''"])
+      D --> G(["⚙️ task_type = 'signal_processing'"])
+      D --> H(["ℹ️ meta (format, channels, time_points)"])
+      style A fill:#fbbf24,stroke:#d97706,stroke-width:2px,color:#000
+      style C fill:#fbbf24,stroke:#d97706,stroke-width:2px,color:#000
+      style B fill:#3b82f6,stroke:#2563eb,stroke-width:2px,color:#fff
+      style D fill:#3b82f6,stroke:#2563eb,stroke-width:2px,color:#fff
+      style E fill:#10b981,stroke:#059669,stroke-width:2px,color:#fff
+      style F fill:#8b5cf6,stroke:#7c3aed,stroke-width:2px,color:#fff
+      style G fill:#8b5cf6,stroke:#7c3aed,stroke-width:2px,color:#fff
+      style H fill:#8b5cf6,stroke:#7c3aed,stroke-width:2px,color:#fff
 
 _metadata:
   bloc: 1

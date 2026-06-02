@@ -1,18 +1,63 @@
 id: "model_t_sne"
 name: "Model: t-SNE"
-description: "T-distributed Stochastic Neighbor Embedding. Réduction de dimension non-linéaire excellente pour la visualisation 2D."
+description: |
+  T-distributed Stochastic Neighbor Embedding. Technique de réduction de dimension non linéaire particulièrement performante pour intégrer des données de haute dimension dans un espace à deux ou trois dimensions. Conçue principalement pour la visualisation.
 category: "Réduction de Dimension"
 tags: ["model", "dimensionality-reduction", "tabular", "sklearn", "tsne", "visualization"]
 applies_to: ["Tabulaire"]
-when_to_use: "Pour visualiser des clusters cachés dans un dataset haute dimension."
+when_to_use: |
+  Idéal pour explorer et visualiser la structure locale des données complexes, repérer des amas (clusters) ou évaluer qualitativement la séparabilité des classes sur des données d'entraînement.
+use_cases:
+  - "Visualisation exploratoire de données omiques en biologie (ex: séquençage ARN unicellulaire)."
+  - "Analyse d'images ou traitement du langage naturel (ex: embeddings de mots)."
+  - "Détection de fraude ou d'anomalies en projetant les profils comportementaux en 2D."
 pros:
-  - "Visualisations magnifiques."
+  - "Visualisations magnifiques et très intuitives montrant la structure locale."
+  - "Capture bien les relations non linéaires, ce que l'ACP (PCA) ne fait pas."
+  - "Capable de séparer distinctement des clusters qui se chevauchent en haute dimension."
 cons:
-  - "Très lent."
-  - "Transductif (impossible d'appliquer sur de nouvelles données test)."
+  - "Très lent et coûteux en mémoire (complexité computationnelle élevée pour de grands jeux de données)."
+  - "Algorithme transductif : il ne permet pas d'appliquer la même transformation sur de nouvelles données (pas de méthode transform isolée)."
+  - "Les distances entre clusters ne sont pas toujours représentatives de la structure globale."
+  - "Peut nécessiter un ajustement minutieux de la perplexité pour obtenir des résultats pertinents."
 hyperparameters:
   n_components: "Nombre de dimensions (ex: 2)."
   perplexity: "Densité locale vs globale (ex: 30)."
+math_theory: |
+  Le t-SNE modélise les similarités d'abord comme des probabilités $\textcolor{#10b981}{p_{ij}}$ dans l'espace original (loi gaussienne) puis comme probabilités $\textcolor{#3b82f6}{q_{ij}}$ dans l'espace réduit (loi de Student-t avec 1 ddl). Il minimise la divergence de Kullback-Leibler $\textcolor{#ef4444}{KL(P || Q)}$ pour ajuster l'espace réduit :
+  $$ \textcolor{#ef4444}{KL(P || Q)} = \sum_{i \neq j} \textcolor{#10b981}{p_{ij}} \log \frac{\textcolor{#10b981}{p_{ij}}}{\textcolor{#3b82f6}{q_{ij}}} $$
+  L'utilisation de la loi de Student aux queues lourdes dans l'espace réduit empêche le problème de surpeuplement ("crowding problem") en écartant les points dissimilaires.
+math_illustration_svg: |
+  <svg viewBox="0 0 500 250" xmlns="http://www.w3.org/2000/svg">
+    <rect width="100%" height="100%" fill="#222222" rx="10"/>
+    <text x="250" y="25" fill="#ffffff" font-family="sans-serif" font-size="16" font-weight="bold" text-anchor="middle">t-SNE (t-distributed Stochastic Neighbor Embedding)</text>
+    
+    <!-- Original Space -->
+    <text x="125" y="60" fill="#10b981" font-family="sans-serif" font-size="14" font-weight="bold" text-anchor="middle">High-Dim Space (Gaussian)</text>
+    <path d="M 50 150 Q 125 50 200 150" stroke="#10b981" stroke-width="2" fill="none"/>
+    <circle cx="125" cy="150" r="5" fill="#10b981"/>
+    <circle cx="150" cy="150" r="5" fill="#10b981"/>
+    <path d="M 125 150 L 150 150" stroke="#10b981" stroke-width="2"/>
+    <text x="137" y="140" fill="#10b981" font-family="sans-serif" font-size="12" text-anchor="middle">p_ij</text>
+    
+    <!-- Transformation / KL -->
+    <path d="M 210 130 C 230 110, 270 110, 290 130" stroke="#ef4444" stroke-width="2" marker-end="url(#arrow)" fill="none" stroke-dasharray="4,4"/>
+    <text x="250" y="100" fill="#ef4444" font-family="sans-serif" font-size="14" font-weight="bold" text-anchor="middle">Min KL(P||Q)</text>
+    
+    <!-- Reduced Space -->
+    <text x="375" y="60" fill="#3b82f6" font-family="sans-serif" font-size="14" font-weight="bold" text-anchor="middle">Low-Dim Space (Student-t)</text>
+    <!-- Heavy tails illustration -->
+    <path d="M 300 150 Q 375 70 450 150" stroke="#3b82f6" stroke-width="2" fill="none"/>
+    <path d="M 280 160 Q 375 70 470 160" stroke="#555" stroke-width="1" fill="none" stroke-dasharray="2,2"/>
+    
+    <circle cx="360" cy="150" r="5" fill="#3b82f6"/>
+    <circle cx="410" cy="150" r="5" fill="#3b82f6"/>
+    <path d="M 360 150 L 410 150" stroke="#3b82f6" stroke-width="2"/>
+    <text x="385" y="140" fill="#3b82f6" font-family="sans-serif" font-size="12" text-anchor="middle">q_ij (pushed apart)</text>
+    
+    <!-- Legend -->
+    <text x="250" y="210" fill="#ffffff" font-family="sans-serif" font-size="12" text-anchor="middle">Heavy tails in Student-t separate clusters to prevent crowding</text>
+  </svg>
 code_template: |
   import pandas as pd
   import numpy as np
@@ -56,12 +101,20 @@ code_template: |
       training_history = {"status": "success"}
       task_type = "dimensionality_reduction"
 illustration_mermaid: |
-    graph LR
-      Data([Features]) --> Model((Machine Learning))
-      Model --> Pred([Predictions])
-      style Model fill:#8b5cf6,stroke:#7c3aed,stroke-width:2px,color:#fff
-      style Data fill:#f8fafc,stroke:#94a3b8,stroke-width:1px
-      style Pred fill:#f8fafc,stroke:#94a3b8,stroke-width:1px
+  flowchart LR
+    Data(["Données Haute Dimension"])
+    Params[/"Hyperparamètres (perplexity, components)"/]
+    Model{"t-SNE"}
+    Pred(["Embeddings 2D/3D (Visualisation)"])
+    
+    Data --> Model
+    Params --> Model
+    Model --> Pred
+
+    style Data fill:#10b981,stroke:#059669,stroke-width:2px,color:#fff
+    style Params fill:#fbbf24,stroke:#d97706,stroke-width:2px,color:#000
+    style Model fill:#3b82f6,stroke:#2563eb,stroke-width:2px,color:#fff
+    style Pred fill:#10b981,stroke:#059669,stroke-width:2px,color:#fff
 
 _metadata:
   bloc: 3

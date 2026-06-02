@@ -1,14 +1,24 @@
 id: "model_audio_spectrogram_cnn"
 name: "Model: Audio Spectrogram CNN"
-description: "Convertit l'audio en image (spectrogramme Mel) puis le classifie avec un CNN 2D PyTorch."
+description: |
+  Modèle de classification audio personnalisé utilisant PyTorch. Il convertit d'abord les signaux audio bruts en spectrogrammes Mel (images 2D) à l'aide de la bibliothèque Librosa, puis applique un réseau de neurones convolutif (CNN) pour extraire les caractéristiques et effectuer la classification.
 category: "Multimédia & Audio"
 tags: ["model", "audio", "classification", "pytorch", "cnn", "spectrogram"]
 applies_to: ["Audio"]
-when_to_use: "Quand vous voulez créer un modèle audio custom depuis zéro (ex: détection d'aboiements)."
+when_to_use: |
+  Parfait pour les tâches de classification audio spécialisées (ex. détection de bruits environnementaux, cris d'animaux) lorsque vous souhaitez construire et entraîner un modèle léger et transparent depuis zéro, sans dépendre de modèles pré-entraînés lourds.
+use_cases:
+  - "Détection d'événements sonores spécifiques (bris de verre, alarmes, aboiements)."
+  - "Classification de la parole ou d'instruments de musique sur des petits datasets."
+  - "Prototypage rapide d'un modèle audio sur mesure avant de passer à des transformeurs."
 pros:
-  - "Plus léger que Wav2Vec2."
+  - "Architecture légère et rapide à entraîner comparativement aux modèles basés sur des Transformers (comme Wav2Vec2)."
+  - "Très explicable et facile à modifier (ajout de couches, changement des dimensions)."
+  - "Utilise la représentation temps-fréquence (spectrogramme Mel) très efficace pour capturer l'information audio."
 cons:
-  - "Nécessite le package librosa."
+  - "Nécessite la bibliothèque 'librosa' pour le prétraitement du signal."
+  - "Gère moins bien les dépendances temporelles longues comparé aux RNN/LSTM ou Transformers."
+  - "Les performances peuvent être limitées si le jeu de données d'entraînement est très restreint (pas de pré-entraînement)."
 hyperparameters:
   epochs: "Nombre d'époques d'entraînement (ex: 5)."
 code_template: |
@@ -173,37 +183,99 @@ code_template: |
       full_pipeline = model
       training_history = {"status": "success", "epochs_trained": int(EPOCHS)}
 
+math_theory: |
+  The Audio Spectrogram CNN transforms raw 1D audio signals into 2D time-frequency representations (Mel-spectrograms) to apply convolutional neural networks (CNNs). 
+  
+  1. **Spectrogram Generation**: The Short-Time Fourier Transform (STFT) computes the energy $\textcolor{#3b82f6}{S(t, f)}$ of the signal $\textcolor{#10b981}{x}$ over time. A Mel-filterbank $M$ is applied, followed by logarithmic scaling:
+  $$ \textcolor{#fbbf24}{X_{mel}} = \log(M \cdot |\text{STFT}(\textcolor{#10b981}{x})|^2) $$
+  
+  2. **CNN Forward Pass**: The 2D spectrogram $\textcolor{#fbbf24}{X_{mel}}$ is passed through convolutional layers with weights $\textcolor{#8b5cf6}{W_c}$, pooling, and dense layers with weights $\textcolor{#ef4444}{W_d}$:
+  $$ \textcolor{#3b82f6}{h} = \text{Pool}(\text{ReLU}(\textcolor{#8b5cf6}{W_c} \ast \textcolor{#fbbf24}{X_{mel}} + b_c)) $$
+  $$ \textcolor{#10b981}{y_{pred}} = \text{Softmax}(\textcolor{#ef4444}{W_d} \cdot \text{Flatten}(\textcolor{#3b82f6}{h}) + b_d) $$
+  
+  3. **Loss Function**: Cross-Entropy loss is used to optimize the weights against the true class labels $\textcolor{#8b5cf6}{y}$:
+  $$ \mathcal{L} = - \sum_{i=1}^{C} \textcolor{#8b5cf6}{y_i} \log(\textcolor{#10b981}{y_{pred, i}}) $$
+math_illustration_svg: |
+  <svg viewBox="0 0 800 400" xmlns="http://www.w3.org/2000/svg">
+    <!-- Raw Audio -->
+    <path d="M30 200 Q40 150 50 200 T70 200 T90 200 T110 200 T130 180 T150 220 T170 200" fill="none" stroke="#10b981" stroke-width="3"/>
+    <text x="100" y="240" font-family="sans-serif" font-size="14" font-weight="bold" fill="#10b981" text-anchor="middle">Raw Audio x</text>
+    
+    <path d="M180 200 L210 200" stroke="#94a3b8" stroke-width="2" marker-end="url(#arrow)"/>
+    
+    <!-- Spectrogram -->
+    <rect x="220" y="160" width="80" height="80" fill="#fef3c7" stroke="#fbbf24" stroke-width="3" rx="4"/>
+    <!-- Grid inside spectrogram -->
+    <line x1="220" y1="180" x2="300" y2="180" stroke="#fde68a" stroke-width="2"/>
+    <line x1="220" y1="200" x2="300" y2="200" stroke="#fde68a" stroke-width="2"/>
+    <line x1="220" y1="220" x2="300" y2="220" stroke="#fde68a" stroke-width="2"/>
+    <line x1="246" y1="160" x2="246" y2="240" stroke="#fde68a" stroke-width="2"/>
+    <line x1="273" y1="160" x2="273" y2="240" stroke="#fde68a" stroke-width="2"/>
+    <text x="260" y="260" font-family="sans-serif" font-size="14" font-weight="bold" fill="#fbbf24" text-anchor="middle">Mel-Spectrogram X_mel</text>
+
+    <path d="M310 200 L340 200" stroke="#94a3b8" stroke-width="2" marker-end="url(#arrow)"/>
+
+    <!-- CNN Layers -->
+    <rect x="350" y="150" width="40" height="100" fill="#f3e8ff" stroke="#8b5cf6" stroke-width="3" rx="4"/>
+    <rect x="360" y="140" width="40" height="100" fill="#f3e8ff" stroke="#8b5cf6" stroke-width="3" rx="4"/>
+    <rect x="370" y="130" width="40" height="100" fill="#f3e8ff" stroke="#8b5cf6" stroke-width="3" rx="4"/>
+    <text x="380" y="270" font-family="sans-serif" font-size="14" font-weight="bold" fill="#8b5cf6" text-anchor="middle">Conv2D (W_c)</text>
+    
+    <path d="M420 200 L450 200" stroke="#94a3b8" stroke-width="2" marker-end="url(#arrow)"/>
+    
+    <!-- Feature Map h -->
+    <rect x="460" y="170" width="30" height="60" fill="#eff6ff" stroke="#3b82f6" stroke-width="3" rx="2"/>
+    <rect x="470" y="160" width="30" height="60" fill="#eff6ff" stroke="#3b82f6" stroke-width="3" rx="2"/>
+    <text x="475" y="250" font-family="sans-serif" font-size="14" font-weight="bold" fill="#3b82f6" text-anchor="middle">Features h</text>
+
+    <path d="M510 200 L540 200" stroke="#94a3b8" stroke-width="2" marker-end="url(#arrow)"/>
+
+    <!-- Dense Layers -->
+    <rect x="550" y="120" width="20" height="160" fill="#fee2e2" stroke="#ef4444" stroke-width="3" rx="2"/>
+    <text x="560" y="300" font-family="sans-serif" font-size="14" font-weight="bold" fill="#ef4444" text-anchor="middle">Dense (W_d)</text>
+
+    <path d="M580 200 L610 200" stroke="#94a3b8" stroke-width="2" marker-end="url(#arrow)"/>
+    
+    <!-- Output -->
+    <circle cx="650" cy="180" r="10" fill="#d1fae5" stroke="#10b981" stroke-width="2"/>
+    <circle cx="650" cy="200" r="10" fill="#d1fae5" stroke="#10b981" stroke-width="2"/>
+    <circle cx="650" cy="220" r="10" fill="#d1fae5" stroke="#10b981" stroke-width="2"/>
+    <text x="650" y="250" font-family="sans-serif" font-size="14" font-weight="bold" fill="#10b981" text-anchor="middle">y_pred</text>
+
+    <defs>
+      <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto"><path d="M0 0 L10 5 L0 10 z" fill="#94a3b8"/></marker>
+    </defs>
+  </svg>
 illustration_mermaid: |
-    graph TD
-      subgraph Data Prep
-        Raw([Raw Audio Waveform]) --> Preproc[librosa\nMel-Spectrogram]
-        Preproc --> Spec([2D Image Tensor])
-      end
+    flowchart LR
+      Raw(["Signal Audio Brut"])
+      Preproc{"Librosa\n(Mel-Spectrogramme)"}
+      Spec(["Tensor 2D\n(Image)"])
+      C1{"Conv2d + ReLU\nMaxPool2d"}
+      C2{"Conv2d + ReLU\nMaxPool2d"}
+      Flat{"Aplatissement"}
+      FC1{"Couche Linéaire\n(128)"}
+      FC2{"Couche Linéaire\n(Classes)"}
+      Out(["Classes Prédites"])
       
-      subgraph CNN Architecture
-        Spec --> C1[Conv2d\n1->16 channels]
-        C1 --> R1[ReLU + MaxPool2d]
-        R1 --> C2[Conv2d\n16->32 channels]
-        C2 --> R2[ReLU + MaxPool2d]
-      end
+      Raw --> Preproc
+      Preproc --> Spec
+      Spec --> C1
+      C1 --> C2
+      C2 --> Flat
+      Flat --> FC1
+      FC1 --> FC2
+      FC2 --> Out
       
-      subgraph Classification Head
-        R2 --> Flat[Flatten]
-        Flat --> FC1[Linear\n128 units]
-        FC1 --> R3[ReLU + Dropout]
-        R3 --> FC2[Linear\nNum Classes]
-        FC2 --> SM[Softmax]
-      end
-      
-      SM --> Out([Predicted Class])
-      
-      style Raw fill:#f8fafc,stroke:#94a3b8,stroke-width:1px
-      style Spec fill:#f8fafc,stroke:#94a3b8,stroke-width:1px
-      style Out fill:#f8fafc,stroke:#94a3b8,stroke-width:1px
-      style C1 fill:#8b5cf6,stroke:#7c3aed,stroke-width:2px,color:#fff
-      style C2 fill:#8b5cf6,stroke:#7c3aed,stroke-width:2px,color:#fff
-      style FC1 fill:#a78bfa,stroke:#7c3aed,stroke-width:1px,color:#fff
-      style FC2 fill:#a78bfa,stroke:#7c3aed,stroke-width:1px,color:#fff
+      style Raw fill:#10b981,stroke:#059669,stroke-width:2px,color:#fff
+      style Preproc fill:#3b82f6,stroke:#2563eb,stroke-width:2px,color:#fff
+      style Spec fill:#10b981,stroke:#059669,stroke-width:2px,color:#fff
+      style C1 fill:#3b82f6,stroke:#2563eb,stroke-width:2px,color:#fff
+      style C2 fill:#3b82f6,stroke:#2563eb,stroke-width:2px,color:#fff
+      style Flat fill:#3b82f6,stroke:#2563eb,stroke-width:2px,color:#fff
+      style FC1 fill:#3b82f6,stroke:#2563eb,stroke-width:2px,color:#fff
+      style FC2 fill:#3b82f6,stroke:#2563eb,stroke-width:2px,color:#fff
+      style Out fill:#10b981,stroke:#059669,stroke-width:2px,color:#fff
 
 _metadata:
   bloc: 3

@@ -1,18 +1,95 @@
 id: "model_tpot_automl_classifier"
 name: "Model: TPOT AutoML (Genetic Algorithm)"
-description: "Tree-based Pipeline Optimization Tool. Utilise la programmation génétique pour trouver le meilleur pipeline (modèle + feature engineering)."
+description: |
+  Tree-based Pipeline Optimization Tool (TPOT). Ce modèle AutoML utilise des algorithmes génétiques pour explorer et optimiser de manière autonome des milliers de combinaisons de pipelines d'apprentissage automatique (incluant la sélection de caractéristiques, le prétraitement et le choix de l'estimateur).
 category: "AutoML"
 tags: ["model", "automl", "classification", "tabular", "tpot", "genetic"]
 applies_to: ["Tabulaire"]
-when_to_use: "Si vous avez du temps (plusieurs heures) pour trouver LE meilleur modèle avec le preprocessing intégré."
+when_to_use: |
+  À utiliser lorsque vous disposez de ressources de calcul importantes et de beaucoup de temps, et que votre objectif absolu est de découvrir l'architecture de pipeline optimale de bout en bout avec un minimum d'intervention humaine.
+use_cases:
+  - "Découverte automatisée de pipelines de Machine Learning complexes pour des données tabulaires."
+  - "Compétitions de Data Science (ex: Kaggle) pour trouver des combinaisons de modèles performantes et non intuitives."
+  - "Recherche exhaustive de la meilleure solution de classification possible pour un problème métier critique."
+  - "Génération de code de base : TPOT peut exporter le code Python du meilleur pipeline trouvé pour une utilisation future."
 pros:
-  - "Très innovant (génétique)."
-  - "Exporte le code Python du meilleur pipeline généré."
+  - "Approche hautement innovante basée sur la programmation génétique (mutations et croisements de modèles/transformations)."
+  - "Optimise simultanément le prétraitement, l'ingénierie des variables (features) et les hyperparamètres du modèle final."
+  - "Permet d'exporter le code Python complet du pipeline gagnant, facilitant la mise en production."
 cons:
-  - "Extrêmement lent."
+  - "Extrêmement lent et gourmand en calculs ; les exécutions peuvent prendre des heures, voire des jours sur de gros jeux de données."
+  - "Peut produire des pipelines inutilement complexes et difficiles à interpréter ou à justifier."
+  - "Risque de surapprentissage (overfitting) sur l'ensemble de validation si l'algorithme tourne sur un trop grand nombre de générations."
 hyperparameters:
   generations: "Nombre d'itérations génétiques (ex: 5)."
   population_size: "Taille de la population par génération (ex: 20)."
+math_theory: |
+  TPOT utilise la programmation génétique pour faire évoluer des pipelines d'apprentissage.
+  Une population de pipelines $\textcolor{#8b5cf6}{\mathcal{P}_{gen}}$ évolue au fil des générations.
+  Chaque pipeline $\textcolor{#3b82f6}{P}$ est évalué sur sa capacité de classification pour obtenir une fitness (score) $\textcolor{#ef4444}{F(P)}$.
+  La nouvelle génération est créée via des opérations de mutation $\textcolor{#10b981}{\mu(P)}$ et de croisement $\textcolor{#fbbf24}{\chi(P_1, P_2)}$. Le but est de trouver le pipeline optimal $\textcolor{#3b82f6}{P^*}$ :
+  $$ \textcolor{#3b82f6}{P^*} = \arg\max_{P \in \mathcal{P}} \textcolor{#ef4444}{F(P)} $$
+math_illustration_svg: |
+  <svg viewBox="0 0 800 400" xmlns="http://www.w3.org/2000/svg">
+    <rect width="800" height="400" fill="#1e1e1e" rx="10" />
+    <text x="400" y="40" fill="#ffffff" font-family="Arial" font-size="20" font-weight="bold" text-anchor="middle">TPOT Genetic Algorithm Flow</text>
+
+    <!-- Population -->
+    <rect x="40" y="100" width="160" height="200" fill="#8b5cf6" fill-opacity="0.1" stroke="#8b5cf6" stroke-width="2" stroke-dasharray="5,5" rx="10" />
+    <text x="120" y="125" fill="#8b5cf6" font-family="Arial" font-size="16" font-weight="bold" text-anchor="middle">Population P_gen</text>
+
+    <!-- Pipelines -->
+    <rect x="60" y="140" width="120" height="40" fill="#3b82f6" fill-opacity="0.2" stroke="#3b82f6" stroke-width="2" rx="4" />
+    <text x="120" y="165" fill="#3b82f6" font-family="Arial" font-size="14" font-weight="bold" text-anchor="middle">Pipeline P_1</text>
+
+    <rect x="60" y="190" width="120" height="40" fill="#3b82f6" fill-opacity="0.2" stroke="#3b82f6" stroke-width="2" rx="4" />
+    <text x="120" y="215" fill="#3b82f6" font-family="Arial" font-size="14" font-weight="bold" text-anchor="middle">Pipeline P_2</text>
+
+    <rect x="60" y="240" width="120" height="40" fill="#3b82f6" fill-opacity="0.2" stroke="#3b82f6" stroke-width="2" rx="4" />
+    <text x="120" y="265" fill="#3b82f6" font-family="Arial" font-size="14" font-weight="bold" text-anchor="middle">Pipeline P_N</text>
+
+    <!-- Evaluation / Fitness -->
+    <path d="M 200 200 L 260 200" fill="none" stroke="#ffffff" stroke-width="2" marker-end="url(#tpot-arrow-white)" />
+    <rect x="260" y="140" width="120" height="120" fill="#ef4444" fill-opacity="0.1" stroke="#ef4444" stroke-width="2" rx="50" />
+    <text x="320" y="195" fill="#ef4444" font-family="Arial" font-size="16" font-weight="bold" text-anchor="middle">Fitness Eval</text>
+    <text x="320" y="220" fill="#ef4444" font-family="Arial" font-size="16" font-weight="bold" text-anchor="middle">F(P)</text>
+
+    <!-- Evolutionary Operations -->
+    <path d="M 380 180 L 440 130" fill="none" stroke="#ffffff" stroke-width="2" marker-end="url(#tpot-arrow-white)" />
+    <path d="M 380 220 L 440 270" fill="none" stroke="#ffffff" stroke-width="2" marker-end="url(#tpot-arrow-white)" />
+
+    <!-- Crossover -->
+    <rect x="440" y="100" width="140" height="60" fill="#fbbf24" fill-opacity="0.2" stroke="#fbbf24" stroke-width="2" rx="8" />
+    <text x="510" y="130" fill="#fbbf24" font-family="Arial" font-size="16" font-weight="bold" text-anchor="middle">Crossover χ</text>
+    <text x="510" y="150" fill="#fbbf24" font-family="Arial" font-size="12" text-anchor="middle">χ(P_1, P_2)</text>
+
+    <!-- Mutation -->
+    <rect x="440" y="240" width="140" height="60" fill="#10b981" fill-opacity="0.2" stroke="#10b981" stroke-width="2" rx="8" />
+    <text x="510" y="270" fill="#10b981" font-family="Arial" font-size="16" font-weight="bold" text-anchor="middle">Mutation μ</text>
+    <text x="510" y="290" fill="#10b981" font-family="Arial" font-size="12" text-anchor="middle">μ(P_N)</text>
+
+    <!-- Loop Back to Next Generation -->
+    <path d="M 580 130 C 650 130, 650 350, 400 350 C 150 350, 140 320, 140 310" fill="none" stroke="#8b5cf6" stroke-width="2" stroke-dasharray="6,6" marker-end="url(#tpot-arrow-purple)" />
+    <text x="400" y="375" fill="#8b5cf6" font-family="Arial" font-size="14" font-style="italic" text-anchor="middle">Next Generation</text>
+
+    <!-- Selection Best Pipeline -->
+    <path d="M 380 200 L 640 200" fill="none" stroke="#ef4444" stroke-width="3" marker-end="url(#tpot-arrow-red)" />
+    <rect x="640" y="160" width="120" height="80" fill="#3b82f6" fill-opacity="0.3" stroke="#3b82f6" stroke-width="3" rx="10" />
+    <text x="700" y="200" fill="#ffffff" font-family="Arial" font-size="20" font-weight="bold" text-anchor="middle">P*</text>
+    <text x="700" y="220" fill="#ffffff" font-family="Arial" font-size="12" text-anchor="middle">Best Pipeline</text>
+
+    <defs>
+      <marker id="tpot-arrow-white" viewBox="0 0 10 10" refX="10" refY="5" markerWidth="6" markerHeight="6" orient="auto">
+        <path d="M 0 0 L 10 5 L 0 10 z" fill="#ffffff" />
+      </marker>
+      <marker id="tpot-arrow-purple" viewBox="0 0 10 10" refX="10" refY="5" markerWidth="6" markerHeight="6" orient="auto">
+        <path d="M 0 0 L 10 5 L 0 10 z" fill="#8b5cf6" />
+      </marker>
+      <marker id="tpot-arrow-red" viewBox="0 0 10 10" refX="10" refY="5" markerWidth="6" markerHeight="6" orient="auto">
+        <path d="M 0 0 L 10 5 L 0 10 z" fill="#ef4444" />
+      </marker>
+    </defs>
+  </svg>
 code_template: |
   import pandas as pd
   import numpy as np
@@ -59,20 +136,17 @@ code_template: |
       training_history = {"status": "success", "pipeline_score": model.score(X_test, y_test) if 'y_test' in locals() else None}
       task_type = "classification"
 illustration_mermaid: |
-    graph TD
-      In([Input Data]) --> Eval(Genetic Algorithm: Evaluate Pipelines)
-      Eval --> Mutate(Mutate & Cross-over)
-      Mutate --> Eval
-      Eval --> Best([Select Best Pipeline])
-      Best --> Model((Fitted Pipeline))
-      Model --> Pred([Predictions])
-      
-      style In fill:#f8fafc,stroke:#94a3b8,stroke-width:2px
-      style Eval fill:#38bdf8,stroke:#0284c7,stroke-width:2px,color:#fff
-      style Mutate fill:#38bdf8,stroke:#0284c7,stroke-width:2px,color:#fff
-      style Best fill:#10b981,stroke:#059669,stroke-width:2px,color:#fff
-      style Model fill:#8b5cf6,stroke:#7c3aed,stroke-width:2px,color:#fff
-      style Pred fill:#f8fafc,stroke:#94a3b8,stroke-width:2px
+  flowchart LR
+    In[/"Données d'Entrée (Input Data)"/]:::input --> Eval{"Algo Génétique: Évaluer les Pipelines"}:::model
+    Eval <--> Mutate{"Mutation & Croisement"}:::model
+    Eval --> Best(["Meilleur Pipeline"]):::metadata
+    Best --> Model{"Entraînement Pipeline Final"}:::model
+    Model --> Pred(["Prédictions"]):::tensor
+
+    classDef input fill:#fbbf24,stroke:#d97706,stroke-width:2px,color:#000
+    classDef model fill:#3b82f6,stroke:#2563eb,stroke-width:2px,color:#fff
+    classDef tensor fill:#10b981,stroke:#059669,stroke-width:2px,color:#fff
+    classDef metadata fill:#8b5cf6,stroke:#7c3aed,stroke-width:2px,color:#fff
 
 _metadata:
   bloc: 3

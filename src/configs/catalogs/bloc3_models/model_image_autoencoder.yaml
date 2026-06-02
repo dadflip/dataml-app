@@ -1,14 +1,21 @@
 id: "model_image_autoencoder"
 name: "Model: Convolutional Autoencoder"
-description: "Réseau non-supervisé pour compresser une image (encoder) puis la reconstruire (decoder)."
+description: "Réseau de neurones artificiels non-supervisé conçu pour apprendre une représentation compressée (espace latent) d'une image via un encodeur, puis la reconstruire de manière fidèle à l'aide d'un décodeur."
 category: "Vision par Ordinateur (Modèles Entraînés)"
-tags: ["model", "vision", "unsupervised", "pytorch", "autoencoder", "deep-learning"]
+tags: ["model", "vision", "unsupervised", "pytorch", "autoencoder", "deep-learning", "compression", "anomaly-detection"]
 applies_to: ["Images"]
-when_to_use: "Pour faire de la réduction de dimension d'images (embeddings), du débruitage, ou détecter des anomalies visuelles (défauts d'usine)."
+when_to_use: "Privilégiez ce modèle pour la réduction de dimension d'images (génération d'embeddings), le débruitage d'images (denoising), ou la détection d'anomalies visuelles complexes (telles que des défauts de fabrication en milieu industriel)."
+use_cases:
+  - "Contrôle qualité industriel : Détection de rayures ou malformations par analyse de l'erreur de reconstruction."
+  - "Débruitage d'images médicales ou satellitaires (apprentissage sur paires bruitées/nettes)."
+  - "Extraction de caractéristiques latentes (embeddings) pour une recherche d'images similaires ou un clustering."
 pros:
-  - "Apprend seul les caractéristiques (non supervisé)."
+  - "Apprentissage non supervisé autonome (ne nécessite pas de labels coûteux à produire)."
+  - "Capacité à capturer des caractéristiques non linéaires complexes, surpassant les méthodes classiques comme l'ACP."
+  - "Architecture flexible et adaptable (variation du bottleneck, utilisation de couches convolutives profondes)."
 cons:
-  - "Reconstruction souvent floue sur des images complexes."
+  - "Reconstruction souvent floue sur des images très complexes ou avec de faibles résolutions."
+  - "Entraînement gourmand en ressources computationnelles (GPU généralement requis) et sensible au choix des hyperparamètres (learning rate, dimension latente)."
 hyperparameters:
   epochs: "Nombre d'époques (ex: 5)."
 code_template: |
@@ -98,24 +105,71 @@ code_template: |
       training_history = {"status": "success", "final_loss": float(loss)}
       task_type = "image_reconstruction"
       meta = {}
+math_theory: |
+  Un autoencodeur convolutionnel applique des filtres spatiaux pour compresser l'image originale $\textcolor{#10b981}{X}$.
+  L'encodeur enchaîne des convolutions et du sous-échantillonnage (pooling) pour obtenir le tenseur latent $\textcolor{#3b82f6}{Z}$ (le goulot d'étranglement ou bottleneck) :
+  
+  $$ \textcolor{#3b82f6}{Z} = \sigma(\textcolor{#8b5cf6}{W_{enc}} * \textcolor{#10b981}{X} + \textcolor{#fbbf24}{b_{enc}}) $$
+  
+  Le décodeur utilise des convolutions transposées (ou un upsampling) pour remonter à la dimension originale et former la reconstruction $\textcolor{#ef4444}{\hat{X}}$ :
+  
+  $$ \textcolor{#ef4444}{\hat{X}} = \sigma(\textcolor{#8b5cf6}{W_{dec}} * \textcolor{#3b82f6}{Z} + \textcolor{#fbbf24}{b_{dec}}) $$
+  
+  L'apprentissage s'effectue en minimisant la Mean Squared Error (MSE) pixel par pixel :
+  
+  $$ \mathcal{L} = \frac{1}{N} \sum || \textcolor{#10b981}{X} - \textcolor{#ef4444}{\hat{X}} ||^2 $$
+math_illustration_svg: |
+  <svg viewBox="0 0 700 300" xmlns="http://www.w3.org/2000/svg">
+    <!-- Image X -->
+    <rect x="50" y="80" width="80" height="80" rx="5" fill="#10b981" />
+    <text x="90" y="185" fill="#10b981" font-family="sans-serif" font-size="18" font-weight="bold" text-anchor="middle">Input X</text>
+    
+    <!-- Conv Encoder -->
+    <polygon points="160,80 230,110 230,130 160,160" fill="#8b5cf6" />
+    <text x="195" y="100" fill="white" font-family="sans-serif" font-size="12" text-anchor="middle">Conv</text>
+    
+    <polygon points="250,110 300,125 300,115 250,130" fill="#8b5cf6" />
+    
+    <!-- Latent Z -->
+    <rect x="320" y="115" width="20" height="10" fill="#3b82f6" />
+    <text x="330" y="150" fill="#3b82f6" font-family="sans-serif" font-size="18" font-weight="bold" text-anchor="middle">Latent Z</text>
+    
+    <!-- Conv Decoder -->
+    <polygon points="360,125 410,110 410,130 360,115" fill="#fbbf24" />
+    
+    <polygon points="430,110 500,80 500,160 430,130" fill="#fbbf24" />
+    <text x="465" y="100" fill="white" font-family="sans-serif" font-size="12" text-anchor="middle">ConvT</text>
+    
+    <!-- Output X^ -->
+    <rect x="530" y="80" width="80" height="80" rx="5" fill="#ef4444" />
+    <text x="570" y="185" fill="#ef4444" font-family="sans-serif" font-size="18" font-weight="bold" text-anchor="middle">Recon X^</text>
+    
+    <!-- Error -->
+    <path d="M 90 200 L 90 230 L 570 230 L 570 200" stroke="black" stroke-width="2" fill="none" stroke-dasharray="5,5" />
+    <text x="330" y="255" fill="black" font-family="sans-serif" font-size="16" text-anchor="middle">MSE Loss</text>
+  </svg>
 illustration_mermaid: |
-  graph LR
-    subgraph Encoder
-      In[Original Image] --> Conv1[Conv2d Layer]
-      Conv1 --> Pool1[Downsample]
-      Pool1 --> Conv2[Conv2d Layer]
-      Conv2 --> Latent[Latent Representation / Embeddings]
-    end
-    subgraph Decoder
-      Latent --> Deconv1[ConvTranspose2d]
-      Deconv1 --> Up1[Upsample]
-      Up1 --> Deconv2[ConvTranspose2d]
-      Deconv2 --> Out[Reconstructed Image]
-    end
-    Out -.->|MSE Loss| In
-    style Enc fill:#8b5cf6,stroke:#7c3aed,stroke-width:2px,color:#fff
-    style Latent fill:#f59e0b,stroke:#d97706,stroke-width:2px,color:#fff
-    style Dec fill:#10b981,stroke:#059669,stroke-width:2px,color:#fff
+  flowchart LR
+    In(["Image Originale (X)"])
+    Conv1{"Encodeur (Conv2d)"}
+    Latent(["Espace Latent (Z)"])
+    Conv2{"Décodeur (ConvTranspose2d)"}
+    Out(["Image Reconstruite (X')"])
+    Loss{"Fonction de Perte (MSE)"}
+
+    In --> Conv1
+    Conv1 --> Latent
+    Latent --> Conv2
+    Conv2 --> Out
+    In -.-> Loss
+    Out -.-> Loss
+
+    style In fill:#10b981,stroke:#059669,stroke-width:2px,color:#fff
+    style Out fill:#10b981,stroke:#059669,stroke-width:2px,color:#fff
+    style Latent fill:#10b981,stroke:#059669,stroke-width:2px,color:#fff
+    style Conv1 fill:#3b82f6,stroke:#2563eb,stroke-width:2px,color:#fff
+    style Conv2 fill:#3b82f6,stroke:#2563eb,stroke-width:2px,color:#fff
+    style Loss fill:#ef4444,stroke:#dc2626,stroke-width:2px,color:#fff
 
 _metadata:
   bloc: 3

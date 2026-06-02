@@ -1,14 +1,40 @@
 id: "transform_audio_melspectrogram"
 name: "Transform: Audio MelSpectrogram"
-description: "Waveform vers MelSpectrogram."
+description: "Transforme un signal audio brut (waveform) en un Mel-spectrogramme, une représentation temps-fréquence adaptée à la perception auditive humaine en appliquant une échelle de Mel."
+math_theory: |
+  Le spectrogramme de Mel $\textcolor{#3b82f6}{M(f, t)}$ est obtenu en appliquant un banc de filtres triangulaires $\textcolor{#10b981}{H_m(k)}$ sur le spectre de puissance $\textcolor{#fbbf24}{|X(t, f)|^2}$ issu de la transformée de Fourier à court terme (STFT) : $$ \textcolor{#3b82f6}{M_m} = \log \left( \sum_{k} \textcolor{#fbbf24}{|X(k)|^2} \textcolor{#10b981}{H_m(k)} \right) $$
+math_illustration_svg: |
+  <svg viewBox="0 0 400 200" xmlns="http://www.w3.org/2000/svg">
+    <rect width="400" height="200" fill="#1e293b" rx="10" />
+    <g transform="translate(40, 160)">
+      <line x1="0" y1="0" x2="320" y2="0" stroke="#94a3b8" stroke-width="2" />
+      <line x1="0" y1="0" x2="0" y2="-120" stroke="#94a3b8" stroke-width="2" />
+      <text x="325" y="5" fill="#94a3b8" font-family="sans-serif" font-size="12">Hz</text>
+      <text x="-5" y="-125" fill="#94a3b8" font-family="sans-serif" font-size="12" text-anchor="end">Amp</text>
+      <path d="M0,0 L20,-40 L40,0" fill="none" stroke="#10b981" stroke-width="2" />
+      <path d="M20,0 L50,-60 L80,0" fill="none" stroke="#10b981" stroke-width="2" />
+      <path d="M50,0 L90,-80 L130,0" fill="none" stroke="#10b981" stroke-width="2" />
+      <path d="M90,0 L140,-100 L190,0" fill="none" stroke="#10b981" stroke-width="2" />
+      <path d="M0,-10 Q30,-50 60,-20 T150,-80 T250,-40" fill="none" stroke="#fbbf24" stroke-width="2" />
+      <text x="210" y="-90" fill="#10b981" font-family="sans-serif" font-size="16" font-style="italic">H<tspan baseline-shift="sub" font-size="12">m</tspan>(k)</text>
+      <text x="210" y="-30" fill="#fbbf24" font-family="sans-serif" font-size="16" font-style="italic">|X|<tspan baseline-shift="super" font-size="12">2</tspan></text>
+      <text x="140" y="-140" fill="#3b82f6" font-family="sans-serif" font-size="18" font-style="italic">M<tspan baseline-shift="sub" font-size="12">m</tspan></text>
+    </g>
+  </svg>
 category: "4.1 Preprocessing"
 tags: ["transform", "audio", "multimedia", "torchaudio", "pipeline"]
 applies_to: ["Audio"]
-when_to_use: "Pour CNN audio."
+when_to_use: "Indispensable lors du prétraitement de données audio pour entraîner des réseaux de neurones convolutifs (CNN) ou des architectures de type Transformer appliqués à l'audio, car ces modèles excellent sur des représentations 2D."
+use_cases:
+  - "Reconnaissance vocale (Speech-to-Text)."
+  - "Classification de sons environnementaux."
+  - "Détection d'anomalies audio."
 pros:
-  - "Très classique."
+  - "Compresse efficacement l'information audio tout en préservant les caractéristiques perceptuellement pertinentes."
+  - "Permet de traiter l'audio comme une image pour exploiter la puissance des CNN."
 cons:
-  - "Perte de phase."
+  - "Perte des informations de phase du signal (seule l'amplitude est conservée)."
+  - "Sensible au choix des hyperparamètres (taille de fenêtre, nombre de filtres Mel)."
 hyperparameters:
   audio_col: "Colonne"
 code_template: |
@@ -47,18 +73,18 @@ code_template: |
       print("[AVERTISSEMENT] torchaudio n'est pas installé, transformation ignorée.")
 
 illustration_mermaid: |
-  graph TD
-    A[Raw Audio DataFrame] --> B{Is torchaudio installed?}
-    B -- Yes --> C[Initialize MelSpectrogram Transformer]
-    B -- No --> D[Print Error/Warning]
-    C --> E{Does AUDIO_COL exist?}
-    E -- Yes --> F[Apply melspec to each Tensor]
-    E -- No --> G[Skip transformation]
-    F --> H[Update DataFrame & pipeline_steps]
-    G --> H
-    H --> I[Processed Audio Data]
-    style A fill:#eff6ff,stroke:#94a3b8,stroke-width:2px
-    style I fill:#10b981,stroke:#059669,stroke-width:2px,color:#fff
+  flowchart LR
+    A[/ "📄 Audio Col (Tensor)" /] --> B{"⚙️ Check torchaudio"}
+    B -- "Installed" --> C{"⚙️ AT.MelSpectrogram()"}
+    B -- "Missing" --> E(["ℹ️ Error/Warning"])
+    C --> D(["📊 df (MelSpectrogram)"])
+    D --> F(["ℹ️ pipeline_steps"])
+    style A fill:#fbbf24,stroke:#d97706,stroke-width:2px,color:#000
+    style B fill:#3b82f6,stroke:#2563eb,stroke-width:2px,color:#fff
+    style C fill:#3b82f6,stroke:#2563eb,stroke-width:2px,color:#fff
+    style D fill:#10b981,stroke:#059669,stroke-width:2px,color:#fff
+    style E fill:#8b5cf6,stroke:#7c3aed,stroke-width:2px,color:#fff
+    style F fill:#8b5cf6,stroke:#7c3aed,stroke-width:2px,color:#fff
 
 _metadata:
   bloc: 2

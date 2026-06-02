@@ -1,6 +1,19 @@
 id: eda_outliers_isolation_forest
 name: 'EDA: Détection Outliers (Isolation Forest)'
-description: Repère visuellement les anomalies multivariées via Isolation Forest.
+description: Repère visuellement et isole les anomalies multivariées au sein des données en utilisant l'algorithme Isolation Forest.
+when_to_use: À utiliser pour détecter des enregistrements suspects, frauduleux ou simplement très différents de la norme dans un jeu de données multidimensionnel.
+use_cases:
+- "Détection de fraude ou d'opérations anormales"
+- "Nettoyage de données avant l'entraînement de modèles sensibles (comme la régression linéaire)"
+- "Surveillance de capteurs et détection de pannes industrielles"
+pros:
+- "Efficace même dans des espaces à haute dimension (multivarié)"
+- "Ne nécessite pas de données labellisées (non supervisé)"
+- "Performant sur des grands jeux de données"
+cons:
+- "Nécessite de fixer un taux de contamination arbitraire a priori"
+- "Les résultats peuvent varier d'une exécution à l'autre en raison de son caractère probabiliste"
+- "Ne fournit pas directement la cause de l'anomalie"
 category: 3. Exploratory Data Analysis
 tags:
 - eda
@@ -37,18 +50,21 @@ code_template: |
       print("[EDA] Dataset inadapté pour Isolation Forest.")
 illustration_mermaid: |
     flowchart TD
-        Input([DataFrame]) --> Filter[Select Numeric & Drop NaNs]
-        Filter --> Check{Rows > 50 & Cols >= 2?}
-        Check -- Yes --> IsoForest[Init IsolationForest]
-        IsoForest --> Fit[Fit & Predict Anomalies]
-        Fit --> Scatter{{Scatter Plot Col1 vs Col2}}
-        Fit --> Stats[/Print Outlier Count & %/]
-        Check -- No --> Error[/Print Warning/]
+        InDF[/ df /] --> Filter{ select_dtypes_dropna }
+        InParam[/ CONTAMINATION /] --> IsoForest
+        Filter --> IsoForest{ IsolationForest_fit_predict }
+        IsoForest --> Preds([ preds ])
+        Preds --> Scatter{ plt_scatter }
+        Filter --> Scatter
+        Scatter --> Fig([ Outliers_Fig ])
     
-        style Input fill:#3b82f6,stroke:#2563eb,color:#fff
-        style IsoForest fill:#8b5cf6,stroke:#7c3aed,color:#fff
-        style Scatter fill:#ec4899,stroke:#db2777,color:#fff
-        style Fit fill:#10b981,stroke:#059669,color:#fff
+        style InDF fill:#fbbf24,stroke:#d97706,stroke-width:2px,color:#000
+        style InParam fill:#fbbf24,stroke:#d97706,stroke-width:2px,color:#000
+        style Filter fill:#3b82f6,stroke:#2563eb,stroke-width:2px,color:#fff
+        style IsoForest fill:#3b82f6,stroke:#2563eb,stroke-width:2px,color:#fff
+        style Scatter fill:#3b82f6,stroke:#2563eb,stroke-width:2px,color:#fff
+        style Preds fill:#8b5cf6,stroke:#7c3aed,stroke-width:2px,color:#fff
+        style Fig fill:#10b981,stroke:#059669,stroke-width:2px,color:#fff
 
 _metadata:
   bloc: 1

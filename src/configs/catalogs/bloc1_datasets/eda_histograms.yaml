@@ -1,7 +1,16 @@
 id: eda_histograms
 name: 'EDA: Histogrammes Numériques'
-description: Trace la distribution (Histogramme + KDE) des variables numériques du
-  dataset.
+description: Trace la distribution empirique (histogramme avec KDE) pour les variables numériques du dataset, afin d'observer la dispersion et la normalité.
+when_to_use: "Lors de l'exploration initiale des données pour analyser la forme des distributions numériques."
+use_cases:
+  - "Vérification de la normalité des distributions (par ex. pour les modèles linéaires)."
+  - "Détection de l'asymétrie (skewness) pour appliquer d'éventuelles transformations (log, box-cox)."
+pros:
+  - "Très parlant visuellement grâce à la superposition de l'histogramme et de la densité estimée (KDE)."
+  - "Gestion automatique d'une grille pour visualiser de multiples variables simultanément."
+cons:
+  - "Peut être lent sur de gros jeux de données à cause du calcul de la densité KDE."
+  - "L'estimation du nombre de bins idéal n'est pas toujours parfaite."
 category: 3. Exploratory Data Analysis
 tags:
 - eda
@@ -35,20 +44,24 @@ code_template: |
   plt.show()
 illustration_mermaid: |
     graph TD
-      A([DataFrame df]) --> B[Select numerical columns]
-      B --> C{Columns > 20?}
-      C -- Yes --> D[Truncate to top 20]
-      C -- No --> E[Keep all numerical]
-      D --> F[Create Grid Subplots]
-      E --> F
-      F --> G{For each column}
-      G --> H[Drop NAs]
-      H --> I{{Plot sns.histplot<br>with KDE}}
-      I --> G
-      G -- Done --> J([Display Histograms])
-      style A fill:#4F46E5,color:#fff
-      style C fill:#F59E0B,color:#fff
-      style I fill:#10B981,color:#fff
+      A[/DataFrame df/] --> B{Select numerical columns}
+      A2[/NUM_BINS/] --> G
+      B --> C{Truncate if > 20 columns}
+      C --> D{Create Grid Subplots}
+      D --> E{For each column}
+      E --> F{Drop NAs}
+      F --> G{Plot sns.histplot with KDE}
+      G --> E
+      G --> H([Display Histograms fig])
+      
+      classDef input fill:#fbbf24,stroke:#d97706,stroke-width:2px,color:#000;
+      classDef process fill:#3b82f6,stroke:#2563eb,stroke-width:2px,color:#fff;
+      classDef outputPrimary fill:#10b981,stroke:#059669,stroke-width:2px,color:#fff;
+      classDef outputSecondary fill:#8b5cf6,stroke:#7c3aed,stroke-width:2px,color:#fff;
+      
+      class A,A2 input;
+      class B,C,D,E,F,G process;
+      class H outputPrimary;
 
 _metadata:
   bloc: 1

@@ -1,6 +1,18 @@
 id: load_image
 name: 'Load: Image (JPG, PNG, TIFF)'
-description: Charge une image sous forme de matrice NumPy (RGB).
+description: "Charge une image sous forme de matrice NumPy (RGB)."
+when_to_use: "Lorsque vous avez besoin de charger, d'inspecter ou de traiter une seule image (par exemple JPG, PNG) pour des tâches de vision par ordinateur."
+use_cases:
+  - "Inférence de modèle sur une image spécifique fournie par l'utilisateur."
+  - "Test rapide de filtres de traitement d'image ou d'augmentations de données."
+  - "Création d'exemples de démonstration pour des algorithmes de Computer Vision."
+pros:
+  - "Conversion automatique de l'espace de couleurs BGR (OpenCV) vers RGB (standard ML)."
+  - "Basé sur OpenCV, l'une des bibliothèques les plus rapides pour l'I/O d'images."
+  - "Extrait instantanément la dimension (shape) de l'image en tant que métadonnée."
+cons:
+  - "Ne charge qu'une seule image à la fois, non adapté pour les batchs complets."
+  - "Nécessite l'installation d'OpenCV (cv2) dans l'environnement Python."
 category: 2. Load
 tags:
 - load
@@ -47,13 +59,22 @@ code_template: |
   task_type = "computer_vision"
   meta = {"format": "image", "shape": img_rgb.shape}
 illustration_mermaid: |
-  flowchart TD
-      A([FILE_PATH]) --> B[Load IMAGE]
-      B --> df([df])
-      
-      style A fill:#3b82f6,color:#fff
-      style B fill:#10b981,color:#fff
-      style df fill:#f59e0b,color:#fff
+  flowchart LR
+      A[/"🖼️ FILE_PATH"/] --> B{"cv2.imread()"}
+      C[/"🎯 N/A"/] --> D{"Set Defaults"}
+      B --> E(["📊 df (DataFrame)"])
+      E --> D
+      D --> F(["🎯 target_name"])
+      D --> G(["⚙️ task_type"])
+      D --> H(["ℹ️ meta (image)"])
+      style A fill:#fbbf24,stroke:#d97706,stroke-width:2px,color:#000
+      style C fill:#fbbf24,stroke:#d97706,stroke-width:2px,color:#000
+      style B fill:#3b82f6,stroke:#2563eb,stroke-width:2px,color:#fff
+      style D fill:#3b82f6,stroke:#2563eb,stroke-width:2px,color:#fff
+      style E fill:#10b981,stroke:#059669,stroke-width:2px,color:#fff
+      style F fill:#8b5cf6,stroke:#7c3aed,stroke-width:2px,color:#fff
+      style G fill:#8b5cf6,stroke:#7c3aed,stroke-width:2px,color:#fff
+      style H fill:#8b5cf6,stroke:#7c3aed,stroke-width:2px,color:#fff
 
 _metadata:
   bloc: 1

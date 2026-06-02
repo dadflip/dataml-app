@@ -1,6 +1,19 @@
 id: eda_timeseries_rolling_mean
 name: 'EDA: Moyenne Mobile'
-description: Lisse une série temporelle avec une moyenne et écart-type glissants.
+description: Lisse une série temporelle en superposant la moyenne et l'écart-type glissants pour mieux visualiser les tendances sous-jacentes.
+when_to_use: À utiliser lorsque les données temporelles sont très bruitées et que vous souhaitez extraire la tendance de fond ou évaluer la volatilité locale.
+use_cases:
+  - Lissage des cours de bourse journaliers avec une moyenne mobile sur 30 jours (Moyenne Mobile Simple).
+  - Évaluation de la volatilité d'une série via l'écart-type glissant.
+  - Suppression des variations intra-hebdomadaires (ex: fenêtre de 7 jours) pour voir l'évolution mensuelle d'un trafic.
+pros:
+  - Réduit considérablement le bruit visuel dans les séries très volatiles.
+  - Superpose la série brute et lissée pour une comparaison directe.
+  - L'écart-type glissant offre un bon aperçu de la stabilité de la variance dans le temps (utile pour vérifier la stationnarité).
+cons:
+  - Induit un retard (lag) artificiel dans la courbe lissée, masquant la date exacte des retournements.
+  - Les premières valeurs de la série lissée sont manquantes à cause de la fenêtre.
+  - Le choix de la taille de la fenêtre (WINDOW) est arbitraire et change radicalement l'interprétation.
 category: 3. Exploratory Data Analysis
 tags:
 - eda
@@ -37,17 +50,27 @@ code_template: |
       print("[EDA] Colonnes temporelles manquantes.")
 illustration_mermaid: |
     graph TD
-      DF([DataFrame]) --> Check{Check TIME_COL & target_name}
-      Check -- Valid --> SortDrop[DropNA & Sort]
-      SortDrop --> RMean{{rolling.mean}}
-      SortDrop --> RStd{{rolling.std}}
-      RMean --> Plot[plt.plot]
+      DF[/ df /] --> Params[/ TIME_COL, target_name, WINDOW /]
+      Params --> Check{ check_cols }
+      Check -- Valid --> SortDrop{ dropna_sort_setindex }
+      SortDrop --> RMean{ rolling.mean }
+      SortDrop --> RStd{ rolling.std }
+      RMean --> Plot{ plt.plot }
       RStd --> Plot
-      Plot --> Show[plt.show]
-      Check -- Missing --> Err[Print Error]
-      style RMean fill:#d946ef,stroke:#c026d3,stroke-width:2px,color:#fff
-      style RStd fill:#d946ef,stroke:#c026d3,stroke-width:2px,color:#fff
-      style Plot fill:#10b981,stroke:#059669,stroke-width:2px,color:#fff
+      Plot --> Show{ plt.show }
+      Plot --> Fig([ fig ])
+      Check -- Missing --> Err([ Error ])
+      
+      style DF fill:#fbbf24,stroke:#d97706,stroke-width:2px,color:#000
+      style Params fill:#fbbf24,stroke:#d97706,stroke-width:2px,color:#000
+      style Check fill:#3b82f6,stroke:#2563eb,stroke-width:2px,color:#fff
+      style SortDrop fill:#3b82f6,stroke:#2563eb,stroke-width:2px,color:#fff
+      style RMean fill:#3b82f6,stroke:#2563eb,stroke-width:2px,color:#fff
+      style RStd fill:#3b82f6,stroke:#2563eb,stroke-width:2px,color:#fff
+      style Plot fill:#3b82f6,stroke:#2563eb,stroke-width:2px,color:#fff
+      style Show fill:#3b82f6,stroke:#2563eb,stroke-width:2px,color:#fff
+      style Fig fill:#10b981,stroke:#059669,stroke-width:2px,color:#fff
+      style Err fill:#8b5cf6,stroke:#7c3aed,stroke-width:2px,color:#fff
 _metadata:
   bloc: 1
   section: 3_eda

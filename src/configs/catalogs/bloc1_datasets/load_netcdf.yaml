@@ -1,6 +1,17 @@
 id: "load_netcdf"
 name: "Load: Géoscience NetCDF"
-description: "Charge un fichier de données météorologiques ou climatiques au format NetCDF (.nc)."
+description: "Ce bloc charge un fichier de données multidimensionnelles au format NetCDF (.nc), souvent utilisé en géosciences, climatologie et océanographie. Il convertit le jeu de données en format tabulaire et extrait les métadonnées (dimensions, variables)."
+when_to_use: "À utiliser pour exploiter des données météorologiques, climatiques ou scientifiques structurées sur des grilles spatiales et temporelles."
+use_cases:
+  - "Prédiction météorologique ou climatique à partir de séries temporelles spatialisées."
+  - "Analyse des températures de surface océanique pour des études environnementales."
+  - "Modélisation des données satellitaires en sciences de la Terre."
+pros:
+  - "Gère nativement les tableaux de données multidimensionnels."
+  - "Extrait facilement les métadonnées attachées via la bibliothèque xarray."
+cons:
+  - "L'aplatissement (flatten) en DataFrame Pandas peut s'avérer très coûteux en mémoire pour de gros fichiers."
+  - "Nécessite les packages `xarray` et `netCDF4`."
 category: "2. Load"
 tags: ["load", "netcdf", "weather", "science"]
 code_template: |
@@ -41,20 +52,22 @@ output_variables:
   - task_type
   - meta
 illustration_mermaid: |
-  flowchart TD
-      A([FILE_PATH]) --> B{File Exists?}
-      B -- Yes --> C[xr.open_dataset]
-      B -- No --> D[Empty DataFrame]
-      C --> E[Convert to DataFrame]
-      E --> F[Extract Meta: dims & vars]
-      F --> G[Determine Target]
-      D --> G
-      G --> H([df, target_name, task_type, meta])
-
-      style A fill:#3b82f6,color:#fff
-      style C fill:#10b981,color:#fff
-      style E fill:#10b981,color:#fff
-      style H fill:#f59e0b,color:#fff
+  flowchart LR
+      A[/"📄 FILE_PATH"/] --> B{"xr.open_dataset & Convert"}
+      C[/"🎯 TARGET_COL"/] --> D{"Check TARGET_COL"}
+      B --> E(["📊 df (DataFrame)"])
+      E --> D
+      D --> F(["🎯 target_name"])
+      D --> G(["⚙️ task_type"])
+      D --> H(["ℹ️ meta (...)"])
+      style A fill:#fbbf24,stroke:#d97706,stroke-width:2px,color:#000
+      style C fill:#fbbf24,stroke:#d97706,stroke-width:2px,color:#000
+      style B fill:#3b82f6,stroke:#2563eb,stroke-width:2px,color:#fff
+      style D fill:#3b82f6,stroke:#2563eb,stroke-width:2px,color:#fff
+      style E fill:#10b981,stroke:#059669,stroke-width:2px,color:#fff
+      style F fill:#8b5cf6,stroke:#7c3aed,stroke-width:2px,color:#fff
+      style G fill:#8b5cf6,stroke:#7c3aed,stroke-width:2px,color:#fff
+      style H fill:#8b5cf6,stroke:#7c3aed,stroke-width:2px,color:#fff
 
 _metadata:
   bloc: 1

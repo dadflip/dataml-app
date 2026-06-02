@@ -1,14 +1,24 @@
 id: "model_exponential_smoothing"
 name: "Model: Exponential Smoothing (Holt-Winters)"
-description: "Modèle de lissage exponentiel pour séries temporelles, gérant tendance et saisonnalité."
+description: |
+  Modèle statistique classique d'analyse de séries temporelles reposant sur le lissage exponentiel (méthode de Holt-Winters). Il modélise explicitement le niveau, la tendance et la saisonnalité en accordant un poids décroissant exponentiellement aux observations passées. C'est un modèle de référence, rapide à ajuster et facilement interprétable.
 category: "Modèles Séries Temporelles"
 tags: ["model", "time-series", "forecasting", "statsmodels", "smoothing"]
 applies_to: ["Séries Temporelles"]
-when_to_use: "Alternative classique et performante à ARIMA pour les données avec saisonnalité explicite."
+when_to_use: |
+  Utilisez ce modèle pour des prévisions à court et moyen terme sur des séries temporelles présentant une tendance claire ou des motifs saisonniers réguliers (ex: ventes mensuelles, trafic hebdomadaire). C'est souvent la première approche à tester avant des modèles plus complexes (comme ARIMA ou Prophet).
+use_cases:
+  - "Prévision de la demande ou des ventes avec saisonnalité annuelle/mensuelle."
+  - "Surveillance de la charge d'un serveur avec des cycles journaliers."
+  - "Estimation de budgets financiers à partir de données historiques stables."
 pros:
-  - "Supporte bien la saisonnalité explicite."
+  - "Très rapide à entraîner et facile à configurer (peu d'hyperparamètres)."
+  - "Supporte de façon explicite et efficace les saisonnalités additives ou multiplicatives."
+  - "Interprétabilité forte des composantes (niveau, tendance, saisonnalité)."
 cons:
-  - "Moins robuste aux données bruitées ou aux sauts soudains que Prophet."
+  - "Moins performant sur les séries bruitées, les valeurs aberrantes ou les changements structurels soudains comparé à Prophet."
+  - "Nécessite la spécification explicite de la période saisonnière."
+  - "Moins adapté pour les longues séries prédictives sans amortissement (dampening) de la tendance."
 hyperparameters:
   trend: "Type de tendance ('add' pour additive, 'mul' pour multiplicative, ou 'none')."
   seasonal: "Type de saisonnalité ('add', 'mul', ou 'none')."
@@ -74,20 +84,47 @@ code_template: |
       training_history = {"status": "success", "aic": getattr(model, "aic", None)}
 
 illustration_mermaid: |
-  graph TD
-    subgraph Holt-Winters Exponential Smoothing
-      In([Time Series Data]) --> Level[Level Equation]
-      In --> Trend[Trend Equation]
-      In --> Season[Seasonal Equation]
-      Level --> Smooth[Exponential Smoothing]
-      Trend --> Smooth
-      Season --> Smooth
-      Smooth --> Forecast([Future Forecasts])
-    end
-    style In fill:#f8fafc,stroke:#94a3b8,stroke-width:1px
-    style Forecast fill:#10b981,stroke:#059669,stroke-width:2px,color:#fff
-    style Smooth fill:#8b5cf6,stroke:#7c3aed,stroke-width:2px,color:#fff
+  flowchart LR
+    In[/ "Série Temporelle" /] --> Model{"Holt-Winters\n(Exponential Smoothing)"}
+    Config(["Params\nTendance, Saison"]) -.-> Model
+    Model --> Out(["Prévisions\n(Horizons futurs)"])
+    
+    style In fill:#fbbf24,stroke:#d97706,stroke-width:2px,color:#000
+    style Config fill:#8b5cf6,stroke:#7c3aed,stroke-width:2px,color:#fff
+    style Model fill:#3b82f6,stroke:#2563eb,stroke-width:2px,color:#fff
+    style Out fill:#10b981,stroke:#059669,stroke-width:2px,color:#fff
 
+math_theory: |
+  Le modèle additif de Holt-Winters projette la prévision $\textcolor{#10b981}{\hat{y}_{t+h|t}}$ à l'horizon $h$ :
+  $$ \textcolor{#10b981}{\hat{y}_{t+h|t}} = \textcolor{#3b82f6}{l_t} + h \textcolor{#fbbf24}{b_t} + \textcolor{#ef4444}{s_{t+h-m}} $$
+  
+  Mise à jour des 3 composantes lissées de manière exponentielle (les observations récentes ont plus de poids) :
+  - **Niveau** (Level) : $ \textcolor{#3b82f6}{l_t} = \alpha (y_t - \textcolor{#ef4444}{s_{t-m}}) + (1 - \alpha)(\textcolor{#3b82f6}{l_{t-1}} + \textcolor{#fbbf24}{b_{t-1}}) $
+  - **Tendance** (Trend) : $ \textcolor{#fbbf24}{b_t} = \beta^*(\textcolor{#3b82f6}{l_t} - \textcolor{#3b82f6}{l_{t-1}}) + (1 - \beta^*)\textcolor{#fbbf24}{b_{t-1}} $
+  - **Saisonnalité** (Season) : $ \textcolor{#ef4444}{s_t} = \gamma (y_t - \textcolor{#3b82f6}{l_{t-1}} - \textcolor{#fbbf24}{b_{t-1}}) + (1 - \gamma)\textcolor{#ef4444}{s_{t-m}} $
+  
+  Où $\alpha, \beta^*, \gamma \in [0, 1]$ sont les constantes de lissage et $m$ est la période saisonnière.
+math_illustration_svg: |
+  <svg viewBox="0 0 800 300" xmlns="http://www.w3.org/2000/svg">
+    <rect width="800" height="300" fill="#f8fafc" rx="10"/>
+    <text x="400" y="40" font-family="Arial" font-size="18" font-weight="bold" text-anchor="middle" fill="#1f2937">Holt-Winters Additive Method</text>
+    <rect x="50" y="80" width="200" height="80" fill="#3b82f6" fill-opacity="0.1" stroke="#3b82f6" stroke-width="2" rx="5"/>
+    <text x="150" y="110" font-family="Arial" font-size="16" font-weight="bold" text-anchor="middle" fill="#3b82f6">Level l_t (α)</text>
+    <text x="150" y="135" font-family="Arial" font-size="12" text-anchor="middle" fill="#4b5563">Lissage de la valeur de base</text>
+    <rect x="300" y="80" width="200" height="80" fill="#fbbf24" fill-opacity="0.1" stroke="#fbbf24" stroke-width="2" rx="5"/>
+    <text x="400" y="110" font-family="Arial" font-size="16" font-weight="bold" text-anchor="middle" fill="#fbbf24">Trend b_t (β*)</text>
+    <text x="400" y="135" font-family="Arial" font-size="12" text-anchor="middle" fill="#4b5563">Lissage de la pente locale</text>
+    <rect x="550" y="80" width="200" height="80" fill="#ef4444" fill-opacity="0.1" stroke="#ef4444" stroke-width="2" rx="5"/>
+    <text x="650" y="110" font-family="Arial" font-size="16" font-weight="bold" text-anchor="middle" fill="#ef4444">Season s_t (γ)</text>
+    <text x="650" y="135" font-family="Arial" font-size="12" text-anchor="middle" fill="#4b5563">Lissage des cycles (période m)</text>
+    <path d="M 150 160 L 400 220" fill="none" stroke="#6b7280" stroke-width="2"/>
+    <path d="M 400 160 L 400 220" fill="none" stroke="#6b7280" stroke-width="2"/>
+    <path d="M 650 160 L 400 220" fill="none" stroke="#6b7280" stroke-width="2"/>
+    <circle cx="400" cy="220" r="15" fill="#1f2937"/>
+    <text x="400" y="225" font-family="Arial" font-size="16" font-weight="bold" text-anchor="middle" fill="#ffffff">+</text>
+    <rect x="300" y="245" width="200" height="40" fill="#10b981" fill-opacity="0.2" stroke="#10b981" stroke-width="2" rx="5"/>
+    <text x="400" y="270" font-family="Arial" font-size="16" font-weight="bold" text-anchor="middle" fill="#10b981">Forecast: y_hat_{t+h|t}</text>
+  </svg>
 _metadata:
   bloc: 3
   section: "3_nlp_and_timeseries"

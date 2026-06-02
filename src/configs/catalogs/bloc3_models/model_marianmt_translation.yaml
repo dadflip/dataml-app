@@ -1,14 +1,21 @@
 id: "model_marianmt_translation"
 name: "Model: MarianMT Translation (EN -> FR)"
-description: "Modèle de traduction automatique performant open-source (Helsinki-NLP)."
+description: "Modèle de traduction automatique pré-entraîné basé sur l'architecture Transformer (MarianMT), développé par Helsinki-NLP et distribué via Hugging Face."
 category: "Modèles NLP (Pré-entraînés)"
 tags: ["model", "nlp", "translation", "transformers", "huggingface", "zero-shot", "generative"]
 applies_to: ["Texte"]
-when_to_use: "Pour traduire massivement des textes (par défaut Anglais vers Français)."
+when_to_use: "Indiqué pour le traitement de traductions massives et automatisées de textes, en particulier pour la paire Anglais vers Français, dans un pipeline d'analyse de données multilingues."
+use_cases:
+  - "Traduction automatique de larges corpus documentaires ou de bases de connaissances hétérogènes."
+  - "Localisation et adaptation de descriptions de produits pour des plateformes e-commerce à l'international."
+  - "Prétraitement de données textuelles anglophones pour une analyse de sentiment en français."
 pros:
-  - "Aussi performant que Google Translate sur de nombreuses paires de langues."
+  - "Performances compétitives se rapprochant de systèmes commerciaux comme Google Translate sur de nombreuses paires de langues."
+  - "Solution open source permettant une exécution locale sans dépendre d'API payantes externes."
+  - "Intégration fluide dans l'écosystème Hugging Face Transformers pour une accélération matérielle."
 cons:
-  - "Modèle spécifique requis pour chaque paire de langues."
+  - "Chaque paire de langues (source-cible) nécessite un modèle distinct, limitant la traduction multilingue spontanée."
+  - "Consommation mémoire et temps d'inférence non négligeables, en particulier lors d'un traitement exclusif sur CPU."
 hyperparameters: {}
 code_template: |
   import pandas as pd
@@ -83,24 +90,110 @@ code_template: |
       training_history = {"status": "success", "type": "zero_shot_translation"}
 
 illustration_mermaid: |
-  graph TD
-    A[Input English Text] --> B(Preprocessing Pipeline)
-    B --> C[MarianMT Wrapper]
+  flowchart LR
+    A[/ "Input English Text" /]
+    B{"Preprocessing Pipeline"}
+    C{"MarianMT Wrapper"}
+    D{"English Tokenizer"}
+    E{"Transformer Encoder"}
+    F{"Cross Attention"}
+    G{"Transformer Decoder"}
+    H{"French Token Generator"}
+    I{"Detokenizer"}
+    J(["y_pred: Translated Text"])
+
+    A --> B
+    B --> C
+    C --> D
+    D --> E
+    E --> F
+    F --> G
+    G --> H
+    H --> I
+    I --> J
     
-    subgraph MarianMT Encoder-Decoder
-      C --> D[English Tokenizer]
-      D --> E[Transformer Encoder]
-      E --> F[Cross Attention Context]
-      F --> G[Transformer Decoder]
-      G --> H[French Token Generator]
-    end
+    style A fill:#fbbf24,stroke:#d97706,stroke-width:2px,color:#000
+    style B fill:#3b82f6,stroke:#2563eb,stroke-width:2px,color:#fff
+    style C fill:#3b82f6,stroke:#2563eb,stroke-width:2px,color:#fff
+    style D fill:#3b82f6,stroke:#2563eb,stroke-width:2px,color:#fff
+    style E fill:#3b82f6,stroke:#2563eb,stroke-width:2px,color:#fff
+    style F fill:#3b82f6,stroke:#2563eb,stroke-width:2px,color:#fff
+    style G fill:#3b82f6,stroke:#2563eb,stroke-width:2px,color:#fff
+    style H fill:#3b82f6,stroke:#2563eb,stroke-width:2px,color:#fff
+    style I fill:#3b82f6,stroke:#2563eb,stroke-width:2px,color:#fff
+    style J fill:#10b981,stroke:#059669,stroke-width:2px,color:#fff
+
+math_theory: |
+  MarianMT employs a standard Encoder-Decoder Transformer architecture designed for neural machine translation. It learns to map a source language sequence $\textcolor{#3b82f6}{X}$ (e.g., English) to a target sequence $\textcolor{#10b981}{Y}$ (e.g., French).
+  
+  The core of the interaction between the two languages happens in the **Cross-Attention** layers of the decoder:
+  
+  $$ \text{CrossAttention}(\textcolor{#ef4444}{Q_{\text{dec}}}, \textcolor{#fbbf24}{K_{\text{enc}}}, \textcolor{#fbbf24}{V_{\text{enc}}}) = \text{Softmax}\left(\frac{\textcolor{#ef4444}{Q_{\text{dec}}} \cdot \textcolor{#fbbf24}{K_{\text{enc}}}^T}{\sqrt{d_k}}\right) \textcolor{#fbbf24}{V_{\text{enc}}} $$
+  
+  where:
+  *   $\textcolor{#fbbf24}{K_{\text{enc}}}, \textcolor{#fbbf24}{V_{\text{enc}}}$ are the Keys and Values derived from the encoder's hidden states (the English text representation).
+  *   $\textcolor{#ef4444}{Q_{\text{dec}}}$ are the Queries generated from the decoder's current state (the French text generated so far).
+  
+  This allows the decoder to "look back" at relevant parts of the English sentence when generating each French word.
+
+math_illustration_svg: |
+  <svg viewBox="0 0 700 350" xmlns="http://www.w3.org/2000/svg">
+    <defs>
+      <marker id="arrow" viewBox="0 0 10 10" refX="10" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+        <path d="M 0 0 L 10 5 L 0 10 z" fill="#6b7280" />
+      </marker>
+    </defs>
     
-    H --> I[Detokenizer]
-    I --> J([y_pred: French Translated Text])
+    <!-- Source Text -->
+    <rect x="20" y="50" width="100" height="60" rx="5" fill="#eff6ff" stroke="#3b82f6" stroke-width="2"/>
+    <text x="70" y="75" text-anchor="middle" font-family="sans-serif" font-size="14" font-weight="bold" fill="#3b82f6">English (X)</text>
+    <text x="70" y="95" text-anchor="middle" font-family="sans-serif" font-size="10" fill="#3b82f6">"Hello World"</text>
     
-    style C fill:#8b5cf6,stroke:#7c3aed,stroke-width:2px,color:#fff
-    style G fill:#f59e0b,stroke:#d97706,stroke-width:2px,color:#fff
-    style J fill:#3b82f6,stroke:#2563eb,stroke-width:2px,color:#fff
+    <line x1="120" y1="80" x2="180" y2="80" stroke="#6b7280" stroke-width="2" marker-end="url(#arrow)"/>
+    
+    <!-- Encoder -->
+    <rect x="180" y="30" width="140" height="100" rx="10" fill="#f8fafc" stroke="#94a3b8" stroke-width="2"/>
+    <text x="250" y="85" text-anchor="middle" font-family="sans-serif" font-size="18" font-weight="bold" fill="#475569">Encoder</text>
+    
+    <!-- K, V outputs -->
+    <line x1="320" y1="80" x2="420" y2="80" stroke="#6b7280" stroke-width="2" marker-end="url(#arrow)"/>
+    <rect x="340" y="50" width="60" height="60" rx="5" fill="#fffbeb" stroke="#fbbf24" stroke-width="2"/>
+    <text x="370" y="75" text-anchor="middle" font-family="sans-serif" font-size="14" font-weight="bold" fill="#fbbf24">K_enc</text>
+    <text x="370" y="95" text-anchor="middle" font-family="sans-serif" font-size="14" font-weight="bold" fill="#fbbf24">V_enc</text>
+    
+    <!-- Target Text So far -->
+    <rect x="20" y="240" width="100" height="60" rx="5" fill="#fef2f2" stroke="#ef4444" stroke-width="2"/>
+    <text x="70" y="265" text-anchor="middle" font-family="sans-serif" font-size="14" font-weight="bold" fill="#ef4444">French y_&lt;t</text>
+    <text x="70" y="285" text-anchor="middle" font-family="sans-serif" font-size="10" fill="#ef4444">"Bonjour"</text>
+    
+    <line x1="120" y1="270" x2="180" y2="270" stroke="#6b7280" stroke-width="2" marker-end="url(#arrow)"/>
+    
+    <!-- Decoder -->
+    <rect x="180" y="220" width="140" height="100" rx="10" fill="#f8fafc" stroke="#94a3b8" stroke-width="2"/>
+    <text x="250" y="275" text-anchor="middle" font-family="sans-serif" font-size="18" font-weight="bold" fill="#475569">Decoder</text>
+    
+    <!-- Q output -->
+    <line x1="320" y1="270" x2="420" y2="270" stroke="#6b7280" stroke-width="2" marker-end="url(#arrow)"/>
+    <rect x="340" y="240" width="60" height="60" rx="5" fill="#fef2f2" stroke="#ef4444" stroke-width="2"/>
+    <text x="370" y="275" text-anchor="middle" font-family="sans-serif" font-size="14" font-weight="bold" fill="#ef4444">Q_dec</text>
+    
+    <!-- Cross Attention -->
+    <rect x="420" y="100" width="120" height="150" rx="10" fill="#f3e8ff" stroke="#a855f7" stroke-width="2"/>
+    <text x="480" y="160" text-anchor="middle" font-family="sans-serif" font-size="16" font-weight="bold" fill="#7e22ce">Cross</text>
+    <text x="480" y="180" text-anchor="middle" font-family="sans-serif" font-size="16" font-weight="bold" fill="#7e22ce">Attention</text>
+    <text x="480" y="210" text-anchor="middle" font-family="sans-serif" font-size="12" fill="#7e22ce">Softmax(Q*K)</text>
+    
+    <!-- Arrows to Cross Attention -->
+    <path d="M 400 80 C 450 80, 480 80, 480 100" fill="none" stroke="#6b7280" stroke-width="2" marker-end="url(#arrow)"/>
+    <path d="M 400 270 C 450 270, 480 270, 480 250" fill="none" stroke="#6b7280" stroke-width="2" marker-end="url(#arrow)"/>
+    
+    <!-- Next Token Output -->
+    <line x1="540" y1="175" x2="600" y2="175" stroke="#6b7280" stroke-width="2" marker-end="url(#arrow)"/>
+    
+    <rect x="600" y="145" width="80" height="60" rx="5" fill="#f0fdf4" stroke="#10b981" stroke-width="2"/>
+    <text x="640" y="170" text-anchor="middle" font-family="sans-serif" font-size="14" font-weight="bold" fill="#10b981">y_t</text>
+    <text x="640" y="190" text-anchor="middle" font-family="sans-serif" font-size="10" fill="#10b981">"le"</text>
+  </svg>
 
 _metadata:
   bloc: 3

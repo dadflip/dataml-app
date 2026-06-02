@@ -1,6 +1,19 @@
 id: eda_timeseries_autocorrelation
 name: 'EDA: Autocorrélation (ACF/PACF)'
-description: Affiche les fonctions d'autocorrélation pour les séries temporelles.
+description: Affiche les graphiques des fonctions d'autocorrélation (ACF) et d'autocorrélation partielle (PACF) pour analyser les dépendances temporelles d'une série.
+when_to_use: "À utiliser pour identifier la saisonnalité, les tendances et les retards pertinents lors de la modélisation de séries temporelles (ex: modèles ARIMA)."
+use_cases:
+  - Détermination des paramètres p et q pour un modèle ARIMA.
+  - Vérification de la présence d'une composante saisonnière dans les ventes mensuelles.
+  - Analyse des résidus d'un modèle pour s'assurer qu'il ne reste pas d'information temporelle inexpliquée.
+pros:
+  - Indispensable pour la modélisation statistique avancée des séries temporelles.
+  - Permet de quantifier visuellement la mémoire d'un processus stochastique.
+  - Identifie clairement les effets saisonniers et les cycles.
+cons:
+  - L'interprétation des graphiques ACF/PACF nécessite de bonnes connaissances en statistiques.
+  - Très sensible aux séries non stationnaires (nécessite souvent une différenciation préalable).
+  - Ne gère pas nativement les valeurs manquantes sans traitement préalable (suppression ou imputation).
 category: 3. Exploratory Data Analysis
 tags:
 - eda
@@ -28,17 +41,29 @@ code_template: |
       print("[EDA] Colonnes temporelles manquantes.")
 illustration_mermaid: |
     graph TD
-      DF([DataFrame]) --> Check{Check TIME_COL & target_name}
-      Check -- Valid --> SortDrop[DropNA & Sort]
-      SortDrop --> Sub[plt.subplots]
-      Sub --> ACF{{plot_acf}}
-      Sub --> PACF{{plot_pacf}}
-      ACF --> Show[plt.show]
+      DF[/ df /] --> Params[/ TIME_COL, target_name /]
+      Params --> Check{ check_cols }
+      Check -- Valid --> SortDrop{ dropna_sort }
+      SortDrop --> Sub{ plt.subplots }
+      Sub --> Axes([ ax1, ax2 ])
+      Axes --> ACF{ plot_acf }
+      Axes --> PACF{ plot_pacf }
+      ACF --> Show{ plt.show }
       PACF --> Show
-      Check -- Missing --> Err[Print Error]
-      style ACF fill:#d946ef,stroke:#c026d3,stroke-width:2px,color:#fff
-      style PACF fill:#d946ef,stroke:#c026d3,stroke-width:2px,color:#fff
+      ACF --> Fig([ fig ])
+      Check -- Missing --> Err([ Error ])
+      
+      style DF fill:#fbbf24,stroke:#d97706,stroke-width:2px,color:#000
+      style Params fill:#fbbf24,stroke:#d97706,stroke-width:2px,color:#000
+      style Check fill:#3b82f6,stroke:#2563eb,stroke-width:2px,color:#fff
       style SortDrop fill:#3b82f6,stroke:#2563eb,stroke-width:2px,color:#fff
+      style Sub fill:#3b82f6,stroke:#2563eb,stroke-width:2px,color:#fff
+      style Axes fill:#8b5cf6,stroke:#7c3aed,stroke-width:2px,color:#fff
+      style ACF fill:#3b82f6,stroke:#2563eb,stroke-width:2px,color:#fff
+      style PACF fill:#3b82f6,stroke:#2563eb,stroke-width:2px,color:#fff
+      style Show fill:#3b82f6,stroke:#2563eb,stroke-width:2px,color:#fff
+      style Fig fill:#10b981,stroke:#059669,stroke-width:2px,color:#fff
+      style Err fill:#8b5cf6,stroke:#7c3aed,stroke-width:2px,color:#fff
 _metadata:
   bloc: 1
   section: 3_eda

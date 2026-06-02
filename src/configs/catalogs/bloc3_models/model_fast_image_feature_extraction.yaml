@@ -1,17 +1,57 @@
 id: "model_fast_image_feature_extraction"
 name: "Model: Fast Image Feature Extraction (Transfer Learning)"
-description: "Classification d'images ultra-rapide utilisant un modèle pré-entraîné (MobileNet V2) en extraction de caractéristiques, suivi d'une Régression Logistique."
+description: |
+  Pipeline hybride d'apprentissage automatique conçu pour la classification d'images ultra-rapide. Il utilise un réseau profond pré-entraîné (MobileNetV2) uniquement comme extracteur de caractéristiques (sans rétropropagation), et applique ensuite un classifieur linéaire classique (Régression Logistique) sur ces représentations denses. Cela permet d'obtenir d'excellentes performances en une fraction du temps requis pour un fine-tuning complet.
 category: "Vision par Ordinateur (Modèles Entraînés)"
 tags: ["model", "vision", "classification", "transfer-learning", "mobilenet", "fast"]
 applies_to: ["Images"]
-when_to_use: "Quand vous voulez d'excellentes performances de classification d'images (comme 102 flowers) sans passer des heures à entraîner un modèle profond."
+when_to_use: |
+  Privilégiez cette approche lorsque vous avez besoin de construire rapidement un classifieur d'images très performant (comme pour des prototypes), sans disposer de la puissance de calcul nécessaire (gros GPUs) pour faire du fine-tuning de bout en bout.
+use_cases:
+  - "Prototypage rapide d'applications de vision par ordinateur."
+  - "Classification d'images en milieu contraint ou sur CPU."
+  - "Évaluation rapide de la séparabilité des classes d'un nouveau jeu de données visuel (ex: 102 flowers)."
 pros:
-  - "Ultra rapide (pas de backpropagation pour le réseau profond)."
-  - "Performances très élevées grâce au transfert d'apprentissage."
+  - "Extrêmement rapide à entraîner (seulement une passe d'inférence pour le CNN)."
+  - "Tire parti des excellentes représentations d'ImageNet."
+  - "Pas de risque de sur-apprentissage catastrophique du réseau profond."
 cons:
-  - "L'extraction des features prend quelques secondes selon le nombre d'images."
+  - "La phase d'extraction peut prendre un peu de temps sur de très gros volumes de données."
+  - "Ne permet pas aux couches convolutives de s'adapter spécifiquement à votre domaine métier (si très différent d'ImageNet)."
 hyperparameters:
   batch_size: "Taille du batch pour l'extraction (ex: 32)."
+math_theory: |
+  Ce pipeline de Transfer Learning (extraction de caractéristiques) fige les poids d'un réseau de neurones convolutif (CNN) pré-entraîné $\textcolor{#3b82f6}{f_{CNN}}$.
+  L'image d'entrée $\textcolor{#10b981}{X}$ est transformée en un vecteur de caractéristiques dense $\textcolor{#fbbf24}{h}$ de dimension $d$ (ex: 1280 pour MobileNetV2) :
+  $$ \textcolor{#fbbf24}{h} = \textcolor{#3b82f6}{f_{CNN}}(\textcolor{#10b981}{X}) $$
+  Ensuite, une régression logistique standard est appliquée sur $\textcolor{#fbbf24}{h}$ pour prédire la probabilité de chaque classe $k$ :
+  $$ P(\textcolor{#ef4444}{y}=k | \textcolor{#fbbf24}{h}) = \frac{\exp(\textcolor{#8b5cf6}{W}_k \cdot \textcolor{#fbbf24}{h} + \textcolor{#8b5cf6}{b}_k)}{\sum_{j} \exp(\textcolor{#8b5cf6}{W}_j \cdot \textcolor{#fbbf24}{h} + \textcolor{#8b5cf6}{b}_j)} $$
+  où $\textcolor{#8b5cf6}{W}$ et $\textcolor{#8b5cf6}{b}$ sont les seuls paramètres appris lors de l'entraînement.
+math_illustration_svg: |
+  <svg viewBox="0 0 800 400" xmlns="http://www.w3.org/2000/svg">
+    <rect x="0" y="0" width="800" height="400" fill="#1e293b" rx="10"/>
+    <text x="400" y="40" fill="#ffffff" font-family="sans-serif" font-size="22" font-weight="bold" text-anchor="middle">Transfer Learning : Feature Extraction</text>
+    <rect x="50" y="150" width="100" height="100" fill="#10b981" fill-opacity="0.2" stroke="#10b981" stroke-width="2" rx="5"/>
+    <text x="100" y="205" fill="#10b981" font-family="sans-serif" font-size="18" font-weight="bold" text-anchor="middle">Image X</text>
+    <path d="M160 200 L220 200" stroke="#ffffff" stroke-width="2" marker-end="url(#arrow)" />
+    <rect x="230" y="100" width="160" height="200" fill="#3b82f6" fill-opacity="0.2" stroke="#3b82f6" stroke-width="2" rx="5"/>
+    <text x="310" y="180" fill="#3b82f6" font-family="sans-serif" font-size="20" font-weight="bold" text-anchor="middle">CNN (Frozen)</text>
+    <text x="310" y="220" fill="#3b82f6" font-family="sans-serif" font-size="16" text-anchor="middle">f_CNN</text>
+    <path d="M400 200 L460 200" stroke="#ffffff" stroke-width="2" marker-end="url(#arrow)" />
+    <rect x="470" y="100" width="60" height="200" fill="#fbbf24" fill-opacity="0.2" stroke="#fbbf24" stroke-width="2" rx="5"/>
+    <text x="500" y="205" fill="#fbbf24" font-family="sans-serif" font-size="18" font-weight="bold" text-anchor="middle">h</text>
+    <path d="M540 200 L600 200" stroke="#ffffff" stroke-width="2" marker-end="url(#arrow)" />
+    <rect x="610" y="120" width="150" height="160" fill="#8b5cf6" fill-opacity="0.2" stroke="#8b5cf6" stroke-width="2" rx="5"/>
+    <text x="685" y="160" fill="#8b5cf6" font-family="sans-serif" font-size="18" font-weight="bold" text-anchor="middle">LogReg</text>
+    <text x="685" y="195" fill="#8b5cf6" font-family="sans-serif" font-size="16" text-anchor="middle">Weights W, b</text>
+    <circle cx="685" cy="250" r="20" fill="#ef4444" fill-opacity="0.2" stroke="#ef4444" stroke-width="2"/>
+    <text x="685" y="255" fill="#ef4444" font-family="sans-serif" font-size="16" font-weight="bold" text-anchor="middle">y</text>
+    <defs>
+      <marker id="arrow" markerWidth="10" markerHeight="10" refX="9" refY="3" orient="auto">
+        <path d="M0,0 L0,6 L9,3 z" fill="#ffffff" />
+      </marker>
+    </defs>
+  </svg>
 code_template: |
   import pandas as pd
   import numpy as np
@@ -130,20 +170,19 @@ code_template: |
       print("[AVERTISSEMENT] X_train, y_train, ou X_test manquants, ou torch non disponible.")
 
 illustration_mermaid: |
-  graph TD
-    subgraph Fast Image Feature Extraction Pipeline
-      In([Image Inputs]) --> Resize[Resize & Crop]
-      Resize --> Norm[Normalize]
-      Norm --> MobileNet[MobileNetV2 CNN]
-      MobileNet --> Flatten[Global Avg Pooling Layer]
-      Flatten --> Features[1280-dim Feature Vector]
-      Features --> LR[Logistic Regression Classifier]
-      LR --> Out([Predicted Class])
-    end
-    style In fill:#f8fafc,stroke:#94a3b8,stroke-width:1px
+  flowchart LR
+    In[/ "Images" /] --> Model{"MobileNetV2\n(Extracteur)"}
+    Config(["Params\nBatch Size"]) -.-> Model
+    Model --> Features(["Features\n(Vecteurs 1D)"])
+    Features --> LR{"Régression\nLogistique"}
+    LR --> Out(["Prédictions\n(Classes)"])
+    
+    style In fill:#fbbf24,stroke:#d97706,stroke-width:2px,color:#000
+    style Config fill:#8b5cf6,stroke:#7c3aed,stroke-width:2px,color:#fff
+    style Model fill:#3b82f6,stroke:#2563eb,stroke-width:2px,color:#fff
+    style LR fill:#3b82f6,stroke:#2563eb,stroke-width:2px,color:#fff
+    style Features fill:#10b981,stroke:#059669,stroke-width:2px,color:#fff
     style Out fill:#10b981,stroke:#059669,stroke-width:2px,color:#fff
-    style MobileNet fill:#8b5cf6,stroke:#7c3aed,stroke-width:2px,color:#fff
-    style LR fill:#8b5cf6,stroke:#7c3aed,stroke-width:2px,color:#fff
 
 _metadata:
   bloc: 3

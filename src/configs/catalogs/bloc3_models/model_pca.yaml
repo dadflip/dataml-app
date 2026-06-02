@@ -1,17 +1,70 @@
 id: "model_pca"
 name: "Model: Principal Component Analysis (PCA)"
-description: "Réduction de dimension linéaire. Transforme les données en composantes principales orthogonales."
+description: |
+  L'Analyse en Composantes Principales (PCA) est une technique d'apprentissage non-supervisée linéaire de réduction de dimension. Elle projette les données d'origine dans un nouvel espace orthogonal de moindre dimension, en maximisant la variance (l'information) conservée sur chaque nouvel axe (composante principale).
 category: "Réduction de Dimension"
 tags: ["model", "dimensionality-reduction", "tabular", "sklearn", "pca"]
 applies_to: ["Tabulaire"]
-when_to_use: "Pour visualiser un dataset de grande dimension en 2D/3D ou supprimer la colinéarité avant un modèle lourd."
+when_to_use: |
+  À utiliser pour réduire le nombre de descripteurs (features) lorsque vous êtes confronté à la malédiction de la dimensionnalité, pour visualiser des données complexes en 2D ou 3D, ou pour éliminer la colinéarité (variables fortement corrélées) avant d'appliquer un modèle linéaire ou un réseau de neurones.
+use_cases:
+  - "Visualisation exploratoire (EDA) de jeux de données à haute dimensionnalité (ex: expression génomique, images aplaties)."
+  - "Prétraitement d'images ou de signaux pour en extraire l'essence (ex: Eigenfaces pour la reconnaissance faciale)."
+  - "Réduction du bruit et de la taille en mémoire d'un jeu de données avant l'entraînement d'algorithmes coûteux."
 pros:
-  - "Très rapide."
-  - "Préserve la variance globale."
+  - "Très rapide et computationnellement efficace grâce aux méthodes d'algèbre linéaire optimisées (SVD)."
+  - "Supprime mathématiquement la multicolinéarité : toutes les composantes principales sont orthogonales entre elles."
+  - "Fournit une mesure interprétable de l'information conservée via le ratio de variance expliquée."
 cons:
-  - "Linéaire uniquement."
+  - "Transforme les données de manière linéaire uniquement, incapable de capturer des variétés non linéaires complexes (contrairement à t-SNE, UMAP ou Kernel PCA)."
+  - "Sensible aux valeurs extrêmes (outliers) et nécessite impérativement de standardiser les données (moyenne nulle, variance unitaire) au préalable."
+  - "Perte d'interprétabilité des features individuelles, les nouvelles composantes étant des combinaisons linéaires des variables initiales."
 hyperparameters:
   n_components: "Nombre de composantes à garder (ex: 2)."
+math_theory: |
+  L'Analyse en Composantes Principales (PCA) cherche la projection linéaire des données centrées $\textcolor{#10b981}{X}$ qui maximise la variance conservée. Mathématiquement, cela revient à calculer la matrice de covariance $\textcolor{#fbbf24}{C}$ :
+  $$ \textcolor{#fbbf24}{C} = \frac{1}{n} \textcolor{#10b981}{X}^T \textcolor{#10b981}{X} $$
+  Ensuite, on résout le problème aux valeurs propres pour extraire les composantes principales (vecteurs propres) $\textcolor{#3b82f6}{v_k}$ et leurs variances associées (valeurs propres) $\textcolor{#ef4444}{\lambda_k}$ :
+  $$ \textcolor{#fbbf24}{C} \textcolor{#3b82f6}{v_k} = \textcolor{#ef4444}{\lambda_k} \textcolor{#3b82f6}{v_k} $$
+  Les données sont finalement projetées sur les top-K vecteurs propres ayant les plus grandes valeurs propres.
+math_illustration_svg: |
+  <svg viewBox="0 0 500 250" xmlns="http://www.w3.org/2000/svg">
+    <rect width="100%" height="100%" fill="#18181b" rx="10"/>
+    <text x="250" y="25" fill="#ffffff" font-family="sans-serif" font-size="16" font-weight="bold" text-anchor="middle">Principal Component Analysis (PCA)</text>
+    
+    <!-- Coordinate System -->
+    <path d="M 250 200 L 250 50" stroke="#52525b" stroke-width="2" stroke-dasharray="4,4"/>
+    <path d="M 100 150 L 400 150" stroke="#52525b" stroke-width="2" stroke-dasharray="4,4"/>
+    
+    <!-- Data Ellipse -->
+    <ellipse cx="250" cy="150" rx="120" ry="40" fill="#10b981" fill-opacity="0.2" transform="rotate(-30 250 150)"/>
+    
+    <!-- Data Points -->
+    <circle cx="200" cy="170" r="3" fill="#10b981"/>
+    <circle cx="220" cy="150" r="3" fill="#10b981"/>
+    <circle cx="280" cy="140" r="3" fill="#10b981"/>
+    <circle cx="320" cy="110" r="3" fill="#10b981"/>
+    <circle cx="260" cy="130" r="3" fill="#10b981"/>
+    <circle cx="180" cy="190" r="3" fill="#10b981"/>
+    <circle cx="240" cy="160" r="3" fill="#10b981"/>
+    <circle cx="300" cy="120" r="3" fill="#10b981"/>
+    <text x="350" y="90" fill="#10b981" font-family="sans-serif" font-size="14" font-weight="bold">X (Centered)</text>
+    
+    <!-- PC1 -->
+    <path d="M 250 150 L 354 90" stroke="#3b82f6" stroke-width="4"/>
+    <polygon points="354,90 344,92 350,100" fill="#3b82f6" transform="rotate(-30 354 90)"/>
+    <text x="360" y="80" fill="#3b82f6" font-family="sans-serif" font-size="14" font-weight="bold">v_1 (PC1)</text>
+    <text x="310" y="140" fill="#ef4444" font-family="sans-serif" font-size="12">λ_1 (Max Variance)</text>
+    
+    <!-- PC2 -->
+    <path d="M 250 150 L 210 80" stroke="#fbbf24" stroke-width="4"/>
+    <polygon points="210,80 206,90 216,86" fill="#fbbf24" transform="rotate(60 210 80)"/>
+    <text x="180" y="70" fill="#fbbf24" font-family="sans-serif" font-size="14" font-weight="bold">v_2 (PC2)</text>
+    <text x="150" y="110" fill="#ef4444" font-family="sans-serif" font-size="12">λ_2 (Min Variance)</text>
+    
+    <!-- Origin Center -->
+    <circle cx="250" cy="150" r="5" fill="#ffffff"/>
+  </svg>
 code_template: |
   import pandas as pd
   import numpy as np
@@ -46,12 +99,48 @@ code_template: |
       training_history = {"status": "success", "explained_variance": sum(model.explained_variance_ratio_)}
       task_type = "dimensionality_reduction"
 illustration_mermaid: |
-    graph LR
-      Data([Features]) --> Model((Machine Learning))
-      Model --> Pred([Predictions])
-      style Model fill:#8b5cf6,stroke:#7c3aed,stroke-width:2px,color:#fff
-      style Data fill:#f8fafc,stroke:#94a3b8,stroke-width:1px
-      style Pred fill:#f8fafc,stroke:#94a3b8,stroke-width:1px
+  flowchart LR
+    %% Inputs/Params
+    DataTrain[/ "Données Haute Dimension (X)" /]
+    Params[/ "Hyperparamètres (n_components)" /]
+    
+    %% Processes/Models
+    Centering{"Centrage & Réduction"}
+    Covariance{"Matrice de Covariance"}
+    Eigendecomp{"Décomposition SVD / Valeurs Propres"}
+    SelectPC{"Sélection des Top N Composantes"}
+    Transform{"Projection (Transform)"}
+    
+    %% Tensors/DataFrames
+    Model(["Modèle PCA Ajusté (Vecteurs Propres)"])
+    Pred(["Nouvelles Coordonnées (Composantes Principales)"])
+    VarRatio(["Ratio de Variance Expliquée"])
+    
+    %% Connections
+    DataTrain --> Centering
+    Centering --> Covariance
+    Covariance --> Eigendecomp
+    Params --> SelectPC
+    Eigendecomp --> SelectPC
+    SelectPC --> Model
+    Model --> Transform
+    Centering --> Transform
+    Transform --> Pred
+    Eigendecomp --> VarRatio
+    
+    %% Styling
+    style DataTrain fill:#fbbf24,stroke:#d97706,stroke-width:2px,color:#000
+    style Params fill:#fbbf24,stroke:#d97706,stroke-width:2px,color:#000
+    
+    style Centering fill:#3b82f6,stroke:#2563eb,stroke-width:2px,color:#fff
+    style Covariance fill:#3b82f6,stroke:#2563eb,stroke-width:2px,color:#fff
+    style Eigendecomp fill:#3b82f6,stroke:#2563eb,stroke-width:2px,color:#fff
+    style SelectPC fill:#3b82f6,stroke:#2563eb,stroke-width:2px,color:#fff
+    style Transform fill:#3b82f6,stroke:#2563eb,stroke-width:2px,color:#fff
+    
+    style Model fill:#10b981,stroke:#059669,stroke-width:2px,color:#fff
+    style Pred fill:#10b981,stroke:#059669,stroke-width:2px,color:#fff
+    style VarRatio fill:#10b981,stroke:#059669,stroke-width:2px,color:#fff
 
 _metadata:
   bloc: 3

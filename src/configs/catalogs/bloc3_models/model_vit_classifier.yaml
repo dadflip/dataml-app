@@ -1,14 +1,22 @@
 id: "model_vit_classifier"
 name: "Model: Vision Transformer (ViT)"
-description: "Vision Transformer par Google. Applique l'architecture Transformer (Self-Attention) directement sur des patchs d'images."
+description: |
+  Vision Transformer (ViT) par Google. Remplace les convolutions classiques par l'architecture Transformer (mécanisme de Self-Attention) appliquée directement sur des séquences de patchs d'images, atteignant l'état de l'art sur de nombreuses tâches de vision.
 category: "Vision par Ordinateur (Modèles Entraînés)"
 tags: ["model", "vision", "classification", "transformers", "huggingface", "vit", "deep-learning"]
 applies_to: ["Images"]
-when_to_use: "Sur de gigantesques datasets où les ViT surclassent les CNN (ResNet)."
+when_to_use: |
+  Privilégié sur de vastes ensembles de données où les modèles ViT surpassent les réseaux de neurones convolutifs (CNN, ex: ResNet) grâce à leur capacité à modéliser des dépendances globales complexes.
+use_cases:
+  - "Classification fine d'images médicales à haute résolution."
+  - "Reconnaissance de défauts industriels complexes sur de gros volumes de données."
+  - "Catégorisation d'images satellites et de télédétection."
 pros:
-  - "State-of-the-art absolu sur d'énormes volumes de données."
+  - "Performances prédictives à l'état de l'art absolu lorsqu'entraîné sur d'énormes volumes de données."
+  - "Capture les relations spatiales globales dès les premières couches, contrairement aux CNN."
 cons:
-  - "Plus lent et gourmand en VRAM qu'un CNN. Difficile à entraîner sur petit dataset sans fort pré-entraînement."
+  - "Plus lent en inférence et beaucoup plus gourmand en VRAM qu'un CNN de taille équivalente."
+  - "Nécessite généralement un fort pré-entraînement ou d'immenses datasets pour briller (manque de biais inductif)."
 hyperparameters:
   epochs: "Nombre d'époques (ex: 3)."
 code_template: |
@@ -97,20 +105,91 @@ code_template: |
       full_pipeline = model
       training_history = {"status": "success"}
 illustration_mermaid: |
-    graph TD
-      In([Input Image]) --> Patch(Split Image into Patches)
-      Patch --> Flat(Flatten Patches & Linear Projection)
-      Flat --> Pos(Add Positional Embeddings)
-      Pos --> Trans(Transformer Encoder Blocks)
-      Trans --> Cls(Extract CLS Token State)
-      Cls --> MLP(MLP Head)
-      MLP --> Out([Class Predictions])
-      
-      style In fill:#f8fafc,stroke:#94a3b8,stroke-width:2px
-      style Patch fill:#38bdf8,stroke:#0284c7,stroke-width:2px,color:#fff
-      style Trans fill:#8b5cf6,stroke:#7c3aed,stroke-width:2px,color:#fff
-      style MLP fill:#f59e0b,stroke:#d97706,stroke-width:2px,color:#fff
-      style Out fill:#10b981,stroke:#059669,stroke-width:2px,color:#fff
+  flowchart LR
+    In[/"Hyperparamètres :<br/>EPOCHS"/] --> |Configuration| Train{"Fine-Tuning<br/>(Trainer)"}
+    Image(["Image en Entrée"]) --> Patch{"Découpage en Patchs"}
+    Patch --> Flat{"Aplatissement & Projection"}
+    Flat --> Pos{"Embeddings de Position"}
+    Pos --> Trans{"Blocs Encodeurs Transformer"}
+    Trans --> Cls{"Token CLS"}
+    Cls --> MLP{"Tête MLP"}
+    MLP --> Train
+    Train --> Out(["Prédictions de Classes"])
+    
+    style In fill:#fbbf24,stroke:#d97706,stroke-width:2px,color:#000
+    style Image fill:#10b981,stroke:#059669,stroke-width:2px,color:#fff
+    style Patch fill:#3b82f6,stroke:#2563eb,stroke-width:2px,color:#fff
+    style Flat fill:#3b82f6,stroke:#2563eb,stroke-width:2px,color:#fff
+    style Pos fill:#3b82f6,stroke:#2563eb,stroke-width:2px,color:#fff
+    style Trans fill:#3b82f6,stroke:#2563eb,stroke-width:2px,color:#fff
+    style Cls fill:#3b82f6,stroke:#2563eb,stroke-width:2px,color:#fff
+    style MLP fill:#3b82f6,stroke:#2563eb,stroke-width:2px,color:#fff
+    style Train fill:#3b82f6,stroke:#2563eb,stroke-width:2px,color:#fff
+    style Out fill:#10b981,stroke:#059669,stroke-width:2px,color:#fff
+
+math_theory: |
+  Vision Transformers (ViT) process images by dividing them into a grid of fixed-size patches, flattening them, and applying a standard Transformer Encoder.
+  
+  The input image $\textcolor{#ef4444}{\mathbf{X}} \in \mathbb{R}^{H \times W \times C}$ is reshaped into a sequence of patches $\textcolor{#fbbf24}{\mathbf{X}_p} \in \mathbb{R}^{N \times (P^2 \cdot C)}$, where $(P, P)$ is the patch resolution and $N = \frac{H \cdot W}{P^2}$.
+  
+  These patches are linearly projected into embeddings, prepended with a learnable class token $\textcolor{#10b981}{\mathbf{x}_{\text{class}}}$, and position embeddings $\textcolor{#3b82f6}{\mathbf{E}_{pos}}$ are added:
+  $$ \textcolor{#8b5cf6}{\mathbf{Z}_0} = [\textcolor{#10b981}{\mathbf{x}_{\text{class}}}; \textcolor{#fbbf24}{\mathbf{X}_p^1}\mathbf{E}; \dots; \textcolor{#fbbf24}{\mathbf{X}_p^N}\mathbf{E}] + \textcolor{#3b82f6}{\mathbf{E}_{pos}} $$
+  
+  This sequence $\textcolor{#8b5cf6}{\mathbf{Z}_0}$ is then passed through $L$ Transformer Encoder layers, using Multi-Head Self-Attention (MSA) and Multi-Layer Perceptrons (MLP):
+  $$ \mathbf{Z}'_{\ell} = \text{MSA}(\text{LN}(\mathbf{Z}_{\ell-1})) + \mathbf{Z}_{\ell-1} $$
+  $$ \mathbf{Z}_{\ell} = \text{MLP}(\text{LN}(\mathbf{Z}'_{\ell})) + \mathbf{Z}'_{\ell} $$
+
+  Finally, the classification head uses the state of the class token at the last layer, $\mathbf{Z}_L^0$.
+
+math_illustration_svg: |
+  <svg viewBox="0 0 800 400" xmlns="http://www.w3.org/2000/svg">
+    <defs>
+      <marker id="arrow" viewBox="0 0 10 10" refX="10" refY="5" markerWidth="6" markerHeight="6" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="#666" /></marker>
+    </defs>
+    
+    <!-- Image -->
+    <rect x="50" y="150" width="80" height="80" fill="#fee2e2" stroke="#ef4444" stroke-width="3" />
+    <path d="M90,150 L90,230 M50,190 L130,190" stroke="#ef4444" stroke-width="2" stroke-dasharray="4,4" />
+    <text x="90" y="250" font-family="sans-serif" font-size="14" font-weight="bold" fill="#ef4444" text-anchor="middle">Image X</text>
+
+    <!-- Patches -->
+    <rect x="180" y="130" width="20" height="120" fill="#fef3c7" stroke="#fbbf24" stroke-width="2" />
+    <rect x="210" y="130" width="20" height="120" fill="#fef3c7" stroke="#fbbf24" stroke-width="2" />
+    <rect x="240" y="130" width="20" height="120" fill="#fef3c7" stroke="#fbbf24" stroke-width="2" />
+    <rect x="270" y="130" width="20" height="120" fill="#fef3c7" stroke="#fbbf24" stroke-width="2" />
+    <text x="235" y="270" font-family="sans-serif" font-size="14" font-weight="bold" fill="#d97706" text-anchor="middle">Flattened Patches X_p</text>
+
+    <!-- Class Token -->
+    <rect x="150" y="130" width="20" height="120" fill="#d1fae5" stroke="#10b981" stroke-width="2" />
+    <text x="160" y="120" font-family="sans-serif" font-size="12" font-weight="bold" fill="#059669" text-anchor="middle">CLS</text>
+
+    <!-- Linear Proj + Pos Emb -->
+    <rect x="340" y="130" width="100" height="120" rx="8" fill="#dbeafe" stroke="#3b82f6" stroke-width="3" />
+    <text x="390" y="180" font-family="sans-serif" font-size="14" font-weight="bold" fill="#1d4ed8" text-anchor="middle">Linear Proj</text>
+    <text x="390" y="200" font-family="sans-serif" font-size="14" font-weight="bold" fill="#1d4ed8" text-anchor="middle">+ Pos Emb</text>
+
+    <!-- Transformer Encoder -->
+    <rect x="500" y="80" width="120" height="220" rx="8" fill="#ede9fe" stroke="#8b5cf6" stroke-width="3" />
+    <text x="560" y="130" font-family="sans-serif" font-size="16" font-weight="bold" fill="#6d28d9" text-anchor="middle">Transformer</text>
+    <text x="560" y="150" font-family="sans-serif" font-size="16" font-weight="bold" fill="#6d28d9" text-anchor="middle">Encoder</text>
+    <rect x="520" y="170" width="80" height="40" rx="4" fill="#ddd6fe" stroke="#8b5cf6" stroke-width="2" />
+    <text x="560" y="195" font-family="sans-serif" font-size="12" fill="#6d28d9" text-anchor="middle">Self-Attention</text>
+    <rect x="520" y="230" width="80" height="40" rx="4" fill="#ddd6fe" stroke="#8b5cf6" stroke-width="2" />
+    <text x="560" y="255" font-family="sans-serif" font-size="12" fill="#6d28d9" text-anchor="middle">MLP</text>
+
+    <!-- Output -->
+    <rect x="680" y="130" width="80" height="50" rx="8" fill="#d1fae5" stroke="#10b981" stroke-width="3" />
+    <text x="720" y="160" font-family="sans-serif" font-size="14" font-weight="bold" fill="#059669" text-anchor="middle">MLP Head</text>
+    
+    <text x="720" y="210" font-family="sans-serif" font-size="14" font-weight="bold" fill="#ef4444" text-anchor="middle">Classes</text>
+
+    <!-- Arrows -->
+    <path d="M140,190 L165,190" stroke="#666" stroke-width="2" fill="none" marker-end="url(#arrow)"/>
+    <path d="M300,190 L330,190" stroke="#666" stroke-width="2" fill="none" marker-end="url(#arrow)"/>
+    <path d="M450,190 L490,190" stroke="#666" stroke-width="2" fill="none" marker-end="url(#arrow)"/>
+    <path d="M630,130 L670,145" stroke="#666" stroke-width="2" fill="none" marker-end="url(#arrow)"/>
+    <text x="650" y="125" font-family="sans-serif" font-size="12" fill="#6d28d9" text-anchor="middle">CLS State</text>
+  </svg>
 
 _metadata:
   bloc: 3

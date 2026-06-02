@@ -1,6 +1,15 @@
 id: eda_target_distribution
 name: 'EDA: Distribution de la Target'
-description: Analyse spécifique de la variable cible (Régression ou Classification).
+description: "Analyse spécifique de la distribution de la variable cible pour identifier son type (Régression ou Classification) et ses caractéristiques."
+when_to_use: "Au tout début de l'exploration des données pour comprendre la nature de ce que vous cherchez à prédire."
+use_cases:
+  - "Vérifier le déséquilibre des classes pour un problème de classification (Target catégorielle)."
+  - "Observer l'asymétrie ou les valeurs extrêmes (outliers) pour un problème de régression (Target continue)."
+pros:
+  - "Adaptation automatique selon le type de la Target (numérique vs catégorielle)."
+  - "Donne une vue immédiate des proportions ou de la distribution."
+cons:
+  - "L'heuristique de détection (nunique > 20) peut parfois se tromper sur certaines variables discrètes."
 category: 3. Exploratory Data Analysis
 tags:
 - eda
@@ -31,16 +40,24 @@ code_template: |
       print("[EDA] AVERTISSEMENT : target_name n'est pas définie ou introuvable dans df.")
 illustration_mermaid: |
     graph TD
-      DF([DataFrame]) --> Check{Check target_name}
-      Check -- Valid --> CheckNum{Numeric & >20 uniques?}
-      CheckNum -- Yes --> RegPlot[sns.histplot]
-      CheckNum -- No --> ClfPlot[sns.countplot]
-      RegPlot --> Show[plt.show]
-      ClfPlot --> Show
-      Check -- Missing --> Warn[Print Warning]
-      style RegPlot fill:#8b5cf6,stroke:#7c3aed,stroke-width:2px,color:#fff
-      style ClfPlot fill:#ec4899,stroke:#db2777,stroke-width:2px,color:#fff
-      style CheckNum fill:#f59e0b,stroke:#d97706,stroke-width:2px,color:#fff
+      In1[/df/] --> P1{Check target_name}
+      In2[/target_name/] --> P1
+      P1 -- Valide --> P2{Check type & unique > 20}
+      P2 -- Continue --> P3{sns.histplot}
+      P2 -- Catégorielle --> P4{sns.countplot}
+      P3 --> Out1([Fig: Dist Continue])
+      P4 --> Out2([Fig: Dist Catégorielle])
+      P1 -- Invalide --> Out3([Print Avertissement])
+      
+      style In1 fill:#fbbf24,stroke:#d97706,stroke-width:2px,color:#000
+      style In2 fill:#fbbf24,stroke:#d97706,stroke-width:2px,color:#000
+      style P1 fill:#3b82f6,stroke:#2563eb,stroke-width:2px,color:#fff
+      style P2 fill:#3b82f6,stroke:#2563eb,stroke-width:2px,color:#fff
+      style P3 fill:#3b82f6,stroke:#2563eb,stroke-width:2px,color:#fff
+      style P4 fill:#3b82f6,stroke:#2563eb,stroke-width:2px,color:#fff
+      style Out1 fill:#10b981,stroke:#059669,stroke-width:2px,color:#fff
+      style Out2 fill:#10b981,stroke:#059669,stroke-width:2px,color:#fff
+      style Out3 fill:#8b5cf6,stroke:#7c3aed,stroke-width:2px,color:#fff
 _metadata:
   bloc: 1
   section: 3_eda

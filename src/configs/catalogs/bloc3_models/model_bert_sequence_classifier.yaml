@@ -1,14 +1,24 @@
 id: "model_bert_sequence_classifier"
 name: "Model: BERT Sequence Classifier (Fine-Tuning)"
-description: "Fine-tune un modèle BERT de HuggingFace via l'API Trainer."
+description: |
+  Modèle de classification de séquences textuelles basé sur l'architecture BERT (Bidirectional Encoder Representations from Transformers). Ce modèle charge une version pré-entraînée (par exemple DistilBERT) depuis Hugging Face et affine (fine-tune) la couche finale pour une tâche de classification spécifique.
 category: "Modèles NLP (Entraînés)"
 tags: ["model", "nlp", "classification", "transformers", "huggingface", "bert", "deep-learning"]
 applies_to: ["Texte"]
-when_to_use: "Quand vous avez au moins quelques centaines/milliers d'exemples de texte labellisés et vous voulez la précision SOTA (State Of The Art)."
+when_to_use: |
+  À privilégier lorsque vous traitez du texte naturel complexe (langage courant, sémantique riche), que vous disposez d'au moins quelques centaines à milliers d'exemples d'entraînement, et que vous souhaitez atteindre des performances à l'état de l'art (SOTA).
+use_cases:
+  - "Analyse de sentiment sur des critiques de produits, avis clients ou posts sur les réseaux sociaux."
+  - "Catégorisation automatique de tickets de support client ou d'emails."
+  - "Détection de discours haineux, de toxicité ou modération de contenu en ligne."
 pros:
-  - "Précision exceptionnelle sur du texte complexe."
+  - "Offre une précision souvent inégalée (State of the Art) grâce à sa compréhension contextuelle bidirectionnelle."
+  - "Très robuste face aux variations linguistiques (synonymes, tournures de phrases complexes)."
+  - "Le 'Fine-tuning' permet d'adapter rapidement le modèle à des domaines très spécifiques."
 cons:
-  - "Extrêmement lent sur CPU. GPU indispensable."
+  - "Entraînement et inférence extrêmement lents sur CPU ; requiert idéalement un accélérateur matériel (GPU/TPU)."
+  - "Modèle lourd (plusieurs centaines de Mo à quelques Go), nécessitant beaucoup de RAM."
+  - "Fonctionne mal avec des textes très longs sans découpage, limitant l'entrée à 512 'tokens'."
 hyperparameters:
   epochs: "Nombre d'époques (ex: 3)."
   learning_rate: "Taux d'apprentissage (ex: 2e-5)."
@@ -137,34 +147,112 @@ code_template: |
       full_pipeline = pipeline("text-classification", model=model, tokenizer=tokenizer, device=0 if torch.cuda.is_available() else -1)
 
 illustration_mermaid: |
-    graph TD
-      subgraph Tokenization
-        Text([Text Inputs]) --> Tok[AutoTokenizer]
-        Tok --> Ids([Input IDs & Attention Mask])
-      end
+    flowchart LR
+      Text(["Textes d'entrée"])
+      Tok{"Tokenizer\n(HuggingFace)"}
+      Ids(["Input IDs &\nAttention Mask"])
+      Embed{"Embeddings\n(Mots & Positions)"}
+      L1{"Transformer\nCouche 1"}
+      LN{"Transformer\nCouche N"}
+      Pool{"Pooling\n(CLS Token)"}
+      FC{"Couche Linéaire\n(Classification)"}
+      Pred(["Classes Prédites"])
       
-      subgraph Transformer BackBone
-        Ids --> Embed[Word & Position\nEmbeddings]
-        Embed --> L1[Transformer Layer 1]
-        L1 --> L2[...]
-        L2 --> LN[Transformer Layer N]
-      end
+      Text --> Tok
+      Tok --> Ids
+      Ids --> Embed
+      Embed --> L1
+      L1 --> LN
+      LN --> Pool
+      Pool --> FC
+      FC --> Pred
       
-      subgraph Classification Head
-        LN --> Pool[CLS Token\nPooling]
-        Pool --> FC[Linear Layer]
-        FC --> SM[Softmax]
-      end
-      
-      SM --> Pred([Predicted Labels])
-      
-      style Text fill:#f8fafc,stroke:#94a3b8,stroke-width:1px
-      style Tok fill:#8b5cf6,stroke:#7c3aed,stroke-width:2px,color:#fff
-      style L1 fill:#a78bfa,stroke:#7c3aed,stroke-width:1px,color:#fff
-      style LN fill:#a78bfa,stroke:#7c3aed,stroke-width:1px,color:#fff
-      style Pool fill:#c4b5fd,stroke:#8b5cf6,stroke-width:1px,color:#000
-      style FC fill:#c4b5fd,stroke:#8b5cf6,stroke-width:1px,color:#000
-      style Pred fill:#f8fafc,stroke:#94a3b8,stroke-width:1px
+      style Text fill:#10b981,stroke:#059669,stroke-width:2px,color:#fff
+      style Ids fill:#10b981,stroke:#059669,stroke-width:2px,color:#fff
+      style Pred fill:#10b981,stroke:#059669,stroke-width:2px,color:#fff
+      style Tok fill:#3b82f6,stroke:#2563eb,stroke-width:2px,color:#fff
+      style Embed fill:#3b82f6,stroke:#2563eb,stroke-width:2px,color:#fff
+      style L1 fill:#3b82f6,stroke:#2563eb,stroke-width:2px,color:#fff
+      style LN fill:#3b82f6,stroke:#2563eb,stroke-width:2px,color:#fff
+      style Pool fill:#3b82f6,stroke:#2563eb,stroke-width:2px,color:#fff
+      style FC fill:#3b82f6,stroke:#2563eb,stroke-width:2px,color:#fff
+
+math_theory: |
+  BERT utilizes a multi-layer Bidirectional Transformer encoder. The core mechanism is scaled dot-product attention, allowing the model to weigh the importance of each token relative to others in the sequence:
+  
+  $$ \text{Attention}(\textcolor{#3b82f6}{Q}, \textcolor{#10b981}{K}, \textcolor{#fbbf24}{V}) = \text{Softmax}\left(\frac{\textcolor{#3b82f6}{Q} \cdot \textcolor{#10b981}{K}^T}{\sqrt{\textcolor{#ef4444}{d_k}}}\right) \textcolor{#fbbf24}{V} $$
+  
+  For sequence classification, the final hidden state of the special `[CLS]` token, $\textcolor{#8b5cf6}{h_{\text{CLS}}}$, is extracted. This vector summarizes the entire sequence's context. A classification head (linear layer + softmax) is applied on top:
+  
+  $$ P(y \mid X) = \text{Softmax}(\textcolor{#3b82f6}{W} \cdot \textcolor{#8b5cf6}{h_{\text{CLS}}} + \textcolor{#10b981}{b}) $$
+  
+  where:
+  *   $\textcolor{#3b82f6}{Q}, \textcolor{#10b981}{K}, \textcolor{#fbbf24}{V}$ are Queries, Keys, and Values matrices.
+  *   $\textcolor{#ef4444}{d_k}$ is the dimension of the keys.
+  *   $\textcolor{#8b5cf6}{h_{\text{CLS}}}$ is the pooled contextual representation.
+
+math_illustration_svg: |
+  <svg viewBox="0 0 800 400" xmlns="http://www.w3.org/2000/svg">
+    <defs>
+      <marker id="arrow" viewBox="0 0 10 10" refX="10" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+        <path d="M 0 0 L 10 5 L 0 10 z" fill="#6b7280" />
+      </marker>
+    </defs>
+    
+    <!-- Self Attention Block -->
+    <rect x="50" y="50" width="350" height="300" rx="10" fill="#f8fafc" stroke="#cbd5e1" stroke-width="2"/>
+    <text x="225" y="80" text-anchor="middle" font-family="sans-serif" font-size="18" font-weight="bold" fill="#334155">Self-Attention Mechanism</text>
+    
+    <!-- Q, K, V -->
+    <rect x="80" y="120" width="60" height="40" rx="5" fill="#eff6ff" stroke="#3b82f6" stroke-width="2"/>
+    <text x="110" y="145" text-anchor="middle" font-family="sans-serif" font-size="16" font-weight="bold" fill="#3b82f6">Q</text>
+    
+    <rect x="195" y="120" width="60" height="40" rx="5" fill="#f0fdf4" stroke="#10b981" stroke-width="2"/>
+    <text x="225" y="145" text-anchor="middle" font-family="sans-serif" font-size="16" font-weight="bold" fill="#10b981">K</text>
+    
+    <rect x="310" y="120" width="60" height="40" rx="5" fill="#fffbeb" stroke="#fbbf24" stroke-width="2"/>
+    <text x="340" y="145" text-anchor="middle" font-family="sans-serif" font-size="16" font-weight="bold" fill="#fbbf24">V</text>
+    
+    <!-- MatMul -->
+    <circle cx="165" cy="210" r="25" fill="#fef2f2" stroke="#ef4444" stroke-width="2"/>
+    <text x="165" y="215" text-anchor="middle" font-family="sans-serif" font-size="14" font-weight="bold" fill="#ef4444">x</text>
+    
+    <path d="M 110 160 C 110 180, 145 190, 145 190" fill="none" stroke="#6b7280" stroke-width="2" marker-end="url(#arrow)"/>
+    <path d="M 225 160 C 225 180, 185 190, 185 190" fill="none" stroke="#6b7280" stroke-width="2" marker-end="url(#arrow)"/>
+    
+    <!-- Scale & Softmax -->
+    <rect x="120" y="260" width="90" height="40" rx="5" fill="#f1f5f9" stroke="#94a3b8" stroke-width="2"/>
+    <text x="165" y="285" text-anchor="middle" font-family="sans-serif" font-size="12" font-weight="bold" fill="#475569">Softmax( / &#8730;d_k )</text>
+    
+    <line x1="165" y1="235" x2="165" y2="260" stroke="#6b7280" stroke-width="2" marker-end="url(#arrow)"/>
+    
+    <!-- V MatMul -->
+    <circle cx="340" cy="280" r="25" fill="#f3e8ff" stroke="#a855f7" stroke-width="2"/>
+    <text x="340" y="285" text-anchor="middle" font-family="sans-serif" font-size="14" font-weight="bold" fill="#a855f7">x</text>
+    
+    <line x1="210" y1="280" x2="315" y2="280" stroke="#6b7280" stroke-width="2" marker-end="url(#arrow)"/>
+    <line x1="340" y1="160" x2="340" y2="255" stroke="#6b7280" stroke-width="2" marker-end="url(#arrow)"/>
+    
+    <!-- Output Attention -->
+    <line x1="340" y1="305" x2="340" y2="330" stroke="#6b7280" stroke-width="2" marker-end="url(#arrow)"/>
+    
+    <!-- Output Side -->
+    <rect x="450" y="100" width="300" height="200" rx="10" fill="#fdf4ff" stroke="#f0abfc" stroke-width="2"/>
+    <text x="600" y="130" text-anchor="middle" font-family="sans-serif" font-size="18" font-weight="bold" fill="#c026d3">Classification</text>
+    
+    <!-- Path to Output -->
+    <line x1="400" y1="200" x2="450" y2="200" stroke="#6b7280" stroke-width="2" marker-end="url(#arrow)"/>
+    
+    <!-- h_CLS -->
+    <rect x="520" y="160" width="160" height="40" rx="5" fill="#faf5ff" stroke="#8b5cf6" stroke-width="2"/>
+    <text x="600" y="185" text-anchor="middle" font-family="sans-serif" font-size="16" font-weight="bold" fill="#8b5cf6">h_CLS</text>
+    
+    <line x1="600" y1="200" x2="600" y2="230" stroke="#6b7280" stroke-width="2" marker-end="url(#arrow)"/>
+    
+    <!-- Linear Head -->
+    <rect x="540" y="230" width="120" height="40" rx="5" fill="#eff6ff" stroke="#3b82f6" stroke-width="2"/>
+    <text x="600" y="255" text-anchor="middle" font-family="sans-serif" font-size="14" font-weight="bold" fill="#3b82f6">W * h + b</text>
+  </svg>
 
 _metadata:
   bloc: 3

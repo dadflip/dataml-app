@@ -1,16 +1,24 @@
 id: "model_prophet"
 name: "Model: Meta Prophet (Time Series Forecaster)"
-description: "Modèle de prévision de séries temporelles développé par Meta (Facebook), robuste aux données manquantes et variations saisonnières."
+description: |
+  Prophet est une procédure de prévision de séries temporelles open-source développée par Meta (Facebook Core Data Science). Basée sur un modèle additif où des tendances non linéaires s'ajustent à des composantes de saisonnalité (annuelle, hebdomadaire, quotidienne), elle excelle sur des données présentant de forts effets saisonniers et l'impact de jours fériés.
 category: "Modèles Séries Temporelles"
 tags: ["model", "time-series", "forecasting", "prophet"]
 applies_to: ["Séries Temporelles"]
-when_to_use: "Pour des prédictions (forecasting) temporelles avec de fortes composantes saisonnières."
+when_to_use: |
+  Privilégier Prophet pour la prévision à l'échelle de l'entreprise sur des données ayant des caractéristiques "humaines" typiques : saisonnalité forte et prévisible, historique d'au moins un an, jours fériés connus, et présence potentielle de points de rupture de tendance ou de données manquantes.
+use_cases:
+  - "Prévision de la fréquentation d'un site web ou des ventes e-commerce (effets week-end et soldes)."
+  - "Anticipation des volumes d'appels dans un centre de support client."
+  - "Suivi et prévision d'indicateurs économiques ou de performance métier sur le long terme."
 pros:
-  - "Très robuste, s'ajuste tout seul."
-  - "Gère les jours fériés."
+  - "Extrêmement robuste face aux données manquantes, aux changements de tendance abrupts et aux valeurs aberrantes (outliers)."
+  - "Permet l'intégration facile de jours fériés ou d'événements personnalisés (ex: Super Bowl, Black Friday)."
+  - "Produit des prévisions accompagnées d'intervalles d'incertitude et permet d'inspecter les composantes de saisonnalité."
 cons:
-  - "Nécessite la bibliothèque fbprophet / prophet."
-  - "Attends impérativement un DataFrame avec des colonnes 'ds' (dates) et 'y' (valeurs)."
+  - "Nécessite impérativement le formatage des données d'entraînement avec des colonnes nommées spécifiquement 'ds' (dates) et 'y' (valeurs)."
+  - "L'installation de la bibliothèque Python peut parfois s'avérer complexe en raison de ses dépendances (pystan ou cmdstanpy)."
+  - "Conçu principalement pour des séries univariées (bien qu'il accepte des régresseurs exogènes), il ne capture pas l'auto-corrélation avec la même finesse qu'un modèle ARIMA."
 hyperparameters:
   seasonality_mode: "Mode de saisonnalité ('additive' ou 'multiplicative')."
 code_template: |
@@ -25,13 +33,76 @@ code_template: |
   # [PARAM: SEASONALITY_MODE | string]
   SEASONALITY_MODE = "additive"
 illustration_mermaid: |
-    graph LR
-      Data([Features]) --> Model((Machine Learning))
-      Model --> Pred([Predictions])
-      style Model fill:#8b5cf6,stroke:#7c3aed,stroke-width:2px,color:#fff
-      style Data fill:#f8fafc,stroke:#94a3b8,stroke-width:1px
-      style Pred fill:#f8fafc,stroke:#94a3b8,stroke-width:1px
+  flowchart LR
+    %% Inputs/Params
+    DataTrain[/ "Séries Temporelles (df avec ds, y)" /]
+    Params[/ "Hyperparamètres (seasonality_mode)" /]
+    Holidays[/ "Calendrier Jours Fériés" /]
+    
+    %% Processes/Models
+    FitProphet{"Ajustement Modèle Additif (Trend + Seasonality + Holidays)"}
+    MakeFuture{"Création DataFrame Futur (make_future_dataframe)"}
+    Predict{"Inférence (predict)"}
+    
+    %% Tensors/DataFrames
+    Model(["Modèle Prophet Entraîné"])
+    Pred(["Prévisions (yhat, yhat_lower, yhat_upper)"])
+    Components(["Composantes (Tendance, Saisonnalité)"])
+    
+    %% Connections
+    DataTrain --> FitProphet
+    Params --> FitProphet
+    Holidays --> FitProphet
+    FitProphet --> Model
+    
+    Model --> MakeFuture
+    MakeFuture --> Predict
+    Predict --> Pred
+    Predict --> Components
+    
+    %% Styling
+    style DataTrain fill:#fbbf24,stroke:#d97706,stroke-width:2px,color:#000
+    style Params fill:#fbbf24,stroke:#d97706,stroke-width:2px,color:#000
+    style Holidays fill:#fbbf24,stroke:#d97706,stroke-width:2px,color:#000
+    
+    style FitProphet fill:#3b82f6,stroke:#2563eb,stroke-width:2px,color:#fff
+    style MakeFuture fill:#3b82f6,stroke:#2563eb,stroke-width:2px,color:#fff
+    style Predict fill:#3b82f6,stroke:#2563eb,stroke-width:2px,color:#fff
+    
+    style Model fill:#10b981,stroke:#059669,stroke-width:2px,color:#fff
+    style Pred fill:#10b981,stroke:#059669,stroke-width:2px,color:#fff
+    style Components fill:#10b981,stroke:#059669,stroke-width:2px,color:#fff
 
+math_theory: |
+  Modèle de prévision additif décomposant la série temporelle :
+  $$ \textcolor{#10b981}{y(t)} = \textcolor{#3b82f6}{g(t)} + \textcolor{#fbbf24}{s(t)} + \textcolor{#ef4444}{h(t)} + \textcolor{#8b5cf6}{\epsilon_t} $$
+  
+  Où :
+  - $\textcolor{#10b981}{y(t)}$ est la valeur de la série temporelle à l'instant $t$.
+  - $\textcolor{#3b82f6}{g(t)}$ modélise la **tendance** (croissance non périodique, souvent avec des points de rupture).
+  - $\textcolor{#fbbf24}{s(t)}$ représente la **saisonnalité** (changements périodiques comme hebdomadaires ou annuels, modélisés via des séries de Fourier).
+  - $\textcolor{#ef4444}{h(t)}$ intègre l'effet des **jours fériés** (holidays) ou d'événements exceptionnels ponctuels.
+  - $\textcolor{#8b5cf6}{\epsilon_t}$ est l'erreur résiduelle.
+math_illustration_svg: |
+  <svg viewBox="0 0 800 300" xmlns="http://www.w3.org/2000/svg">
+    <rect width="800" height="300" fill="#f8fafc" rx="10"/>
+    <path d="M 50 100 Q 150 80, 250 150 T 450 120 T 650 60" fill="none" stroke="#10b981" stroke-width="4"/>
+    <text x="70" y="70" font-family="Arial" font-size="18" font-weight="bold" fill="#10b981">y(t)</text>
+    <text x="200" y="230" font-family="Arial" font-size="24" font-weight="bold" fill="#1f2937">=</text>
+    <path d="M 250 250 L 350 220 L 420 180" fill="none" stroke="#3b82f6" stroke-width="3" stroke-dasharray="5"/>
+    <text x="250" y="275" font-family="Arial" font-size="14" font-weight="bold" fill="#3b82f6">g(t) Tendance</text>
+    <text x="440" y="230" font-family="Arial" font-size="24" font-weight="bold" fill="#1f2937">+</text>
+    <path d="M 470 230 Q 485 200, 500 230 T 530 230 T 560 230" fill="none" stroke="#fbbf24" stroke-width="3"/>
+    <text x="470" y="275" font-family="Arial" font-size="14" font-weight="bold" fill="#fbbf24">s(t) Saisonnalité</text>
+    <text x="580" y="230" font-family="Arial" font-size="24" font-weight="bold" fill="#1f2937">+</text>
+    <line x1="610" y1="230" x2="610" y2="180" stroke="#ef4444" stroke-width="3"/>
+    <circle cx="610" cy="180" r="4" fill="#ef4444"/>
+    <line x1="650" y1="230" x2="650" y2="200" stroke="#ef4444" stroke-width="3"/>
+    <circle cx="650" cy="200" r="4" fill="#ef4444"/>
+    <text x="600" y="275" font-family="Arial" font-size="14" font-weight="bold" fill="#ef4444">h(t) Jours fériés</text>
+    <text x="700" y="230" font-family="Arial" font-size="24" font-weight="bold" fill="#1f2937">+</text>
+    <text x="730" y="230" font-family="Arial" font-size="20" font-weight="bold" fill="#8b5cf6">ε_t</text>
+  </svg>
 _metadata:
   bloc: 3
   section: "3_nlp_and_timeseries"

@@ -1,14 +1,25 @@
 id: "model_clip_zeroshot_vision"
 name: "Model: CLIP Zero-Shot Vision (OpenAI)"
-description: "Contrastive Language-Image Pre-Training. Classifie des images dans n'importe quelles catégories textuelles définies par l'utilisateur."
+description: |
+  Modèle de fondation vision-langage (Contrastive Language-Image Pre-Training) par OpenAI.
+  Associe des images à n'importe quelles étiquettes textuelles (Zero-Shot) en projetant
+  textes et images dans un même espace latent.
 category: "Vision par Ordinateur (Pré-entraînés)"
 tags: ["model", "vision", "classification", "transformers", "clip", "zero-shot"]
 applies_to: ["Images"]
-when_to_use: "Pour classifier des images (ex: 'chat', 'chien', 'voiture') sans AUCUN entraînement."
+when_to_use: |
+  Pour classer des images selon des catégories arbitraires non connues à l'avance,
+  sans avoir besoin d'entraîner ou de fine-tuner un réseau de neurones.
+use_cases:
+  - "Classification d'images à la volée basée sur des prompts textuels."
+  - "Filtrage et modération de contenu visuel."
+  - "Moteur de recherche sémantique d'images."
 pros:
-  - "Magique : trouve ce que vous cherchez avec des mots clés."
+  - "Magique : fonctionne sans aucun entraînement avec des mots clés libres."
+  - "Extrêmement flexible et généraliste."
 cons:
-  - "Moins précis qu'un ResNet fine-tuné spécifiquement."
+  - "Moins précis qu'un modèle CNN/ViT fine-tuné spécifiquement pour une tâche restreinte."
+  - "Peut manquer de granularité sur des classifications très spécialisées (ex: médicales)."
 hyperparameters:
   candidate_labels: "Classes cibles séparées par des virgules (ex: 'un chat, un chien, une voiture')."
 code_template: |
@@ -91,38 +102,98 @@ code_template: |
       training_history = {"status": "success", "type": "zero_shot_vision"}
 
 illustration_mermaid: |
-    graph TD
-      subgraph Inputs
-        Img([Image])
-        Txt([Candidate Labels:\n'a dog', 'a cat'])
-      end
-      
-      subgraph CLIP Architecture
-        Img --> VEnc[Vision Encoder\nViT]
-        Txt --> TEnc[Text Encoder\nTransformer]
-        
-        VEnc --> VEmb[Image Embedding Vector]
-        TEnc --> TEmb[Text Embedding Vectors]
-      end
-      
-      subgraph Contrastive Matching
-        VEmb --> Dot[Cosine Similarity / Dot Product]
-        TEmb --> Dot
-        Dot --> SM[Softmax]
-      end
-      
-      subgraph Output
-        SM --> Prob([Probabilities per Label])
-        Prob --> Max[ArgMax]
-        Max --> Pred([Predicted Label])
-      end
-      
-      style VEnc fill:#8b5cf6,stroke:#7c3aed,stroke-width:2px,color:#fff
-      style TEnc fill:#8b5cf6,stroke:#7c3aed,stroke-width:2px,color:#fff
-      style Dot fill:#c4b5fd,stroke:#8b5cf6,stroke-width:1px,color:#000
-      style Img fill:#f8fafc,stroke:#94a3b8,stroke-width:1px
-      style Txt fill:#f8fafc,stroke:#94a3b8,stroke-width:1px
-      style Pred fill:#f8fafc,stroke:#94a3b8,stroke-width:1px
+  flowchart LR
+    Img[/"Images"/]
+    Txt[/"Étiquettes Candidates"/]
+    VEnc{"Vision Encoder\n(ViT / ResNet)"}
+    TEnc{"Text Encoder\n(Transformer)"}
+    VEmb(["Plongement Image"])
+    TEmb(["Plongements Texte"])
+    Sim{"Similarité Cosinus"}
+    SM{"Softmax & ArgMax"}
+    Pred(["Prédiction (Label Textuel)"])
+
+    Img --> VEnc
+    Txt --> TEnc
+    VEnc --> VEmb
+    TEnc --> TEmb
+    VEmb --> Sim
+    TEmb --> Sim
+    Sim --> SM
+    SM --> Pred
+
+    style Img fill:#fbbf24,stroke:#d97706,stroke-width:2px,color:#000
+    style Txt fill:#fbbf24,stroke:#d97706,stroke-width:2px,color:#000
+    style VEnc fill:#3b82f6,stroke:#2563eb,stroke-width:2px,color:#fff
+    style TEnc fill:#3b82f6,stroke:#2563eb,stroke-width:2px,color:#fff
+    style VEmb fill:#10b981,stroke:#059669,stroke-width:2px,color:#fff
+    style TEmb fill:#10b981,stroke:#059669,stroke-width:2px,color:#fff
+    style Sim fill:#3b82f6,stroke:#2563eb,stroke-width:2px,color:#fff
+    style SM fill:#3b82f6,stroke:#2563eb,stroke-width:2px,color:#fff
+    style Pred fill:#10b981,stroke:#059669,stroke-width:2px,color:#fff
+
+math_theory: |
+  CLIP (Contrastive Language-Image Pre-Training) learns a joint embedding space for images and texts. It consists of an Image Encoder $f_{vis}$ and a Text Encoder $f_{text}$.
+  
+  Given an image $\textcolor{#10b981}{\mathbf{x}}$ and a set of candidate text labels $\{\textcolor{#3b82f6}{\mathbf{t}_1}, \textcolor{#3b82f6}{\mathbf{t}_2}, \dots, \textcolor{#3b82f6}{\mathbf{t}_K}\}$, they are encoded into normalized vectors:
+  $$ \textcolor{#10b981}{\mathbf{v}} = \frac{f_{vis}(\textcolor{#10b981}{\mathbf{x}})}{||f_{vis}(\textcolor{#10b981}{\mathbf{x}})||_2}, \quad \textcolor{#3b82f6}{\mathbf{w}_i} = \frac{f_{text}(\textcolor{#3b82f6}{\mathbf{t}_i})}{||f_{text}(\textcolor{#3b82f6}{\mathbf{t}_i})||_2} $$
+  
+  The similarity score for each label is computed as the scaled cosine similarity:
+  $$ \textcolor{#fbbf24}{s_i} = \exp(\textcolor{#ef4444}{\tau} \cdot \langle \textcolor{#10b981}{\mathbf{v}}, \textcolor{#3b82f6}{\mathbf{w}_i} \rangle) $$
+  where $\textcolor{#ef4444}{\tau}$ is a learned temperature parameter.
+  
+  The final zero-shot prediction probability for class $i$ is obtained via a softmax over all candidate labels:
+  $$ \textcolor{#8b5cf6}{P(y=i | \mathbf{x})} = \frac{\exp(\textcolor{#fbbf24}{s_i})}{\sum_{j=1}^K \exp(\textcolor{#fbbf24}{s_j})} $$
+
+math_illustration_svg: |
+  <svg viewBox="0 0 800 400" xmlns="http://www.w3.org/2000/svg">
+    <defs>
+      <marker id="arrow" viewBox="0 0 10 10" refX="10" refY="5" markerWidth="6" markerHeight="6" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="#666" /></marker>
+    </defs>
+    
+    <!-- Image Path -->
+    <rect x="50" y="80" width="100" height="60" rx="8" fill="#d1fae5" stroke="#10b981" stroke-width="3" />
+    <text x="100" y="115" font-family="sans-serif" font-size="16" font-weight="bold" fill="#059669" text-anchor="middle">Image x</text>
+
+    <rect x="220" y="70" width="120" height="80" rx="8" fill="#d1fae5" stroke="#10b981" stroke-width="3" />
+    <text x="280" y="110" font-family="sans-serif" font-size="14" font-weight="bold" fill="#059669" text-anchor="middle">Image Encoder</text>
+    <text x="280" y="130" font-family="sans-serif" font-size="14" fill="#059669" text-anchor="middle">f_vis(x)</text>
+
+    <circle cx="420" cy="110" r="30" fill="#d1fae5" stroke="#10b981" stroke-width="3" />
+    <text x="420" y="115" font-family="sans-serif" font-size="18" font-weight="bold" fill="#059669" text-anchor="middle">v</text>
+
+    <!-- Text Path -->
+    <rect x="50" y="260" width="100" height="80" rx="8" fill="#dbeafe" stroke="#3b82f6" stroke-width="3" />
+    <text x="100" y="295" font-family="sans-serif" font-size="14" font-weight="bold" fill="#1d4ed8" text-anchor="middle">Texts t_i</text>
+    <text x="100" y="315" font-family="sans-serif" font-size="12" fill="#1d4ed8" text-anchor="middle">"A photo of..."</text>
+
+    <rect x="220" y="260" width="120" height="80" rx="8" fill="#dbeafe" stroke="#3b82f6" stroke-width="3" />
+    <text x="280" y="300" font-family="sans-serif" font-size="14" font-weight="bold" fill="#1d4ed8" text-anchor="middle">Text Encoder</text>
+    <text x="280" y="320" font-family="sans-serif" font-size="14" fill="#1d4ed8" text-anchor="middle">f_text(t_i)</text>
+
+    <circle cx="420" cy="300" r="30" fill="#dbeafe" stroke="#3b82f6" stroke-width="3" />
+    <text x="420" y="305" font-family="sans-serif" font-size="18" font-weight="bold" fill="#1d4ed8" text-anchor="middle">w_i</text>
+
+    <!-- Similarity -->
+    <rect x="520" y="150" width="120" height="100" rx="8" fill="#fef3c7" stroke="#fbbf24" stroke-width="3" />
+    <text x="580" y="195" font-family="sans-serif" font-size="16" font-weight="bold" fill="#d97706" text-anchor="middle">Cosine Sim</text>
+    <text x="580" y="220" font-family="sans-serif" font-size="16" font-weight="bold" fill="#d97706" text-anchor="middle">v · w_i * τ</text>
+
+    <rect x="700" y="170" width="80" height="60" rx="8" fill="#ede9fe" stroke="#8b5cf6" stroke-width="3" />
+    <text x="740" y="205" font-family="sans-serif" font-size="16" font-weight="bold" fill="#6d28d9" text-anchor="middle">Softmax</text>
+
+    <!-- Arrows -->
+    <path d="M160,110 L210,110" stroke="#666" stroke-width="2" fill="none" marker-end="url(#arrow)"/>
+    <path d="M350,110 L380,110" stroke="#666" stroke-width="2" fill="none" marker-end="url(#arrow)"/>
+    
+    <path d="M160,300 L210,300" stroke="#666" stroke-width="2" fill="none" marker-end="url(#arrow)"/>
+    <path d="M350,300 L380,300" stroke="#666" stroke-width="2" fill="none" marker-end="url(#arrow)"/>
+
+    <path d="M460,110 L550,110 L550,140" stroke="#666" stroke-width="2" fill="none" marker-end="url(#arrow)"/>
+    <path d="M460,300 L550,300 L550,260" stroke="#666" stroke-width="2" fill="none" marker-end="url(#arrow)"/>
+
+    <path d="M650,200 L690,200" stroke="#666" stroke-width="2" fill="none" marker-end="url(#arrow)"/>
+  </svg>
 
 _metadata:
   bloc: 3

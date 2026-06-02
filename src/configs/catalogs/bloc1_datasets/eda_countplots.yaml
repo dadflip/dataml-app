@@ -1,7 +1,16 @@
 id: eda_countplots
 name: 'EDA: Fréquences Catégorielles'
-description: Trace des diagrammes en barres pour la fréquence des modalités des variables
-  qualitatives.
+description: Trace des diagrammes en barres pour la fréquence des modalités des variables qualitatives. Permet de visualiser rapidement la distribution des classes.
+when_to_use: "À utiliser lors de la phase d'exploration initiale pour analyser les distributions des variables catégorielles (ex: object, category, bool)."
+use_cases:
+  - "Détection de classes déséquilibrées (imbalanced data) dans les jeux de données tabulaires."
+  - "Vérification des modalités rares ou inattendues."
+pros:
+  - "Très visuel et facile à interpréter."
+  - "Gère automatiquement les variables avec de nombreuses modalités en limitant aux N plus fréquentes."
+cons:
+  - "Ne donne pas d'information sur la relation entre les variables."
+  - "Peut être illisible si la variable contient trop de modalités uniques."
 category: 3. Exploratory Data Analysis
 tags:
 - eda
@@ -33,20 +42,24 @@ code_template: |
   plt.show()
 illustration_mermaid: |
     graph TD
-      A([DataFrame df]) --> B[Select categorical columns<br>exclude num/datetime]
-      B --> C{Columns > 20?}
-      C -- Yes --> D[Truncate to 20 columns]
-      C -- No --> E[Keep all selected]
-      D --> F[Create Grid Subplots]
-      E --> F
-      F --> G{For each column}
-      G --> H[Compute Top_N value_counts]
-      H --> I{{Plot sns.countplot}}
-      I --> G
-      G -- Done --> J([Display All Countplots])
-      style A fill:#4F46E5,color:#fff
-      style C fill:#F59E0B,color:#fff
-      style I fill:#10B981,color:#fff
+      A[/DataFrame df/] --> B{Select categorical columns}
+      A2[/TOP_N/] --> E
+      B --> C{Truncate if > 20 columns}
+      C --> D{Create Grid Subplots}
+      D --> E{For each column}
+      E --> F{Compute Top_N value_counts}
+      F --> G{Plot sns.countplot}
+      G --> E
+      G --> H([Display All Countplots fig])
+      
+      classDef input fill:#fbbf24,stroke:#d97706,stroke-width:2px,color:#000;
+      classDef process fill:#3b82f6,stroke:#2563eb,stroke-width:2px,color:#fff;
+      classDef outputPrimary fill:#10b981,stroke:#059669,stroke-width:2px,color:#fff;
+      classDef outputSecondary fill:#8b5cf6,stroke:#7c3aed,stroke-width:2px,color:#fff;
+      
+      class A,A2 input;
+      class B,C,D,E,F,G process;
+      class H outputPrimary;
 
 _metadata:
   bloc: 1

@@ -1,17 +1,73 @@
 id: "model_one_class_svm"
 name: "Model: One-Class SVM"
-description: "Support Vector Machine adapté à la détection d'anomalies (délimite la région des données normales)."
+description: |
+  Le One-Class SVM est une variante non-supervisée des Machines à Vecteurs de Support conçue pour la détection d'anomalies (ou la détection de nouveautés). Il apprend une frontière de décision sphérique ou un hyperplan qui sépare les données normales de l'origine dans un espace de grande dimension induit par un noyau (kernel trick), isolant ainsi les données atypiques.
 category: "Détection d'Anomalies (Non-Supervisé)"
 tags: ["model", "anomaly-detection", "tabular", "sklearn", "svm", "one-class"]
 applies_to: ["Tabulaire"]
-when_to_use: "Quand vous n'avez que des données 'normales' en apprentissage et voulez détecter toute déviation par la suite."
+when_to_use: |
+  Particulièrement indiqué lorsque le jeu de données d'entraînement ne contient que des observations normales (détection de nouveautés) ou lorsque les anomalies sont très rares ou indéfinies. Il est efficace pour des jeux de données avec un nombre de dimensions modéré à élevé.
+use_cases:
+  - "Surveillance de serveurs et d'infrastructures informatiques pour identifier des comportements inhabituels."
+  - "Contrôle qualité dans le milieu manufacturier pour détecter des défauts de fabrication inédits."
+  - "Détection de fraudes dans des transactions financières lorsque les exemples de fraude sont rares ou inexistants lors de l'entraînement."
 pros:
-  - "Très robuste mathématiquement (Kernel Trick)."
+  - "Bénéficie de la puissance mathématique du 'kernel trick', permettant de modéliser des frontières non linéaires complexes."
+  - "Fonctionne efficacement même lorsque la distribution sous-jacente des données n'est pas gaussienne."
+  - "Idéal pour l'apprentissage semi-supervisé où l'on dispose uniquement d'exemples de la classe positive (normale)."
 cons:
-  - "Lent sur grands jeux de données."
+  - "Sensible à la présence de valeurs aberrantes importantes dans le jeu d'entraînement (moins robuste si non utilisé comme pur détecteur de nouveautés)."
+  - "Gourmand en ressources de calcul et en mémoire (complexité quadratique ou cubique) sur les très grands jeux de données."
+  - "Le réglage des hyperparamètres, notamment 'nu' et 'gamma', peut être délicat en l'absence de données d'évaluation."
 hyperparameters:
   nu: "Borne supérieure de la fraction d'erreurs d'entraînement (similaire à contamination, ex: 0.05)."
   kernel: "Noyau ('rbf', 'linear')."
+math_theory: |
+  Le One-Class SVM projette les données $\textcolor{#10b981}{x_i}$ dans un espace de caractéristiques de plus grande dimension via un noyau $\phi(x)$, et tente de les séparer de l'origine avec la marge maximale. Le problème d'optimisation est :
+  $$ \min_{w, \rho, \xi} \frac{1}{2} ||\textcolor{#3b82f6}{w}||^2 - \textcolor{#fbbf24}{\rho} + \frac{1}{\textcolor{#8b5cf6}{\nu} N} \sum_{i=1}^N \textcolor{#ef4444}{\xi_i} $$
+  Sous contrainte que $\textcolor{#3b82f6}{w} \cdot \phi(\textcolor{#10b981}{x_i}) \geq \textcolor{#fbbf24}{\rho} - \textcolor{#ef4444}{\xi_i}$ avec $\textcolor{#ef4444}{\xi_i} \geq 0$.
+  Ici, $\textcolor{#3b82f6}{w}$ définit l'hyperplan, $\textcolor{#fbbf24}{\rho}$ est la distance de l'hyperplan à l'origine, $\textcolor{#8b5cf6}{\nu}$ contrôle la proportion maximale d'anomalies (erreurs), et $\textcolor{#ef4444}{\xi_i}$ sont les variables de relâchement.
+math_illustration_svg: |
+  <svg viewBox="0 0 500 250" xmlns="http://www.w3.org/2000/svg">
+    <rect width="100%" height="100%" fill="#2d3748" rx="10"/>
+    <text x="250" y="30" fill="#ffffff" font-family="sans-serif" font-size="16" font-weight="bold" text-anchor="middle">One-Class SVM</text>
+    
+    <!-- Origin -->
+    <circle cx="50" cy="200" r="6" fill="#ffffff"/>
+    <text x="35" y="215" fill="#ffffff" font-family="sans-serif" font-size="14">Origin</text>
+    
+    <!-- Axes -->
+    <path d="M 50 200 L 50 50" stroke="#a0aec0" stroke-width="2" marker-end="url(#arrow)"/>
+    <path d="M 50 200 L 450 200" stroke="#a0aec0" stroke-width="2" marker-end="url(#arrow)"/>
+    
+    <!-- Margin/Hyperplane curve (simulated RBF boundary) -->
+    <path d="M 150 200 C 150 100, 250 50, 450 50" stroke="#3b82f6" stroke-width="3" fill="none"/>
+    <text x="280" y="70" fill="#3b82f6" font-family="sans-serif" font-size="14" font-weight="bold">Hyperplane w·φ(x) = ρ</text>
+    <path d="M 50 200 L 220 130" stroke="#fbbf24" stroke-width="2" stroke-dasharray="4,4"/>
+    <text x="120" y="160" fill="#fbbf24" font-family="sans-serif" font-size="16" font-weight="bold">ρ (Margin)</text>
+    
+    <!-- Normal points -->
+    <circle cx="250" cy="110" r="5" fill="#10b981"/>
+    <circle cx="280" cy="140" r="5" fill="#10b981"/>
+    <circle cx="320" cy="90" r="5" fill="#10b981"/>
+    <circle cx="350" cy="130" r="5" fill="#10b981"/>
+    <circle cx="380" cy="70" r="5" fill="#10b981"/>
+    <circle cx="410" cy="110" r="5" fill="#10b981"/>
+    
+    <!-- Support vectors -->
+    <circle cx="180" cy="165" r="5" fill="#10b981" stroke="#ffffff" stroke-width="2"/>
+    <circle cx="240" cy="110" r="5" fill="#10b981" stroke="#ffffff" stroke-width="2"/>
+    
+    <!-- Anomalies / Margin errors -->
+    <circle cx="130" cy="140" r="6" fill="#ef4444"/>
+    <circle cx="220" cy="180" r="6" fill="#ef4444"/>
+    
+    <!-- Slack variable -->
+    <path d="M 130 140 L 160 120" stroke="#ef4444" stroke-width="2"/>
+    <text x="115" y="130" fill="#ef4444" font-family="sans-serif" font-size="14" font-weight="bold">ξ_i</text>
+    <text x="350" y="180" fill="#10b981" font-family="sans-serif" font-size="12">Normal Space (w·φ(x) ≥ ρ)</text>
+    <text x="100" y="230" fill="#ef4444" font-family="sans-serif" font-size="12">Anomaly Space</text>
+  </svg>
 code_template: |
   import pandas as pd
   import numpy as np
@@ -61,30 +117,55 @@ code_template: |
       
       training_history = {"status": "success", "anomalies_found": int(np.sum(y_pred))}
 illustration_mermaid: |
-  graph TD
-    A[Input Data: X_train] --> B(Preprocessing Pipeline)
-    B --> C[One-Class SVM]
+  flowchart LR
+    %% Inputs/Params
+    DataTrain[/ "Données (X_train)" /]
+    DataTest[/ "Données (X_test)" /]
+    Params[/ "Hyperparamètres (nu, kernel)" /]
     
-    subgraph Support Vector Density Estimation
-        C --> D[Kernel Mapping: RBF / Linear]
-        D --> E[Map features to High-Dimensional Space]
-        E --> F[Find Maximum Margin Hyperplane from Origin]
-        F --> G[Enclose normal points inside boundary]
-    end
+    %% Processes/Models
+    Preproc{"Pipeline de Prétraitement"}
+    KernelTrick{"Transformation Noyau (ex: RBF)"}
+    HyperplaneOptimization{"Optimisation Hyperplan"}
+    Predict{"Inférence (Distance à la Frontière)"}
     
-    G --> H[Fitted SVM Boundary]
+    %% Tensors/DataFrames
+    PreprocTrain(["X_train Prétraité"])
+    PreprocTest(["X_test Prétraité"])
+    Model(["Modèle One-Class SVM Ajusté"])
+    Pred(["Prédictions (1: Anomalie, 0: Normal)"])
+    Proba(["Pseudo-Probabilités (y_proba)"])
     
-    X_test[Input Data: X_test] --> I(Preprocessing Pipeline)
-    I --> J[Map to Kernel Space]
-    H -.-> J
-    J --> K{Inside boundary?}
-    K -- Yes --> L[Normal Class 0]
-    K -- No --> M[Anomaly Class 1]
+    %% Connections
+    DataTrain --> Preproc
+    Preproc --> PreprocTrain
+    Params --> HyperplaneOptimization
+    PreprocTrain --> KernelTrick
+    KernelTrick --> HyperplaneOptimization
+    HyperplaneOptimization --> Model
     
-    style C fill:#8b5cf6,stroke:#7c3aed,stroke-width:2px,color:#fff
-    style H fill:#10b981,stroke:#059669,stroke-width:2px,color:#fff
-    style L fill:#3b82f6,stroke:#2563eb,stroke-width:2px,color:#fff
-    style M fill:#ef4444,stroke:#dc2626,stroke-width:2px,color:#fff
+    DataTest --> Preproc
+    Preproc --> PreprocTest
+    PreprocTest --> Predict
+    Model --> Predict
+    Predict --> Pred
+    Predict --> Proba
+    
+    %% Styling
+    style DataTrain fill:#fbbf24,stroke:#d97706,stroke-width:2px,color:#000
+    style DataTest fill:#fbbf24,stroke:#d97706,stroke-width:2px,color:#000
+    style Params fill:#fbbf24,stroke:#d97706,stroke-width:2px,color:#000
+    
+    style Preproc fill:#3b82f6,stroke:#2563eb,stroke-width:2px,color:#fff
+    style KernelTrick fill:#3b82f6,stroke:#2563eb,stroke-width:2px,color:#fff
+    style HyperplaneOptimization fill:#3b82f6,stroke:#2563eb,stroke-width:2px,color:#fff
+    style Predict fill:#3b82f6,stroke:#2563eb,stroke-width:2px,color:#fff
+    
+    style PreprocTrain fill:#10b981,stroke:#059669,stroke-width:2px,color:#fff
+    style PreprocTest fill:#10b981,stroke:#059669,stroke-width:2px,color:#fff
+    style Model fill:#10b981,stroke:#059669,stroke-width:2px,color:#fff
+    style Pred fill:#10b981,stroke:#059669,stroke-width:2px,color:#fff
+    style Proba fill:#10b981,stroke:#059669,stroke-width:2px,color:#fff
 
 _metadata:
   bloc: 3

@@ -1,14 +1,44 @@
 id: "transform_drop_columns"
 name: "Transform: Drop Columns"
-description: "Supprime des colonnes inutiles."
+description: "Élimine explicitement une liste de colonnes spécifiées du DataFrame, permettant de retirer les identifiants, les données redondantes ou les variables induisant une fuite de données (data leakage)."
+math_theory: |
+  Il s'agit d'une projection orthogonale simple de l'espace des descripteurs. Pour une matrice de caractéristiques $\textcolor{#3b82f6}{X} \in \mathbb{R}^{N \times D}$, la suppression de $K$ colonnes produit un nouvel espace $\textcolor{#10b981}{X'} \in \mathbb{R}^{N \times (D - K)}$, réduisant ainsi la dimensionnalité intrinsèque de l'entrée.
+math_illustration_svg: |
+  <svg viewBox="0 0 400 200" xmlns="http://www.w3.org/2000/svg">
+    <rect width="400" height="200" fill="#1e293b" rx="10" />
+    <g transform="translate(40, 40)">
+      <text x="60" y="-10" fill="#3b82f6" font-family="sans-serif" font-size="14" text-anchor="middle" font-weight="bold">X (Original)</text>
+      <rect x="0" y="0" width="120" height="120" fill="none" stroke="#3b82f6" stroke-width="2" />
+      <rect x="0" y="0" width="40" height="120" fill="#0f172a" stroke="#475569" stroke-width="1" />
+      <rect x="40" y="0" width="40" height="120" fill="#ef4444" fill-opacity="0.2" stroke="#ef4444" stroke-width="1" stroke-dasharray="4" />
+      <rect x="80" y="0" width="40" height="120" fill="#0f172a" stroke="#475569" stroke-width="1" />
+      <line x1="40" y1="0" x2="80" y2="120" stroke="#ef4444" stroke-width="2" />
+      <line x1="80" y1="0" x2="40" y2="120" stroke="#ef4444" stroke-width="2" />
+      <text x="60" y="65" fill="#ef4444" font-family="sans-serif" font-size="12" text-anchor="middle" font-weight="bold">DROP</text>
+    </g>
+    <path d="M180,100 L210,100" fill="none" stroke="#94a3b8" stroke-width="2" />
+    <polygon points="210,-5 220,0 210,5" transform="translate(0, 100)" fill="#94a3b8" />
+    <g transform="translate(250, 40)">
+      <text x="40" y="-10" fill="#10b981" font-family="sans-serif" font-size="14" text-anchor="middle" font-weight="bold">X' (Reduced)</text>
+      <rect x="0" y="0" width="80" height="120" fill="none" stroke="#10b981" stroke-width="2" />
+      <rect x="0" y="0" width="40" height="120" fill="#0f172a" stroke="#475569" stroke-width="1" />
+      <rect x="40" y="0" width="40" height="120" fill="#0f172a" stroke="#475569" stroke-width="1" />
+    </g>
+  </svg>
 category: "4.1 Preprocessing"
 tags: ["transform", "cleaning", "tabular", "pandas", "pipeline"]
 applies_to: ["Tabulaire"]
-when_to_use: "Pour retirer explicitement des colonnes."
+when_to_use: "Lorsqu'il faut nettoyer manuellement les variables identifiées comme inutiles ou risquées suite à l'Analyse Exploratoire des Données (EDA)."
+use_cases:
+  - "Suppression des identifiants (IDs), clés primaires ou noms propres."
+  - "Élimination des variables provoquant des fuites d'informations (target leakage)."
+  - "Retrait des variables hautement corrélées détectées précédemment."
 pros:
-  - "Réduit le bruit pour les modèles."
+  - "Diminue l'empreinte mémoire et accélère l'entraînement."
+  - "Réduit efficacement le bruit et évite l'overfitting potentiel induit par des variables parasites."
 cons:
-  - "Peut supprimer de l'information utile."
+  - "Action irréversible (si non gérée par copie) : une suppression hâtive peut détruire un fort signal prédictif."
+  - "Nécessite de connaître exactement le nom de la colonne (sensibilité à la casse et aux espaces)."
 hyperparameters:
   columns_to_drop: "Noms des colonnes séparés par des virgules."
 code_template: |
@@ -36,17 +66,14 @@ code_template: |
       print(f"[TRANSFORM] Colonnes supprimées (si elles existaient).")
 
 illustration_mermaid: |
-  graph TD
-    A[Input DataFrame] --> B{COLUMNS_TO_DROP provided?}
-    B -- Yes --> C[Parse columns list]
-    B -- No --> D[Skip and return original]
-    C --> E[Initialize FunctionTransformer]
-    E --> F[df.drop columns with errors='ignore']
-    F --> G[Update pipeline_steps & df]
-    D --> G
-    G --> H[Output DataFrame]
-    style A fill:#eff6ff,stroke:#94a3b8,stroke-width:2px
-    style H fill:#10b981,stroke:#059669,stroke-width:2px,color:#fff
+  flowchart LR
+    A[/ "📄 COLUMNS_TO_DROP" /] --> B{"⚙️ df.drop(columns)"}
+    B --> C(["📊 df (Filtered)"])
+    C --> D(["ℹ️ pipeline_steps"])
+    style A fill:#fbbf24,stroke:#d97706,stroke-width:2px,color:#000
+    style B fill:#3b82f6,stroke:#2563eb,stroke-width:2px,color:#fff
+    style C fill:#10b981,stroke:#059669,stroke-width:2px,color:#fff
+    style D fill:#8b5cf6,stroke:#7c3aed,stroke-width:2px,color:#fff
 
 _metadata:
   bloc: 2

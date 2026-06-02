@@ -1,6 +1,17 @@
 id: "load_pdf"
 name: "Load: Texte PDF"
 description: "Extrait le texte brut d'un document PDF pour des tâches NLP."
+when_to_use: "À utiliser lorsque vos données d'entrée sont contenues dans des documents PDF et que vous souhaitez effectuer des tâches d'analyse de texte, de classification ou d'extraction d'informations."
+use_cases:
+  - "Analyse de rapports financiers, documents juridiques ou articles scientifiques."
+  - "Création de jeux de données pour l'entraînement ou le fine-tuning de modèles de langage (LLM)."
+  - "Recherche d'informations et indexation de corpus documentaires."
+pros:
+  - "Extrait facilement le texte page par page pour conserver la structure globale."
+  - "Idéal pour introduire des données textuelles non structurées dans un pipeline NLP."
+cons:
+  - "Peut perdre le formatage riche, les tableaux et les images contenus dans le PDF d'origine."
+  - "L'extraction de texte peut être de mauvaise qualité pour les PDF scannés sans OCR préalable."
 category: "2. Load"
 tags: ["load", "pdf", "nlp", "text"]
 code_template: |
@@ -42,20 +53,22 @@ output_variables:
   - task_type
   - meta
 illustration_mermaid: |
-  flowchart TD
-      A([FILE_PATH]) --> B{File Exists?}
-      B -- Yes --> C[pypdf.PdfReader]
-      B -- No --> D[Empty DataFrame]
-      C --> E[Iterate Pages]
-      E --> F[Extract Text]
-      F --> G[Create DataFrame: page_number, text]
-      G --> H([df, target_name, task_type, meta])
-      D --> H
-
-      style A fill:#3b82f6,color:#fff
-      style C fill:#10b981,color:#fff
-      style F fill:#10b981,color:#fff
-      style H fill:#f59e0b,color:#fff
+    flowchart LR
+        A[/"📄 FILE_PATH (data.pdf)"/] --> B{"pypdf Extract Text()"}
+        C[/"🎯 TARGET_COL"/] --> D{"Check TARGET_COL"}
+        B --> E(["📊 df (Pages Data)"])
+        E --> D
+        D --> F(["🎯 target_name"])
+        D --> G(["⚙️ task_type"])
+        D --> H(["ℹ️ meta (num_pages)"])
+        style A fill:#fbbf24,stroke:#d97706,stroke-width:2px,color:#000
+        style C fill:#fbbf24,stroke:#d97706,stroke-width:2px,color:#000
+        style B fill:#3b82f6,stroke:#2563eb,stroke-width:2px,color:#fff
+        style D fill:#3b82f6,stroke:#2563eb,stroke-width:2px,color:#fff
+        style E fill:#10b981,stroke:#059669,stroke-width:2px,color:#fff
+        style F fill:#8b5cf6,stroke:#7c3aed,stroke-width:2px,color:#fff
+        style G fill:#8b5cf6,stroke:#7c3aed,stroke-width:2px,color:#fff
+        style H fill:#8b5cf6,stroke:#7c3aed,stroke-width:2px,color:#fff
 
 _metadata:
   bloc: 1

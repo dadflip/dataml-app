@@ -1,19 +1,143 @@
 id: "model_catboost_classifier"
 name: "Model: CatBoost Classifier"
-description: "Categorical Boosting. Framework Yandex, ultra-optimisé pour les variables catégorielles sans pré-encodage OHE."
+description: |
+  Algorithme de Gradient Boosting développé par Yandex, spécialement optimisé pour la gestion
+  automatique et ultra-performante des variables catégorielles sans nécessiter d'encodage préalable (One-Hot).
 category: "Modèles Basés sur les Arbres"
 tags: ["model", "classification", "tabular", "catboost", "ensemble", "boosting"]
 applies_to: ["Tabulaire"]
-when_to_use: "Quand vous avez énormément de variables catégorielles."
+when_to_use: |
+  Idéal pour les jeux de données tabulaires complexes contenant une forte proportion
+  de caractéristiques catégorielles, ou lorsque vous recherchez une performance de pointe "out-of-the-box".
+use_cases:
+  - "Scoring de crédit avec de nombreuses variables textuelles ou factorielles."
+  - "Prédiction de churn client à partir de profils hétérogènes."
+  - "Compétitions Kaggle sur des données tabulaires mixtes."
 pros:
-  - "L'un des meilleurs modèles au monde out-of-the-box."
-  - "Évite l'encodage fastidieux."
+  - "Performances exceptionnelles sans réglages complexes (out-of-the-box)."
+  - "Élimine le besoin d'un encodage manuel fastidieux des variables catégorielles."
+  - "Gère très bien le surapprentissage grâce à son architecture symétrique."
 cons:
-  - "Package lourd, inférence parfois plus lente que LGBM."
+  - "L'inférence (prédiction) peut s'avérer légèrement plus lente que LightGBM."
+  - "Empreinte mémoire importante et dépendance à un package lourd."
 hyperparameters:
   iterations: "Nombre d'itérations (ex: 500)."
   learning_rate: "Taux d'apprentissage (ex: 0.1)."
   depth: "Profondeur des arbres (ex: 6)."
+math_theory: |
+  CatBoost innove sur deux axes majeurs : l'encodage cible (Target Encoding) avec statistiques ordonnées, et l'utilisation d'arbres symétriques (Oblivious Trees).
+  
+  Pour éviter le target leakage, CatBoost utilise un **Ordered Target Encoding**. La valeur catégorielle d'une observation $i$ pour la variable $k$ est encodée comme :
+  $$ \textcolor{#10b981}{\hat{x}_{i,k}} = \frac{\sum_{j=1}^{i-1} [x_{j,k} = x_{i,k}] \cdot \textcolor{#3b82f6}{y_j} + \textcolor{#fbbf24}{a} \cdot \textcolor{#ef4444}{P}}{\sum_{j=1}^{i-1} [x_{j,k} = x_{i,k}] + \textcolor{#fbbf24}{a}} $$
+  Où :
+  - La somme se fait uniquement sur les observations précédentes ($j < i$) grâce à une permutation aléatoire.
+  - $\textcolor{#3b82f6}{y_j}$ est la valeur cible (0 ou 1).
+  - $\textcolor{#fbbf24}{a}$ est un paramètre de lissage (prior weight).
+  - $\textcolor{#ef4444}{P}$ est la valeur a priori (prior, ex: moyenne de la cible).
+  
+  Le modèle final $\textcolor{#8b5cf6}{F(x)}$ utilise des "oblivious trees" où le même critère de coupure est appliqué à tous les nœuds d'une même profondeur :
+  $$ \textcolor{#8b5cf6}{F(x)} = \sum_{t=1}^T \eta \cdot \textcolor{#10b981}{h_t}(x) $$
+math_illustration_svg: |
+  <svg viewBox="0 0 800 400" xmlns="http://www.w3.org/2000/svg">
+    <!-- Background -->
+    <rect width="800" height="400" fill="#1e1e2f" rx="15" />
+    
+    <!-- Ordered Target Encoding Section -->
+    <g transform="translate(30, 30)">
+      <rect x="0" y="0" width="340" height="340" fill="#2d2d44" rx="8" stroke="#10b981" stroke-width="2"/>
+      <text x="170" y="25" fill="#10b981" font-family="sans-serif" font-weight="bold" font-size="16" text-anchor="middle">Ordered Target Encoding</text>
+      
+      <text x="20" y="60" fill="#ffffff" font-family="sans-serif" font-size="12">Ligne de temps (permutation aléatoire)</text>
+      
+      <!-- Timeline arrow -->
+      <line x1="20" y1="80" x2="310" y2="80" stroke="#ffffff" stroke-width="2" marker-end="url(#arrow)"/>
+      
+      <!-- Points on timeline -->
+      <circle cx="50" cy="80" r="8" fill="#3b82f6"/> <text x="50" y="105" fill="#ffffff" font-size="12" text-anchor="middle">x1=A</text>
+      <circle cx="100" cy="80" r="8" fill="#ef4444"/> <text x="100" y="105" fill="#ffffff" font-size="12" text-anchor="middle">x2=B</text>
+      <circle cx="150" cy="80" r="8" fill="#3b82f6"/> <text x="150" y="105" fill="#ffffff" font-size="12" text-anchor="middle">x3=A</text>
+      <circle cx="200" cy="80" r="8" fill="#3b82f6"/> <text x="200" y="105" fill="#ffffff" font-size="12" text-anchor="middle">x4=A</text>
+      <circle cx="250" cy="80" r="8" fill="#ef4444"/> <text x="250" y="105" fill="#ffffff" font-size="12" text-anchor="middle">x5=B</text>
+      
+      <!-- Focusing on x4 -->
+      <rect x="185" y="65" width="30" height="45" fill="none" stroke="#fbbf24" stroke-width="2" stroke-dasharray="4,4"/>
+      <path d="M 200 120 L 200 140" fill="none" stroke="#fbbf24" stroke-width="2" marker-end="url(#arrow-yellow)"/>
+      
+      <rect x="20" y="150" width="300" height="170" fill="#1e1e2f" rx="8" stroke="#4b5563" stroke-width="1"/>
+      <text x="170" y="170" fill="#fbbf24" font-family="sans-serif" font-size="14" text-anchor="middle">Pour encoder x4 (catégorie A) :</text>
+      <text x="170" y="195" fill="#ffffff" font-family="sans-serif" font-size="12" text-anchor="middle">On ne regarde que le passé (j &lt; 4)</text>
+      
+      <!-- Formula representation -->
+      <text x="170" y="240" fill="#10b981" font-family="sans-serif" font-size="16" text-anchor="middle">Count(A passé) × y + a × P</text>
+      <line x1="50" y1="250" x2="290" y2="250" stroke="#ffffff" stroke-width="2"/>
+      <text x="170" y="275" fill="#ffffff" font-family="sans-serif" font-size="16" text-anchor="middle">Count(A passé) + a</text>
+      
+      <text x="170" y="305" fill="#ef4444" font-family="sans-serif" font-size="12" text-anchor="middle">=> Évite le Target Leakage !</text>
+    </g>
+
+    <!-- Oblivious Tree Section -->
+    <g transform="translate(410, 30)">
+      <rect x="0" y="0" width="360" height="340" fill="#2d2d44" rx="8" stroke="#8b5cf6" stroke-width="2"/>
+      <text x="180" y="25" fill="#8b5cf6" font-family="sans-serif" font-weight="bold" font-size="16" text-anchor="middle">Oblivious Tree (Arbre Symétrique)</text>
+      
+      <text x="180" y="55" fill="#ffffff" font-family="sans-serif" font-size="12" text-anchor="middle">Le même critère s'applique à toute la profondeur</text>
+      
+      <!-- Tree Structure -->
+      <!-- Depth 1 -->
+      <text x="40" y="95" fill="#fbbf24" font-family="sans-serif" font-size="14">P1: f1 &lt; 0.5</text>
+      <line x1="80" y1="100" x2="300" y2="100" stroke="#fbbf24" stroke-width="1" stroke-dasharray="2,2"/>
+      
+      <!-- Root -->
+      <circle cx="180" cy="95" r="15" fill="#3b82f6"/>
+      <text x="180" y="100" fill="#ffffff" font-family="sans-serif" font-size="12" text-anchor="middle">D1</text>
+      
+      <!-- Edges L1 -->
+      <line x1="170" y1="105" x2="110" y2="155" stroke="#ffffff" stroke-width="2"/>
+      <line x1="190" y1="105" x2="250" y2="155" stroke="#ffffff" stroke-width="2"/>
+      
+      <!-- Depth 2 -->
+      <text x="40" y="165" fill="#fbbf24" font-family="sans-serif" font-size="14">P2: f3 = 'A'</text>
+      <line x1="80" y1="170" x2="300" y2="170" stroke="#fbbf24" stroke-width="1" stroke-dasharray="2,2"/>
+      
+      <!-- L1 Nodes (Identical condition) -->
+      <circle cx="100" cy="165" r="15" fill="#10b981"/>
+      <text x="100" y="170" fill="#ffffff" font-family="sans-serif" font-size="12" text-anchor="middle">D2</text>
+      
+      <circle cx="260" cy="165" r="15" fill="#10b981"/>
+      <text x="260" y="170" fill="#ffffff" font-family="sans-serif" font-size="12" text-anchor="middle">D2</text>
+      
+      <!-- Edges L2 -->
+      <line x1="90" y1="175" x2="60" y2="225" stroke="#ffffff" stroke-width="2"/>
+      <line x1="110" y1="175" x2="140" y2="225" stroke="#ffffff" stroke-width="2"/>
+      <line x1="250" y1="175" x2="220" y2="225" stroke="#ffffff" stroke-width="2"/>
+      <line x1="270" y1="175" x2="300" y2="225" stroke="#ffffff" stroke-width="2"/>
+      
+      <!-- Leaves -->
+      <rect x="45" y="230" width="30" height="20" fill="#ef4444" rx="4"/>
+      <rect x="125" y="230" width="30" height="20" fill="#ef4444" rx="4"/>
+      <rect x="205" y="230" width="30" height="20" fill="#ef4444" rx="4"/>
+      <rect x="285" y="230" width="30" height="20" fill="#ef4444" rx="4"/>
+      
+      <text x="60" y="245" fill="#ffffff" font-family="sans-serif" font-size="10" text-anchor="middle">v1</text>
+      <text x="140" y="245" fill="#ffffff" font-family="sans-serif" font-size="10" text-anchor="middle">v2</text>
+      <text x="220" y="245" fill="#ffffff" font-family="sans-serif" font-size="10" text-anchor="middle">v3</text>
+      <text x="300" y="245" fill="#ffffff" font-family="sans-serif" font-size="10" text-anchor="middle">v4</text>
+      
+      <!-- Advantages -->
+      <rect x="20" y="270" width="320" height="50" fill="#1e1e2f" rx="8"/>
+      <text x="180" y="290" fill="#ffffff" font-family="sans-serif" font-size="12" text-anchor="middle">✅ Structure équilibrée, moins sujette au surapprentissage</text>
+      <text x="180" y="310" fill="#ffffff" font-family="sans-serif" font-size="12" text-anchor="middle">✅ Inférence très rapide (indexation binaire simple)</text>
+    </g>
+
+    <defs>
+      <marker id="arrow" markerWidth="10" markerHeight="10" refX="9" refY="3" orient="auto" markerUnits="strokeWidth">
+        <path d="M0,0 L0,6 L9,3 z" fill="#ffffff" />
+      </marker>
+      <marker id="arrow-yellow" markerWidth="10" markerHeight="10" refX="9" refY="3" orient="auto" markerUnits="strokeWidth">
+        <path d="M0,0 L0,6 L9,3 z" fill="#fbbf24" />
+      </marker>
+    </defs>
+  </svg>
 code_template: |
   import pandas as pd
   import numpy as np
@@ -120,33 +244,36 @@ code_template: |
       }
 
 illustration_mermaid: |
-    graph TD
-      subgraph Features Handling
-        Data([X_train]) --> CatSplit{Categorical\nColumns?}
-        CatSplit -- Yes --> TargetEnc[Target Statistics\nEncoding on the fly]
-        CatSplit -- No --> NumSplit[Numeric features]
-      end
-      
-      subgraph CatBoost Oblivious Trees
-        TargetEnc --> Tree1[Oblivious Tree 1\nSymmetric Splits]
-        NumSplit --> Tree1
-        Tree1 -- Gradients --> Tree2[Oblivious Tree 2]
-        Tree2 -- Gradients --> TreeN[Oblivious Tree N]
-      end
-      
-      subgraph Aggregation
-        TreeN --> Sum((Sum of leaves))
-        Sum --> Sigmoid[Sigmoid / Softmax]
-        Sigmoid --> Pred([Predictions])
-      end
-      
-      style TargetEnc fill:#8b5cf6,stroke:#7c3aed,stroke-width:2px,color:#fff
-      style Tree1 fill:#c4b5fd,stroke:#8b5cf6,stroke-width:1px,color:#000
-      style Tree2 fill:#c4b5fd,stroke:#8b5cf6,stroke-width:1px,color:#000
-      style TreeN fill:#c4b5fd,stroke:#8b5cf6,stroke-width:1px,color:#000
-      style Sum fill:#a78bfa,stroke:#7c3aed,stroke-width:1px,color:#fff
-      style Pred fill:#f8fafc,stroke:#94a3b8,stroke-width:1px
-      style Data fill:#f8fafc,stroke:#94a3b8,stroke-width:1px
+  flowchart LR
+    Data[/"Données X_train"/]
+    CatSplit{"Séparation Numérique/Catégorielle"}
+    TargetEnc{"Encodage par cible\n(à la volée)"}
+    NumSplit(["Features Numériques"])
+    Tree1{"Arbre Oblivious 1"}
+    TreeN{"Arbre Oblivious N"}
+    Sum{"Somme des feuilles"}
+    Sigmoid{"Fonction Sigmoïde / Softmax"}
+    Pred(["Prédictions (Classes)"])
+
+    Data --> CatSplit
+    CatSplit -- "Catégoriel" --> TargetEnc
+    CatSplit -- "Numérique" --> NumSplit
+    TargetEnc --> Tree1
+    NumSplit --> Tree1
+    Tree1 -- "Gradients" --> TreeN
+    TreeN --> Sum
+    Sum --> Sigmoid
+    Sigmoid --> Pred
+
+    style Data fill:#fbbf24,stroke:#d97706,stroke-width:2px,color:#000
+    style CatSplit fill:#3b82f6,stroke:#2563eb,stroke-width:2px,color:#fff
+    style TargetEnc fill:#3b82f6,stroke:#2563eb,stroke-width:2px,color:#fff
+    style NumSplit fill:#10b981,stroke:#059669,stroke-width:2px,color:#fff
+    style Tree1 fill:#3b82f6,stroke:#2563eb,stroke-width:2px,color:#fff
+    style TreeN fill:#3b82f6,stroke:#2563eb,stroke-width:2px,color:#fff
+    style Sum fill:#3b82f6,stroke:#2563eb,stroke-width:2px,color:#fff
+    style Sigmoid fill:#3b82f6,stroke:#2563eb,stroke-width:2px,color:#fff
+    style Pred fill:#10b981,stroke:#059669,stroke-width:2px,color:#fff
 
 _metadata:
   bloc: 3

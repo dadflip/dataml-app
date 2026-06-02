@@ -1,14 +1,79 @@
 id: "transform_polynomial_features"
 name: "Transform: Polynomial Features"
-description: "Génère de nouvelles variables (carrés, interactions)."
+description: "Génère automatiquement de nouvelles variables à partir des colonnes numériques existantes en créant toutes les combinaisons polynomiales jusqu'à un degré donné. Par exemple, pour deux variables x1 et x2 avec un degré 2, le transformeur crée x1², x2², et x1·x2. Cela permet aux modèles linéaires de capturer des relations non linéaires."
+math_theory: |
+  Soit un vecteur de caractéristiques $x = [\textcolor{#3b82f6}{x_1}, \textcolor{#3b82f6}{x_2}, ..., x_d]$. La transformation polynomiale de degré $\textcolor{#fbbf24}{p}$ génère toutes les combinaisons :
+  $$ \textcolor{#10b981}{\phi(x)} = [1, \textcolor{#3b82f6}{x_1}, \textcolor{#3b82f6}{x_2}, ..., \textcolor{#8b5cf6}{x_1^2}, \textcolor{#ef4444}{x_1 x_2}, ..., x_d^{\textcolor{#fbbf24}{p}}] $$
+  Le nombre total de nouvelles caractéristiques est donné par le coefficient binomial :
+  $$ N_{features} = \binom{d + \textcolor{#fbbf24}{p}}{\textcolor{#fbbf24}{p}} - 1 $$
+  Par exemple, pour $d=3$ variables et un degré $\textcolor{#fbbf24}{p}=2$, on obtient $\binom{5}{2} - 1 = 9$ caractéristiques (les 3 originales + 3 carrés + 3 interactions croisées).
+  Un modèle linéaire $y = w^T \textcolor{#10b981}{\phi(x)}$ devient alors capable de modéliser des frontières de décision non linéaires dans l'espace original.
+math_illustration_svg: |
+  <svg viewBox="0 0 400 200" xmlns="http://www.w3.org/2000/svg">
+    <!-- Background -->
+    <rect width="400" height="200" fill="#1e293b" rx="8" />
+    
+    <!-- Original Features -->
+    <g transform="translate(40, 70)">
+      <text x="0" y="-15" fill="#94a3b8" font-family="sans-serif" font-size="12" font-weight="bold">Original (d=2)</text>
+      <rect x="0" y="0" width="40" height="40" rx="4" fill="#1e293b" stroke="#3b82f6" stroke-width="2" />
+      <text x="20" y="25" fill="#3b82f6" font-family="sans-serif" font-size="16" font-weight="bold" text-anchor="middle">x₁</text>
+      
+      <rect x="50" y="0" width="40" height="40" rx="4" fill="#1e293b" stroke="#3b82f6" stroke-width="2" />
+      <text x="70" y="25" fill="#3b82f6" font-family="sans-serif" font-size="16" font-weight="bold" text-anchor="middle">x₂</text>
+    </g>
+
+    <!-- Transformation Arrow -->
+    <g transform="translate(150, 85)">
+      <path d="M 0 5 L 30 5" stroke="#fbbf24" stroke-width="2" stroke-dasharray="4,4" fill="none" />
+      <polygon points="30,0 38,5 30,10" fill="#fbbf24" />
+      <text x="19" y="-5" fill="#fbbf24" font-family="sans-serif" font-size="12" font-weight="bold" text-anchor="middle">p=2</text>
+    </g>
+
+    <!-- Polynomial Features -->
+    <g transform="translate(210, 40)">
+      <text x="0" y="-15" fill="#94a3b8" font-family="sans-serif" font-size="12" font-weight="bold">Polynomial (degree=2)</text>
+      
+      <!-- Linear -->
+      <rect x="0" y="0" width="30" height="30" rx="4" fill="#1e293b" stroke="#3b82f6" stroke-width="2" />
+      <text x="15" y="20" fill="#3b82f6" font-family="sans-serif" font-size="12" font-weight="bold" text-anchor="middle">x₁</text>
+      
+      <rect x="40" y="0" width="30" height="30" rx="4" fill="#1e293b" stroke="#3b82f6" stroke-width="2" />
+      <text x="55" y="20" fill="#3b82f6" font-family="sans-serif" font-size="12" font-weight="bold" text-anchor="middle">x₂</text>
+      
+      <!-- Squared -->
+      <rect x="0" y="40" width="30" height="30" rx="4" fill="#1e293b" stroke="#8b5cf6" stroke-width="2" />
+      <text x="15" y="60" fill="#8b5cf6" font-family="sans-serif" font-size="12" font-weight="bold" text-anchor="middle">x₁²</text>
+      
+      <rect x="40" y="40" width="30" height="30" rx="4" fill="#1e293b" stroke="#8b5cf6" stroke-width="2" />
+      <text x="55" y="60" fill="#8b5cf6" font-family="sans-serif" font-size="12" font-weight="bold" text-anchor="middle">x₂²</text>
+      
+      <!-- Interaction -->
+      <rect x="20" y="80" width="30" height="30" rx="4" fill="#1e293b" stroke="#ef4444" stroke-width="2" />
+      <text x="35" y="100" fill="#ef4444" font-family="sans-serif" font-size="12" font-weight="bold" text-anchor="middle">x₁x₂</text>
+      
+      <!-- Connectors -->
+      <path d="M 15 35 L 15 40" stroke="#475569" stroke-width="1" />
+      <path d="M 55 35 L 55 40" stroke="#475569" stroke-width="1" />
+      <path d="M 35 35 L 35 80" stroke="#475569" stroke-width="1" />
+    </g>
+  </svg>
 category: "4.1 Preprocessing"
 tags: ["transform", "feature-engineering", "tabular", "sklearn", "pipeline"]
 applies_to: ["Tabulaire"]
-when_to_use: "Modèles linéaires sous-performants (non linéarité)."
+when_to_use: "À utiliser lorsque vos modèles linéaires (régression linéaire, régression logistique) sous-performent et que vous suspectez des relations non linéaires ou des interactions entre variables dans vos données."
+use_cases:
+  - "Amélioration d'une régression linéaire pour capturer des tendances quadratiques (ex: prix immobilier vs surface)."
+  - "Création de termes d'interaction pour un modèle de scoring où l'effet combiné de deux variables est plus informatif que chaque variable seule."
+  - "Feature engineering automatisé avant une sélection de variables (SelectKBest) pour ne garder que les termes polynomiaux les plus pertinents."
 pros:
-  - "Capture interactions."
+  - "Permet aux modèles linéaires simples de capturer des relations non linéaires complexes sans changer d'algorithme."
+  - "Création automatique et exhaustive de toutes les interactions et puissances possibles."
+  - "Compatible avec le pipeline sklearn pour un déploiement propre."
 cons:
-  - "Explosion combinatoire."
+  - "Explosion combinatoire du nombre de features avec le degré et le nombre de variables (ex: 100 variables au degré 3 = 176 851 features)."
+  - "Risque élevé de surapprentissage (overfitting) si le degré est trop élevé ou si la régularisation est insuffisante."
+  - "Augmente considérablement le temps de calcul et la mémoire nécessaire."
 hyperparameters:
   degree: "Degré (ex: 2)."
 code_template: |
@@ -50,16 +115,21 @@ code_template: |
   if 'task_type' not in locals(): task_type = "classification"
   if 'meta' not in locals(): meta = {}
 illustration_mermaid: |
-  graph TD
-    A[Raw Data] --> B{Are there numeric columns?}
-    B -- Yes --> C[Initialize PolynomialFeatures]
-    C --> D[Create ColumnTransformer]
-    D --> E[Add to Pipeline Steps]
-    B -- No --> F[Skip PolynomialFeatures]
-    E --> G[Update Data Contract Variables]
-    F --> G
-    style A fill:#eff6ff,stroke:#3b82f6,stroke-width:2px
-    style G fill:#10b981,stroke:#059669,stroke-width:2px
+  flowchart LR
+    A(["📊 df"]) --> B[/"📄 DEGREE"/]
+    B --> C{"⚙️ Extraire Cols Num."}
+    C -- "Oui" --> D{"⚙️ PolynomialFeatures"}
+    C -- "Non" --> E{"⚙️ Skip"}
+    D --> F(["📊 df (avec interactions)"])
+    E --> F
+    F --> G(["ℹ️ pipeline_steps"])
+    style A fill:#10b981,stroke:#059669,stroke-width:2px,color:#fff
+    style B fill:#fbbf24,stroke:#d97706,stroke-width:2px,color:#000
+    style C fill:#3b82f6,stroke:#2563eb,stroke-width:2px,color:#fff
+    style D fill:#3b82f6,stroke:#2563eb,stroke-width:2px,color:#fff
+    style E fill:#3b82f6,stroke:#2563eb,stroke-width:2px,color:#fff
+    style F fill:#10b981,stroke:#059669,stroke-width:2px,color:#fff
+    style G fill:#8b5cf6,stroke:#7c3aed,stroke-width:2px,color:#fff
 
 _metadata:
   bloc: 2

@@ -1,6 +1,16 @@
 id: extract_scraper_playwright
 name: 'Extract: Web Scraping (Playwright)'
 description: Pilote Chromium via Playwright pour scrapper une SPA (React, Vue, Angular).
+when_to_use: Lorsque le contenu du site cible nécessite l'exécution de JavaScript (React, Vue, Angular).
+use_cases:
+  - Extraction de données sur des tableaux de bord dynamiques.
+  - Scraping de sites web modernes nécessitant des interactions complexes.
+pros:
+  - Gère parfaitement le contenu rendu côté client (JavaScript).
+  - Moderne, rapide, et propose une API asynchrone performante.
+cons:
+  - Plus lent et gourmand en ressources qu'un simple parseur HTML.
+  - Nécessite l'installation d'un navigateur headless complet.
 category: 1. Extract
 tags:
 - extract
@@ -54,48 +64,22 @@ code_template: |
   meta = {"source": "scraping_playwright", "path": DEST_PATH}
 
 illustration_mermaid: |
-  flowchart TD
-      subgraph Config [Parameters]
-          URL([TARGET_URL])
-          DEST([DEST_PATH])
-      end
-
-      subgraph Operations [Playwright SPA Scraping]
-          AsyncPW([async_playwright])
-          Browser([chromium.launch])
-          Page([browser.new_page])
-          Goto([page.goto networkidle])
-          Content([page.content])
-          Write([Write HTML])
-          OutFile[(SPA HTML File)]
-      end
-
-      subgraph Outputs [Contract Variables]
-          df((df = pd.DataFrame))
-          target((target_name = ''))
-          task((task_type = 'unknown'))
-          meta((meta: dict))
-      end
-
-      AsyncPW --> Browser
-      Browser --> Page
-      URL --> Goto
-      Page --> Goto
-      Goto --> Content
-      Content --> Write
-      DEST --> OutFile
-      Write --> OutFile
-      OutFile -.-> meta
-
-      style Config fill:#f8fafc,stroke:#cbd5e1,stroke-width:2px
-      style AsyncPW fill:#3b82f6,stroke:#1d4ed8,stroke-width:2px,color:#fff
-      style Browser fill:#f59e0b,stroke:#b45309,stroke-width:2px,color:#fff
-      style Page fill:#10b981,stroke:#047857,stroke-width:2px,color:#fff
-      style Goto fill:#8b5cf6,stroke:#6d28d9,stroke-width:2px,color:#fff
-      style Content fill:#ec4899,stroke:#be185d,stroke-width:2px,color:#fff
-      style Write fill:#14b8a6,stroke:#0f766e,stroke-width:2px,color:#fff
-      style OutFile fill:#64748b,stroke:#475569,stroke-width:2px,color:#fff
-      style Outputs fill:#f1f5f9,stroke:#94a3b8,stroke-width:2px
+  flowchart LR
+      A[/"📄 TARGET_URL (SPA)"/] --> B{"async_playwright()"}
+      C[/"🎯 TARGET_COL"/] --> D{"Check TARGET_COL"}
+      B --> E(["📊 df (HTML Path)"])
+      E --> D
+      D --> F(["🎯 target_name"])
+      D --> G(["⚙️ task_type"])
+      D --> H(["ℹ️ meta (playwright)"])
+      style A fill:#fbbf24,stroke:#d97706,stroke-width:2px,color:#000
+      style C fill:#fbbf24,stroke:#d97706,stroke-width:2px,color:#000
+      style B fill:#3b82f6,stroke:#2563eb,stroke-width:2px,color:#fff
+      style D fill:#3b82f6,stroke:#2563eb,stroke-width:2px,color:#fff
+      style E fill:#10b981,stroke:#059669,stroke-width:2px,color:#fff
+      style F fill:#8b5cf6,stroke:#7c3aed,stroke-width:2px,color:#fff
+      style G fill:#8b5cf6,stroke:#7c3aed,stroke-width:2px,color:#fff
+      style H fill:#8b5cf6,stroke:#7c3aed,stroke-width:2px,color:#fff
 
 _metadata:
   bloc: 1

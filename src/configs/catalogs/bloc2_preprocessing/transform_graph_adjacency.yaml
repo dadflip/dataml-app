@@ -1,14 +1,70 @@
 id: "transform_graph_adjacency"
 name: "Transform: Graph Edge Index Injector"
-description: "Rend l'edge_index du graphe (stocké dans 'meta') globalement accessible pour le Bloc 3 (GNN)."
+description: "Extrait et injecte l'index des arêtes (edge_index) depuis les métadonnées globales vers le contexte d'exécution, afin de le rendre disponible pour les modèles de réseaux de neurones sur graphes (GNN) dans le Bloc 3."
+math_theory: |
+  Un graphe orienté $G = (\textcolor{#3b82f6}{V}, \textcolor{#10b981}{E})$ est constitué de nœuds $\textcolor{#3b82f6}{V}$ et d'arêtes $\textcolor{#10b981}{E}$. L'`edge_index` représente la matrice d'adjacence sous forme de liste de paires de coordonnées au format COO (Coordinate format). Formellement, il s'agit d'une matrice $\textcolor{#fbbf24}{E_{idx}} \in \mathbb{Z}^{2 \times |E|}$ où chaque colonne $\begin{pmatrix} \textcolor{#3b82f6}{u} \\ \textcolor{#3b82f6}{v} \end{pmatrix}$ indique une arête dirigée du nœud source $\textcolor{#3b82f6}{u}$ vers le nœud cible $\textcolor{#3b82f6}{v}$. Cette représentation creuse est optimale pour le calcul de la propagation de l'information (message passing) dans les GNN : $$\textcolor{#8b5cf6}{H^{(l+1)}} = \sigma(\tilde{D}^{-1/2} \textcolor{#10b981}{\tilde{A}} \tilde{D}^{-1/2} H^{(l)} W^{(l)})$$ où $\textcolor{#10b981}{\tilde{A}}$ est déduit de $\textcolor{#fbbf24}{E_{idx}}$.
+math_illustration_svg: |
+  <svg viewBox="0 0 400 200" xmlns="http://www.w3.org/2000/svg">
+    <defs>
+      <style>
+        .node { fill: #1e293b; stroke: #3b82f6; stroke-width: 2; }
+        .edge { stroke: #10b981; stroke-width: 2; marker-end: url(#edgeArrow); }
+        .text-math { fill: #f8fafc; font-family: monospace; font-size: 14px; }
+        .box { fill: #1e293b; stroke: #fbbf24; stroke-width: 2; rx: 4; }
+        .arrow { stroke: #94a3b8; stroke-width: 2; marker-end: url(#arrowhead3); }
+      </style>
+      <marker id="edgeArrow" markerWidth="10" markerHeight="7" refX="22" refY="3.5" orient="auto">
+        <polygon points="0 0, 10 3.5, 0 7" fill="#10b981" />
+      </marker>
+      <marker id="arrowhead3" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
+        <polygon points="0 0, 10 3.5, 0 7" fill="#94a3b8" />
+      </marker>
+    </defs>
+
+    <!-- Graph -->
+    <text x="60" y="30" class="text-math" fill="#3b82f6">Graph G(V,E)</text>
+    
+    <circle cx="50" cy="70" r="15" class="node" />
+    <text x="50" y="75" class="text-math" fill="#3b82f6" text-anchor="middle">0</text>
+    
+    <circle cx="120" cy="70" r="15" class="node" />
+    <text x="120" y="75" class="text-math" fill="#3b82f6" text-anchor="middle">1</text>
+    
+    <circle cx="85" cy="130" r="15" class="node" />
+    <text x="85" y="135" class="text-math" fill="#3b82f6" text-anchor="middle">2</text>
+
+    <line x1="50" y1="70" x2="120" y2="70" class="edge" /> <!-- 0 -> 1 -->
+    <line x1="120" y1="70" x2="85" y2="130" class="edge" /> <!-- 1 -> 2 -->
+    <line x1="85" y1="130" x2="50" y2="70" class="edge" /> <!-- 2 -> 0 -->
+
+    <!-- Transformation Arrow -->
+    <line x1="160" y1="100" x2="210" y2="100" class="arrow" />
+
+    <!-- COO Matrix -->
+    <text x="260" y="30" class="text-math" fill="#fbbf24">Edge Index (COO)</text>
+    <rect x="230" y="50" width="140" height="90" class="box" />
+    
+    <text x="240" y="80" class="text-math" fill="#3b82f6">u (src):</text>
+    <text x="310" y="80" class="text-math" fill="#10b981">0   1   2</text>
+    
+    <text x="240" y="110" class="text-math" fill="#3b82f6">v (dst):</text>
+    <text x="310" y="110" class="text-math" fill="#10b981">1   2   0</text>
+
+    <line x1="230" y1="90" x2="370" y2="90" stroke="#94a3b8" stroke-width="1" stroke-dasharray="4" />
+  </svg>
 category: "4.1 Preprocessing"
 tags: ["transform", "graph", "pytorch-geometric", "gnn"]
 applies_to: ["Graphes"]
-when_to_use: "Indispensable pour lier le DataFrame (nœuds) à la matrice d'adjacence avant un GCN/GAT."
+when_to_use: "Absolument indispensable dans un pipeline de graphe pour lier les caractéristiques des nœuds (contenues dans le DataFrame) à la topologie du graphe (matrice d'adjacence) avant d'appliquer un modèle GCN, GAT ou GraphSAGE."
+use_cases:
+  - "Préparation des données structurelles (réseaux sociaux, molécules) pour un entraînement sous PyTorch Geometric."
+  - "Conservation de la topologie relationnelle lors des étapes intermédiaires du pipeline DataML."
 pros:
-  - "Respecte le contrat de flux de données DataML."
+  - "Respecte scrupuleusement le contrat de flux de données DataML en séparant les features (Dataframe) et la topologie (Meta)."
+  - "Extrêmement léger en mémoire grâce à l'utilisation du format COO pour les arêtes."
 cons:
-  - "Techniquement, ne modifie pas le dataframe."
+  - "Il s'agit techniquement d'une opération d'injection dans l'environnement (scope global) ; elle ne modifie pas le DataFrame en soi."
+  - "Rend le pipeline dépendant de la présence de la clé 'edge_index' dans les métadonnées."
 hyperparameters:
   none: "Aucun."
 code_template: |
@@ -36,16 +92,19 @@ code_template: |
           print("[AVERTISSEMENT] 'edge_index' introuvable dans 'meta'.")
 
 illustration_mermaid: |
-  graph TD
-    A[Input meta dictionary] --> B{Does meta contain 'edge_index'?}
-    B -- Yes --> C[Set global global_edge_index]
-    B -- No --> D[Warn and skip]
-    C --> E[Create Identity FunctionTransformer]
-    E --> F[Update pipeline_steps]
-    D --> F
-    F --> G[Graph Data Ready for GNN]
-    style A fill:#eff6ff,stroke:#94a3b8,stroke-width:2px
-    style G fill:#10b981,stroke:#059669,stroke-width:2px,color:#fff
+  flowchart LR
+    A(["ℹ️ meta"]) --> B{"⚙️ Extract edge_index"}
+    B --> C(["ℹ️ global_edge_index"])
+    B --> D{"⚙️ IdentityTransform"}
+    D --> E(["📊 df (Unchanged)"])
+    D --> F(["ℹ️ pipeline_steps"])
+    
+    style B fill:#3b82f6,stroke:#2563eb,stroke-width:2px,color:#fff
+    style D fill:#3b82f6,stroke:#2563eb,stroke-width:2px,color:#fff
+    style E fill:#10b981,stroke:#059669,stroke-width:2px,color:#fff
+    style A fill:#8b5cf6,stroke:#7c3aed,stroke-width:2px,color:#fff
+    style C fill:#8b5cf6,stroke:#7c3aed,stroke-width:2px,color:#fff
+    style F fill:#8b5cf6,stroke:#7c3aed,stroke-width:2px,color:#fff
 
 _metadata:
   bloc: 2

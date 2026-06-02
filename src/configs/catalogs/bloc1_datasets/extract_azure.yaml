@@ -1,6 +1,16 @@
 id: extract_azure
 name: 'Extract: Azure Blob Storage'
 description: Télécharge un fichier depuis un conteneur Azure.
+when_to_use: À utiliser pour récupérer des jeux de données stockés dans le cloud Azure Blob Storage.
+use_cases:
+- Chargement de données brutes centralisées dans un data lake Azure.
+- Partage de fichiers de données entre différentes applications via Azure.
+pros:
+- Intégration native avec l'écosystème cloud Microsoft.
+- Téléchargement fiable et sécurisé avec les chaînes de connexion.
+cons:
+- Nécessite de configurer des clés d'accès et une chaîne de connexion.
+- Les temps de téléchargement dépendent de la taille du blob et de la bande passante.
 category: 1. Extract
 tags:
 - extract
@@ -49,14 +59,22 @@ code_template: |
   task_type = "unknown"
   meta = {"source": "azure", "path": DEST_PATH}
 illustration_mermaid: |
-    flowchart TD
-    A([FILE_PATH]) --> B[Load EXTRACT_AZURE]
-    B --> df([df])
-    
-    style A fill:#3b82f6,color:#fff
-    style B fill:#10b981,color:#fff
-    style df fill:#f59e0b,color:#fff
-
+    flowchart LR
+        A[/"📄 Azure Blob Storage"/] --> B{"Load/Extract Function()"}
+        C[/"🎯 TARGET_COL"/] --> D{"Check TARGET_COL"}
+        B --> E(["📊 df (DataFrame)"])
+        E --> D
+        D --> F(["🎯 target_name"])
+        D --> G(["⚙️ task_type"])
+        D --> H(["ℹ️ meta (...)"])
+        style A fill:#fbbf24,stroke:#d97706,stroke-width:2px,color:#000
+        style C fill:#fbbf24,stroke:#d97706,stroke-width:2px,color:#000
+        style B fill:#3b82f6,stroke:#2563eb,stroke-width:2px,color:#fff
+        style D fill:#3b82f6,stroke:#2563eb,stroke-width:2px,color:#fff
+        style E fill:#10b981,stroke:#059669,stroke-width:2px,color:#fff
+        style F fill:#8b5cf6,stroke:#7c3aed,stroke-width:2px,color:#fff
+        style G fill:#8b5cf6,stroke:#7c3aed,stroke-width:2px,color:#fff
+        style H fill:#8b5cf6,stroke:#7c3aed,stroke-width:2px,color:#fff
 
 
 _metadata:

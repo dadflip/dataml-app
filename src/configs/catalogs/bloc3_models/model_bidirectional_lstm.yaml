@@ -1,18 +1,122 @@
 id: "model_bidirectional_lstm"
 name: "Model: Bi-Directional LSTM"
-description: "LSTM qui lit la séquence dans les deux sens (avant et arrière) pour mieux capturer le contexte global."
+description: |
+  Réseau LSTM qui traite la séquence d'entrée dans les deux sens (vers l'avant et vers l'arrière).
+  Cette architecture bidirectionnelle permet au modèle de capturer un contexte global riche,
+  intégrant à la fois les informations passées et futures pour chaque élément de la séquence.
 category: "Réseaux Séquentiels (RNN)"
 tags: ["model", "classification", "timeseries", "nlp", "pytorch", "bi-lstm", "deep-learning"]
 applies_to: ["Séquences", "Texte"]
-when_to_use: "Classification de texte ou analyse de sentiment avec des ressources limitées."
+when_to_use: |
+  Privilégiez ce modèle pour des tâches complexes sur des séquences, comme la classification de textes avancée,
+  l'analyse de sentiments nuancée, ou la prédiction de séries temporelles où le contexte environnant est crucial.
+use_cases:
+  - "Analyse de sentiments sur des textes longs ou complexes."
+  - "Reconnaissance d'entités nommées (NER) nécessitant un contexte global."
+  - "Traitement de séquences chronologiques où des motifs bidirectionnels peuvent émerger."
 pros:
-  - "Contexte riche (passé et futur)."
+  - "Capture un contexte extrêmement riche (passé et futur simultanément)."
+  - "Performances supérieures aux LSTM classiques sur de nombreuses tâches NLP."
 cons:
-  - "Plus lourd en mémoire qu'un LSTM classique."
+  - "Consommation mémoire et temps de calcul doublés par rapport à un LSTM unilatéral."
+  - "Plus complexe à paramétrer et risque accru de surapprentissage."
 hyperparameters:
   hidden_size: "Taille de l'état caché (ex: 64)."
   num_layers: "Nombre de couches (ex: 2)."
   epochs: "Nombre d'époques (ex: 10)."
+math_theory: |
+  Le Bi-LSTM calcule les représentations d'une séquence en effectuant deux passages: un dans le sens direct et un dans le sens inverse.
+  Soit $\textcolor{#3b82f6}{x_t}$ l'entrée au temps $t$.
+  Le passage avant calcule l'état caché $\textcolor{#10b981}{\overrightarrow{h}_t}$ :
+  $$\textcolor{#10b981}{\overrightarrow{h}_t} = \text{LSTM}_{fwd}(\textcolor{#3b82f6}{x_t}, \textcolor{#10b981}{\overrightarrow{h}_{t-1}})$$
+  Le passage arrière calcule l'état caché $\textcolor{#fbbf24}{\overleftarrow{h}_t}$ en lisant la séquence à l'envers :
+  $$\textcolor{#fbbf24}{\overleftarrow{h}_t} = \text{LSTM}_{bwd}(\textcolor{#3b82f6}{x_t}, \textcolor{#fbbf24}{\overleftarrow{h}_{t+1}})$$
+  La représentation finale au temps $t$, $\textcolor{#8b5cf6}{h_t}$, est la concaténation des deux états :
+  $$\textcolor{#8b5cf6}{h_t} = [\textcolor{#10b981}{\overrightarrow{h}_t} ; \textcolor{#fbbf24}{\overleftarrow{h}_t}]$$
+  La sortie $\textcolor{#ef4444}{y}$ pour la classification repose souvent sur la dernière combinaison : $\textcolor{#ef4444}{y} = \text{Softmax}(W \cdot \textcolor{#8b5cf6}{h_T} + b)$.
+math_illustration_svg: |
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 400">
+    <defs>
+      <marker id="arrowFwd" markerWidth="10" markerHeight="10" refX="9" refY="3" orient="auto" markerUnits="strokeWidth">
+        <path d="M0,0 L0,6 L9,3 z" fill="#10b981" />
+      </marker>
+      <marker id="arrowBwd" markerWidth="10" markerHeight="10" refX="9" refY="3" orient="auto" markerUnits="strokeWidth">
+        <path d="M0,0 L0,6 L9,3 z" fill="#fbbf24" />
+      </marker>
+      <marker id="arrowOut" markerWidth="10" markerHeight="10" refX="9" refY="3" orient="auto" markerUnits="strokeWidth">
+        <path d="M0,0 L0,6 L9,3 z" fill="#8b5cf6" />
+      </marker>
+    </defs>
+  
+    <!-- Inputs -->
+    <g transform="translate(150, 320)">
+      <rect x="-30" y="0" width="60" height="40" rx="5" fill="#3b82f6" />
+      <text x="0" y="25" fill="#fff" font-family="sans-serif" font-size="18" text-anchor="middle">x_{t-1}</text>
+    </g>
+    <g transform="translate(400, 320)">
+      <rect x="-30" y="0" width="60" height="40" rx="5" fill="#3b82f6" />
+      <text x="0" y="25" fill="#fff" font-family="sans-serif" font-size="18" text-anchor="middle">x_t</text>
+    </g>
+    <g transform="translate(650, 320)">
+      <rect x="-30" y="0" width="60" height="40" rx="5" fill="#3b82f6" />
+      <text x="0" y="25" fill="#fff" font-family="sans-serif" font-size="18" text-anchor="middle">x_{t+1}</text>
+    </g>
+  
+    <!-- Forward LSTM -->
+    <g transform="translate(150, 220)">
+      <rect x="-45" y="-25" width="90" height="50" rx="10" fill="#10b981" />
+      <text x="0" y="5" fill="#fff" font-family="sans-serif" font-size="18" text-anchor="middle">LSTM (fwd)</text>
+    </g>
+    <path d="M 195 220 L 345 220" stroke="#10b981" stroke-width="3" marker-end="url(#arrowFwd)" />
+  
+    <g transform="translate(400, 220)">
+      <rect x="-45" y="-25" width="90" height="50" rx="10" fill="#10b981" />
+      <text x="0" y="5" fill="#fff" font-family="sans-serif" font-size="18" text-anchor="middle">LSTM (fwd)</text>
+    </g>
+    <path d="M 445 220 L 595 220" stroke="#10b981" stroke-width="3" marker-end="url(#arrowFwd)" />
+  
+    <g transform="translate(650, 220)">
+      <rect x="-45" y="-25" width="90" height="50" rx="10" fill="#10b981" />
+      <text x="0" y="5" fill="#fff" font-family="sans-serif" font-size="18" text-anchor="middle">LSTM (fwd)</text>
+    </g>
+  
+    <!-- Backward LSTM -->
+    <g transform="translate(150, 120)">
+      <rect x="-45" y="-25" width="90" height="50" rx="10" fill="#fbbf24" />
+      <text x="0" y="5" fill="#000" font-family="sans-serif" font-size="18" text-anchor="middle">LSTM (bwd)</text>
+    </g>
+    
+    <g transform="translate(400, 120)">
+      <rect x="-45" y="-25" width="90" height="50" rx="10" fill="#fbbf24" />
+      <text x="0" y="5" fill="#000" font-family="sans-serif" font-size="18" text-anchor="middle">LSTM (bwd)</text>
+    </g>
+    <path d="M 355 120 L 205 120" stroke="#fbbf24" stroke-width="3" marker-end="url(#arrowBwd)" />
+  
+    <g transform="translate(650, 120)">
+      <rect x="-45" y="-25" width="90" height="50" rx="10" fill="#fbbf24" />
+      <text x="0" y="5" fill="#000" font-family="sans-serif" font-size="18" text-anchor="middle">LSTM (bwd)</text>
+    </g>
+    <path d="M 605 120 L 455 120" stroke="#fbbf24" stroke-width="3" marker-end="url(#arrowBwd)" />
+  
+    <!-- Connections from Input to LSTM -->
+    <path d="M 150 320 L 150 255" stroke="#3b82f6" stroke-width="2" />
+    <path d="M 150 320 L 150 155" stroke="#3b82f6" stroke-width="2" stroke-dasharray="4" />
+  
+    <path d="M 400 320 L 400 255" stroke="#3b82f6" stroke-width="2" />
+    <path d="M 400 320 L 400 155" stroke="#3b82f6" stroke-width="2" stroke-dasharray="4" />
+  
+    <path d="M 650 320 L 650 255" stroke="#3b82f6" stroke-width="2" />
+    <path d="M 650 320 L 650 155" stroke="#3b82f6" stroke-width="2" stroke-dasharray="4" />
+  
+    <!-- Output Concat -->
+    <g transform="translate(400, 40)">
+      <rect x="-40" y="-20" width="80" height="40" rx="5" fill="#8b5cf6" />
+      <text x="0" y="5" fill="#fff" font-family="sans-serif" font-size="18" text-anchor="middle">h_t</text>
+    </g>
+  
+    <path d="M 400 195 L 400 65" stroke="#10b981" stroke-width="2" marker-end="url(#arrowOut)" />
+    <path d="M 400 95 L 400 65" stroke="#fbbf24" stroke-width="2" marker-end="url(#arrowOut)" />
+  </svg>
 code_template: |
   import pandas as pd
   import numpy as np
@@ -138,36 +242,33 @@ code_template: |
       training_history = {"status": "success", "final_loss": float(final_loss), "epochs": int(EPOCHS)}
 
 illustration_mermaid: |
-    graph TD
-      subgraph Inputs
-        X([X_train 3D Tensor\nBatch, Seq, Feat])
-      end
-      
-      subgraph Bi-LSTM Architecture
-        X --> LSTM[Bi-Directional LSTM\nHidden Size, N Layers]
-        
-        %% Forward and Backward representations
-        LSTM -- Forward Pass --> H_fwd[Forward Hidden State]
-        LSTM -- Backward Pass --> H_bwd[Backward Hidden State]
-        
-        H_fwd --> Concat[Concatenation\nH_fwd : H_bwd]
-        H_bwd --> Concat
-      end
-      
-      subgraph Classification Head
-        Concat -- Last Timestep --> FC[Fully Connected Layer\nHidden*2 -> Classes]
-        FC --> SM[Softmax]
-      end
-      
-      SM --> Pred([Predicted Label])
-      
-      style X fill:#f8fafc,stroke:#94a3b8,stroke-width:1px
-      style LSTM fill:#8b5cf6,stroke:#7c3aed,stroke-width:2px,color:#fff
-      style H_fwd fill:#c4b5fd,stroke:#8b5cf6,stroke-width:1px,color:#000
-      style H_bwd fill:#c4b5fd,stroke:#8b5cf6,stroke-width:1px,color:#000
-      style Concat fill:#a78bfa,stroke:#7c3aed,stroke-width:1px,color:#fff
-      style FC fill:#a78bfa,stroke:#7c3aed,stroke-width:1px,color:#fff
-      style Pred fill:#f8fafc,stroke:#94a3b8,stroke-width:1px
+  flowchart LR
+    X[/"Tensor 3D (Batch, Seq, Feat)"/]
+    LSTM{"Bi-Directional LSTM\nHidden Size, N Layers"}
+    H_fwd(["État Caché Forward"])
+    H_bwd(["État Caché Backward"])
+    Concat{"Concaténation\nH_fwd : H_bwd"}
+    FC{"Couche Dense\nHidden*2 -> Classes"}
+    SM{"Softmax"}
+    Pred(["Étiquette Prédite"])
+
+    X --> LSTM
+    LSTM -- "Passage Avant" --> H_fwd
+    LSTM -- "Passage Arrière" --> H_bwd
+    H_fwd --> Concat
+    H_bwd --> Concat
+    Concat -- "Dernier pas de temps" --> FC
+    FC --> SM
+    SM --> Pred
+
+    style X fill:#fbbf24,stroke:#d97706,stroke-width:2px,color:#000
+    style LSTM fill:#3b82f6,stroke:#2563eb,stroke-width:2px,color:#fff
+    style H_fwd fill:#10b981,stroke:#059669,stroke-width:2px,color:#fff
+    style H_bwd fill:#10b981,stroke:#059669,stroke-width:2px,color:#fff
+    style Concat fill:#3b82f6,stroke:#2563eb,stroke-width:2px,color:#fff
+    style FC fill:#3b82f6,stroke:#2563eb,stroke-width:2px,color:#fff
+    style SM fill:#3b82f6,stroke:#2563eb,stroke-width:2px,color:#fff
+    style Pred fill:#10b981,stroke:#059669,stroke-width:2px,color:#fff
 
 _metadata:
   bloc: 3

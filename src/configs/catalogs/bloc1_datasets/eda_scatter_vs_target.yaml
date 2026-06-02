@@ -1,6 +1,16 @@
 id: eda_scatter_vs_target
 name: 'EDA: Scatter vs Target'
 description: Nuage de points de chaque feature contre une cible continue.
+when_to_use: "Pour explorer la relation entre plusieurs variables prédictives continues et une variable cible continue (problème de régression)."
+use_cases:
+  - "Recherche visuelle d'une tendance linéaire ou non-linéaire."
+  - "Détection de corrélations fortes avec la cible."
+pros:
+  - "Très parlant pour identifier visuellement si une feature est un bon prédicteur."
+  - "Aide à identifier les outliers spécifiques qui faussent une relation."
+cons:
+  - "Uniquement pertinent pour les problèmes de régression avec une cible continue."
+  - "Risque de sur-saturation de l'image (overplotting) si le dataset est massif."
 category: 3. Exploratory Data Analysis
 tags:
 - eda
@@ -32,22 +42,25 @@ code_template: |
       print("[EDA] Cible (target_name) introuvable ou non définie.")
 illustration_mermaid: |
     flowchart TD
-        Input([DataFrame & target_name]) --> CheckTarget{Target Valid?}
-        CheckTarget -- Yes --> SelectCols[Select Numeric Cols]
-        SelectCols --> RemoveTarget[Remove Target from Features]
-        RemoveTarget --> CheckLimit{Cols > 12?}
-        CheckLimit -- Yes --> Truncate[Keep Top 12]
-        CheckLimit -- No --> PlotGrid
-        Truncate --> PlotGrid[Setup Subplot Grid]
-        PlotGrid --> Loop[Loop Features]
-        Loop --> Scatter{{sns.scatterplot\nCol vs Target}}
-        Scatter --> Loop
-        Scatter --> Show[/Show Plot/]
-        CheckTarget -- No --> Err[/Print 'Target not found'/]
-    
-        style Input fill:#3b82f6,stroke:#2563eb,color:#fff
-        style SelectCols fill:#10b981,stroke:#059669,color:#fff
-        style Scatter fill:#ec4899,stroke:#db2777,color:#fff
+        InDF[/df/]
+        InTarget[/target_name/]
+        ProcSelect{select_dtypes}
+        ProcScatter{sns.scatterplot}
+        OutFig([fig])
+        OutAxes([ax_grid])
+
+        InDF --> ProcSelect
+        InTarget --> ProcSelect
+        ProcSelect --> ProcScatter
+        ProcScatter --> OutFig
+        ProcScatter --> OutAxes
+
+        style InDF fill:#fbbf24,stroke:#d97706,stroke-width:2px,color:#000
+        style InTarget fill:#fbbf24,stroke:#d97706,stroke-width:2px,color:#000
+        style ProcSelect fill:#3b82f6,stroke:#2563eb,stroke-width:2px,color:#fff
+        style ProcScatter fill:#3b82f6,stroke:#2563eb,stroke-width:2px,color:#fff
+        style OutFig fill:#10b981,stroke:#059669,stroke-width:2px,color:#fff
+        style OutAxes fill:#8b5cf6,stroke:#7c3aed,stroke-width:2px,color:#fff
 
 _metadata:
   bloc: 1

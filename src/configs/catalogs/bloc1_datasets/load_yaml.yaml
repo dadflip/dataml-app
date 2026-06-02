@@ -1,6 +1,17 @@
 id: "load_yaml"
 name: "Load: Configuration YAML"
-description: "Parse un fichier de configuration YAML en dictionnaire Python."
+description: "Lit un fichier YAML, généralement utilisé pour la configuration, et extrait ses métadonnées et son chemin d'accès."
+when_to_use: "Approprié lorsqu'il est nécessaire de charger des paramètres, des configurations de pipeline, ou des hyperparamètres stockés au format YAML."
+use_cases:
+  - "Chargement de paramètres d'entraînement pour des modèles de Machine Learning."
+  - "Lecture de configurations d'environnement (bases de données, chemins de fichiers)."
+  - "Import de dictionnaires de paramètres dans le pipeline d'analyse."
+pros:
+  - "Format lisible par l'homme, très répandu pour la configuration."
+  - "Extraction simple et rapide du chemin et des métadonnées basiques."
+cons:
+  - "Ne produit pas directement un DataFrame exploitable (par défaut vide dans ce bloc)."
+  - "L'analyse complète du YAML en données tabulaires nécessite souvent un code personnalisé selon la structure."
 category: "2. Load"
 tags: ["load", "yaml", "config", "dict"]
 code_template: |
@@ -22,19 +33,22 @@ output_variables:
   - task_type
   - meta
 illustration_mermaid: |
-    flowchart LR
-        YAML[("YAML File\n(.yaml)")] -->|FILE_PATH| Load(["Load\nYAML"])
-        Load --> df(["df (None)"])
-        Load --> target_name(["target_name (None)"])
-        Load --> task_type(["task_type ('unknown')"])
-        Load --> meta(["meta (dict)"])
-
-        style YAML fill:#3b82f6,stroke:#2563eb,stroke-width:2px,color:#fff
-        style Load fill:#eff6ff,stroke:#3b82f6,stroke-width:2px
-        style df fill:#f3f4f6,stroke:#9ca3af,stroke-width:1px
-        style target_name fill:#f3f4f6,stroke:#9ca3af,stroke-width:1px
-        style task_type fill:#f3f4f6,stroke:#9ca3af,stroke-width:1px
-        style meta fill:#f3f4f6,stroke:#9ca3af,stroke-width:1px
+  flowchart LR
+      A[/"📄 FILE_PATH"/] --> B{"Load Config"}
+      C[/"🎯 Target Info"/] --> D{"Define target"}
+      B --> E(["📊 df (Empty)"])
+      E --> D
+      D --> F(["🎯 target_name"])
+      D --> G(["⚙️ task_type"])
+      D --> H(["ℹ️ meta (source)"])
+      style A fill:#fbbf24,stroke:#d97706,stroke-width:2px,color:#000
+      style C fill:#fbbf24,stroke:#d97706,stroke-width:2px,color:#000
+      style B fill:#3b82f6,stroke:#2563eb,stroke-width:2px,color:#fff
+      style D fill:#3b82f6,stroke:#2563eb,stroke-width:2px,color:#fff
+      style E fill:#10b981,stroke:#059669,stroke-width:2px,color:#fff
+      style F fill:#8b5cf6,stroke:#7c3aed,stroke-width:2px,color:#fff
+      style G fill:#8b5cf6,stroke:#7c3aed,stroke-width:2px,color:#fff
+      style H fill:#8b5cf6,stroke:#7c3aed,stroke-width:2px,color:#fff
 
 _metadata:
   bloc: 1

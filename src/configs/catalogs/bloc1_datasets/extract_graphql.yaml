@@ -1,6 +1,16 @@
 id: extract_graphql
 name: 'Extract: API GraphQL'
-description: Exécute une requête GraphQL et sauvegarde le résultat JSON.
+description: "Exécute une requête GraphQL via HTTP POST et sauvegarde le résultat au format JSON sur le disque local."
+when_to_use: "Lorsque les données se trouvent derrière une API GraphQL nécessitant une authentification par token et une requête structurée."
+use_cases:
+  - "Extraction de données métier complexes depuis des plateformes comme GitHub, Shopify, etc."
+  - "Récupération partielle de graphes de données pour l'analyse structurée."
+pros:
+  - "Ne récupère que les champs demandés (optimisation de la bande passante)."
+  - "S'intègre facilement avec une authentification par jeton."
+cons:
+  - "Nécessite la connaissance du schéma GraphQL cible."
+  - "Peut être limité par les quotas de requêtes de l'API."
 category: 1. Extract
 tags:
 - extract
@@ -52,13 +62,22 @@ code_template: |
   task_type = "unknown"
   meta = {"source": "graphql", "path": DEST_PATH}
 illustration_mermaid: |
-    flowchart TD
-    A([FILE_PATH]) --> B[Load EXTRACT_GRAPHQL]
-    B --> df([df])
-    
-    style A fill:#3b82f6,color:#fff
-    style B fill:#10b981,color:#fff
-    style df fill:#f59e0b,color:#fff
+    flowchart LR
+        A[/"📄 API Endpoint"/] --> B{"Execute GraphQL()"}
+        C[/"🎯 TARGET_COL"/] --> D{"Check TARGET_COL"}
+        B --> E(["📊 JSON File Path"])
+        E --> D
+        D --> F(["🎯 target_name"])
+        D --> G(["⚙️ task_type"])
+        D --> H(["ℹ️ meta (source, path)"])
+        style A fill:#fbbf24,stroke:#d97706,stroke-width:2px,color:#000
+        style C fill:#fbbf24,stroke:#d97706,stroke-width:2px,color:#000
+        style B fill:#3b82f6,stroke:#2563eb,stroke-width:2px,color:#fff
+        style D fill:#3b82f6,stroke:#2563eb,stroke-width:2px,color:#fff
+        style E fill:#10b981,stroke:#059669,stroke-width:2px,color:#fff
+        style F fill:#8b5cf6,stroke:#7c3aed,stroke-width:2px,color:#fff
+        style G fill:#8b5cf6,stroke:#7c3aed,stroke-width:2px,color:#fff
+        style H fill:#8b5cf6,stroke:#7c3aed,stroke-width:2px,color:#fff
 
 
 _metadata:

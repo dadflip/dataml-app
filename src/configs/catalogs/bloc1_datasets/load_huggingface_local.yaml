@@ -1,6 +1,18 @@
 id: load_huggingface_local
 name: 'Load: HuggingFace (from Disk)'
-description: Charge un dataset HuggingFace précédemment extrait sur le disque local en DataFrame Pandas.
+description: "Charge un dataset HuggingFace précédemment extrait sur le disque local en DataFrame Pandas."
+when_to_use: "Lorsque vous avez téléchargé un jeu de données via la librairie 'datasets' d'HuggingFace et que vous l'avez sauvegardé localement (par exemple pour travailler hors ligne ou accélérer les chargements répétés)."
+use_cases:
+  - "Chargement de corpus NLP textuels (classification de textes, analyse de sentiment)."
+  - "Traitement de grands volumes de données fragmentés stockés au format Arrow."
+  - "Création de pipelines de Machine Learning hybrides nécessitant le passage vers Pandas."
+pros:
+  - "Extrêmement rapide grâce au backend Apache Arrow."
+  - "Maintient les types de données complexes et les métadonnées d'HuggingFace."
+  - "Fonctionne sans connexion Internet après le premier téléchargement."
+cons:
+  - "Requiert l'installation de la librairie 'datasets' qui peut être lourde."
+  - "La conversion vers Pandas peut consommer beaucoup de mémoire (RAM) pour les très gros jeux de données."
 category: 2. Load
 tags:
 - load
@@ -47,17 +59,22 @@ code_template: |
       print(f"[ERREUR LOAD] Échec du chargement HuggingFace : {str(e)}")
       raise e
 illustration_mermaid: |
-  flowchart TD
-      A([DIR_PATH]) --> B{Directory exists?}
-      B -- Yes --> C[load_from_disk]
-      C --> D[dataset.to_pandas]
-      D --> df([df])
-      B -- No --> E[Empty DataFrame]
-      E --> df
-      
-      style A fill:#3b82f6,color:#fff
-      style C fill:#10b981,color:#fff
-      style df fill:#f59e0b,color:#fff
+  flowchart LR
+      A[/"📁 LOCAL_PATH"/] --> B{"load_from_disk()"}
+      C[/"🎯 TARGET_COL"/] --> D{"Check TARGET_COL"}
+      B --> E(["📊 df (DataFrame)"])
+      E --> D
+      D --> F(["🎯 target_name"])
+      D --> G(["⚙️ task_type"])
+      D --> H(["ℹ️ meta (huggingface)"])
+      style A fill:#fbbf24,stroke:#d97706,stroke-width:2px,color:#000
+      style C fill:#fbbf24,stroke:#d97706,stroke-width:2px,color:#000
+      style B fill:#3b82f6,stroke:#2563eb,stroke-width:2px,color:#fff
+      style D fill:#3b82f6,stroke:#2563eb,stroke-width:2px,color:#fff
+      style E fill:#10b981,stroke:#059669,stroke-width:2px,color:#fff
+      style F fill:#8b5cf6,stroke:#7c3aed,stroke-width:2px,color:#fff
+      style G fill:#8b5cf6,stroke:#7c3aed,stroke-width:2px,color:#fff
+      style H fill:#8b5cf6,stroke:#7c3aed,stroke-width:2px,color:#fff
 
 _metadata:
   bloc: 1

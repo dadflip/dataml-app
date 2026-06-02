@@ -1,4 +1,5 @@
 import yaml from "js-yaml";
+import { autoWrapMathColors } from "./utils";
 
 export interface IOContract {
   bloc: number;
@@ -30,6 +31,8 @@ export interface CatalogBlock {
   output_variables?: Record<string, string> | string[];
   output_contract?: Record<string, string>;
   illustration_mermaid?: string;
+  math_theory?: string;
+  math_illustration_svg?: string;
   code_template?: string;
   reentry_target?: string;
 
@@ -261,6 +264,7 @@ export interface NotebookCell {
   name: string;
   section: string;
   code: string;
+  mermaidCode?: string;
   type?: "code" | "markdown";
   params: ParamDef[];
   overrides: Record<string, string>;
@@ -354,6 +358,7 @@ export function makeCell(b: CatalogBlock): NotebookCell {
     name: b.name,
     section: b.section,
     code,
+    mermaidCode: b.illustration_mermaid,
     params,
     overrides: {},
     required: blockRequired(b),
@@ -734,12 +739,53 @@ function escapeHtml(unsafe: string) {
     .replace(/'/g, "&#039;");
 }
 
-export function buildHtmlReport(cells: NotebookCell[], outputs: Record<string, any>): string {
+export function buildHtmlReport(
+  cells: NotebookCell[],
+  outputs: Record<string, any>,
+  blockIndex?: Map<string, CatalogBlock>
+): string {
   const cellsHtml = cells.map((cell, index) => {
     const code = applyParamOverrides(cell.code, cell.overrides);
     const output = outputs[cell.uid];
+    const blockMeta = blockIndex?.get(cell.blockId);
+    const finalMermaidCode = cell.mermaidCode ?? blockMeta?.illustration_mermaid;
 
     let cellContent = '';
+
+    let metaHtml = '';
+    if (blockMeta) {
+      metaHtml += `<div class="block-meta" style="font-size: 0.9em; background: #fff; padding: 1rem; border: 1px solid #e2e8f0; border-radius: 6px; margin-bottom: 1rem;">`;
+      if (blockMeta.description) {
+        metaHtml += `<p style="margin-top: 0;"><strong>Description :</strong> ${escapeHtml(blockMeta.description)}</p>`;
+      }
+      if (blockMeta.when_to_use) {
+        metaHtml += `<p><strong>Quand l'utiliser :</strong> ${escapeHtml(blockMeta.when_to_use)}</p>`;
+      }
+      if (blockMeta.use_cases && blockMeta.use_cases.length > 0) {
+        metaHtml += `<p><strong>Cas d'usage :</strong></p><ul style="margin-top: 0;">`;
+        blockMeta.use_cases.forEach(u => metaHtml += `<li>${escapeHtml(u)}</li>`);
+        metaHtml += `</ul>`;
+      }
+      if (blockMeta.hyperparameters && typeof blockMeta.hyperparameters === 'object') {
+        metaHtml += `<p><strong>Hyperparamètres :</strong></p><ul style="margin-top: 0;">`;
+        for (const [k, v] of Object.entries(blockMeta.hyperparameters)) {
+          metaHtml += `<li><code>${escapeHtml(k)}</code>: ${escapeHtml(typeof v === 'object' ? JSON.stringify(v) : String(v))}</li>`;
+        }
+        metaHtml += `</ul>`;
+      }
+      if (blockMeta.math_theory) {
+        metaHtml += `<div style="margin-top: 1rem;"><p><strong>Théorie & Mathématiques :</strong></p><div class="math-theory" style="white-space: pre-wrap; font-family: inherit; font-size: 0.9em; background: #f8fafc; padding: 1rem; border-radius: 6px; border: 1px solid #e2e8f0; overflow-x: auto;">${escapeHtml(autoWrapMathColors(blockMeta.math_theory))}</div></div>`;
+      }
+      if (blockMeta.math_illustration_svg) {
+        metaHtml += `<div style="margin-top: 1rem; display: flex; justify-content: center; background: #fff; border: 1px solid #e2e8f0; border-radius: 6px; padding: 1rem;">${blockMeta.math_illustration_svg}</div>`;
+      }
+      metaHtml += `</div>`;
+    }
+
+    let mermaidHtml = '';
+    if (finalMermaidCode) {
+      mermaidHtml = `<div class="mermaid-container" style="margin-bottom: 1rem; padding: 1rem; border: 1px solid #e2e8f0; border-radius: 6px; background: #f8fafc; text-align: center;"><div class="mermaid">${escapeHtml(finalMermaidCode)}</div></div>`;
+    }
 
     if (cell.type === 'markdown') {
       cellContent = `<div class="markdown-cell"><pre style="font-family: inherit; font-size: 1rem; background: transparent; border: none; white-space: pre-wrap; padding: 0;">${escapeHtml(code)}</pre></div>`;
@@ -770,6 +816,8 @@ export function buildHtmlReport(cells: NotebookCell[], outputs: Record<string, a
       cellContent = `
         <div class="code-cell">
           <div class="cell-header">[${index + 1}] ${escapeHtml(cell.name)}</div>
+          ${metaHtml}
+          ${mermaidHtml}
           <pre class="code-pre"><code class="language-python">${escapeHtml(code)}</code></pre>
           ${outHtml}
         </div>
@@ -786,6 +834,15 @@ export function buildHtmlReport(cells: NotebookCell[], outputs: Record<string, a
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/github.min.css">
   <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/languages/python.min.js"></script>
+  <script>
+    window.MathJax = {
+      tex: {
+        inlineMath: [['$', '$'], ['\\\\(', '\\\\)']],
+        displayMath: [['$$', '$$'], ['\\\\[', '\\\\]']]
+      }
+    };
+  </script>
+  <script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml.js"></script>
   <style>
     body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; line-height: 1.6; max-width: 1000px; margin: 0 auto; padding: 2rem; color: #333; background: #f8fafc; }
     h1, h2, h3 { border-bottom: 1px solid #e2e8f0; padding-bottom: 0.3em; color: #0f172a; }
@@ -811,6 +868,10 @@ export function buildHtmlReport(cells: NotebookCell[], outputs: Record<string, a
   </div>
   <script>
     if (typeof hljs !== 'undefined') hljs.highlightAll();
+  </script>
+  <script type="module">
+    import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.esm.min.mjs';
+    mermaid.initialize({ startOnLoad: true });
   </script>
 </body>
 </html>`;

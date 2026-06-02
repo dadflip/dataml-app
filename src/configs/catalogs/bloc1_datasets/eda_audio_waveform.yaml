@@ -1,6 +1,16 @@
 id: eda_audio_waveform
 name: 'EDA: Waveform (Audio)'
-description: Affiche le signal temporel d'un audio.
+description: "Affiche le signal temporel d'un audio (amplitude en fonction du temps)."
+when_to_use: "Pour vérifier l'intégrité globale d'un enregistrement et ses niveaux d'amplitude."
+use_cases:
+  - "Vérification des silences avant ou après un enregistrement."
+  - "Détection de saturation (clipping) dans le signal audio."
+pros:
+  - "Très rapide à afficher."
+  - "Prise en charge du mono et de la stéréo."
+cons:
+  - "Ne permet pas de distinguer les fréquences."
+  - "Peut être peu lisible si le signal est très long."
 category: 3. Exploratory Data Analysis
 tags:
 - eda
@@ -28,20 +38,27 @@ code_template: |
       print("[EDA] Aucun Tensor 'waveform' trouvé dans le scope local.")
 illustration_mermaid: |
     graph TD
-      A([Tensor 'waveform']) --> B{Exists in locals?}
+      A[/Tensor 'waveform'/] --> B{Exists in locals?}
       B -- Yes --> C{Mono or Stereo?}
-      C -- Mono --> D{{Plot Channel 0}}
-      D --> E[Set Title: Mono]
-      C -- Stereo --> F{{Plot Left & Right Channels}}
-      F --> G[Set Title: Stereo & Add Legend]
-      E --> H[Set Labels & Display]
+      C -- Mono --> D{Plot Channel 0}
+      C -- Stereo --> F{Plot Left & Right Channels}
+      D --> E{Set Title: Mono}
+      F --> G{Set Title: Stereo & Add Legend}
+      E --> H{Set Labels & Display}
       G --> H
-      B -- No --> I[/Print Error Message/]
-      style A fill:#4F46E5,color:#fff
-      style B fill:#F59E0B,color:#fff
-      style C fill:#F59E0B,color:#fff
-      style D fill:#10B981,color:#fff
-      style F fill:#10B981,color:#fff
+      H --> I([Display Waveform])
+      B -- No --> J([Print Error Message])
+
+      style A fill:#fbbf24,stroke:#d97706,stroke-width:2px,color:#000
+      style B fill:#3b82f6,stroke:#2563eb,stroke-width:2px,color:#fff
+      style C fill:#3b82f6,stroke:#2563eb,stroke-width:2px,color:#fff
+      style D fill:#3b82f6,stroke:#2563eb,stroke-width:2px,color:#fff
+      style F fill:#3b82f6,stroke:#2563eb,stroke-width:2px,color:#fff
+      style E fill:#3b82f6,stroke:#2563eb,stroke-width:2px,color:#fff
+      style G fill:#3b82f6,stroke:#2563eb,stroke-width:2px,color:#fff
+      style H fill:#3b82f6,stroke:#2563eb,stroke-width:2px,color:#fff
+      style I fill:#10b981,stroke:#059669,stroke-width:2px,color:#fff
+      style J fill:#8b5cf6,stroke:#7c3aed,stroke-width:2px,color:#fff
 
 _metadata:
   bloc: 1

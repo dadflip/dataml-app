@@ -1,14 +1,23 @@
 id: "model_bernoulli_nb"
 name: "Model: Bernoulli Naive Bayes"
-description: "Conçu pour les données binaires / booléennes."
+description: |
+  Algorithme Naive Bayes conçu spécifiquement pour les données distribuées selon une loi de Bernoulli, c'est-à-dire avec des variables explicatives booléennes (binaires).
 category: "Modèles Probabilistes"
 tags: ["model", "classification", "tabular", "sklearn", "bayes"]
 applies_to: ["Tabulaire"]
-when_to_use: "Quand la plupart de vos features sont des variables binaires (0/1)."
+when_to_use: |
+  Très efficace lorsque vos variables caractéristiques (features) sont strictement binaires (0/1) ou peuvent être binarisées de manière logique (ex. présence/absence d'un mot dans un texte).
+use_cases:
+  - "Classification de textes courts avec l'approche Bag of Words en binaire (présence/absence de mots)."
+  - "Détection de spam basée sur la présence de certains mots-clés."
+  - "Modélisation de données cliniques (ex: présence ou absence de symptômes)."
 pros:
-  - "Très rapide, pénalise l'absence explicite des features (contrairement au Multinomial)."
+  - "Extrêmement rapide à entraîner et à évaluer, idéal pour les grands volumes de données."
+  - "Pénalise explicitement la non-occurrence d'une caractéristique (contrairement au Naive Bayes Multinomial qui l'ignore)."
+  - "Très performant avec peu de données si l'hypothèse d'indépendance est approximativement respectée."
 cons:
-  - "Binarise les variables numériques implicitement."
+  - "Repose sur l'hypothèse forte (souvent fausse) de l'indépendance conditionnelle des caractéristiques."
+  - "Binarise implicitement toutes les variables continues ou discrètes passées en entrée, perdant ainsi l'information de fréquence ou de magnitude."
 hyperparameters:
   alpha: "Paramètre de lissage de Laplace (ex: 1.0)."
 code_template: |
@@ -77,29 +86,88 @@ code_template: |
       training_history = {"status": "success", "fitted_on": len(X_train)}
 
 illustration_mermaid: |
-    graph TD
-      subgraph Bayes Theorem
-        P_Y[P(Class)] --> Post[P(Class | X)]
-        P_X[P(Features | Class)] --> Post
-        P_E[P(Features)] -.-> Post
-      end
+    flowchart LR
+      Bin(["Variables Binaires\n(0/1)"])
+      Likelihood{"Vraisemblance\n(Bernoulli)"}
+      P_Y{"P(Classe)\n(A priori)"}
+      P_X{"P(X | Classe)"}
+      Post{"P(Classe | X)\n(Théorème de Bayes)"}
+      ArgMax{"ArgMax\n(Décision)"}
+      Pred(["Prédictions"])
       
-      subgraph Bernoulli Probabilities
-        Bin([Binary Features]) --> Likelihood[Bernoulli Likelihood]
-        Likelihood --> P_X
-      end
+      Bin --> Likelihood
+      Likelihood --> P_X
+      P_Y --> Post
+      P_X --> Post
+      Post --> ArgMax
+      ArgMax --> Pred
       
-      subgraph Inference
-        Post --> ArgMax[ArgMax Class]
-        ArgMax --> Pred([Predictions])
-      end
-      
-      style Post fill:#8b5cf6,stroke:#7c3aed,stroke-width:2px,color:#fff
-      style Likelihood fill:#c4b5fd,stroke:#8b5cf6,stroke-width:1px,color:#000
-      style ArgMax fill:#a78bfa,stroke:#7c3aed,stroke-width:1px,color:#fff
-      style Bin fill:#f8fafc,stroke:#94a3b8,stroke-width:1px
-      style Pred fill:#f8fafc,stroke:#94a3b8,stroke-width:1px
-
-_metadata:
-  bloc: 3
-  section: "1_classification_tabulaire"
+      style Bin fill:#10b981,stroke:#059669,stroke-width:2px,color:#fff
+      style Likelihood fill:#3b82f6,stroke:#2563eb,stroke-width:2px,color:#fff
+      style P_Y fill:#8b5cf6,stroke:#7c3aed,stroke-width:2px,color:#fff
+      style P_X fill:#3b82f6,stroke:#2563eb,stroke-width:2px,color:#fff
+      style Post fill:#3b82f6,stroke:#2563eb,stroke-width:2px,color:#fff
+      style ArgMax fill:#3b82f6,stroke:#2563eb,stroke-width:2px,color:#fff
+      style Pred fill:#10b981,stroke:#059669,stroke-width:2px,color:#fff
+math_theory: |
+  Le Bernoulli Naive Bayes est adapté aux variables prédictives binaires (0 ou 1).
+  
+  La vraisemblance de chaque variable $j$ pour la classe $\textcolor{#8b5cf6}{c}$ est modélisée par une distribution de Bernoulli :
+  $$P(\textcolor{#fbbf24}{x}^{(j)} | y=\textcolor{#8b5cf6}{c}) = \textcolor{#3b82f6}{p}_{jc}^{\textcolor{#fbbf24}{x}^{(j)}} (1 - \textcolor{#3b82f6}{p}_{jc})^{(1 - \textcolor{#fbbf24}{x}^{(j)})}$$
+  
+  Où $\textcolor{#3b82f6}{p}_{jc}$ est la probabilité que la variable $j$ soit présente (1) sachant la classe $c$.
+  
+  La probabilité a posteriori est proportionnelle au produit des probabilités individuelles (hypothèse naïve) :
+  $$P(y=\textcolor{#8b5cf6}{c} | \textcolor{#fbbf24}{x}) \propto P(y=\textcolor{#8b5cf6}{c}) \prod_{j=1}^{d} P(\textcolor{#fbbf24}{x}^{(j)} | y=\textcolor{#8b5cf6}{c})$$
+  
+  Un lissage de Laplace (paramètre $\textcolor{#10b981}{\alpha}$) est souvent appliqué pour éviter des probabilités nulles si une variable n'a jamais été vue pour une classe lors de l'entraînement.
+  
+  - $\textcolor{#fbbf24}{x}^{(j)} \in \{0, 1\}$ : Valeur binaire de la $j$-ème feature.
+  - $\textcolor{#8b5cf6}{c}$ : Classe cible.
+  - $\textcolor{#3b82f6}{p}_{jc}$ : Probabilité d'occurrence de la feature $j$ dans la classe $c$.
+  - $\textcolor{#10b981}{\alpha}$ : Hyperparamètre de lissage.
+math_illustration_svg: |
+  <svg viewBox="0 0 500 250" xmlns="http://www.w3.org/2000/svg">
+    <rect width="500" height="250" fill="#f8fafc" rx="10" />
+    
+    <!-- Title -->
+    <text x="250" y="30" font-family="Arial" font-size="16" fill="#1e293b" font-weight="bold" text-anchor="middle">Calcul Naïf de Bernoulli</text>
+    
+    <!-- Vector x -->
+    <rect x="50" y="80" width="80" height="120" rx="5" fill="#fbbf24" opacity="0.2" stroke="#d97706" stroke-width="2" />
+    <text x="90" y="70" font-family="Arial" font-size="14" fill="#d97706" font-weight="bold" text-anchor="middle">x (Input)</text>
+    
+    <text x="90" y="105" font-family="Arial" font-size="14" fill="#d97706" text-anchor="middle">x₁ = 1</text>
+    <text x="90" y="145" font-family="Arial" font-size="14" fill="#d97706" text-anchor="middle">x₂ = 0</text>
+    <text x="90" y="185" font-family="Arial" font-size="14" fill="#d97706" text-anchor="middle">x₃ = 1</text>
+    
+    <!-- Class 1 computation -->
+    <rect x="200" y="60" width="180" height="60" rx="5" fill="#8b5cf6" opacity="0.1" stroke="#7c3aed" stroke-width="2" stroke-dasharray="4" />
+    <text x="290" y="80" font-family="Arial" font-size="14" fill="#7c3aed" font-weight="bold" text-anchor="middle">Classe c = A</text>
+    <text x="290" y="105" font-family="Arial" font-size="12" fill="#7c3aed" text-anchor="middle">p₁A × (1 - p₂A) × p₃A</text>
+    
+    <!-- Class 2 computation -->
+    <rect x="200" y="160" width="180" height="60" rx="5" fill="#3b82f6" opacity="0.1" stroke="#2563eb" stroke-width="2" stroke-dasharray="4" />
+    <text x="290" y="180" font-family="Arial" font-size="14" fill="#2563eb" font-weight="bold" text-anchor="middle">Classe c = B</text>
+    <text x="290" y="205" font-family="Arial" font-size="12" fill="#2563eb" text-anchor="middle">p₁B × (1 - p₂B) × p₃B</text>
+    
+    <!-- Connectors -->
+    <path d="M 130 110 C 160 110, 170 90, 200 90" fill="none" stroke="#94a3b8" stroke-width="2" marker-end="url(#arrow)" />
+    <path d="M 130 140 C 160 140, 170 190, 200 190" fill="none" stroke="#94a3b8" stroke-width="2" marker-end="url(#arrow)" />
+    
+    <!-- ArgMax output -->
+    <rect x="420" y="110" width="60" height="60" rx="30" fill="#10b981" opacity="0.2" stroke="#059669" stroke-width="2" />
+    <text x="450" y="140" font-family="Arial" font-size="12" fill="#059669" font-weight="bold" text-anchor="middle">Max()</text>
+    
+    <path d="M 380 90 Q 400 90 420 120" fill="none" stroke="#10b981" stroke-width="2" marker-end="url(#arrow-green)" />
+    <path d="M 380 190 Q 400 190 420 160" fill="none" stroke="#10b981" stroke-width="2" marker-end="url(#arrow-green)" />
+    
+    <defs>
+      <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+        <path d="M 0 0 L 10 5 L 0 10 z" fill="#94a3b8" />
+      </marker>
+      <marker id="arrow-green" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+        <path d="M 0 0 L 10 5 L 0 10 z" fill="#10b981" />
+      </marker>
+    </defs>
+  </svg>

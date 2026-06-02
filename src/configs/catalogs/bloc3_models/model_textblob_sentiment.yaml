@@ -1,16 +1,58 @@
 id: "model_textblob_sentiment"
 name: "Model: TextBlob Sentiment Analyzer"
-description: "Modèle NLP pré-entraîné simple pour extraire la polarité et la subjectivité d'un texte."
+description: |
+  Modèle de Traitement du Langage Naturel (NLP) pré-entraîné basé sur TextBlob, conçu pour extraire la polarité (sentiment) et la subjectivité d'un texte. Il s'appuie sur une approche par lexique (lexicon-based) pour évaluer rapidement les sentiments sans nécessiter d'entraînement spécifique.
 category: "Modèles NLP (Pré-entraînés)"
 tags: ["model", "nlp", "sentiment", "textblob", "pretrained"]
 applies_to: ["Texte"]
-when_to_use: "Pour une analyse de sentiment Zero-Shot rapide et robuste."
+when_to_use: |
+  Privilégiez TextBlob lorsque vous avez besoin d'une évaluation rapide et sans configuration du sentiment (Zero-Shot) sur des textes en anglais, ou lors du prototypage initial d'un pipeline d'analyse de texte où la simplicité prime sur la précision de l'état de l'art.
+use_cases:
+  - "Analyse rapide du sentiment des commentaires clients ou des avis sur des produits."
+  - "Extraction de la polarité dans les flux de médias sociaux pour la détection de tendances."
+  - "Création de variables (features) basées sur le sentiment pour enrichir un autre modèle prédictif."
+  - "Filtrage de documents pour identifier des contenus fortement subjectifs ou polarisés."
 pros:
-  - "Zéro entraînement, très simple d'utilisation."
+  - "Aucun entraînement requis (Zero-Shot), utilisable immédiatement (out-of-the-box)."
+  - "Extrêmement simple et léger, adapté au traitement rapide de grandes quantités de texte."
+  - "Fournit non seulement un score de polarité, mais également une mesure de la subjectivité."
 cons:
-  - "Moins précis que les modèles Transformer (BERT)."
+  - "Sensiblement moins précis que les grands modèles de langage (Transformers comme BERT)."
+  - "Approche lexicale ayant des difficultés avec l'ironie, le sarcasme ou le contexte complexe."
+  - "Fonctionne nativement mieux en anglais ; nécessite des solutions de contournement pour d'autres langues."
 hyperparameters:
   text_col: "Colonne de texte cible."
+math_theory: |
+  TextBlob utilise une approche lexicale (basée sur des règles et des dictionnaires) pour calculer la polarité (sentiment).
+  Chaque mot $w_i$ d'un texte $\textcolor{#10b981}{X}$ est recherché dans un lexique pré-annoté qui lui associe une polarité $\textcolor{#3b82f6}{p}(w_i) \in [-1, 1]$ et une intensité (ou subjectivité) $\textcolor{#fbbf24}{s}(w_i)$.
+  Le modèle prend en compte les modificateurs (comme "très" ou "pas") qui appliquent un coefficient multiplicatif $\textcolor{#8b5cf6}{m}_i$.
+  La polarité globale $\textcolor{#ef4444}{P}$ du texte est la moyenne pondérée des mots connus :
+  $$ \textcolor{#ef4444}{P} = \frac{\sum_{i=1}^{N} \textcolor{#8b5cf6}{m}_i \cdot \textcolor{#3b82f6}{p}(w_i)}{\text{nombre de mots évalués}} $$
+math_illustration_svg: |
+  <svg viewBox="0 0 800 400" xmlns="http://www.w3.org/2000/svg">
+    <rect x="0" y="0" width="800" height="400" fill="#1e293b" rx="10"/>
+    <text x="400" y="40" fill="#ffffff" font-family="sans-serif" font-size="22" font-weight="bold" text-anchor="middle">TextBlob Sentiment Lexicon</text>
+    <rect x="100" y="100" width="150" height="80" fill="#10b981" fill-opacity="0.2" stroke="#10b981" stroke-width="2" rx="5"/>
+    <text x="175" y="145" fill="#10b981" font-family="sans-serif" font-size="16" font-weight="bold" text-anchor="middle">Text X (words w_i)</text>
+    <path d="M260 140 L340 140" stroke="#ffffff" stroke-width="2" marker-end="url(#arrow)" />
+    <rect x="350" y="80" width="250" height="120" fill="#3b82f6" fill-opacity="0.2" stroke="#3b82f6" stroke-width="2" rx="5"/>
+    <text x="475" y="115" fill="#3b82f6" font-family="sans-serif" font-size="16" font-weight="bold" text-anchor="middle">Lexicon Lookup</text>
+    <text x="475" y="145" fill="#3b82f6" font-family="sans-serif" font-size="14" text-anchor="middle">Polarity p(w_i)</text>
+    <text x="475" y="175" fill="#fbbf24" font-family="sans-serif" font-size="14" text-anchor="middle">Subjectivity s(w_i)</text>
+    <path d="M475 210 L475 260" stroke="#ffffff" stroke-width="2" marker-end="url(#arrow)" />
+    <rect x="350" y="270" width="250" height="80" fill="#8b5cf6" fill-opacity="0.2" stroke="#8b5cf6" stroke-width="2" rx="5"/>
+    <text x="475" y="305" fill="#8b5cf6" font-family="sans-serif" font-size="16" font-weight="bold" text-anchor="middle">Modifiers m_i</text>
+    <text x="475" y="330" fill="#8b5cf6" font-family="sans-serif" font-size="14" text-anchor="middle">(ex: "very", "not")</text>
+    <path d="M610 140 L670 140" stroke="#ffffff" stroke-width="2" marker-end="url(#arrow)" />
+    <rect x="680" y="100" width="100" height="80" fill="#ef4444" fill-opacity="0.2" stroke="#ef4444" stroke-width="2" rx="5"/>
+    <text x="730" y="135" fill="#ef4444" font-family="sans-serif" font-size="16" font-weight="bold" text-anchor="middle">Average</text>
+    <text x="730" y="160" fill="#ef4444" font-family="sans-serif" font-size="16" font-weight="bold" text-anchor="middle">Polarity P</text>
+    <defs>
+      <marker id="arrow" markerWidth="10" markerHeight="10" refX="9" refY="3" orient="auto">
+        <path d="M0,0 L0,6 L9,3 z" fill="#ffffff" />
+      </marker>
+    </defs>
+  </svg>
 code_template: |
   import pandas as pd
   import numpy as np
@@ -57,17 +99,17 @@ code_template: |
       full_pipeline = model
       training_history = {"status": "success", "processed_texts": len(y_pred)}
 illustration_mermaid: |
-    graph TD
-      In([Raw Text]) --> Token(Tokenization & POS Tagging)
-      Token --> Lexicon(Sentiment Lexicon Lookup)
-      Lexicon --> Score(Compute Polarity & Subjectivity)
-      Score --> Threshold(Thresholding)
-      Threshold --> Out([Sentiment Label: Positive/Neutral/Negative])
-      
-      style In fill:#f8fafc,stroke:#94a3b8,stroke-width:2px
-      style Token fill:#38bdf8,stroke:#0284c7,stroke-width:2px,color:#fff
-      style Lexicon fill:#8b5cf6,stroke:#7c3aed,stroke-width:2px,color:#fff
-      style Out fill:#10b981,stroke:#059669,stroke-width:2px,color:#fff
+  flowchart LR
+    In[/"Texte Brut (Raw Text)"/]:::input --> Token{"Tokenisation & Analyse Syntaxique"}:::model
+    Token --> Lexicon(["Lexique de Sentiments"]):::metadata
+    Lexicon --> Score{"Calcul de Polarité & Subjectivité"}:::model
+    Score --> Threshold{"Application des Seuils"}:::model
+    Threshold --> Out(["Label de Sentiment"]):::tensor
+
+    classDef input fill:#fbbf24,stroke:#d97706,stroke-width:2px,color:#000
+    classDef model fill:#3b82f6,stroke:#2563eb,stroke-width:2px,color:#fff
+    classDef tensor fill:#10b981,stroke:#059669,stroke-width:2px,color:#fff
+    classDef metadata fill:#8b5cf6,stroke:#7c3aed,stroke-width:2px,color:#fff
 
 _metadata:
   bloc: 3

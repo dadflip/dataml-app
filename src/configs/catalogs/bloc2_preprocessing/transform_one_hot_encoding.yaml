@@ -1,14 +1,59 @@
 id: "transform_one_hot_encoding"
 name: "Transform: One-Hot Encoding"
-description: "OHE sur les colonnes catégorielles."
+description: "Le One-Hot Encoding (OHE) convertit chaque modalité d'une variable catégorielle en une nouvelle caractéristique binaire distincte (indicatrice). Cette méthode est essentielle pour les algorithmes qui ne peuvent pas exploiter la structure catégorielle directement et qui risqueraient d'interpréter à tort un ordre hiérarchique si on utilisait un encodage ordinal. L'OHE transforme le jeu de données en augmentant son espace de représentation, produisant souvent une matrice creuse (sparse) pour limiter la consommation mémoire."
+math_theory: |
+  Soit une variable catégorielle $\textcolor{#3b82f6}{X}$ ayant un ensemble de $k$ modalités distinctes $\{\textcolor{#fbbf24}{C_1}, \textcolor{#fbbf24}{C_2}, \dots, \textcolor{#fbbf24}{C_k}\}$. L'OHE transforme chaque observation $x_i$ en un vecteur binaire $\textcolor{#10b981}{V_i} = [v_{i,1}, v_{i,2}, \dots, v_{i,k}]$ de dimension $k$, où $v_{i,j} = 1$ si $x_i = \textcolor{#fbbf24}{C_j}$ et $0$ sinon. Pour éviter la multicolinéarité parfaite (le piège des variables muettes / dummy variable trap) dans les modèles linéaires, on retire souvent la première colonne, réduisant l'espace à $k-1$ dimensions.
+math_illustration_svg: |
+  <svg viewBox="0 0 400 200" xmlns="http://www.w3.org/2000/svg">
+    <rect width="400" height="200" fill="#1e293b" rx="8"/>
+    <rect x="50" y="40" width="80" height="30" fill="#3b82f6" rx="4"/>
+    <text x="90" y="60" fill="white" font-family="sans-serif" font-size="14" text-anchor="middle">"Red"</text>
+    <rect x="50" y="80" width="80" height="30" fill="#3b82f6" rx="4"/>
+    <text x="90" y="100" fill="white" font-family="sans-serif" font-size="14" text-anchor="middle">"Blue"</text>
+    <rect x="50" y="120" width="80" height="30" fill="#3b82f6" rx="4"/>
+    <text x="90" y="140" fill="white" font-family="sans-serif" font-size="14" text-anchor="middle">"Green"</text>
+    <path d="M 140 95 L 200 95" stroke="#94a3b8" stroke-width="2" marker-end="url(#arrow-ohe)"/>
+    <text x="170" y="85" fill="#94a3b8" font-family="sans-serif" font-size="12" text-anchor="middle">OHE</text>
+    <text x="250" y="30" fill="#ef4444" font-family="sans-serif" font-size="12" text-anchor="middle">is_Red</text>
+    <text x="300" y="30" fill="#3b82f6" font-family="sans-serif" font-size="12" text-anchor="middle">is_Blue</text>
+    <text x="350" y="30" fill="#10b981" font-family="sans-serif" font-size="12" text-anchor="middle">is_Green</text>
+    <rect x="235" y="40" width="30" height="30" fill="#ef4444" rx="4"/>
+    <text x="250" y="60" fill="white" font-family="sans-serif" font-size="14" text-anchor="middle">1</text>
+    <rect x="285" y="40" width="30" height="30" fill="#475569" rx="4"/>
+    <text x="300" y="60" fill="white" font-family="sans-serif" font-size="14" text-anchor="middle">0</text>
+    <rect x="335" y="40" width="30" height="30" fill="#475569" rx="4"/>
+    <text x="350" y="60" fill="white" font-family="sans-serif" font-size="14" text-anchor="middle">0</text>
+    <rect x="235" y="80" width="30" height="30" fill="#475569" rx="4"/>
+    <text x="250" y="100" fill="white" font-family="sans-serif" font-size="14" text-anchor="middle">0</text>
+    <rect x="285" y="80" width="30" height="30" fill="#3b82f6" rx="4"/>
+    <text x="300" y="100" fill="white" font-family="sans-serif" font-size="14" text-anchor="middle">1</text>
+    <rect x="335" y="80" width="30" height="30" fill="#475569" rx="4"/>
+    <text x="350" y="100" fill="white" font-family="sans-serif" font-size="14" text-anchor="middle">0</text>
+    <rect x="235" y="120" width="30" height="30" fill="#475569" rx="4"/>
+    <text x="250" y="140" fill="white" font-family="sans-serif" font-size="14" text-anchor="middle">0</text>
+    <rect x="285" y="120" width="30" height="30" fill="#475569" rx="4"/>
+    <text x="300" y="140" fill="white" font-family="sans-serif" font-size="14" text-anchor="middle">0</text>
+    <rect x="335" y="120" width="30" height="30" fill="#10b981" rx="4"/>
+    <text x="350" y="140" fill="white" font-family="sans-serif" font-size="14" text-anchor="middle">1</text>
+    <defs>
+      <marker id="arrow-ohe" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+        <path d="M 0 0 L 10 5 L 0 10 z" fill="#94a3b8"/>
+      </marker>
+    </defs>
+  </svg>
 category: "4.1 Preprocessing"
 tags: ["transform", "encoding", "tabular", "sklearn", "pipeline"]
 applies_to: ["Tabulaire"]
-when_to_use: "Indispensable pour les modèles linéaires."
+when_to_use: "Absolument nécessaire pour traiter les variables catégorielles nominales (sans ordre naturel) avant de les fournir à des modèles linéaires (Régression Linéaire, Régression Logistique), des Réseaux de Neurones ou des algorithmes basés sur le calcul de distance (KNN, SVM)."
+use_cases:
+  - "Encodage de catégories géographiques (Villes, Pays) ou de types de produits."
+  - "Création de variables indicatrices ('dummy variables') dans un pipeline de prédiction de churn."
 pros:
-  - "Empêche l'ordre implicite."
+  - "Traite toutes les catégories sur un pied d'égalité, ne postulant aucun ordre implicite mathématique."
+  - "Améliore significativement les performances des modèles paramétriques et linéaires."
 cons:
-  - "Augmente la dimension."
+  - "Provoque le fléau de la dimensionnalité si la variable d'origine possède une très haute cardinalité."
+  - "Génère des données fortement creuses, ce qui nécessite un traitement matriciel optimisé (sparse matrices) pour ne pas épuiser la mémoire vive."
 hyperparameters:
   drop_first: "True pour éviter la multicolinéarité parfaite."
 code_template: |
@@ -51,17 +96,17 @@ code_template: |
   if 'task_type' not in locals(): task_type = "classification"
   if 'meta' not in locals(): meta = {}
 illustration_mermaid: |
-  graph TD
-    A[Raw Data] --> B{Are there categorical columns?}
-    B -- Yes --> C[Select Categorical Columns]
-    C --> D[Initialize OneHotEncoder]
-    D --> E[Create ColumnTransformer]
-    E --> F[Add to Pipeline Steps]
-    B -- No --> G[Skip One-Hot Encoding]
-    F --> H[Update Data Contract Variables]
-    G --> H
-    style A fill:#eff6ff,stroke:#3b82f6,stroke-width:2px
-    style H fill:#10b981,stroke:#059669,stroke-width:2px
+  flowchart LR
+    A[/"📄 DROP_FIRST"/] --> B{"⚙️ OneHotEncoder"}
+    C(["📊 df Input"]) --> B
+    B --> D(["📊 df OHE"])
+    B --> E(["ℹ️ pipeline_steps"])
+
+    style A fill:#fbbf24,stroke:#d97706,stroke-width:2px,color:#000
+    style B fill:#3b82f6,stroke:#2563eb,stroke-width:2px,color:#fff
+    style C fill:#10b981,stroke:#059669,stroke-width:2px,color:#fff
+    style D fill:#10b981,stroke:#059669,stroke-width:2px,color:#fff
+    style E fill:#8b5cf6,stroke:#7c3aed,stroke-width:2px,color:#fff
 
 _metadata:
   bloc: 2

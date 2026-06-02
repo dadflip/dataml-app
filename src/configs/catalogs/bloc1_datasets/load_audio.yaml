@@ -1,6 +1,20 @@
 id: load_audio
 name: 'Load: Audio (WAV, MP3)'
-description: Charge un fichier audio sous forme de série temporelle (Librosa).
+description: "Charge et décode un fichier audio (formats WAV, MP3, etc.) pour le convertir en une série temporelle unidimensionnelle à l'aide de la bibliothèque spécialisée Librosa. Ce bloc gère l'ingestion du signal acoustique brut, échantillonne les données selon la fréquence cible spécifiée (ou conserve l'originale), et prépare les structures fondamentales (vecteur d'amplitudes et fréquence d'échantillonnage) pour les étapes ultérieures de traitement du signal ou d'extraction de caractéristiques (comme les MFCC ou les spectrogrammes)."
+when_to_use: "À utiliser dès lors que votre pipeline d'apprentissage automatique ou d'analyse nécessite d'ingérer des données sonores ou vocales brutes pour de la classification, de la transcription ou de la génération."
+use_cases:
+  - "Reconnaissance vocale (Speech-to-Text) et analyse de la parole."
+  - "Classification de sons environnementaux ou d'événements acoustiques."
+  - "Détection d'anomalies audio (maintenance prédictive sur des machines)."
+  - "Analyse des sentiments à partir du ton de la voix."
+pros:
+  - "Exploite Librosa, le standard de l'industrie pour l'analyse audio en Python."
+  - "Gère automatiquement le rééchantillonnage de la fréquence (resampling) si nécessaire."
+  - "Extraction simple et immédiate des caractéristiques essentielles (longueur, sample_rate)."
+cons:
+  - "Consommation mémoire importante pour les fichiers audio très longs (chargement intégral en mémoire vive)."
+  - "Ne gère pas nativement le streaming audio en temps réel ou par petits lots (batch processing)."
+  - "Nécessite souvent des étapes de prétraitement complexes (spectrogrammes) avant de nourrir un modèle de Deep Learning."
 category: 2. Load
 tags:
 - load
@@ -47,37 +61,22 @@ code_template: |
   meta = {"format": "audio", "sample_rate": sr, "length": len(y)}
 
 illustration_mermaid: |
-  flowchart TD
-      subgraph Config [Parameters]
-          FILE([FILE_PATH])
-          SR([SAMPLE_RATE])
-      end
-
-      subgraph Operations [Audio Load]
-          Check([os.path.exists])
-          Librosa([librosa.load])
-          ToDF([Create DataFrame])
-      end
-
-      subgraph Outputs [Contract Variables]
-          df((df))
-          target((target_name = ''))
-          task((task_type = 'audio_processing'))
-          meta((meta: dict))
-      end
-
-      FILE --> Check
-      Check --> Librosa
-      SR --> Librosa
-      Librosa --> ToDF
-      ToDF --> df
-      Librosa -.-> meta
-
-      style Config fill:#f8fafc,stroke:#cbd5e1,stroke-width:2px
-      style Check fill:#64748b,stroke:#475569,stroke-width:2px,color:#fff
-      style Librosa fill:#3b82f6,stroke:#1d4ed8,stroke-width:2px,color:#fff
-      style ToDF fill:#10b981,stroke:#047857,stroke-width:2px,color:#fff
-      style Outputs fill:#f1f5f9,stroke:#94a3b8,stroke-width:2px
+  flowchart LR
+      A[/"📄 FILE_PATH"/] --> B{"librosa.load()"}
+      C[/"🎛️ SAMPLE_RATE"/] --> D{"Apply sr & Create Meta"}
+      B --> E(["📊 df (Audio Data)"])
+      E --> D
+      D --> F(["🎯 target_name = ''"])
+      D --> G(["⚙️ task_type = 'audio_processing'"])
+      D --> H(["ℹ️ meta (sample_rate, length)"])
+      style A fill:#fbbf24,stroke:#d97706,stroke-width:2px,color:#000
+      style C fill:#fbbf24,stroke:#d97706,stroke-width:2px,color:#000
+      style B fill:#3b82f6,stroke:#2563eb,stroke-width:2px,color:#fff
+      style D fill:#3b82f6,stroke:#2563eb,stroke-width:2px,color:#fff
+      style E fill:#10b981,stroke:#059669,stroke-width:2px,color:#fff
+      style F fill:#8b5cf6,stroke:#7c3aed,stroke-width:2px,color:#fff
+      style G fill:#8b5cf6,stroke:#7c3aed,stroke-width:2px,color:#fff
+      style H fill:#8b5cf6,stroke:#7c3aed,stroke-width:2px,color:#fff
 _metadata:
   bloc: 1
   section: 2_load

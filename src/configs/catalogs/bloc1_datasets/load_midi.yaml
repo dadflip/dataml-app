@@ -1,6 +1,17 @@
 id: load_midi
 name: 'Load: Fichier MIDI'
-description: 'Parse un fichier musical MIDI et extrait ses événements.'
+description: "Ce bloc permet de parser et d'extraire des événements depuis un fichier musical MIDI. Il transforme les notes et pistes en une structure de données tabulaire exploitable en apprentissage automatique."
+when_to_use: "À utiliser lorsque vous travaillez sur des projets de génération musicale, d'analyse de mélodies ou de transcription automatique et que vous possédez des données brutes au format MIDI."
+use_cases:
+  - "Génération de nouvelles séquences musicales par réseaux de neurones (ex: RNN, Transformers)."
+  - "Classification de genres musicaux à partir de motifs mélodiques."
+  - "Extraction de caractéristiques rythmiques et harmoniques pour l'analyse musicologique."
+pros:
+  - "Extraction structurée et détaillée des événements musicaux (notes, vélocité, tempo)."
+  - "Format très léger par rapport aux fichiers audio bruts (WAV, MP3)."
+cons:
+  - "Ne contient pas la forme d'onde audio (pas de timbre ou de texture sonore réelle)."
+  - "Nécessite la bibliothèque externe `mido`."
 category: 2. Load
 tags: ["load", "midi", "music", "audio"]
 code_template: |
@@ -48,12 +59,21 @@ output_variables:
   - meta
 illustration_mermaid: |
   flowchart LR
-      A([FILE_PATH]) --> B[Load MIDI]
-      B --> df([df])
-      
-      style A fill:#3b82f6,color:#fff
-      style B fill:#10b981,color:#fff
-      style df fill:#f59e0b,color:#fff
+      A[/"📄 FILE_PATH"/] --> B{"Load MIDI"}
+      C[/"🎯 TARGET_COL"/] --> D{"Check TARGET_COL"}
+      B --> E(["📊 df (DataFrame)"])
+      E --> D
+      D --> F(["🎯 target_name"])
+      D --> G(["⚙️ task_type"])
+      D --> H(["ℹ️ meta (...)"])
+      style A fill:#fbbf24,stroke:#d97706,stroke-width:2px,color:#000
+      style C fill:#fbbf24,stroke:#d97706,stroke-width:2px,color:#000
+      style B fill:#3b82f6,stroke:#2563eb,stroke-width:2px,color:#fff
+      style D fill:#3b82f6,stroke:#2563eb,stroke-width:2px,color:#fff
+      style E fill:#10b981,stroke:#059669,stroke-width:2px,color:#fff
+      style F fill:#8b5cf6,stroke:#7c3aed,stroke-width:2px,color:#fff
+      style G fill:#8b5cf6,stroke:#7c3aed,stroke-width:2px,color:#fff
+      style H fill:#8b5cf6,stroke:#7c3aed,stroke-width:2px,color:#fff
 
 _metadata:
   bloc: 1

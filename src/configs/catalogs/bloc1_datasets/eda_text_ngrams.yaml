@@ -1,6 +1,16 @@
 id: eda_text_ngrams
 name: 'EDA: N-Grams les plus fréquents'
-description: Extrait les bigrammes ou trigrammes les plus courants du texte.
+description: "Extraction et visualisation des N-grammes (bigrammes, trigrammes, etc.) les plus fréquents dans un corpus textuel."
+when_to_use: "Pour comprendre les termes ou expressions qui reviennent le plus souvent dans une colonne de texte."
+use_cases:
+  - "Analyse des sujets principaux dans des avis clients ou commentaires."
+  - "Identification des collocations courantes dans des articles."
+pros:
+  - "Met en évidence des mots composés souvent plus pertinents que de simples unigrammes."
+  - "Utilise CountVectorizer pour une extraction rapide."
+cons:
+  - "Peut consommer beaucoup de mémoire sur de très gros corpus textuels."
+  - "Ne filtre que les stopwords anglais par défaut."
 category: 3. Exploratory Data Analysis
 tags:
 - eda
@@ -40,17 +50,28 @@ code_template: |
       print(f"[EDA] Colonne {TEXT_COL} introuvable.")
 illustration_mermaid: |
     graph TD
-      DF([DataFrame]) --> Check{Check TEXT_COL}
-      Check -- Valid --> Corpus[Extract corpus]
-      Corpus --> Vec{{CountVectorizer}}
-      Vec -- "ngram_range" --> BoW[Bag of Words]
-      BoW --> Freq[Calculate Frequencies]
-      Freq --> SortTop20[Sort Top 20]
-      SortTop20 --> Plot[sns.barplot]
-      Check -- Missing --> Err[Print Error]
-      style Vec fill:#d946ef,stroke:#c026d3,stroke-width:2px,color:#fff
-      style Freq fill:#3b82f6,stroke:#2563eb,stroke-width:2px,color:#fff
-      style Plot fill:#10b981,stroke:#059669,stroke-width:2px,color:#fff
+      In1[/df/] --> P1{Check TEXT_COL}
+      In2[/TEXT_COL/] --> P1
+      In3[/N_GRAM/] --> P3
+      P1 -- Valide --> P2{Extract corpus}
+      P2 --> P3{CountVectorizer}
+      P3 --> P4{Calcul fréquences}
+      P4 --> P5{Tri & Top 20}
+      P5 --> P6{sns.barplot}
+      P6 --> Out1([Fig: Top N-grams])
+      P1 -- Invalide --> Out2([Print Erreur])
+      
+      style In1 fill:#fbbf24,stroke:#d97706,stroke-width:2px,color:#000
+      style In2 fill:#fbbf24,stroke:#d97706,stroke-width:2px,color:#000
+      style In3 fill:#fbbf24,stroke:#d97706,stroke-width:2px,color:#000
+      style P1 fill:#3b82f6,stroke:#2563eb,stroke-width:2px,color:#fff
+      style P2 fill:#3b82f6,stroke:#2563eb,stroke-width:2px,color:#fff
+      style P3 fill:#3b82f6,stroke:#2563eb,stroke-width:2px,color:#fff
+      style P4 fill:#3b82f6,stroke:#2563eb,stroke-width:2px,color:#fff
+      style P5 fill:#3b82f6,stroke:#2563eb,stroke-width:2px,color:#fff
+      style P6 fill:#3b82f6,stroke:#2563eb,stroke-width:2px,color:#fff
+      style Out1 fill:#10b981,stroke:#059669,stroke-width:2px,color:#fff
+      style Out2 fill:#8b5cf6,stroke:#7c3aed,stroke-width:2px,color:#fff
 _metadata:
   bloc: 1
   section: 3_eda

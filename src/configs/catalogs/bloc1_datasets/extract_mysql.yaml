@@ -1,6 +1,16 @@
 id: extract_mysql
 name: 'Extract: Base MySQL/MariaDB'
-description: Exécute une requête SQL via mysql-connector et exporte en CSV.
+description: Se connecte à une base de données MySQL ou MariaDB, exécute une requête SQL et exporte le résultat au format CSV.
+when_to_use: À utiliser lorsque vos données d'entreprise ou utilisateurs sont stockées de façon relationnelle dans une base MySQL/MariaDB.
+use_cases:
+  - Extraction de tables d'utilisateurs.
+  - Récupération d'historiques de transactions financières.
+pros:
+  - Exploite la puissance de SQL pour filtrer les données en amont.
+  - Conversion directe et automatique en DataFrame Pandas puis en CSV.
+cons:
+  - Nécessite de configurer les identifiants d'accès (host, user, pass).
+  - Les requêtes massives peuvent impacter les performances de la base de données source.
 category: 1. Extract
 tags:
 - extract
@@ -64,13 +74,22 @@ code_template: |
   task_type = "unknown"
   meta = {"source": "mysql", "path": DEST_PATH}
 illustration_mermaid: |
-    flowchart TD
-    A([FILE_PATH]) --> B[Load EXTRACT_MYSQL]
-    B --> df([df])
-    
-    style A fill:#3b82f6,color:#fff
-    style B fill:#10b981,color:#fff
-    style df fill:#f59e0b,color:#fff
+    flowchart LR
+        A[/"📄 MySQL Query"/] --> B{"Extract MySQL()"}
+        C[/"🎯 TARGET_COL"/] --> D{"Check TARGET_COL"}
+        B --> E(["📊 df (CSV Export)"])
+        E --> D
+        D --> F(["🎯 target_name"])
+        D --> G(["⚙️ task_type"])
+        D --> H(["ℹ️ meta (...)"])
+        style A fill:#fbbf24,stroke:#d97706,stroke-width:2px,color:#000
+        style C fill:#fbbf24,stroke:#d97706,stroke-width:2px,color:#000
+        style B fill:#3b82f6,stroke:#2563eb,stroke-width:2px,color:#fff
+        style D fill:#3b82f6,stroke:#2563eb,stroke-width:2px,color:#fff
+        style E fill:#10b981,stroke:#059669,stroke-width:2px,color:#fff
+        style F fill:#8b5cf6,stroke:#7c3aed,stroke-width:2px,color:#fff
+        style G fill:#8b5cf6,stroke:#7c3aed,stroke-width:2px,color:#fff
+        style H fill:#8b5cf6,stroke:#7c3aed,stroke-width:2px,color:#fff
 
 
 _metadata:

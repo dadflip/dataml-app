@@ -1,6 +1,16 @@
 id: extract_unpack_archive
 name: 'Extract: Décompresser Archive'
 description: Dézippe ou dé-tar un fichier d'archive téléchargé.
+when_to_use: "Quand les données sources sont compressées (.zip, .tar, .tgz) et doivent être extraites avant utilisation."
+use_cases:
+  - "Décompression de jeux de données téléchargés depuis Kaggle ou un autre portail open data."
+  - "Récupération d'un export massif compressé par un outil tiers."
+pros:
+  - "Gère automatiquement plusieurs formats standards d'archivage."
+  - "Permet de réduire l'espace disque de transfert."
+cons:
+  - "Nécessite un espace disque suffisant pour les fichiers décompressés."
+  - "Temps de traitement supplémentaire avant lecture des données."
 category: 1. Extract
 tags:
 - extract
@@ -48,41 +58,22 @@ code_template: |
   meta = {"source": "archive_extract", "path": EXTRACT_DIR}
 
 illustration_mermaid: |
-  flowchart TD
-      subgraph Config [Parameters]
-          ARCH([ARCHIVE_PATH])
-          DEST([EXTRACT_DIR])
-      end
-
-      subgraph Operations [Archive Extraction]
-          Check([Check Format])
-          Zip([zipfile.extractall])
-          Tar([tarfile.extractall])
-          OutDir[(Extracted Files)]
-      end
-
-      subgraph Outputs [Contract Variables]
-          df((df = pd.DataFrame))
-          target((target_name = ''))
-          task((task_type = 'unknown'))
-          meta((meta: dict))
-      end
-
-      ARCH --> Check
-      Check -- ".zip" --> Zip
-      Check -- ".tar/.tgz" --> Tar
-      DEST --> Zip
-      DEST --> Tar
-      Zip --> OutDir
-      Tar --> OutDir
-      OutDir -.-> meta
-
-      style Config fill:#f8fafc,stroke:#cbd5e1,stroke-width:2px
-      style Check fill:#64748b,stroke:#475569,stroke-width:2px,color:#fff
-      style Zip fill:#3b82f6,stroke:#1d4ed8,stroke-width:2px,color:#fff
-      style Tar fill:#f59e0b,stroke:#b45309,stroke-width:2px,color:#fff
-      style OutDir fill:#10b981,stroke:#047857,stroke-width:2px,color:#fff
-      style Outputs fill:#f1f5f9,stroke:#94a3b8,stroke-width:2px
+  flowchart LR
+      A[/"📄 ARCHIVE_PATH"/] --> B{"extractall()"}
+      C[/"🎯 TARGET_COL"/] --> D{"Check TARGET_COL"}
+      B --> E(["📊 df (DataFrame)"])
+      E --> D
+      D --> F(["🎯 target_name"])
+      D --> G(["⚙️ task_type"])
+      D --> H(["ℹ️ meta (source, path)"])
+      style A fill:#fbbf24,stroke:#d97706,stroke-width:2px,color:#000
+      style C fill:#fbbf24,stroke:#d97706,stroke-width:2px,color:#000
+      style B fill:#3b82f6,stroke:#2563eb,stroke-width:2px,color:#fff
+      style D fill:#3b82f6,stroke:#2563eb,stroke-width:2px,color:#fff
+      style E fill:#10b981,stroke:#059669,stroke-width:2px,color:#fff
+      style F fill:#8b5cf6,stroke:#7c3aed,stroke-width:2px,color:#fff
+      style G fill:#8b5cf6,stroke:#7c3aed,stroke-width:2px,color:#fff
+      style H fill:#8b5cf6,stroke:#7c3aed,stroke-width:2px,color:#fff
 
 _metadata:
   bloc: 1

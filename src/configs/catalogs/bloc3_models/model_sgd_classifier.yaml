@@ -1,14 +1,22 @@
 id: "model_sgd_classifier"
 name: "Model: SGD Classifier"
-description: "Modèle linéaire avec descente de gradient stochastique."
+description: "Modèle de classification linéaire optimisé via descente de gradient stochastique, permettant un apprentissage en ligne (out-of-core) et un entraînement extrêmement rapide sur d'énormes jeux de données."
 category: "Modèles Linéaires"
 tags: ["model", "classification", "tabular", "sklearn", "linear", "online-learning"]
 applies_to: ["Tabulaire"]
-when_to_use: "Excellente alternative à LogisticRegression ou LinearSVC sur les jeux de données géants (n_samples > 100k)."
+when_to_use: "Privilégié face à une Régression Logistique ou un SVM classique dès lors que les données dépassent les capacités de la mémoire (n_samples > 100k) ou comportent de très nombreuses variables creuses."
+use_cases:
+  - "Classification de textes sur des millions de documents (ex: analyse de sentiments avec TF-IDF)."
+  - "Détection de spams en temps réel avec un apprentissage continu (online learning)."
+  - "Prédiction d'attributs clients sur des logs web massifs et hautement dimensionnels."
 pros:
-  - "Très rapide sur les matrices creuses (NLP)."
+  - "Efficacité redoutable sur les très grandes volumétries et les matrices creuses (sparse data)."
+  - "Capacité de mise à jour incrémentale (partial_fit) sans recharger toutes les données."
+  - "Permet d'émuler divers algorithmes (Régression logistique, SVM) en changeant simplement la fonction de perte."
 cons:
-  - "Sensible au scaling et aux hyperparamètres (learning_rate)."
+  - "Extrêmement sensible à l'échelle des données, exigeant une standardisation stricte."
+  - "Nécessite souvent une recherche délicate de paramètres (taux d'apprentissage, pénalité)."
+  - "Peut osciller autour du minimum sans jamais converger parfaitement (bruit du gradient stochastique)."
 hyperparameters:
   loss: "Fonction de perte ('hinge' donne un Linear SVM, 'log_loss' donne une Logistic Regression)."
   penalty: "Pénalité ('l2', 'l1', 'elasticnet')."
@@ -19,13 +27,59 @@ code_template: |
 
   # [PARAM: LOSS | string]
   LOSS = "hinge"
+math_theory: |
+  Le classifieur SGD (Stochastic Gradient Descent) minimise une fonction de perte empirique (ex: Hinge ou Log-Loss) de manière itérative, en mettant à jour les poids pour chaque échantillon (ou mini-lot).
+
+  Règle de mise à jour stochastique à l'itération $t$ :
+  $$ \textcolor{#3b82f6}{w}_{t+1} = \textcolor{#3b82f6}{w}_t - \textcolor{#8b5cf6}{\eta_t} \nabla_{\textcolor{#3b82f6}{w}} \left( \textcolor{#ef4444}{L}(\textcolor{#10b981}{y_t}, \textcolor{#3b82f6}{w}^T \textcolor{#10b981}{x_t}) + \frac{\textcolor{#fbbf24}{\alpha}}{N} R(\textcolor{#3b82f6}{w}_t) \right) $$
+
+  - $\textcolor{#3b82f6}{w}$ : Poids du modèle (coefficients)
+  - $\textcolor{#8b5cf6}{\eta_t}$ : Taux d'apprentissage (Learning rate)
+  - $\textcolor{#ef4444}{L}$ : Fonction de perte pour une instance
+  - $(\textcolor{#10b981}{x_t}, \textcolor{#10b981}{y_t})$ : Caractéristiques et étiquette de l'instance stochastique
+  - $\textcolor{#fbbf24}{\alpha} R(\textcolor{#3b82f6}{w})$ : Terme de régularisation (ex: pénalité $L_2$)
+math_illustration_svg: |
+  <svg viewBox="0 0 500 250" xmlns="http://www.w3.org/2000/svg">
+    <!-- Contour lines of the loss surface -->
+    <ellipse cx="250" cy="125" rx="200" ry="100" fill="none" stroke="#ef4444" stroke-width="1" stroke-opacity="0.2"/>
+    <ellipse cx="250" cy="125" rx="150" ry="75" fill="none" stroke="#ef4444" stroke-width="1.5" stroke-opacity="0.4"/>
+    <ellipse cx="250" cy="125" rx="100" ry="50" fill="none" stroke="#ef4444" stroke-width="2" stroke-opacity="0.6"/>
+    <ellipse cx="250" cy="125" rx="50" ry="25" fill="none" stroke="#ef4444" stroke-width="2.5" stroke-opacity="0.8"/>
+    
+    <!-- Global minimum -->
+    <circle cx="250" cy="125" r="4" fill="#ef4444"/>
+    <text x="255" y="120" font-family="sans-serif" font-size="12" fill="#ef4444" font-weight="bold">Minimum</text>
+
+    <!-- SGD Path (Noisy zigzag path) -->
+    <path d="M 50 200 L 90 190 L 120 150 L 140 170 L 180 130 L 195 145 L 230 115 L 245 130 L 250 125" 
+          fill="none" stroke="#3b82f6" stroke-width="2" stroke-linejoin="round" marker-end="url(#arrow)"/>
+    
+    <!-- Path points -->
+    <circle cx="50" cy="200" r="3" fill="#3b82f6"/>
+    <text x="35" y="215" font-family="sans-serif" font-size="12" fill="#3b82f6">w_0</text>
+    
+    <circle cx="90" cy="190" r="3" fill="#3b82f6"/>
+    <circle cx="120" cy="150" r="3" fill="#3b82f6"/>
+    <circle cx="140" cy="170" r="3" fill="#3b82f6"/>
+    <text x="145" y="185" font-family="sans-serif" font-size="12" fill="#8b5cf6">Stochastic Updates (-η ∇L)</text>
+    <circle cx="180" cy="130" r="3" fill="#3b82f6"/>
+    
+    <!-- Defining arrow marker -->
+    <defs>
+      <marker id="arrow" viewBox="0 0 10 10" refX="5" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+        <path d="M 0 0 L 10 5 L 0 10 z" fill="#3b82f6"/>
+      </marker>
+    </defs>
+  </svg>
 illustration_mermaid: |
-    graph LR
-      Data([Features]) --> Model((Machine Learning))
-      Model --> Pred([Predictions])
-      style Model fill:#8b5cf6,stroke:#7c3aed,stroke-width:2px,color:#fff
-      style Data fill:#f8fafc,stroke:#94a3b8,stroke-width:1px
-      style Pred fill:#f8fafc,stroke:#94a3b8,stroke-width:1px
+  flowchart LR
+    Data(["Feature Matrix"]) --> Model{"SGD Classifier"}
+    Params[/"Loss & Penalty"/] --> Model
+    Model --> Proba(["Class Probabilities/Scores"])
+    style Params fill:#fbbf24,stroke:#d97706,stroke-width:2px,color:#000
+    style Model fill:#3b82f6,stroke:#2563eb,stroke-width:2px,color:#fff
+    style Data fill:#10b981,stroke:#059669,stroke-width:2px,color:#fff
+    style Proba fill:#10b981,stroke:#059669,stroke-width:2px,color:#fff
 
 _metadata:
   bloc: 3

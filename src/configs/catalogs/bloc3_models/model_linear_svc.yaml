@@ -1,14 +1,24 @@
 id: "model_linear_svc"
 name: "Model: Linear SVC"
-description: "Support Vector Classifier strictement linéaire. Ultra-rapide comparé au SVC classique."
+description: |
+  Support Vector Classifier (Séparateur à Vaste Marge) à noyau strictement linéaire. Implémenté via liblinear, il est extrêmement rapide et adapté aux jeux de données massifs par rapport au SVC classique.
 category: "Modèles Basés sur la Distance / Marges"
 tags: ["model", "classification", "tabular", "sklearn", "svm", "linear"]
 applies_to: ["Tabulaire"]
-when_to_use: "Grands jeux de données où on cherche un séparateur linéaire (ex: texte avec TF-IDF)."
+when_to_use: |
+  Idéal pour les problèmes de classification linéaire sur de grands volumes de données (plusieurs dizaines de milliers de lignes) avec un nombre très élevé de caractéristiques, typiquement en traitement du langage naturel (NLP).
+use_cases:
+  - "Classification de textes (analyse de sentiment) avec des vecteurs TF-IDF."
+  - "Catégorisation de documents à grande échelle."
+  - "Filtrage anti-spam basé sur un grand nombre de mots-clés."
 pros:
-  - "Échelle O(n), peut gérer des millions de lignes."
+  - "Mise à l'échelle quasi linéaire (O(n)), capable de traiter des millions d'enregistrements."
+  - "Extrêmement robuste face aux espaces de grande dimension (beaucoup plus de colonnes que de lignes)."
+  - "Offre des coefficients interprétables pour évaluer l'importance de chaque caractéristique."
 cons:
-  - "Ne produit pas de probabilités (pas de predict_proba)."
+  - "Incapable de modéliser des relations non linéaires (noyau linéaire uniquement)."
+  - "Ne produit pas de probabilités calibrées nativement (absence de predict_proba)."
+  - "Sensible à l'échelle des données, la standardisation est indispensable."
 hyperparameters:
   C: "Paramètre de pénalité."
 code_template: |
@@ -47,27 +57,71 @@ code_template: |
       task_type = "classification"
       meta = {}
 illustration_mermaid: |
-  graph TD
-    subgraph Data
-      X[Feature Vector]
-      Y[Target Label]
-    end
-    subgraph SVM Optimization
-      X --> Margin[Find Maximum Margin Hyperplane]
-      Y --> Margin
-      Margin --> Penalty[Apply Hinge Loss + L2 Penalty C]
-      Penalty --> Weights[Fit Coefficients W and Bias b]
-    end
-    subgraph Inference
-      Weights --> Dot[Compute W * X + b]
-      Dot --> Sign{Sign > 0?}
-      Sign -->|Yes| Class1[Predict Class 1]
-      Sign -->|No| Class0[Predict Class 0]
-    end
-    style Margin fill:#8b5cf6,stroke:#7c3aed,stroke-width:2px,color:#fff
-    style Penalty fill:#f59e0b,stroke:#d97706,stroke-width:2px,color:#fff
+  flowchart LR
+    X[/ "Feature Vector" /] --> Margin{"Maximize Margin Hyperplane"}
+    Y[/ "Target Label" /] --> Margin
+    Margin --> Penalty{"Apply Hinge Loss + L2 Penalty C"}
+    Penalty --> Weights(["Coefficients W & Bias b"])
+    Weights --> Dot{"Compute W * X + b"}
+    Dot --> Sign{"Sign > 0?"}
+    Sign -->|Yes| Class1(["Predict Class 1"])
+    Sign -->|No| Class0(["Predict Class 0"])
+    
+    style X fill:#fbbf24,stroke:#d97706,stroke-width:2px,color:#000
+    style Y fill:#fbbf24,stroke:#d97706,stroke-width:2px,color:#000
+    style Margin fill:#3b82f6,stroke:#2563eb,stroke-width:2px,color:#fff
+    style Penalty fill:#3b82f6,stroke:#2563eb,stroke-width:2px,color:#fff
+    style Weights fill:#10b981,stroke:#059669,stroke-width:2px,color:#fff
+    style Dot fill:#3b82f6,stroke:#2563eb,stroke-width:2px,color:#fff
+    style Sign fill:#3b82f6,stroke:#2563eb,stroke-width:2px,color:#fff
     style Class1 fill:#10b981,stroke:#059669,stroke-width:2px,color:#fff
-    style Class0 fill:#ef4444,stroke:#dc2626,stroke-width:2px,color:#fff
+    style Class0 fill:#10b981,stroke:#059669,stroke-width:2px,color:#fff
+
+math_theory: |
+  Linear Support Vector Classification (SVC) seeks to find the best linear separating hyperplane that maximizes the margin between two classes. It minimizes the squared hinge loss subject to an L2 penalty on the weights:
+  
+  $$ \min_{w, b} \left( \frac{1}{2} ||\textcolor{#ef4444}{w}||_2^2 + \textcolor{#fbbf24}{C} \sum_{i=1}^{N} \max(0, 1 - \textcolor{#3b82f6}{y}^{(i)} (\textcolor{#10b981}{X}^{(i)} \textcolor{#ef4444}{w} + b)) \right) $$
+  
+  Where $\textcolor{#ef4444}{w}$ and $b$ define the hyperplane, $\textcolor{#3b82f6}{y} \in \{-1, 1\}$ are the target labels, $\textcolor{#10b981}{X}$ is the feature matrix, and $\textcolor{#fbbf24}{C}$ is the penalty parameter controlling the trade-off between margin width and classification errors.
+
+math_illustration_svg: |
+  <svg viewBox="0 0 500 250" xmlns="http://www.w3.org/2000/svg">
+    <rect width="500" height="250" fill="#ffffff" />
+    
+    <!-- Axes and Hyperplane -->
+    <line x1="50" y1="200" x2="250" y2="200" stroke="#94a3b8" stroke-width="2" />
+    <line x1="50" y1="200" x2="50" y2="40" stroke="#94a3b8" stroke-width="2" />
+    
+    <!-- Optimal Hyperplane (w*x + b = 0) -->
+    <line x1="60" y1="180" x2="240" y2="60" stroke="#ef4444" stroke-width="3" />
+    <text x="245" y="55" font-family="sans-serif" font-size="12" font-weight="bold" fill="#ef4444">w*X + b = 0</text>
+
+    <!-- Margins (w*x + b = +/- 1) -->
+    <line x1="80" y1="190" x2="250" y2="76" stroke="#94a3b8" stroke-width="1.5" stroke-dasharray="4" />
+    <line x1="50" y1="150" x2="220" y2="36" stroke="#94a3b8" stroke-width="1.5" stroke-dasharray="4" />
+
+    <!-- Class 1 (Blue) -->
+    <circle cx="100" cy="110" r="5" fill="#3b82f6" />
+    <circle cx="130" cy="80" r="5" fill="#3b82f6" />
+    <circle cx="160" cy="60" r="5" fill="#3b82f6" />
+    <circle cx="190" cy="50" r="5" fill="#3b82f6" />
+    
+    <!-- Class -1 (Green) -->
+    <circle cx="120" cy="170" r="5" fill="#10b981" />
+    <circle cx="160" cy="160" r="5" fill="#10b981" />
+    <circle cx="200" cy="130" r="5" fill="#10b981" />
+    <circle cx="230" cy="100" r="5" fill="#10b981" />
+
+    <!-- Margin violation (misclassified or in margin) -->
+    <circle cx="150" cy="120" r="5" fill="#3b82f6" stroke="#fbbf24" stroke-width="2" />
+    
+    <!-- Explanation Box -->
+    <rect x="290" y="80" width="190" height="90" rx="8" fill="#f8fafc" stroke="#e2e8f0" stroke-width="2" />
+    <text x="385" y="105" font-family="sans-serif" font-size="12" font-weight="bold" fill="#475569" text-anchor="middle">Hinge Loss Optimization</text>
+    
+    <text x="300" y="130" font-family="sans-serif" font-size="11" fill="#475569">Maximize margin width: <tspan fill="#ef4444" font-weight="bold">||w||²</tspan></text>
+    <text x="300" y="150" font-family="sans-serif" font-size="11" fill="#475569">Penalty for errors: <tspan fill="#fbbf24" font-weight="bold">C</tspan></text>
+  </svg>
 
 _metadata:
   bloc: 3

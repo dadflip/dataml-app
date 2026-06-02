@@ -1,14 +1,24 @@
 id: "model_bayesian_ridge"
 name: "Model: Bayesian Ridge Regression"
-description: "Régression Ridge bayésienne. Estime un modèle probabiliste."
+description: |
+  Régression Ridge Bayésienne. Modèle linéaire probabiliste qui estime non seulement les poids de la régression, mais aussi les hyperparamètres de régularisation (alpha et lambda) directement à partir des données via des distributions a priori (priors).
 category: "Modèles Probabilistes"
 tags: ["model", "regression", "tabular", "sklearn", "linear", "bayes"]
 applies_to: ["Tabulaire"]
-when_to_use: "Quand vous voulez inclure des probabilités a priori (priors) ou avoir un modèle très robuste sans chercher les hyperparamètres (les alphas sont estimés automatiquement)."
+when_to_use: |
+  Idéal lorsque vous souhaitez une régression linéaire robuste où la force de régularisation est ajustée automatiquement, et lorsque vous avez besoin d'estimer l'incertitude (écart-type) autour de chaque prédiction.
+use_cases:
+  - "Problèmes de régression où l'évaluation du risque ou de l'incertitude est critique."
+  - "Modélisation de données bruitées où la régularisation automatique empêche le surapprentissage."
+  - "Baselines solides ne nécessitant pas de recherche sur grille (grid search) coûteuse."
 pros:
-  - "Estime les paramètres de régularisation automatiquement."
+  - "Estime automatiquement les paramètres de régularisation (alpha, lambda) sans validation croisée externe."
+  - "Fournit des intervalles de confiance (incertitude) sur les prédictions."
+  - "Très robuste au surapprentissage grâce à l'approche bayésienne intégrée."
 cons:
-  - "Lent sur de très gros datasets."
+  - "Généralement plus lent à entraîner qu'une simple régression Ridge ou Lasso classique."
+  - "Suppose que les erreurs et les poids suivent des distributions gaussiennes."
+  - "Peut rencontrer des problèmes de convergence sur des jeux de données avec un très grand nombre de caractéristiques colinéaires."
 hyperparameters:
   n_iter: "Nombre maximum d'itérations."
 code_template: |
@@ -77,34 +87,84 @@ code_template: |
       }
 
 illustration_mermaid: |
-    graph TD
-      subgraph Prior Distributions
-        Alpha[Alpha Prior\nGamma Distribution]
-        Lambda[Lambda Prior\nGamma Distribution]
-      end
+    flowchart LR
+      Data(["X_train + y_train"])
+      Test(["X_test"])
+      Alpha{"Priors Alpha\n(Loi Gamma)"}
+      Lambda{"Priors Lambda\n(Loi Gamma)"}
+      BR{"Régression\nRidge Bayésienne"}
+      Params{"Poids & Précision\n(Posteriors)"}
+      Infer{"Inférence"}
+      Pred(["Prédictions\n(y_pred)"])
+      Std(["Incertitude\n(y_std)"])
       
-      subgraph Bayesian Ridge Logic
-        Data([X_train, y_train]) --> BR[BayesianRidge]
-        Alpha --> BR
-        Lambda --> BR
-        BR -- Update Posteriors --> Params[Weights & Precision]
-      end
+      Data --> BR
+      Alpha --> BR
+      Lambda --> BR
+      BR -- "Mise à jour" --> Params
+      Params --> Infer
+      Test --> Infer
+      Infer --> Pred
+      Infer --> Std
       
-      subgraph Prediction Phase
-        Params --> Infer[Inference]
-        Test([X_test]) --> Infer
-        Infer --> Pred([y_pred])
-        Infer --> Std([y_std\nUncertainty])
-      end
-      
-      style BR fill:#8b5cf6,stroke:#7c3aed,stroke-width:2px,color:#fff
-      style Alpha fill:#c4b5fd,stroke:#8b5cf6,stroke-width:1px,color:#000
-      style Lambda fill:#c4b5fd,stroke:#8b5cf6,stroke-width:1px,color:#000
-      style Infer fill:#a78bfa,stroke:#7c3aed,stroke-width:1px,color:#fff
-      style Data fill:#f8fafc,stroke:#94a3b8,stroke-width:1px
-      style Pred fill:#f8fafc,stroke:#94a3b8,stroke-width:1px
-      style Test fill:#f8fafc,stroke:#94a3b8,stroke-width:1px
-      style Std fill:#f8fafc,stroke:#94a3b8,stroke-width:1px
+      style Data fill:#10b981,stroke:#059669,stroke-width:2px,color:#fff
+      style Test fill:#10b981,stroke:#059669,stroke-width:2px,color:#fff
+      style Alpha fill:#3b82f6,stroke:#2563eb,stroke-width:2px,color:#fff
+      style Lambda fill:#3b82f6,stroke:#2563eb,stroke-width:2px,color:#fff
+      style BR fill:#3b82f6,stroke:#2563eb,stroke-width:2px,color:#fff
+      style Params fill:#3b82f6,stroke:#2563eb,stroke-width:2px,color:#fff
+      style Infer fill:#3b82f6,stroke:#2563eb,stroke-width:2px,color:#fff
+      style Pred fill:#10b981,stroke:#059669,stroke-width:2px,color:#fff
+      style Std fill:#10b981,stroke:#059669,stroke-width:2px,color:#fff
+
+math_theory: |
+  Bayesian Ridge Regression formulates linear regression using probability distributions. Instead of finding a single set of optimal weights, it estimates a posterior distribution over the weights. The target $\textcolor{#3b82f6}{y}$ is assumed to be drawn from a Gaussian distribution:
+  
+  $$p(\textcolor{#3b82f6}{y}|\textcolor{#10b981}{X}, \textcolor{#ef4444}{w}, \textcolor{#fbbf24}{\alpha}) = \mathcal{N}(\textcolor{#3b82f6}{y}|\textcolor{#10b981}{X} \textcolor{#ef4444}{w}, \textcolor{#fbbf24}{\alpha}^{-1})$$
+  
+  The weights $\textcolor{#ef4444}{w}$ are given a spherical Gaussian prior with precision $\textcolor{#8b5cf6}{\lambda}$ (acting as an automatic $L_2$ penalty):
+  
+  $$p(\textcolor{#ef4444}{w}|\textcolor{#8b5cf6}{\lambda}) = \mathcal{N}(\textcolor{#ef4444}{w}|0, \textcolor{#8b5cf6}{\lambda}^{-1} I)$$
+  
+  The hyperparameters $\textcolor{#fbbf24}{\alpha}$ and $\textcolor{#8b5cf6}{\lambda}$ are themselves treated as random variables with Gamma priors and are optimized during training. This provides both predictions and their associated uncertainty (variance).
+
+math_illustration_svg: |
+  <svg viewBox="0 0 500 250" xmlns="http://www.w3.org/2000/svg">
+    <rect width="500" height="250" fill="#ffffff" />
+    <defs>
+      <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+        <path d="M 0 0 L 10 5 L 0 10 z" fill="#64748b" />
+      </marker>
+    </defs>
+    
+    <!-- Nodes -->
+    <circle cx="100" cy="125" r="30" fill="#10b981" fill-opacity="0.1" stroke="#10b981" stroke-width="2" />
+    <text x="100" y="130" font-family="monospace" font-size="20" font-weight="bold" fill="#10b981" text-anchor="middle">X</text>
+    <text x="100" y="175" font-family="sans-serif" font-size="12" fill="#475569" text-anchor="middle">Features</text>
+
+    <circle cx="250" cy="125" r="30" fill="#ef4444" fill-opacity="0.1" stroke="#ef4444" stroke-width="2" />
+    <text x="250" y="130" font-family="monospace" font-size="20" font-weight="bold" fill="#ef4444" text-anchor="middle">w</text>
+    <text x="250" y="175" font-family="sans-serif" font-size="12" fill="#475569" text-anchor="middle">Weights</text>
+
+    <circle cx="400" cy="125" r="30" fill="#3b82f6" fill-opacity="0.1" stroke="#3b82f6" stroke-width="2" />
+    <text x="400" y="130" font-family="monospace" font-size="20" font-weight="bold" fill="#3b82f6" text-anchor="middle">y</text>
+    <text x="400" y="175" font-family="sans-serif" font-size="12" fill="#475569" text-anchor="middle">Target</text>
+    
+    <!-- Priors -->
+    <circle cx="250" cy="40" r="20" fill="#8b5cf6" fill-opacity="0.1" stroke="#8b5cf6" stroke-width="2" />
+    <text x="250" y="45" font-family="serif" font-size="16" font-style="italic" font-weight="bold" fill="#8b5cf6" text-anchor="middle">λ</text>
+    <text x="290" y="45" font-family="sans-serif" font-size="10" fill="#475569" text-anchor="start">Weight Precision</text>
+
+    <circle cx="400" cy="40" r="20" fill="#fbbf24" fill-opacity="0.1" stroke="#fbbf24" stroke-width="2" />
+    <text x="400" y="45" font-family="serif" font-size="16" font-style="italic" font-weight="bold" fill="#fbbf24" text-anchor="middle">α</text>
+    <text x="430" y="45" font-family="sans-serif" font-size="10" fill="#475569" text-anchor="start">Noise Precision</text>
+
+    <!-- Edges -->
+    <path d="M 130 125 L 220 125" fill="none" stroke="#64748b" stroke-width="2" marker-end="url(#arrow)" />
+    <path d="M 280 125 L 370 125" fill="none" stroke="#64748b" stroke-width="2" marker-end="url(#arrow)" />
+    <path d="M 250 60 L 250 95" fill="none" stroke="#64748b" stroke-width="2" marker-end="url(#arrow)" />
+    <path d="M 400 60 L 400 95" fill="none" stroke="#64748b" stroke-width="2" marker-end="url(#arrow)" />
+  </svg>
 
 _metadata:
   bloc: 3

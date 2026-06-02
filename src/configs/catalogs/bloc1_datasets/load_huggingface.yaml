@@ -1,6 +1,17 @@
 id: load_huggingface
 name: 'Load: HuggingFace Dataset'
 description: Charge directement un dataset depuis le hub HuggingFace (datasets).
+when_to_use: À utiliser pour accéder facilement aux milliers de jeux de données open-source spécialisés, notamment en NLP (Traitement du Langage Naturel) ou vision par ordinateur, hébergés sur le Hub HuggingFace.
+use_cases:
+  - "Entraînement de modèles de NLP (classification de textes, traduction)."
+  - "Évaluation de LLMs sur des benchmarks standards (ex: SQuAD, IMDB)."
+  - "Accès rapide à des datasets d'images ou d'audio prêts à l'emploi."
+pros:
+  - "Accès direct et standardisé à une immense bibliothèque de datasets."
+  - "Gestion automatique du téléchargement, du cache et des splits (train/test)."
+cons:
+  - "Dépendance à la bibliothèque `datasets` et à une connexion internet."
+  - "Parfois complexe pour filtrer ou extraire des sous-ensembles très spécifiques sans tout télécharger."
 category: 2. Load
 tags:
 - load
@@ -41,20 +52,22 @@ code_template: |
   task_type = "nlp_classification" if target_name else "unknown"
   meta = {"format": "huggingface", "dataset": DATASET_NAME, "shape": df.shape}
 illustration_mermaid: |
-  flowchart TD
-      A([HuggingFace Hub]) -->|Dataset Name & Split| B{load_dataset}
-      B --> C[Dataset]
-      C -->|to_pandas| D[(df)]
-      D --> E{Check label column}
-      E -- Exists --> F[target_name = label]
-      E -- Missing --> G[target_name = '']
-      F --> H{{Set task_type & meta}}
-      G --> H
-      
-      style A fill:#f97316,stroke:#c2410c,stroke-width:2px,color:#fff
+  flowchart LR
+      A[/"📄 DATASET_NAME"/] --> B{"load_dataset()"}
+      C[/"🎯 TARGET_COL"/] --> D{"Check TARGET_COL"}
+      B --> E(["📊 df (DataFrame)"])
+      E --> D
+      D --> F(["🎯 target_name"])
+      D --> G(["⚙️ task_type"])
+      D --> H(["ℹ️ meta (dataset, shape)"])
+      style A fill:#fbbf24,stroke:#d97706,stroke-width:2px,color:#000
+      style C fill:#fbbf24,stroke:#d97706,stroke-width:2px,color:#000
       style B fill:#3b82f6,stroke:#2563eb,stroke-width:2px,color:#fff
-      style D fill:#10b981,stroke:#047857,stroke-width:2px,color:#fff
-      style H fill:#8b5cf6,stroke:#6d28d9,stroke-width:2px,color:#fff
+      style D fill:#3b82f6,stroke:#2563eb,stroke-width:2px,color:#fff
+      style E fill:#10b981,stroke:#059669,stroke-width:2px,color:#fff
+      style F fill:#8b5cf6,stroke:#7c3aed,stroke-width:2px,color:#fff
+      style G fill:#8b5cf6,stroke:#7c3aed,stroke-width:2px,color:#fff
+      style H fill:#8b5cf6,stroke:#7c3aed,stroke-width:2px,color:#fff
 
 _metadata:
   bloc: 1

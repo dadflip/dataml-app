@@ -1,6 +1,18 @@
 id: eda_image_histogram
 name: 'EDA: Histogramme des Pixels'
-description: Trace la distribution des intensités de pixels par canal (RGB).
+description: Trace la distribution des intensités de pixels par canal (RGB) ou en niveaux de gris.
+when_to_use: À utiliser pour comprendre la distribution de la luminosité et des couleurs d'une image, et pour identifier des problèmes comme la sous-exposition, la surexposition ou le manque de contraste.
+use_cases:
+- "Analyse du contraste et de la luminosité des images"
+- "Vérification de la normalisation des valeurs de pixels (ex: [0, 1] ou [0, 255])"
+- "Détection de problèmes d'exposition (images trop sombres ou brûlées)"
+pros:
+- "Offre une vue statistique de la répartition des couleurs"
+- "Aide à décider des techniques de prétraitement (ex: égalisation d'histogramme)"
+- "Permet de vérifier rapidement la plage de valeurs des tenseurs d'image"
+cons:
+- "Analyse limitée à une seule image à la fois dans cette implémentation"
+- "Ne donne pas d'information sur la structure spatiale de l'image"
 category: 3. Exploratory Data Analysis
 tags:
 - eda
@@ -32,20 +44,20 @@ code_template: |
       print("[EDA] Dataset non trouvé ou vide.")
 illustration_mermaid: |
     flowchart TD
-        Dataset([Dataset]) --> Check{Dataset Valid?}
-        Check -- Yes --> GetSample[Get First Image]
-        GetSample --> EnsureTensor[Ensure Tensor Format]
-        EnsureTensor --> CheckColor{RGB or Grayscale?}
-        CheckColor -- RGB --> R[Red Channel] & G[Green Channel] & B[Blue Channel]
-        CheckColor -- Gray --> K[Grayscale Channel]
-        R & G & B & K --> CalcHist[Calculate np.histogram\n256 bins]
-        CalcHist --> PlotHist{{Plot Histogram Lines}}
-        Check -- No --> Error[/Print Error/]
+        InDataset[/ dataset /] --> GetSample{ Get_Image }
+        GetSample --> EnsureTensor{ ToTensor }
+        EnsureTensor --> CheckColor{ Check_RGB_Gray }
+        CheckColor --> CalcHist{ np_histogram }
+        CalcHist --> PlotHist{ plt_plot }
+        PlotHist --> Fig([ Histogram_Fig ])
     
-        style Dataset fill:#0284c7,stroke:#0369a1,color:#fff
-        style CheckColor fill:#eab308,stroke:#ca8a04,color:#fff
-        style CalcHist fill:#8b5cf6,stroke:#7c3aed,color:#fff
-        style PlotHist fill:#ec4899,stroke:#db2777,color:#fff
+        style InDataset fill:#fbbf24,stroke:#d97706,stroke-width:2px,color:#000
+        style GetSample fill:#3b82f6,stroke:#2563eb,stroke-width:2px,color:#fff
+        style EnsureTensor fill:#3b82f6,stroke:#2563eb,stroke-width:2px,color:#fff
+        style CheckColor fill:#3b82f6,stroke:#2563eb,stroke-width:2px,color:#fff
+        style CalcHist fill:#3b82f6,stroke:#2563eb,stroke-width:2px,color:#fff
+        style PlotHist fill:#3b82f6,stroke:#2563eb,stroke-width:2px,color:#fff
+        style Fig fill:#10b981,stroke:#059669,stroke-width:2px,color:#fff
 
 _metadata:
   bloc: 1

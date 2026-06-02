@@ -1,7 +1,17 @@
 id: extract_elasticsearch
 name: 'Extract: Elasticsearch'
-description: Recherche et dump des documents depuis un index Elasticsearch (Scroll
-  API).
+description: Recherche et dump des documents depuis un index Elasticsearch (Scroll API).
+when_to_use: Idéal lorsque vous devez extraire de gros volumes de documents depuis un cluster Elasticsearch sans surcharger la mémoire, grâce à l'API Scroll.
+use_cases:
+  - Extraction de logs applicatifs ou d'événements temporels pour analyse.
+  - Sauvegarde locale d'un index Elasticsearch complet.
+  - Récupération de données textuelles complexes non structurées.
+pros:
+  - Supporte l'extraction de grands volumes de données grâce au Scroll.
+  - Maintient l'état de la recherche côté serveur.
+cons:
+  - Peut être lent sur des index extrêmement volumineux.
+  - Consomme des ressources sur le cluster Elasticsearch (Scroll context).
 category: 1. Extract
 tags:
 - extract
@@ -53,13 +63,22 @@ code_template: |
   task_type = "unknown"
   meta = {"source": "elasticsearch", "path": DEST_PATH}
 illustration_mermaid: |
-    flowchart TD
-    A([FILE_PATH]) --> B[Load EXTRACT_ELASTICSEARCH]
-    B --> df([df])
-    
-    style A fill:#3b82f6,color:#fff
-    style B fill:#10b981,color:#fff
-    style df fill:#f59e0b,color:#fff
+    flowchart LR
+        A[/"📄 ES_URL / INDEX_NAME"/] --> B{"Extract Elasticsearch()"}
+        C[/"🎯 TARGET_COL"/] --> D{"Check TARGET_COL"}
+        B --> E(["📊 df (Local File/DataFrame)"])
+        E --> D
+        D --> F(["🎯 target_name"])
+        D --> G(["⚙️ task_type"])
+        D --> H(["ℹ️ meta (...)"])
+        style A fill:#fbbf24,stroke:#d97706,stroke-width:2px,color:#000
+        style C fill:#fbbf24,stroke:#d97706,stroke-width:2px,color:#000
+        style B fill:#3b82f6,stroke:#2563eb,stroke-width:2px,color:#fff
+        style D fill:#3b82f6,stroke:#2563eb,stroke-width:2px,color:#fff
+        style E fill:#10b981,stroke:#059669,stroke-width:2px,color:#fff
+        style F fill:#8b5cf6,stroke:#7c3aed,stroke-width:2px,color:#fff
+        style G fill:#8b5cf6,stroke:#7c3aed,stroke-width:2px,color:#fff
+        style H fill:#8b5cf6,stroke:#7c3aed,stroke-width:2px,color:#fff
 
 
 _metadata:

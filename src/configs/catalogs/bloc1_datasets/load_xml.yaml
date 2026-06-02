@@ -1,6 +1,17 @@
 id: "load_xml"
 name: "Load: Fichier XML"
-description: "Parse un fichier XML complexe et l'aplatit dans un DataFrame."
+description: "Parse un fichier de données structurées au format XML et tente de l'aplatir pour le transformer en DataFrame Pandas."
+when_to_use: "Utilisé pour intégrer des données issues de systèmes legacy, d'APIs spécifiques ou d'exports de bases de données qui utilisent le format XML."
+use_cases:
+  - "Traitement de flux de données financiers ou de flux RSS."
+  - "Import de données de configuration ou de catalogues de produits."
+  - "Interopérabilité avec des architectures orientées services (SOA) basées sur XML."
+pros:
+  - "Utilise la fonction native `pd.read_xml` pour une conversion directe."
+  - "Simple à mettre en place pour des structures XML relativement plates."
+cons:
+  - "Peut échouer ou produire des résultats inattendus sur des schémas XML très complexes ou profondément imbriqués."
+  - "Les performances se dégradent sur de très gros fichiers XML."
 category: "2. Load"
 tags: ["load", "xml", "tabular", "pandas"]
 code_template: |
@@ -22,19 +33,22 @@ output_variables:
   - task_type
   - meta
 illustration_mermaid: |
-    flowchart LR
-        XML[("XML File\n(.xml)")] -->|FILE_PATH| Load(["Load\nXML"])
-        Load --> df(["df (None)"])
-        Load --> target_name(["target_name (None)"])
-        Load --> task_type(["task_type ('unknown')"])
-        Load --> meta(["meta (dict)"])
-
-        style XML fill:#3b82f6,stroke:#2563eb,stroke-width:2px,color:#fff
-        style Load fill:#eff6ff,stroke:#3b82f6,stroke-width:2px
-        style df fill:#f3f4f6,stroke:#9ca3af,stroke-width:1px
-        style target_name fill:#f3f4f6,stroke:#9ca3af,stroke-width:1px
-        style task_type fill:#f3f4f6,stroke:#9ca3af,stroke-width:1px
-        style meta fill:#f3f4f6,stroke:#9ca3af,stroke-width:1px
+  flowchart LR
+      A[/"📄 FILE_PATH"/] --> B{"pd.read_xml()"}
+      C[/"🎯 Target Info"/] --> D{"Define target"}
+      B --> E(["📊 df (DataFrame)"])
+      E --> D
+      D --> F(["🎯 target_name"])
+      D --> G(["⚙️ task_type"])
+      D --> H(["ℹ️ meta (source)"])
+      style A fill:#fbbf24,stroke:#d97706,stroke-width:2px,color:#000
+      style C fill:#fbbf24,stroke:#d97706,stroke-width:2px,color:#000
+      style B fill:#3b82f6,stroke:#2563eb,stroke-width:2px,color:#fff
+      style D fill:#3b82f6,stroke:#2563eb,stroke-width:2px,color:#fff
+      style E fill:#10b981,stroke:#059669,stroke-width:2px,color:#fff
+      style F fill:#8b5cf6,stroke:#7c3aed,stroke-width:2px,color:#fff
+      style G fill:#8b5cf6,stroke:#7c3aed,stroke-width:2px,color:#fff
+      style H fill:#8b5cf6,stroke:#7c3aed,stroke-width:2px,color:#fff
 
 _metadata:
   bloc: 1

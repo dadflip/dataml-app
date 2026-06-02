@@ -1,16 +1,53 @@
 id: "model_spacy_ner"
 name: "Model: SpaCy Named Entity Recognition (NER)"
-description: "Pipeline NLP pour l'extraction d'entités nommées (Personnes, Lieux, Organisations) à partir de texte libre."
+description: "Pipeline NLP pré-entraîné basé sur spaCy pour l'Extraction d'Entités Nommées (NER), permettant d'identifier et catégoriser des entités spécifiques (personnes, lieux, organisations, dates) dans des textes libres."
 category: "Modèles NLP (Pré-entraînés)"
 tags: ["model", "nlp", "ner", "spacy", "pretrained"]
 applies_to: ["Texte"]
-when_to_use: "Pour extraire dynamiquement de l'information (ex: extraire les noms de villes d'un corpus de tweets)."
+when_to_use: "Utile lorsque vous avez besoin d'extraire rapidement des informations structurées à partir de gros corpus textuels sans avoir de données annotées pour entraîner un modèle de zéro."
+use_cases:
+  - "Extraction automatique de noms de villes et de personnes à partir de flux d'actualités."
+  - "Anonymisation de documents en détectant et masquant les informations personnelles."
+  - "Structuration de CVs (extraction d'écoles, entreprises et compétences)."
 pros:
-  - "Extrêmement robuste et rapide (Zero-Shot inference)."
+  - "Prêt à l'emploi (Zero-Shot) avec d'excellentes performances de base."
+  - "Très rapide, optimisé pour des pipelines de production intensifs."
+  - "Supporte un grand nombre de langues via différents modèles téléchargeables."
 cons:
-  - "Nécessite le modèle linguistique adéquat (en, fr, etc.)."
+  - "Nécessite le téléchargement préalable des modèles linguistiques lourds (ex: `fr_core_news_md`)."
+  - "Difficile à fine-tuner sur un domaine très spécifique (médical, juridique) comparé aux Transformers."
+  - "Les performances dépendent exclusivement de la qualité des données d'entraînement d'origine du modèle spaCy."
 hyperparameters:
   spacy_model: "Nom du modèle spaCy (ex: 'en_core_web_md')."
+math_theory: |
+  Le modèle de Reconnaissance d'Entités Nommées (NER) de SpaCy utilise une architecture Transition-Based avec un réseau de neurones convolutionnel (CNN) ou Transformer pour encoder le contexte.
+  Étant donné une séquence de tokens d'entrée $\textcolor{#10b981}{X} = (x_1, \dots, x_{\textcolor{#fbbf24}{T}})$, le modèle produit des représentations contextuelles $\textcolor{#3b82f6}{h}_t$.
+  Les décisions de transition (ex: Shift, Reduce, Label) sont prédites itérativement pour construire les entités $\textcolor{#ef4444}{E}$.
+  Le score pour une transition $\textcolor{#8b5cf6}{a}$ à l'état $s$ est modélisé par :
+  $$ P(\textcolor{#8b5cf6}{a} | s, \textcolor{#10b981}{X}) = \text{Softmax}(\textcolor{#3b82f6}{W} \cdot \textcolor{#3b82f6}{h}_{s} + \textcolor{#3b82f6}{b}) $$
+  Le modèle cherche la séquence d'actions maximisant la vraisemblance conjointe pour identifier les entités cibles.
+math_illustration_svg: |
+  <svg viewBox="0 0 800 400" xmlns="http://www.w3.org/2000/svg">
+    <rect x="0" y="0" width="800" height="400" fill="#1e293b" rx="10"/>
+    <text x="400" y="40" fill="#ffffff" font-family="sans-serif" font-size="22" font-weight="bold" text-anchor="middle">SpaCy Transition-Based NER</text>
+    <rect x="100" y="100" width="600" height="60" fill="#10b981" fill-opacity="0.2" stroke="#10b981" stroke-width="2" rx="5"/>
+    <text x="400" y="135" fill="#10b981" font-family="sans-serif" font-size="18" font-weight="bold" text-anchor="middle">Tokens X = (x_1, ... x_T)</text>
+    <text x="730" y="135" fill="#fbbf24" font-family="sans-serif" font-size="18" font-weight="bold" text-anchor="middle">T tokens</text>
+    <path d="M400 170 L400 200" stroke="#ffffff" stroke-width="2" marker-end="url(#arrow)" />
+    <rect x="100" y="210" width="600" height="60" fill="#3b82f6" fill-opacity="0.2" stroke="#3b82f6" stroke-width="2" rx="5"/>
+    <text x="400" y="245" fill="#3b82f6" font-family="sans-serif" font-size="18" font-weight="bold" text-anchor="middle">Context Representations h_t (CNN / Transformer)</text>
+    <path d="M400 280 L400 310" stroke="#ffffff" stroke-width="2" marker-end="url(#arrow)" />
+    <rect x="100" y="320" width="280" height="60" fill="#8b5cf6" fill-opacity="0.2" stroke="#8b5cf6" stroke-width="2" rx="5"/>
+    <text x="240" y="355" fill="#8b5cf6" font-family="sans-serif" font-size="18" font-weight="bold" text-anchor="middle">Transitions a (Shift/Reduce)</text>
+    <path d="M390 350 L410 350" stroke="#ffffff" stroke-width="2" marker-end="url(#arrow)" />
+    <rect x="420" y="320" width="280" height="60" fill="#ef4444" fill-opacity="0.2" stroke="#ef4444" stroke-width="2" rx="5"/>
+    <text x="560" y="355" fill="#ef4444" font-family="sans-serif" font-size="18" font-weight="bold" text-anchor="middle">Entities E (ORG, PER...)</text>
+    <defs>
+      <marker id="arrow" markerWidth="10" markerHeight="10" refX="9" refY="3" orient="auto">
+        <path d="M0,0 L0,6 L9,3 z" fill="#ffffff" />
+      </marker>
+    </defs>
+  </svg>
 code_template: |
   import pandas as pd
   import numpy as np
@@ -24,12 +61,14 @@ code_template: |
   # [PARAM: SPACY_MODEL | string]
   SPACY_MODEL = "en_core_web_md"
 illustration_mermaid: |
-    graph LR
-      Data([Features]) --> Model((Machine Learning))
-      Model --> Pred([Predictions])
-      style Model fill:#8b5cf6,stroke:#7c3aed,stroke-width:2px,color:#fff
-      style Data fill:#f8fafc,stroke:#94a3b8,stroke-width:1px
-      style Pred fill:#f8fafc,stroke:#94a3b8,stroke-width:1px
+  flowchart LR
+    Text(["Raw Text Document"]) --> Pipeline{"SpaCy NER Pipeline"}
+    Model[/"Language Model (e.g. en_core_web_md)"/] --> Pipeline
+    Pipeline --> Entities(["Extracted Entities (PER, LOC, ORG...)"])
+    style Model fill:#fbbf24,stroke:#d97706,stroke-width:2px,color:#000
+    style Pipeline fill:#3b82f6,stroke:#2563eb,stroke-width:2px,color:#fff
+    style Text fill:#10b981,stroke:#059669,stroke-width:2px,color:#fff
+    style Entities fill:#10b981,stroke:#059669,stroke-width:2px,color:#fff
 
 _metadata:
   bloc: 3

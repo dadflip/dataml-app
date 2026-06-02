@@ -1,7 +1,16 @@
 id: extract_huggingface_dataset
 name: 'Extract: HuggingFace Dataset'
-description: Télécharge un dataset (NLP, Vision, Audio) depuis le Hub HuggingFace
-  vers le disque local.
+description: "Télécharge et met en cache un dataset (NLP, Vision, Audio) depuis le Hub HuggingFace, puis le sauvegarde sur le disque."
+when_to_use: "Lorsqu'on souhaite utiliser l'un des milliers de jeux de données disponibles sur la plateforme Hugging Face pour de l'apprentissage."
+use_cases:
+  - "Fine-tuning de modèles LLM avec des datasets de texte (ex: IMDB, SQuAD)."
+  - "Entraînement de modèles de vision ou d'audio via des données standardisées."
+pros:
+  - "Accès instantané à un vaste catalogue de datasets pré-traités et versionnés."
+  - "Gestion automatique du cache et de la reprise du téléchargement."
+cons:
+  - "Requiert la bibliothèque 'datasets' installée."
+  - "Certains datasets nécessitent un token d'accès ou l'acceptation de licences."
 category: 1. Extract
 tags:
 - extract
@@ -55,13 +64,22 @@ code_template: |
       print(f"[ERREUR EXTRACT] Échec de l'extraction HuggingFace : {str(e)}")
       raise e
 illustration_mermaid: |
-    flowchart TD
-    A([FILE_PATH]) --> B[Load EXTRACT_HUGGINGFACE_DATASET]
-    B --> df([df])
-    
-    style A fill:#3b82f6,color:#fff
-    style B fill:#10b981,color:#fff
-    style df fill:#f59e0b,color:#fff
+    flowchart LR
+        A[/"📄 HF Dataset ID"/] --> B{"load_dataset()"}
+        C[/"🎯 TARGET_COL"/] --> D{"Check TARGET_COL"}
+        B --> E(["📊 Arrow/Disk Path"])
+        E --> D
+        D --> F(["🎯 target_name"])
+        D --> G(["⚙️ task_type"])
+        D --> H(["ℹ️ meta (source, hf_id)"])
+        style A fill:#fbbf24,stroke:#d97706,stroke-width:2px,color:#000
+        style C fill:#fbbf24,stroke:#d97706,stroke-width:2px,color:#000
+        style B fill:#3b82f6,stroke:#2563eb,stroke-width:2px,color:#fff
+        style D fill:#3b82f6,stroke:#2563eb,stroke-width:2px,color:#fff
+        style E fill:#10b981,stroke:#059669,stroke-width:2px,color:#fff
+        style F fill:#8b5cf6,stroke:#7c3aed,stroke-width:2px,color:#fff
+        style G fill:#8b5cf6,stroke:#7c3aed,stroke-width:2px,color:#fff
+        style H fill:#8b5cf6,stroke:#7c3aed,stroke-width:2px,color:#fff
 
 
 

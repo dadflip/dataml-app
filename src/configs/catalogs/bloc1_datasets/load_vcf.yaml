@@ -1,6 +1,18 @@
 id: "load_vcf"
 name: "Load: Variants Génomiques VCF"
-description: "Parse un fichier Variant Call Format (.vcf) contenant des mutations ADN."
+description: "Charge et parse un fichier Variant Call Format (.vcf), souvent utilisé en génomique, pour extraire les mutations et leurs annotations."
+when_to_use: "Utilisez ce bloc pour importer des données de variants génétiques depuis des fichiers VCF (compressés ou non) pour des analyses de bioinformatique ou d'associations génétiques."
+use_cases:
+  - "Étude d'associations pangénomiques (GWAS)."
+  - "Analyse de mutations dans des cohortes cliniques."
+  - "Filtrage et annotation de variants (SNPs, indels)."
+pros:
+  - "Gère automatiquement les en-têtes (lignes commençant par ##)."
+  - "Prend en charge les fichiers VCF compressés (.gz)."
+  - "Extrait la liste des chromosomes et le nombre total de variants."
+cons:
+  - "Peut consommer beaucoup de mémoire pour de très gros fichiers VCF."
+  - "Les annotations complexes (champ INFO) ne sont pas automatiquement éclatées."
 category: "2. Load"
 tags: ["load", "vcf", "genetics", "variants"]
 code_template: |
@@ -51,20 +63,22 @@ output_variables:
   - task_type
   - meta
 illustration_mermaid: |
-  flowchart TD
-      A([FILE_PATH]) --> B{File Exists?}
-      B -- Yes --> C[Determine skip_rows for ## metadata]
-      B -- No --> D[Empty DataFrame]
-      C --> E[pd.read_csv skipping metadata]
-      E --> F[Rename #CHROM to CHROM]
-      F --> G[Extract chromosomes list]
-      G --> H([df, target_name, task_type, meta])
-      D --> H
-
-      style A fill:#3b82f6,color:#fff
-      style C fill:#10b981,color:#fff
-      style E fill:#10b981,color:#fff
-      style H fill:#f59e0b,color:#fff
+  flowchart LR
+      A[/"📄 FILE_PATH"/] --> B{"pd.read_csv(vcf)"}
+      C[/"🎯 'QUAL'"/] --> D{"Check target"}
+      B --> E(["📊 df (DataFrame)"])
+      E --> D
+      D --> F(["🎯 target_name"])
+      D --> G(["⚙️ task_type"])
+      D --> H(["ℹ️ meta (chromosomes)"])
+      style A fill:#fbbf24,stroke:#d97706,stroke-width:2px,color:#000
+      style C fill:#fbbf24,stroke:#d97706,stroke-width:2px,color:#000
+      style B fill:#3b82f6,stroke:#2563eb,stroke-width:2px,color:#fff
+      style D fill:#3b82f6,stroke:#2563eb,stroke-width:2px,color:#fff
+      style E fill:#10b981,stroke:#059669,stroke-width:2px,color:#fff
+      style F fill:#8b5cf6,stroke:#7c3aed,stroke-width:2px,color:#fff
+      style G fill:#8b5cf6,stroke:#7c3aed,stroke-width:2px,color:#fff
+      style H fill:#8b5cf6,stroke:#7c3aed,stroke-width:2px,color:#fff
 
 
 _metadata:

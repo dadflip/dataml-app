@@ -1,17 +1,116 @@
 id: "model_autogluon_classifier"
 name: "Model: AutoGluon (Amazon AutoML)"
-description: "AutoML d'Amazon extrêmement performant pour les données tabulaires, incluant de l'empilement (stacking) avancé."
+description: |
+  Cadre d'AutoML d'Amazon extrêmement performant pour les données tabulaires. Il entraîne de multiples modèles (LightGBM, XGBoost, CatBoost, Réseaux de Neurones) et les combine automatiquement via un processus d'empilement (stacking) avancé.
 category: "AutoML"
 tags: ["model", "automl", "classification", "tabular", "autogluon"]
 applies_to: ["Tabulaire"]
-when_to_use: "Pour battre les Kagglers sans effort sur des données tabulaires."
+when_to_use: |
+  Idéal pour obtenir rapidement des performances à l'état de l'art sur des données tabulaires sans expertise en réglage d'hyperparamètres, ou pour établir une base de référence très compétitive (souvent du niveau d'une compétition Kaggle).
+use_cases:
+  - "Compétitions de machine learning et prototypage très rapide avec un temps de développement minimal."
+  - "Automatisation complète de bout en bout de la chaîne d'entraînement pour des modèles tabulaires."
+  - "Comparaison et étalonnage (benchmarking) de nouveaux jeux de données."
 pros:
-  - "Très souvent State of the Art en Tabulaire."
+  - "Performances très souvent à l'état de l'art (State of the Art) sur les données tabulaires sans intervention humaine."
+  - "Gère automatiquement le nettoyage, l'ingénierie des caractéristiques, et la sélection de modèles."
+  - "Très robuste avec des mécanismes de stacking d'ensembles qui maximisent la précision."
 cons:
-  - "Installation complexe (conflits de dépendances fréquents)."
-  - "Modèle résultant lourd et difficile à exporter proprement dans un Pipeline Sklearn classique."
+  - "Modèle résultant souvent très lourd en mémoire (sauvegarde d'une dizaine de sous-modèles)."
+  - "Temps d'inférence (prédiction) plus lent à cause du calcul de l'ensemble des modèles."
+  - "Difficile à intégrer dans des pipelines de déploiement stricts comme `sklearn.pipeline.Pipeline`."
+  - "Installation parfois complexe due à de nombreux conflits de dépendances."
 hyperparameters:
   time_limit: "Temps maximum alloué en secondes (ex: 60)."
+math_theory: |
+  AutoGluon utilise un processus d'empilement (stacking) avancé. Des modèles de base $\{\textcolor{#3b82f6}{M_1}, \dots, \textcolor{#3b82f6}{M_K}\}$ s'entraînent sur les caractéristiques $\textcolor{#fbbf24}{x}$ pour générer des probabilités prédictives $\textcolor{#10b981}{P_k(x)}$.
+  Ensuite, un modèle d'agrégation (stacker) $\textcolor{#8b5cf6}{S}$ prend en entrée la concaténation ($\oplus$) des variables originales $\textcolor{#fbbf24}{x}$ et des prédictions de base $\textcolor{#10b981}{P_k}$ pour calculer la probabilité finale $\textcolor{#ef4444}{\hat{y}}$ :
+  $$ \textcolor{#ef4444}{\hat{y}} = \textcolor{#8b5cf6}{S}\left( \textcolor{#fbbf24}{x} \oplus [\textcolor{#10b981}{P_1(x)}, \textcolor{#10b981}{P_2(x)}, \dots, \textcolor{#10b981}{P_K(x)}] \right) $$
+math_illustration_svg: |
+  <svg viewBox="0 0 800 400" xmlns="http://www.w3.org/2000/svg">
+    <rect width="800" height="400" fill="#1e1e1e" rx="10" />
+    <text x="400" y="40" fill="#ffffff" font-family="Arial" font-size="20" font-weight="bold" text-anchor="middle">AutoGluon Stacking Ensemble</text>
+
+    <!-- Original Features -->
+    <rect x="50" y="160" width="80" height="80" fill="#fbbf24" fill-opacity="0.2" stroke="#fbbf24" stroke-width="2" rx="8" />
+    <text x="90" y="205" fill="#fbbf24" font-family="Arial" font-size="20" font-weight="bold" text-anchor="middle">x</text>
+
+    <!-- Base Models -->
+    <rect x="250" y="70" width="100" height="40" fill="#3b82f6" fill-opacity="0.2" stroke="#3b82f6" stroke-width="2" rx="6" />
+    <text x="300" y="95" fill="#3b82f6" font-family="Arial" font-size="14" font-weight="bold" text-anchor="middle">M_1 (LGBM)</text>
+
+    <rect x="250" y="130" width="100" height="40" fill="#3b82f6" fill-opacity="0.2" stroke="#3b82f6" stroke-width="2" rx="6" />
+    <text x="300" y="155" fill="#3b82f6" font-family="Arial" font-size="14" font-weight="bold" text-anchor="middle">M_2 (XGB)</text>
+
+    <rect x="250" y="190" width="100" height="40" fill="#3b82f6" fill-opacity="0.2" stroke="#3b82f6" stroke-width="2" rx="6" />
+    <text x="300" y="215" fill="#3b82f6" font-family="Arial" font-size="14" font-weight="bold" text-anchor="middle">M_3 (CatB)</text>
+
+    <rect x="250" y="250" width="100" height="40" fill="#3b82f6" fill-opacity="0.2" stroke="#3b82f6" stroke-width="2" rx="6" />
+    <text x="300" y="275" fill="#3b82f6" font-family="Arial" font-size="14" font-weight="bold" text-anchor="middle">M_4 (RF)</text>
+
+    <rect x="250" y="310" width="100" height="40" fill="#3b82f6" fill-opacity="0.2" stroke="#3b82f6" stroke-width="2" rx="6" />
+    <text x="300" y="335" fill="#3b82f6" font-family="Arial" font-size="14" font-weight="bold" text-anchor="middle">M_5 (NN)</text>
+
+    <!-- Input to Base Models -->
+    <path d="M 130 200 L 220 200" fill="none" stroke="#fbbf24" stroke-width="2" />
+    <path d="M 220 90 L 250 90" fill="none" stroke="#fbbf24" stroke-width="2" marker-end="url(#ag-arrow-yellow)" />
+    <path d="M 220 150 L 250 150" fill="none" stroke="#fbbf24" stroke-width="2" marker-end="url(#ag-arrow-yellow)" />
+    <path d="M 220 210 L 250 210" fill="none" stroke="#fbbf24" stroke-width="2" marker-end="url(#ag-arrow-yellow)" />
+    <path d="M 220 270 L 250 270" fill="none" stroke="#fbbf24" stroke-width="2" marker-end="url(#ag-arrow-yellow)" />
+    <path d="M 220 330 L 250 330" fill="none" stroke="#fbbf24" stroke-width="2" marker-end="url(#ag-arrow-yellow)" />
+    <line x1="220" y1="90" x2="220" y2="330" stroke="#fbbf24" stroke-width="2" />
+
+    <!-- Base Predictions -->
+    <circle cx="410" cy="90" r="15" fill="#10b981" fill-opacity="0.2" stroke="#10b981" stroke-width="2" />
+    <text x="410" y="95" fill="#10b981" font-family="Arial" font-size="12" text-anchor="middle">P_1</text>
+    <circle cx="410" cy="150" r="15" fill="#10b981" fill-opacity="0.2" stroke="#10b981" stroke-width="2" />
+    <text x="410" y="155" fill="#10b981" font-family="Arial" font-size="12" text-anchor="middle">P_2</text>
+    <circle cx="410" cy="210" r="15" fill="#10b981" fill-opacity="0.2" stroke="#10b981" stroke-width="2" />
+    <text x="410" y="215" fill="#10b981" font-family="Arial" font-size="12" text-anchor="middle">P_3</text>
+    <circle cx="410" cy="270" r="15" fill="#10b981" fill-opacity="0.2" stroke="#10b981" stroke-width="2" />
+    <text x="410" y="275" fill="#10b981" font-family="Arial" font-size="12" text-anchor="middle">P_4</text>
+    <circle cx="410" cy="330" r="15" fill="#10b981" fill-opacity="0.2" stroke="#10b981" stroke-width="2" />
+    <text x="410" y="335" fill="#10b981" font-family="Arial" font-size="12" text-anchor="middle">P_5</text>
+
+    <!-- Connect Models to Predictions -->
+    <line x1="350" y1="90" x2="395" y2="90" stroke="#3b82f6" stroke-width="2" />
+    <line x1="350" y1="150" x2="395" y2="150" stroke="#3b82f6" stroke-width="2" />
+    <line x1="350" y1="210" x2="395" y2="210" stroke="#3b82f6" stroke-width="2" />
+    <line x1="350" y1="270" x2="395" y2="270" stroke="#3b82f6" stroke-width="2" />
+    <line x1="350" y1="330" x2="395" y2="330" stroke="#3b82f6" stroke-width="2" />
+
+    <!-- Concat & Stacker -->
+    <rect x="520" y="100" width="100" height="200" fill="#8b5cf6" fill-opacity="0.2" stroke="#8b5cf6" stroke-width="3" rx="10" />
+    <text x="570" y="195" fill="#8b5cf6" font-family="Arial" font-size="20" font-weight="bold" text-anchor="middle">Stacker</text>
+    <text x="570" y="220" fill="#8b5cf6" font-family="Arial" font-size="16" font-weight="bold" text-anchor="middle">S(x ⊕ P)</text>
+
+    <!-- Connections to Stacker -->
+    <path d="M 425 90 C 470 90, 470 120, 520 120" fill="none" stroke="#10b981" stroke-width="2" marker-end="url(#ag-arrow-green)" />
+    <path d="M 425 150 C 470 150, 470 160, 520 160" fill="none" stroke="#10b981" stroke-width="2" marker-end="url(#ag-arrow-green)" />
+    <path d="M 425 210 L 520 210" fill="none" stroke="#10b981" stroke-width="2" marker-end="url(#ag-arrow-green)" />
+    <path d="M 425 270 C 470 270, 470 260, 520 260" fill="none" stroke="#10b981" stroke-width="2" marker-end="url(#ag-arrow-green)" />
+    <path d="M 425 330 C 470 330, 470 280, 520 280" fill="none" stroke="#10b981" stroke-width="2" marker-end="url(#ag-arrow-green)" />
+
+    <!-- Bypass original feature to stacker -->
+    <path d="M 90 240 C 90 380, 490 380, 570 300" fill="none" stroke="#fbbf24" stroke-dasharray="5,5" stroke-width="2" marker-end="url(#ag-arrow-yellow)" />
+
+    <!-- Final Output -->
+    <path d="M 620 200 L 680 200" fill="none" stroke="#8b5cf6" stroke-width="2" marker-end="url(#ag-arrow-purple)" />
+    <circle cx="710" cy="200" r="25" fill="#ef4444" fill-opacity="0.2" stroke="#ef4444" stroke-width="3" />
+    <text x="710" y="206" fill="#ef4444" font-family="Arial" font-size="20" font-weight="bold" text-anchor="middle">ŷ</text>
+
+    <defs>
+      <marker id="ag-arrow-yellow" viewBox="0 0 10 10" refX="10" refY="5" markerWidth="6" markerHeight="6" orient="auto">
+        <path d="M 0 0 L 10 5 L 0 10 z" fill="#fbbf24" />
+      </marker>
+      <marker id="ag-arrow-green" viewBox="0 0 10 10" refX="10" refY="5" markerWidth="6" markerHeight="6" orient="auto">
+        <path d="M 0 0 L 10 5 L 0 10 z" fill="#10b981" />
+      </marker>
+      <marker id="ag-arrow-purple" viewBox="0 0 10 10" refX="10" refY="5" markerWidth="6" markerHeight="6" orient="auto">
+        <path d="M 0 0 L 10 5 L 0 10 z" fill="#8b5cf6" />
+      </marker>
+    </defs>
+  </svg>
 code_template: |
   import pandas as pd
   import numpy as np
@@ -79,35 +178,45 @@ code_template: |
       }
 
 illustration_mermaid: |
-    graph TD
-      subgraph AutoGluon Automagic
-        Data([X_train + y_train]) --> AG[TabularPredictor]
-        AG --> CV[Cross Validation]
-        CV --> M1[LightGBM]
-        CV --> M2[CatBoost]
-        CV --> M3[XGBoost]
-        CV --> M4[RandomForest]
-        CV --> M5[NeuralNet]
-      end
+    flowchart LR
+      Data(["X_train + y_train"])
+      AG{"TabularPredictor\n(AutoGluon)"}
+      CV{"Validation\nCroisée"}
+      M1{"LightGBM"}
+      M2{"CatBoost"}
+      M3{"XGBoost"}
+      M4{"Forêts Aléatoires"}
+      M5{"Réseaux\nde Neurones"}
+      Stack{"Stacking\n(Ensemble Pondéré L2)"}
+      Best{"Meilleur Modèle"}
+      Pred(["Prédictions"])
       
-      subgraph Stacking
-        M1 --> Stack[Weighted Ensemble L2]
-        M2 --> Stack
-        M3 --> Stack
-        M4 --> Stack
-        M5 --> Stack
-      end
+      Data --> AG
+      AG --> CV
+      CV --> M1
+      CV --> M2
+      CV --> M3
+      CV --> M4
+      CV --> M5
+      M1 --> Stack
+      M2 --> Stack
+      M3 --> Stack
+      M4 --> Stack
+      M5 --> Stack
+      Stack --> Best
+      Best --> Pred
       
-      subgraph Best Model Selection
-        Stack --> Best[Best Model\nSelected]
-        Best --> Pred([Predictions])
-      end
-      
-      style AG fill:#8b5cf6,stroke:#7c3aed,stroke-width:2px,color:#fff
-      style Stack fill:#c4b5fd,stroke:#8b5cf6,stroke-width:1px,color:#000
-      style Best fill:#a78bfa,stroke:#7c3aed,stroke-width:1px,color:#fff
-      style Data fill:#f8fafc,stroke:#94a3b8,stroke-width:1px
-      style Pred fill:#f8fafc,stroke:#94a3b8,stroke-width:1px
+      style Data fill:#10b981,stroke:#059669,stroke-width:2px,color:#fff
+      style AG fill:#3b82f6,stroke:#2563eb,stroke-width:2px,color:#fff
+      style CV fill:#3b82f6,stroke:#2563eb,stroke-width:2px,color:#fff
+      style M1 fill:#3b82f6,stroke:#2563eb,stroke-width:2px,color:#fff
+      style M2 fill:#3b82f6,stroke:#2563eb,stroke-width:2px,color:#fff
+      style M3 fill:#3b82f6,stroke:#2563eb,stroke-width:2px,color:#fff
+      style M4 fill:#3b82f6,stroke:#2563eb,stroke-width:2px,color:#fff
+      style M5 fill:#3b82f6,stroke:#2563eb,stroke-width:2px,color:#fff
+      style Stack fill:#3b82f6,stroke:#2563eb,stroke-width:2px,color:#fff
+      style Best fill:#3b82f6,stroke:#2563eb,stroke-width:2px,color:#fff
+      style Pred fill:#10b981,stroke:#059669,stroke-width:2px,color:#fff
 
 _metadata:
   bloc: 3

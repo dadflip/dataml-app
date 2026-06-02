@@ -1,17 +1,90 @@
 id: "model_extra_trees_regressor"
 name: "Model: Extra Trees Regressor"
-description: "Extremely Randomized Trees pour la régression."
+description: |
+  Algorithme d'ensemble basé sur les arbres de décision (Extremely Randomized Trees) adapté à la régression. À l'image de la version pour la classification, il utilise des points de coupure aléatoires au lieu de rechercher le seuil optimal. Cette approche permet de créer une surface de prédiction plus lisse et réduit la variance du modèle.
 category: "Modèles Basés sur les Arbres"
 tags: ["model", "regression", "tabular", "sklearn", "ensemble"]
 applies_to: ["Tabulaire"]
-when_to_use: "Comme alternative plus rapide et parfois plus lisse au Random Forest."
+when_to_use: |
+  Utilisez ce modèle en remplacement du Random Forest classique lorsque vous observez un sur-apprentissage (overfitting), ou pour réduire le temps d'entraînement sur des jeux de données de grande taille.
+use_cases:
+  - "Régression sur de gros volumes de données où le Random Forest devient trop lent."
+  - "Modélisation de cibles continues bruitées avec nécessité de réduire fortement la variance."
+  - "Approche de référence (baseline) robuste pour presque tous les problèmes tabulaires de régression."
 pros:
-  - "Très rapide."
-  - "Plus de variance ajoutée, peut mieux généraliser."
+  - "Extrêmement rapide à entraîner, même avec un grand nombre d'arbres et de variables."
+  - "Crée des prédictions plus 'lissées' que Random Forest grâce au moyennage de coupures aléatoires."
+  - "Performances très honorables par défaut sans réglages complexes."
 cons:
-  - "Toujours incapable d'extrapoler."
+  - "Incapable d'extrapoler des valeurs au-delà des bornes observées dans l'ensemble d'entraînement."
+  - "Biais théorique potentiellement plus important que pour un Random Forest classique."
 hyperparameters:
   n_estimators: "Nombre d'arbres (ex: 100)."
+math_theory: |
+  Pour la régression, Extra Trees (Extremely Randomized Trees) applique le même principe de coupures aléatoires.
+  
+  Pour chaque variable $\textcolor{#fbbf24}{X_j}$ testée à un nœud, un seuil $\textcolor{#8b5cf6}{s_j}$ est tiré uniformément entre ses bornes locales :
+  $$ \textcolor{#8b5cf6}{s_j} \sim Uniform(\min(\textcolor{#fbbf24}{X_j}), \max(\textcolor{#fbbf24}{X_j})) $$
+  
+  Le meilleur seuil parmi ces coupures aléatoires est choisi pour minimiser l'Erreur Quadratique Moyenne (MSE) des nœuds enfants :
+  $$ \textcolor{#3b82f6}{MSE(D)} = \frac{1}{|D|} \sum_{i \in D} (y_i - \bar{y})^2 $$
+  
+  En introduisant cet aléa fort sur les seuils, la surface de régression finale devient beaucoup plus lisse que celle d'une Forêt Aléatoire classique, réduisant la variance du modèle.
+  
+  La prédiction finale $\textcolor{#ef4444}{\hat{y}}$ est la moyenne des prédictions des $T$ arbres :
+  $$ \textcolor{#ef4444}{\hat{y}} = \frac{1}{T} \sum_{t=1}^T \textcolor{#10b981}{h_t}(x) $$
+math_illustration_svg: |
+  <svg viewBox="0 0 800 400" xmlns="http://www.w3.org/2000/svg">
+    <rect width="800" height="400" fill="#1e1e2f" rx="15" />
+    
+    <text x="400" y="30" fill="#ffffff" font-family="sans-serif" font-weight="bold" font-size="18" text-anchor="middle">Effet du Lissage (Smoothing) d'Extra Trees en Régression</text>
+    
+    <!-- Random Forest Regression -->
+    <g transform="translate(50, 70)">
+      <rect x="0" y="0" width="320" height="300" fill="#2d2d44" rx="8" stroke="#3b82f6" stroke-width="2"/>
+      <text x="160" y="25" fill="#3b82f6" font-family="sans-serif" font-weight="bold" font-size="14" text-anchor="middle">Random Forest</text>
+      <text x="160" y="45" fill="#ffffff" font-family="sans-serif" font-size="12" text-anchor="middle">(Seuils optimaux locaux)</text>
+      
+      <!-- Graph Axes -->
+      <line x1="30" y1="250" x2="290" y2="250" stroke="#ffffff" stroke-width="2"/>
+      <line x1="30" y1="250" x2="30" y2="80" stroke="#ffffff" stroke-width="2"/>
+      
+      <!-- True data points -->
+      <path d="M 30 220 Q 160 80 290 120" fill="none" stroke="#fbbf24" stroke-width="1" stroke-dasharray="4,4"/>
+      
+      <!-- RF Step Function Prediction -->
+      <path d="M 30 220 L 80 220 L 80 170 L 130 170 L 130 130 L 180 130 L 180 100 L 220 100 L 220 120 L 290 120" fill="none" stroke="#ef4444" stroke-width="3"/>
+      
+      <text x="160" y="285" fill="#ef4444" font-family="sans-serif" font-size="12" text-anchor="middle">Prédiction en "marches d'escalier" marquées</text>
+    </g>
+    
+    <!-- Extra Trees Regression -->
+    <g transform="translate(430, 70)">
+      <rect x="0" y="0" width="320" height="300" fill="#2d2d44" rx="8" stroke="#8b5cf6" stroke-width="2"/>
+      <text x="160" y="25" fill="#8b5cf6" font-family="sans-serif" font-weight="bold" font-size="14" text-anchor="middle">Extra Trees</text>
+      <text x="160" y="45" fill="#ffffff" font-family="sans-serif" font-size="12" text-anchor="middle">(Seuils aléatoires moyennés)</text>
+      
+      <!-- Graph Axes -->
+      <line x1="30" y1="250" x2="290" y2="250" stroke="#ffffff" stroke-width="2"/>
+      <line x1="30" y1="250" x2="30" y2="80" stroke="#ffffff" stroke-width="2"/>
+      
+      <!-- True data points -->
+      <path d="M 30 220 Q 160 80 290 120" fill="none" stroke="#fbbf24" stroke-width="1" stroke-dasharray="4,4"/>
+      
+      <!-- Extra Trees Prediction (Smoother) -->
+      <!-- Simulate smaller, more frequent steps due to extreme random splits averaging out -->
+      <path d="M 30 220 L 45 210 L 60 200 L 75 190 L 90 175 L 105 160 L 120 145 L 135 135 L 150 125 L 165 115 L 180 110 L 195 105 L 210 105 L 225 110 L 240 115 L 255 118 L 270 120 L 290 120" fill="none" stroke="#10b981" stroke-width="3"/>
+      
+      <text x="160" y="285" fill="#10b981" font-family="sans-serif" font-size="12" text-anchor="middle">Surface plus lisse / Variance réduite</text>
+    </g>
+
+    <!-- Explanation Box -->
+    <rect x="250" y="320" width="300" height="60" fill="#1e1e2f" rx="8" stroke="#ffffff" stroke-width="1"/>
+    <text x="400" y="340" fill="#ffffff" font-family="sans-serif" font-size="12" text-anchor="middle">La moyenne de très nombreux arbres ayant des</text>
+    <text x="400" y="355" fill="#ffffff" font-family="sans-serif" font-size="12" text-anchor="middle">coupures aux positions variées gomme les "marches"</text>
+    <text x="400" y="370" fill="#fbbf24" font-family="sans-serif" font-size="12" text-anchor="middle">=> Réduction drastique de la variance !</text>
+
+  </svg>
 code_template: |
   import pandas as pd
   import numpy as np
@@ -55,21 +128,15 @@ code_template: |
       training_history = {"status": "success", "fitted_on": len(X_train)}
 
 illustration_mermaid: |
-  graph TD
-    subgraph Extra Trees Regressor
-      In([Input Features]) --> T1[Random Tree 1]
-      In --> T2[Random Tree 2]
-      In --> TN[Random Tree N]
-      T1 --> V[Average Predictions]
-      T2 --> V
-      TN --> V
-      V --> Out([Continuous Value])
-    end
-    style In fill:#f8fafc,stroke:#94a3b8,stroke-width:1px
+  flowchart LR
+    In[/ "Features (X)" /] --> Model{"Extra Trees\n(Regressor)"}
+    Config(["Params\nN_Estimators"]) -.-> Model
+    Model --> Out(["Continuous Prediction\n(Moyenne)"])
+    
+    style In fill:#fbbf24,stroke:#d97706,stroke-width:2px,color:#000
+    style Config fill:#8b5cf6,stroke:#7c3aed,stroke-width:2px,color:#fff
+    style Model fill:#3b82f6,stroke:#2563eb,stroke-width:2px,color:#fff
     style Out fill:#10b981,stroke:#059669,stroke-width:2px,color:#fff
-    style T1 fill:#8b5cf6,stroke:#7c3aed,stroke-width:2px,color:#fff
-    style T2 fill:#8b5cf6,stroke:#7c3aed,stroke-width:2px,color:#fff
-    style TN fill:#8b5cf6,stroke:#7c3aed,stroke-width:2px,color:#fff
 
 _metadata:
   bloc: 3

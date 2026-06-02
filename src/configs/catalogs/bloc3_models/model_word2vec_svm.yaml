@@ -1,16 +1,53 @@
 id: "model_word2vec_svm"
 name: "Model: Word2Vec + SVM (Spacy)"
-description: "Utilise les embeddings Word2Vec pré-entraînés via Spacy, puis classifie avec un SVM linéaire."
+description: |
+  Pipeline hybride de Traitement du Langage Naturel (NLP) qui utilise les plongements lexicaux denses (Word Embeddings) pré-entraînés via spaCy, suivis d'un algorithme de classification Support Vector Machine (SVM) linéaire pour prédire des classes.
 category: "Modèles NLP (Entraînés)"
 tags: ["model", "nlp", "classification", "spacy", "word2vec", "embeddings", "svm"]
 applies_to: ["Texte"]
-when_to_use: "Quand le sens sémantique global du texte est plus important que la fréquence exacte des mots (TF-IDF)."
+when_to_use: |
+  À privilégier lorsque la sémantique et le contexte global du texte sont plus informatifs que la simple occurrence ou fréquence des mots (comme le ferait TF-IDF ou Bag-of-Words).
+use_cases:
+  - "Analyse de sentiment sur des avis clients nuancés."
+  - "Catégorisation d'articles d'actualité basés sur le sens profond."
+  - "Détection de spam ou de messages toxiques."
 pros:
-  - "Capture le contexte et la sémantique (via l'embedding)."
+  - "Capture avec succès le contexte et la proximité sémantique des mots (via l'embedding Word2Vec)."
+  - "Souvent plus robuste face aux synonymes et aux mots rares par rapport aux approches symboliques."
 cons:
-  - "Nécessite le modèle 'en_core_web_md' ou 'fr_core_news_md' de Spacy."
+  - "Nécessite le téléchargement d'un modèle lourd spaCy (ex: 'en_core_web_md' ou 'fr_core_news_md')."
+  - "Les performances plafonnent face aux architectures Transformers (BERT, RoBERTa)."
 hyperparameters:
   spacy_model: "Nom du modèle spaCy (ex: 'en_core_web_md')."
+math_theory: |
+  Le modèle représente chaque mot par un vecteur d'embedding dense $\textcolor{#3b82f6}{v}_i$ (Word2Vec) de dimension $d$.
+  Pour une phrase d'entrée $\textcolor{#10b981}{X}$ contenant $\textcolor{#fbbf24}{T}$ mots, la représentation globale du document $\textcolor{#8b5cf6}{h}$ est la moyenne des embeddings :
+  $$ \textcolor{#8b5cf6}{h} = \frac{1}{\textcolor{#fbbf24}{T}} \sum_{i=1}^{\textcolor{#fbbf24}{T}} \textcolor{#3b82f6}{v}_i $$
+  Un classifieur SVM linéaire recherche ensuite l'hyperplan optimal défini par un vecteur normal $\textcolor{#ef4444}{w}$ et un biais $b$ qui sépare les classes avec la plus grande marge.
+  La décision de classe $\hat{y} \in \{-1, 1\}$ est donnée par le signe de la fonction de décision :
+  $$ \hat{y} = \text{sign}(\textcolor{#ef4444}{w} \cdot \textcolor{#8b5cf6}{h} + b) $$
+math_illustration_svg: |
+  <svg viewBox="0 0 800 400" xmlns="http://www.w3.org/2000/svg">
+    <rect x="0" y="0" width="800" height="400" fill="#1e293b" rx="10"/>
+    <text x="400" y="40" fill="#ffffff" font-family="sans-serif" font-size="22" font-weight="bold" text-anchor="middle">Word2Vec Embeddings + SVM</text>
+    <rect x="50" y="100" width="150" height="80" fill="#10b981" fill-opacity="0.2" stroke="#10b981" stroke-width="2" rx="5"/>
+    <text x="125" y="145" fill="#10b981" font-family="sans-serif" font-size="16" font-weight="bold" text-anchor="middle">Input Text X</text>
+    <path d="M210 140 L270 140" stroke="#ffffff" stroke-width="2" marker-end="url(#arrow)" />
+    <rect x="280" y="80" width="180" height="120" fill="#3b82f6" fill-opacity="0.2" stroke="#3b82f6" stroke-width="2" rx="5"/>
+    <text x="370" y="130" fill="#3b82f6" font-family="sans-serif" font-size="16" font-weight="bold" text-anchor="middle">Word2Vec (v_i)</text>
+    <text x="370" y="165" fill="#fbbf24" font-family="sans-serif" font-size="14" text-anchor="middle">T Words</text>
+    <path d="M470 140 L530 140" stroke="#ffffff" stroke-width="2" marker-end="url(#arrow)" />
+    <rect x="540" y="100" width="200" height="80" fill="#8b5cf6" fill-opacity="0.2" stroke="#8b5cf6" stroke-width="2" rx="5"/>
+    <text x="640" y="145" fill="#8b5cf6" font-family="sans-serif" font-size="16" font-weight="bold" text-anchor="middle">Document Vector h</text>
+    <path d="M640 190 L640 250" stroke="#ffffff" stroke-width="2" marker-end="url(#arrow)" />
+    <rect x="540" y="260" width="200" height="80" fill="#ef4444" fill-opacity="0.2" stroke="#ef4444" stroke-width="2" rx="5"/>
+    <text x="640" y="305" fill="#ef4444" font-family="sans-serif" font-size="16" font-weight="bold" text-anchor="middle">Linear SVM (w)</text>
+    <defs>
+      <marker id="arrow" markerWidth="10" markerHeight="10" refX="9" refY="3" orient="auto">
+        <path d="M0,0 L0,6 L9,3 z" fill="#ffffff" />
+      </marker>
+    </defs>
+  </svg>
 code_template: |
   import pandas as pd
   import numpy as np
@@ -78,16 +115,21 @@ code_template: |
           full_pipeline = model
           training_history = {"status": "success"}
 illustration_mermaid: |
-    graph TD
-      In([Raw Text]) --> Spacy(spaCy Pipeline: Tokenize & Embed)
-      Spacy --> Mean(Mean Vector Aggregation)
-      Mean --> SVM(Linear Support Vector Machine)
-      SVM --> Out([Class Predictions])
-      
-      style In fill:#f8fafc,stroke:#94a3b8,stroke-width:2px
-      style Spacy fill:#38bdf8,stroke:#0284c7,stroke-width:2px,color:#fff
-      style SVM fill:#8b5cf6,stroke:#7c3aed,stroke-width:2px,color:#fff
-      style Out fill:#10b981,stroke:#059669,stroke-width:2px,color:#fff
+  flowchart LR
+    In[/"Paramètres :<br/>SPACY_MODEL"/] --> |Init| Pipeline{"Pipeline NLP"}
+    Text(["Texte Brut"]) --> Spacy{"spaCy : Tokenisation<br/>& Embedding"}
+    Spacy --> Mean{"Agrégation Mean<br/>(Vecteur Moyen)"}
+    Mean --> SVM{"Classifieur SVM Linéaire"}
+    SVM --> Pipeline
+    Pipeline --> Out(["Classes Prédites"])
+    
+    style In fill:#fbbf24,stroke:#d97706,stroke-width:2px,color:#000
+    style Text fill:#10b981,stroke:#059669,stroke-width:2px,color:#fff
+    style Spacy fill:#3b82f6,stroke:#2563eb,stroke-width:2px,color:#fff
+    style Mean fill:#3b82f6,stroke:#2563eb,stroke-width:2px,color:#fff
+    style SVM fill:#3b82f6,stroke:#2563eb,stroke-width:2px,color:#fff
+    style Pipeline fill:#3b82f6,stroke:#2563eb,stroke-width:2px,color:#fff
+    style Out fill:#10b981,stroke:#059669,stroke-width:2px,color:#fff
 
 _metadata:
   bloc: 3

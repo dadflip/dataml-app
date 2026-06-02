@@ -1,18 +1,63 @@
 id: "model_tesseract_ocr"
 name: "Model: Tesseract OCR (Pytesseract)"
-description: "Moteur OCR open-source classique de Google. Extrait le texte d'images propres."
+description: |
+  Moteur de reconnaissance optique de caractères (OCR) open-source classique initialement développé par HP et maintenant maintenu par Google. Conçu pour extraire du texte imprimé à partir d'images propres.
 category: "Vision par Ordinateur (OCR)"
 tags: ["model", "vision", "ocr", "tesseract", "pytesseract"]
 applies_to: ["Images"]
-when_to_use: "Pour numériser des documents scannés très propres, des factures ou des PDF avec fond blanc."
+when_to_use: |
+  Pour numériser massivement des documents scannés très propres, des factures, des formulaires ou des PDF avec un fond clair et un contraste élevé (noir sur blanc).
+use_cases:
+  - "Numérisation et archivage d'anciens documents administratifs imprimés."
+  - "Extraction de données textuelles depuis des factures, reçus ou tickets de caisse standardisés."
+  - "Indexation automatique du contenu textuel de bibliothèques d'images ou de PDF."
 pros:
-  - "Très rapide sur CPU."
-  - "Excellent sur documents scannés propres."
+  - "Très rapide, ne nécessite pas de GPU et fonctionne très bien sur processeur (CPU)."
+  - "Totalement open-source, sans coûts d'API, avec une multitude de langues supportées."
+  - "Excellente précision sur des documents scannés avec une bonne résolution (typique: 300 DPI)."
 cons:
-  - "Mauvais sur images naturelles ou floues."
-  - "Nécessite d'installer le binaire système Tesseract-OCR."
+  - "Mauvaises performances sur des images naturelles (photos en situation), floues ou à faible contraste."
+  - "Nécessite souvent de lourds prétraitements d'images (binarisation, redressement) en amont."
+  - "L'installation peut être complexe car elle exige le binaire système Tesseract en plus du package Python."
 hyperparameters:
   lang: "Langue principale (ex: 'fra' pour français, 'eng' pour anglais)."
+math_theory: |
+  Tesseract v4+ repose sur des réseaux LSTM et la fonction de perte CTC (Connectionist Temporal Classification) pour l'alignement sans segmentation explicite.
+  Soit $\textcolor{#3b82f6}{Y}$ la matrice des probabilités de sortie du LSTM sur $\textcolor{#fbbf24}{T}$ pas de temps.
+  La probabilité d'un alignement spécifique $\textcolor{#10b981}{\pi}$ de caractères (avec des caractères blancs) est :
+  $$ P(\textcolor{#10b981}{\pi} | \textcolor{#3b82f6}{Y}) = \prod_{t=1}^{\textcolor{#fbbf24}{T}} \textcolor{#3b82f6}{y}_{\textcolor{#10b981}{\pi}_t}^t $$
+  La probabilité globale pour la séquence cible finale $\textcolor{#ef4444}{L}$ correspond à la somme des probabilités de tous les chemins $\textcolor{#10b981}{\pi}$ valides qui se réduisent à $\textcolor{#ef4444}{L}$ (via une fonction $\Phi$) :
+  $$ P(\textcolor{#ef4444}{L} | \textcolor{#3b82f6}{Y}) = \sum_{\textcolor{#10b981}{\pi} \in \Phi(\textcolor{#ef4444}{L})} P(\textcolor{#10b981}{\pi} | \textcolor{#3b82f6}{Y}) $$
+  Le modèle est entraîné en minimisant la perte de log-vraisemblance négative :
+  $$ \textcolor{#8b5cf6}{\mathcal{L}_{CTC}} = -\log P(\textcolor{#ef4444}{L} | \textcolor{#3b82f6}{Y}) $$
+math_illustration_svg: |
+  <svg viewBox="0 0 800 400" xmlns="http://www.w3.org/2000/svg">
+    <rect x="0" y="0" width="800" height="400" fill="#1e293b" rx="10"/>
+    <text x="400" y="50" fill="#ffffff" font-family="sans-serif" font-size="24" font-weight="bold" text-anchor="middle">Connectionist Temporal Classification (CTC)</text>
+    <rect x="100" y="100" width="150" height="200" fill="#fbbf24" fill-opacity="0.1" stroke="#fbbf24" stroke-width="2" rx="5"/>
+    <text x="175" y="130" fill="#fbbf24" font-family="sans-serif" font-size="16" font-weight="bold" text-anchor="middle">Time Steps (T)</text>
+    <text x="175" y="200" fill="#fbbf24" font-family="sans-serif" font-size="30" text-anchor="middle">t = 1 ... T</text>
+    <path d="M260 200 L340 200" stroke="#ffffff" stroke-width="2" marker-end="url(#arrow)" />
+    <rect x="350" y="100" width="150" height="200" fill="#3b82f6" fill-opacity="0.1" stroke="#3b82f6" stroke-width="2" rx="5"/>
+    <text x="425" y="130" fill="#3b82f6" font-family="sans-serif" font-size="16" font-weight="bold" text-anchor="middle">LSTM Output (Y)</text>
+    <text x="425" y="200" fill="#3b82f6" font-family="sans-serif" font-size="20" text-anchor="middle">Probabilities</text>
+    <path d="M510 200 L590 200" stroke="#ffffff" stroke-width="2" marker-end="url(#arrow)" />
+    <rect x="600" y="100" width="150" height="200" fill="#10b981" fill-opacity="0.1" stroke="#10b981" stroke-width="2" rx="5"/>
+    <text x="675" y="130" fill="#10b981" font-family="sans-serif" font-size="16" font-weight="bold" text-anchor="middle">Alignments (π)</text>
+    <text x="675" y="180" fill="#10b981" font-family="sans-serif" font-size="14" text-anchor="middle">ex: a - b - - c</text>
+    <text x="675" y="220" fill="#10b981" font-family="sans-serif" font-size="14" text-anchor="middle">ex: - a b - c -</text>
+    <path d="M675 310 L675 330" stroke="#ffffff" stroke-width="2" marker-end="url(#arrow)" />
+    <rect x="600" y="340" width="150" height="40" fill="#ef4444" fill-opacity="0.1" stroke="#ef4444" stroke-width="2" rx="5"/>
+    <text x="675" y="365" fill="#ef4444" font-family="sans-serif" font-size="16" font-weight="bold" text-anchor="middle">Target L (abc)</text>
+    <rect x="250" y="340" width="300" height="40" fill="#8b5cf6" fill-opacity="0.1" stroke="#8b5cf6" stroke-width="2" rx="5"/>
+    <text x="400" y="365" fill="#8b5cf6" font-family="sans-serif" font-size="16" font-weight="bold" text-anchor="middle">Loss = -log P(L | Y)</text>
+    <path d="M590 360 L560 360" stroke="#ffffff" stroke-width="2" marker-end="url(#arrow)" />
+    <defs>
+      <marker id="arrow" markerWidth="10" markerHeight="10" refX="9" refY="3" orient="auto">
+        <path d="M0,0 L0,6 L9,3 z" fill="#ffffff" />
+      </marker>
+    </defs>
+  </svg>
 code_template: |
   import pandas as pd
   import numpy as np
@@ -56,16 +101,20 @@ code_template: |
       full_pipeline = model
       training_history = {"status": "success", "processed_images": len(y_pred)}
 illustration_mermaid: |
-    graph TD
-      In([Input Images]) --> Pre(Image Preprocessing: Binarization / Deskew)
-      Pre --> Engine(Tesseract OCR Engine)
-      Engine --> Extract(Text Extraction & Layout Analysis)
-      Extract --> Out([Raw Text Output])
-      
-      style In fill:#f8fafc,stroke:#94a3b8,stroke-width:2px
-      style Pre fill:#38bdf8,stroke:#0284c7,stroke-width:2px,color:#fff
-      style Engine fill:#8b5cf6,stroke:#7c3aed,stroke-width:2px,color:#fff
-      style Out fill:#10b981,stroke:#059669,stroke-width:2px,color:#fff
+  flowchart LR
+    Data(["Images Entrantes"])
+    Params[/"Hyperparamètres (lang, config)"/]
+    Model{"Tesseract OCR Engine (LSTM/CTC)"}
+    Pred(["Texte Brut Extrait"])
+    
+    Data --> Model
+    Params --> Model
+    Model --> Pred
+
+    style Data fill:#10b981,stroke:#059669,stroke-width:2px,color:#fff
+    style Params fill:#fbbf24,stroke:#d97706,stroke-width:2px,color:#000
+    style Model fill:#3b82f6,stroke:#2563eb,stroke-width:2px,color:#fff
+    style Pred fill:#10b981,stroke:#059669,stroke-width:2px,color:#fff
 
 _metadata:
   bloc: 3

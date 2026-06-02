@@ -1,7 +1,22 @@
 id: load_excel
 name: 'Load: Fichier Excel'
-description: Charge une feuille de calcul spécifique depuis un fichier Excel (.xls,
-  .xlsx).
+description: >
+  Charge les données tabulaires contenues dans une feuille de calcul spécifique d'un classeur Excel (.xls ou .xlsx) directement dans un DataFrame Pandas. 
+  Ce bloc permet de cibler la feuille de données d'intérêt, et offre également la possibilité de définir une colonne cible (target) explicite. 
+  Il gère l'extraction native du format propriétaire de Microsoft, rendant l'exploitation de jeux de données d'entreprise particulièrement rapide et intégrée.
+when_to_use: >
+  Indispensable lorsque vos sources de données proviennent d'échanges métier classiques, de rapports financiers ou d'extractions de logiciels de gestion où le tableur Excel demeure le format de distribution prédominant.
+use_cases:
+  - "Importation de bases de données clients consolidées manuellement par des équipes commerciales."
+  - "Ingestion de rapports financiers mensuels pour des modèles de prédiction de revenus."
+  - "Lecture de données de paramètres expérimentaux stockées dans différents onglets par des chercheurs."
+pros:
+  - "Prise en charge native du format d'échange de données le plus commun en entreprise."
+  - "Possibilité de sélectionner précisément la feuille (sheet) pertinente parmi de multiples onglets."
+  - "S'appuie sur la robustesse de 'pandas' et 'openpyxl'/'xlrd' pour gérer les complexités du format Excel."
+cons:
+  - "Le traitement des fichiers Excel est intrinsèquement beaucoup plus lent que celui de fichiers CSV."
+  - "Peut échouer silencieusement ou de manière inattendue sur des fichiers très formatés (cellules fusionnées, macros, tableaux croisés dynamiques)."
 category: 2. Load
 tags:
 - load
@@ -47,25 +62,22 @@ code_template: |
   task_type = "unknown"
   meta = {"format": "excel", "sheet": SHEET_NAME, "shape": df.shape}
 illustration_mermaid: |
-    flowchart LR
-        A[/"📄 File Path (.xlsx/.xls)"/] --> B{"pd.read_excel()"}
-        C[/"📑 SHEET_NAME"/] --> B
-        B --> D(["📊 df"])
-        E[/"🎯 TARGET_COL"/] --> F{"Check TARGET_COL"}
-        D --> F
-        F --> G(["🎯 target_name"])
-        F --> H(["⚙️ task_type = 'unknown'"])
-        F --> I(["ℹ️ meta (format, sheet, shape)"])
-
-        style A fill:#fbbf24,stroke:#d97706,stroke-width:2px
-        style C fill:#fbbf24,stroke:#d97706,stroke-width:2px
-        style E fill:#fbbf24,stroke:#d97706,stroke-width:2px
-        style B fill:#3b82f6,stroke:#2563eb,stroke-width:2px,color:#fff
-        style F fill:#3b82f6,stroke:#2563eb,stroke-width:2px,color:#fff
-        style D fill:#10b981,stroke:#059669,stroke-width:2px,color:#fff
-        style G fill:#8b5cf6,stroke:#7c3aed,stroke-width:2px,color:#fff
-        style H fill:#8b5cf6,stroke:#7c3aed,stroke-width:2px,color:#fff
-        style I fill:#8b5cf6,stroke:#7c3aed,stroke-width:2px,color:#fff
+  flowchart LR
+      A[/"📄 File Path (.xlsx)"/] --> B{"pd.read_excel()"}
+      C[/"🎯 TARGET_COL"/] --> D{"Check TARGET_COL"}
+      B --> E(["📊 df (sheet data)"])
+      E --> D
+      D --> F(["🎯 target_name"])
+      D --> G(["⚙️ task_type"])
+      D --> H(["ℹ️ meta (format, sheet, shape)"])
+      style A fill:#fbbf24,stroke:#d97706,stroke-width:2px,color:#000
+      style C fill:#fbbf24,stroke:#d97706,stroke-width:2px,color:#000
+      style B fill:#3b82f6,stroke:#2563eb,stroke-width:2px,color:#fff
+      style D fill:#3b82f6,stroke:#2563eb,stroke-width:2px,color:#fff
+      style E fill:#10b981,stroke:#059669,stroke-width:2px,color:#fff
+      style F fill:#8b5cf6,stroke:#7c3aed,stroke-width:2px,color:#fff
+      style G fill:#8b5cf6,stroke:#7c3aed,stroke-width:2px,color:#fff
+      style H fill:#8b5cf6,stroke:#7c3aed,stroke-width:2px,color:#fff
 
 _metadata:
   bloc: 1

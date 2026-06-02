@@ -1,15 +1,37 @@
 id: "transform_copy_df"
 name: "Transform: Init Pipeline & DataFrame"
-description: "Initialise l'objet de tracking du pipeline et permet de créer (ou non) une copie de sécurité de 'df'."
+description: "Étape fondamentale d'initialisation du pipeline : crée une copie profonde (deep copy) du DataFrame pour prévenir toute modification involontaire des données d'origine et met en place l'objet de suivi des transformations."
+math_theory: |
+  Il n'y a pas de transformation mathématique directe ici. L'opération repose sur la gestion de l'espace mémoire : la création d'une copie profonde alloue un nouvel espace mémoire indépendant pour $\textcolor{#3b82f6}{X_{copy}} = \textcolor{#10b981}{X_{original}}$, garantissant l'immuabilité de l'état initial des données.
+math_illustration_svg: |
+  <svg viewBox="0 0 400 200" xmlns="http://www.w3.org/2000/svg">
+    <rect width="400" height="200" fill="#1e293b" rx="10" />
+    <g transform="translate(60, 50)">
+      <rect x="0" y="0" width="100" height="100" fill="#0f172a" stroke="#10b981" stroke-width="3" rx="8" />
+      <text x="50" y="55" fill="#10b981" font-family="sans-serif" font-size="16" text-anchor="middle" font-weight="bold">X_original</text>
+    </g>
+    <g transform="translate(240, 50)">
+      <rect x="0" y="0" width="100" height="100" fill="#0f172a" stroke="#3b82f6" stroke-width="3" rx="8" />
+      <text x="50" y="55" fill="#3b82f6" font-family="sans-serif" font-size="16" text-anchor="middle" font-weight="bold">X_copy</text>
+    </g>
+    <g transform="translate(170, 100)">
+      <path d="M0,0 L50,0" fill="none" stroke="#94a3b8" stroke-width="3" stroke-dasharray="5,5" />
+      <polygon points="50,-5 60,0 50,5" fill="#94a3b8" />
+      <text x="30" y="-10" fill="#94a3b8" font-family="sans-serif" font-size="12" text-anchor="middle">Deep Copy</text>
+    </g>
+  </svg>
 category: "4.0 Init"
 tags: ["transform", "core", "pandas"]
 applies_to: ["Tabulaire", "Texte", "Images", "Audio"]
-when_to_use: "Au tout début du pipeline de transformations."
+when_to_use: "Doit être systématiquement exécuté au tout début de tout pipeline de prétraitement pour isoler les transformations de l'environnement global."
+use_cases:
+  - "Préparation initiale avant l'application de tout autre bloc de transformation."
+  - "Sécurisation de l'exploration de données itérative (protège le dataset initial)."
 pros:
-  - "Évite les SettingWithCopyWarning."
-  - "Initialise correctement l'objet preprocessor pour le contrat."
+  - "Élimine complètement les erreurs liées aux avertissements `SettingWithCopyWarning` de Pandas."
+  - "Garantit que le suivi du pipeline (`pipeline_steps`) est vierge et prêt à tracer les étapes."
 cons:
-  - "Double l'empreinte mémoire si la copie est activée."
+  - "Augmentation significative de l'empreinte mémoire (doublée) en cas de copie profonde sur des jeux de données volumineux."
 hyperparameters:
   make_copy: "Activer pour créer une copie profonde du DataFrame (recommandé)."
 code_template: |
@@ -40,16 +62,19 @@ code_template: |
   else:
       print("[ERREUR] 'df' introuvable.")
 illustration_mermaid: |
-  graph TD
-    A[Initial DataFrame] --> B{MAKE_COPY == True?}
-    B -- Yes --> C[Deep Copy df.copy]
-    B -- No --> D[Use Original df]
-    C --> E[Initialize pipeline_steps = dict]
-    D --> E
-    E --> F[Initialize preprocessor = None]
-    F --> G[Pipeline Ready]
-    style A fill:#eff6ff,stroke:#94a3b8,stroke-width:2px
-    style G fill:#10b981,stroke:#059669,stroke-width:2px,color:#fff
+  flowchart LR
+    A[/ "📄 df_original" /] --> B{"⚙️ df.copy(deep=True)"}
+    A --> C{"⚙️ Use original"}
+    B --> D(["📊 df (Pipeline)"])
+    C --> D
+    D --> E(["ℹ️ pipeline_steps = {}"])
+    D --> F(["ℹ️ preprocessor = None"])
+    style A fill:#fbbf24,stroke:#d97706,stroke-width:2px,color:#000
+    style B fill:#3b82f6,stroke:#2563eb,stroke-width:2px,color:#fff
+    style C fill:#3b82f6,stroke:#2563eb,stroke-width:2px,color:#fff
+    style D fill:#10b981,stroke:#059669,stroke-width:2px,color:#fff
+    style E fill:#8b5cf6,stroke:#7c3aed,stroke-width:2px,color:#fff
+    style F fill:#8b5cf6,stroke:#7c3aed,stroke-width:2px,color:#fff
 
 _metadata:
   bloc: 2

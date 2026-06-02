@@ -1,14 +1,20 @@
 id: "model_kmeans_image_quantization"
 name: "Model: Image Color Quantization (K-Means)"
-description: "Réduit la palette de couleurs d'une image en utilisant K-Means sur les pixels."
+description: "Algorithme de vision par ordinateur non-supervisé appliquant l'algorithme K-Means dans l'espace colorimétrique (RGB) pour réduire drastiquement la palette de couleurs d'une image."
 category: "Vision par Ordinateur (Modèles Entraînés)"
-tags: ["model", "vision", "unsupervised", "sklearn", "kmeans", "quantization"]
+tags: ["model", "vision", "unsupervised", "sklearn", "kmeans", "quantization", "compression"]
 applies_to: ["Images"]
-when_to_use: "Pour créer un effet 'pixel art / retro' ou compresser drastiquement les couleurs d'une image."
+when_to_use: "À privilégier pour créer des effets stylistiques (pixel art, posterisation), pour réduire l'empreinte mémoire d'une image en vue de sa transmission, ou pour simplifier les données avant une segmentation d'image."
+use_cases:
+  - "Création artistique : Génération d'effets visuels rétro ou de postérisation (réduction des nuances)."
+  - "Compression d'images : Diminution drastique de la taille des fichiers en limitant le dictionnaire de couleurs (ex: format GIF)."
+  - "Pré-traitement pour segmentation : Simplification des textures d'une image pour faciliter l'extraction d'objets (background subtraction)."
 pros:
-  - "Très rapide, basé sur Sklearn classique."
+  - "Processus très rapide et facile à implémenter grâce à Sklearn."
+  - "Résultats visuels immédiats et paramétrage intuitif (nombre de couleurs souhaitées)."
 cons:
-  - "Détruit les dégradés fluides."
+  - "Perte irréversible des détails fins et des dégradés fluides (banding effect)."
+  - "Le traitement image par image peut être lent si les images sont de très haute résolution."
 hyperparameters:
   n_colors: "Nombre de couleurs dans la palette finale (ex: 8)."
 code_template: |
@@ -55,23 +61,105 @@ code_template: |
       training_history = {"status": "success", "colors": N_COLORS}
       task_type = "image_transformation"
       meta = {}
+math_theory: |
+  La quantification d'image par K-Means traite chaque pixel de l'image comme un point dans un espace de couleurs à 3 dimensions (ex: RVB). L'algorithme cherche à regrouper ces pixels en $\textcolor{#8b5cf6}{K}$ clusters de couleurs distinctes.
+
+  L'objectif est de minimiser l'inertie intra-cluster (la somme des distances au carré entre la couleur de chaque pixel et la couleur du centroïde qui lui est assigné) :
+  $$ \textcolor{#ef4444}{J} = \sum_{j=1}^{\textcolor{#8b5cf6}{K}} \sum_{\textcolor{#10b981}{p_i} \in \textcolor{#fbbf24}{S_j}} ||\textcolor{#10b981}{p_i} - \textcolor{#3b82f6}{c_j}||^2 $$
+
+  - $\textcolor{#10b981}{p_i}$ : Le vecteur couleur (R,V,B) du $i$-ème pixel
+  - $\textcolor{#3b82f6}{c_j}$ : Le vecteur couleur du $j$-ème centroïde (qui deviendra une couleur de la nouvelle palette)
+  - $\textcolor{#fbbf24}{S_j}$ : L'ensemble des pixels assignés au cluster $j$
+  - $\textcolor{#8b5cf6}{K}$ : Le nombre total de couleurs de la palette réduite
+math_illustration_svg: |
+  <svg viewBox="0 0 500 250" xmlns="http://www.w3.org/2000/svg">
+    <!-- RGB Axes -->
+    <line x1="50" y1="200" x2="180" y2="200" stroke="#ef4444" stroke-width="2" marker-end="url(#arrow_red)"/>
+    <text x="185" y="205" font-family="sans-serif" font-size="12" fill="#ef4444" font-weight="bold">R</text>
+    
+    <line x1="50" y1="200" x2="50" y2="70" stroke="#10b981" stroke-width="2" marker-end="url(#arrow_green)"/>
+    <text x="45" y="60" font-family="sans-serif" font-size="12" fill="#10b981" font-weight="bold">G</text>
+    
+    <line x1="50" y1="200" x2="100" y2="150" stroke="#3b82f6" stroke-width="2" marker-end="url(#arrow_blue)"/>
+    <text x="105" y="145" font-family="sans-serif" font-size="12" fill="#3b82f6" font-weight="bold">B</text>
+
+    <!-- Cluster 1 -->
+    <g fill="#10b981" opacity="0.6">
+      <circle cx="80" cy="120" r="3"/>
+      <circle cx="90" cy="110" r="3"/>
+      <circle cx="70" cy="100" r="3"/>
+      <circle cx="100" cy="125" r="3"/>
+      <circle cx="85" cy="130" r="3"/>
+    </g>
+    <!-- Centroid 1 -->
+    <circle cx="85" cy="115" r="6" fill="#3b82f6" stroke="#000" stroke-width="2"/>
+    <text x="95" y="115" font-family="sans-serif" font-size="12" fill="#3b82f6" font-weight="bold">c_1</text>
+    <!-- Assignment lines -->
+    <line x1="85" y1="115" x2="80" y2="120" stroke="#fbbf24" stroke-width="1"/>
+    <line x1="85" y1="115" x2="70" y2="100" stroke="#fbbf24" stroke-width="1"/>
+    
+    <!-- Cluster 2 -->
+    <g fill="#10b981" opacity="0.6">
+      <circle cx="150" cy="170" r="3"/>
+      <circle cx="160" cy="180" r="3"/>
+      <circle cx="140" cy="160" r="3"/>
+      <circle cx="170" cy="165" r="3"/>
+      <circle cx="155" cy="155" r="3"/>
+    </g>
+    <!-- Centroid 2 -->
+    <circle cx="155" cy="165" r="6" fill="#3b82f6" stroke="#000" stroke-width="2"/>
+    <text x="165" y="165" font-family="sans-serif" font-size="12" fill="#3b82f6" font-weight="bold">c_2</text>
+    <line x1="155" y1="165" x2="140" y2="160" stroke="#fbbf24" stroke-width="1"/>
+    <line x1="155" y1="165" x2="170" y2="165" stroke="#fbbf24" stroke-width="1"/>
+
+    <!-- Process Box -->
+    <rect x="250" y="50" width="230" height="150" rx="10" fill="none" stroke="#888" stroke-width="2"/>
+    <text x="365" y="80" font-family="sans-serif" font-size="14" fill="#3b82f6" font-weight="bold" text-anchor="middle">Pixels to Palette</text>
+    
+    <text x="270" y="110" font-family="sans-serif" font-size="12" fill="#10b981">Millions of p_i</text>
+    <path d="M 290 120 L 290 150" fill="none" stroke="#888" stroke-width="2" marker-end="url(#arrow_gray)"/>
+    <text x="270" y="170" font-family="sans-serif" font-size="12" fill="#3b82f6">K palette colors c_j</text>
+
+    <defs>
+      <marker id="arrow_red" viewBox="0 0 10 10" refX="5" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+        <path d="M 0 0 L 10 5 L 0 10 z" fill="#ef4444"/>
+      </marker>
+      <marker id="arrow_green" viewBox="0 0 10 10" refX="5" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+        <path d="M 0 0 L 10 5 L 0 10 z" fill="#10b981"/>
+      </marker>
+      <marker id="arrow_blue" viewBox="0 0 10 10" refX="5" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+        <path d="M 0 0 L 10 5 L 0 10 z" fill="#3b82f6"/>
+      </marker>
+      <marker id="arrow_gray" viewBox="0 0 10 10" refX="5" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+        <path d="M 0 0 L 10 5 L 0 10 z" fill="#888"/>
+      </marker>
+    </defs>
+  </svg>
 illustration_mermaid: |
-  graph TD
-    subgraph Image Data
-      Img[Original Image HxWx3] --> Reshape[Reshape to N_Pixels x 3]
-    end
-    subgraph Color Quantization
-      Reshape --> KM[K-Means Clustering on RGB]
-      KM --> Centroids[Find K Dominant Colors / Centroids]
-      Centroids --> Assign[Assign each pixel to nearest Centroid color]
-    end
-    subgraph Reconstruction
-      Assign --> ReshapeBack[Reshape back to HxWx3]
-      ReshapeBack --> Out[Quantized Image]
-    end
-    style KM fill:#8b5cf6,stroke:#7c3aed,stroke-width:2px,color:#fff
-    style Centroids fill:#f59e0b,stroke:#d97706,stroke-width:2px,color:#fff
+  flowchart LR
+    Img(["Image Originale (HxWx3)"])
+    Reshape{"Aplatir (N x 3)"}
+    KM{"Clustering K-Means"}
+    Centroids(["K Couleurs Dominantes"])
+    Assign{"Remplacer par Centre"}
+    ReshapeBack{"Reconstruire (HxWx3)"}
+    Out(["Image Quantifiée"])
+
+    Img --> Reshape
+    Reshape --> KM
+    KM --> Centroids
+    Reshape --> Assign
+    Centroids --> Assign
+    Assign --> ReshapeBack
+    ReshapeBack --> Out
+
+    style Img fill:#10b981,stroke:#059669,stroke-width:2px,color:#fff
     style Out fill:#10b981,stroke:#059669,stroke-width:2px,color:#fff
+    style Centroids fill:#10b981,stroke:#059669,stroke-width:2px,color:#fff
+    style Reshape fill:#3b82f6,stroke:#2563eb,stroke-width:2px,color:#fff
+    style KM fill:#3b82f6,stroke:#2563eb,stroke-width:2px,color:#fff
+    style Assign fill:#3b82f6,stroke:#2563eb,stroke-width:2px,color:#fff
+    style ReshapeBack fill:#3b82f6,stroke:#2563eb,stroke-width:2px,color:#fff
 
 _metadata:
   bloc: 3

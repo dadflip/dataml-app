@@ -1,7 +1,19 @@
 id: load_dir_parquet_partitioned
 name: 'Load: Parquet Partitionné'
-description: 'Charge un dataset Parquet Big Data organisé en sous-dossiers de partition
-  (ex: /year=2023/month=05/).'
+description: 'Ce connecteur est spécialisé dans le chargement de données tabulaires massives (Big Data) stockées sous forme de fichiers Parquet partitionnés. Le format Parquet est orienté colonne, hautement compressé et optimisé pour l''analytique. La particularité des datasets partitionnés est leur structuration hiérarchique sur le disque, utilisant des répertoires pour segmenter les données selon certaines colonnes clés (par exemple, par année puis par mois : /year=2024/month=10/). Grâce à la puissance de la bibliothèque Pandas (et du moteur pyarrow ou fastparquet sous-jacent), ce bloc détecte automatiquement ces partitions, les déduit comme des colonnes virtuelles, et recompose le DataFrame complet de façon transparente et performante.'
+when_to_use: 'À utiliser face à des jeux de données d''entreprise volumineux structurés dans des Data Lakes (Hadoop, S3, stockage local Big Data) utilisant le standard de partitionnement Hive/Spark pour le format Parquet.'
+use_cases:
+- 'Analyse de téraoctets de données transactionnelles historiques.'
+- 'Chargement de logs web massifs segmentés temporellement (année, mois, jour).'
+- 'Ingestion de données IoT ou télémétriques partitionnées par région et par capteur.'
+- 'Transition de processus Data Engineering complexes (Spark) vers de l''analytique locale en Python/Pandas.'
+pros:
+- 'Performances de lecture exceptionnelles et empreinte mémoire très faible (grâce au stockage en colonnes).'
+- 'Découverte automatique du schéma de partitionnement : les dossiers /key=value/ deviennent instantanément des colonnes utiles.'
+- 'Prêt pour l''ère du Big Data, gère parfaitement les types de données complexes et les valeurs manquantes.'
+cons:
+- 'Nécessite l''installation de dépendances supplémentaires souvent lourdes (pyarrow ou fastparquet).'
+- 'Gourmand en RAM si l''ensemble des partitions téléchargées dépasse la capacité de la machine locale.'
 category: 2. Load
 tags:
 - load
@@ -42,20 +54,21 @@ code_template: |
 
 illustration_mermaid: |
   flowchart LR
-      A[/"📂 Directory Path (Parquet)"/] --> B{"pd.read_parquet()"}
-      C[/"⚙️ Engine (auto)"/] -.-> B
-      B --> D(["📊 df (Parquet Data)"])
-      D --> E(["🎯 target_name = ''"])
-      D --> F(["⚙️ task_type = 'unknown'"])
-      D --> G(["ℹ️ meta (format, shape)"])
-
-      style A fill:#fbbf24,stroke:#d97706,stroke-width:2px
-      style C fill:#fcd34d,stroke:#d97706,stroke-width:1px,stroke-dasharray: 5 5
+      A[/"📂 DIRECTORY_PATH"/] --> B{"pd.read_parquet()"}
+      C[/"🎯 No target"/] --> D{"Set Contract Variables"}
+      B --> E(["📊 df (Parquet Data)"])
+      E --> D
+      D --> F(["🎯 target_name = ''"])
+      D --> G(["⚙️ task_type = 'unknown'"])
+      D --> H(["ℹ️ meta (format, shape)"])
+      style A fill:#fbbf24,stroke:#d97706,stroke-width:2px,color:#000
+      style C fill:#fbbf24,stroke:#d97706,stroke-width:2px,color:#000
       style B fill:#3b82f6,stroke:#2563eb,stroke-width:2px,color:#fff
-      style D fill:#10b981,stroke:#059669,stroke-width:2px,color:#fff
-      style E fill:#8b5cf6,stroke:#7c3aed,stroke-width:2px,color:#fff
+      style D fill:#3b82f6,stroke:#2563eb,stroke-width:2px,color:#fff
+      style E fill:#10b981,stroke:#059669,stroke-width:2px,color:#fff
       style F fill:#8b5cf6,stroke:#7c3aed,stroke-width:2px,color:#fff
       style G fill:#8b5cf6,stroke:#7c3aed,stroke-width:2px,color:#fff
+      style H fill:#8b5cf6,stroke:#7c3aed,stroke-width:2px,color:#fff
 
 _metadata:
   bloc: 1

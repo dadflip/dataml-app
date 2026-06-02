@@ -1,6 +1,16 @@
 id: "load_shapefile"
 name: "Load: ESRI Shapefile"
 description: "Charge un fichier SIG Shapefile (.shp) dans un GeoDataFrame."
+when_to_use: "Lors du chargement de données géospatiales vectorielles au format classique ESRI Shapefile."
+use_cases:
+  - "Analyse cartographique ou géostatistique (polygones, lignes, points)."
+  - "Jointure spatiale avec d'autres sources de données (Geopandas)."
+pros:
+  - "Format très standard dans les systèmes d'information géographique (SIG)."
+  - "Contient à la fois la géométrie et les attributs."
+cons:
+  - "Nécessite la bibliothèque Geopandas."
+  - "Format composé de multiples fichiers (.shp, .shx, .dbf, .prj) qui doivent tous être présents."
 category: "2. Load"
 tags: ["load", "shapefile", "spatial", "gis"]
 code_template: |
@@ -21,13 +31,22 @@ output_variables:
   - task_type
   - meta
 illustration_mermaid: |
-    flowchart LR
-    A([FILE_PATH]) --> B[Load SHAPEFILE]
-    B --> df([df])
-    
-    style A fill:#3b82f6,color:#fff
-    style B fill:#10b981,color:#fff
-    style df fill:#f59e0b,color:#fff
+  flowchart LR
+      A[/"📄 FILE_PATH (.shp)"/] --> B{"gpd.read_file()"}
+      C[/"🎯 TARGET_COL"/] --> D{"Check TARGET_COL"}
+      B --> E(["📊 df (GeoDataFrame)"])
+      E --> D
+      D --> F(["🎯 target_name"])
+      D --> G(["⚙️ task_type"])
+      D --> H(["ℹ️ meta (source, path)"])
+      style A fill:#fbbf24,stroke:#d97706,stroke-width:2px,color:#000
+      style C fill:#fbbf24,stroke:#d97706,stroke-width:2px,color:#000
+      style B fill:#3b82f6,stroke:#2563eb,stroke-width:2px,color:#fff
+      style D fill:#3b82f6,stroke:#2563eb,stroke-width:2px,color:#fff
+      style E fill:#10b981,stroke:#059669,stroke-width:2px,color:#fff
+      style F fill:#8b5cf6,stroke:#7c3aed,stroke-width:2px,color:#fff
+      style G fill:#8b5cf6,stroke:#7c3aed,stroke-width:2px,color:#fff
+      style H fill:#8b5cf6,stroke:#7c3aed,stroke-width:2px,color:#fff
 
 _metadata:
   bloc: 1

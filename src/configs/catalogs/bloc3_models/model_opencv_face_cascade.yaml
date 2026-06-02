@@ -1,15 +1,24 @@
 id: "model_opencv_face_cascade"
 name: "Model: OpenCV Face Detection (Haar Cascade)"
-description: "Méthode de détection de visages classique basée sur Haar Cascades via OpenCV."
+description: |
+  Ce modèle utilise la méthode de Viola-Jones implémentée via les classifieurs en cascade de Haar d'OpenCV. Il s'agit d'une approche classique de détection d'objets, particulièrement optimisée pour la détection de visages frontaux, utilisant des caractéristiques rectangulaires simples et une structure en cascade pour un rejet rapide des régions négatives.
 category: "Vision par Ordinateur (Pré-entraînés)"
 tags: ["model", "vision", "object-detection", "opencv", "face", "cascade"]
 applies_to: ["Images"]
-when_to_use: "Pour détecter la présence de visages rapidement sur CPU sans réseaux de neurones complexes."
+when_to_use: |
+  Idéal pour des applications temps-réel sur des environnements avec de fortes contraintes matérielles (comme l'IoT, les microcontrôleurs avancés ou les vieux CPU) où l'utilisation de réseaux de neurones profonds est impossible. Fonctionne mieux lorsque les visages sont face à la caméra, bien éclairés et sans occlusions majeures.
+use_cases:
+  - "Détection de présence basique pour l'activation d'interfaces interactives (ex: miroirs intelligents)."
+  - "Cadrage automatique et suivi du visage dans des applications de visioconférence légères."
+  - "Comptage d'audience rudimentaire dans des conditions d'éclairage contrôlées."
 pros:
-  - "Extrêmement rapide."
-  - "Ne demande aucun framework lourd (juste cv2)."
+  - "Extrêmement rapide, capable de traiter la vidéo en temps réel même sur des processeurs peu performants."
+  - "Très léger en termes de dépendances, ne nécessitant que la bibliothèque OpenCV (pas de PyTorch ou TensorFlow)."
+  - "Simple à configurer et les fichiers XML pré-entraînés sont immédiatement disponibles dans OpenCV."
 cons:
-  - "Mauvais sur les visages de profil ou partiellement cachés."
+  - "Performances médiocres sur les visages de profil, de trois-quarts, ou inclinés."
+  - "Très sensible aux variations d'éclairage, aux ombres dures et aux occlusions (lunettes de soleil, masques, barbe épaisse)."
+  - "Génère davantage de faux positifs que les modèles modernes basés sur le Deep Learning (ex: MTCNN, YOLO, RetinaFace)."
 hyperparameters:
   scale_factor: "Paramètre de mise à l'échelle (ex: 1.1)."
   min_neighbors: "Nombre minimum de voisins (ex: 5)."
@@ -99,26 +108,110 @@ code_template: |
       y_pred = full_pipeline.predict(X_test)
       training_history = {"status": "success", "type": "opencv_cascade"}
 illustration_mermaid: |
-  graph TD
-    A[Input Images] --> B(Preprocessing Pipeline)
-    B --> C[OpenCV Haar Cascade Model]
+  flowchart LR
+    %% Inputs/Params
+    DataTest[/ "Images en Entrée" /]
+    Params[/ "Hyperparamètres (scale_factor, min_neighbors)" /]
     
-    subgraph Viola-Jones Framework
-        C --> D[Convert Image to Grayscale]
-        D --> E[Compute Integral Image]
-        E --> F[Scan Multi-Scale Windows]
-        F --> G[Apply Cascaded Weak Classifiers: Haar Features]
-        G --> H{Pass All Stages?}
-        H -- No --> I[Discard Window]
-        H -- Yes --> J[Accept as Face Region]
-    end
+    %% Processes/Models
+    Preproc{"Pipeline de Prétraitement"}
+    Gray{"Conversion en Niveaux de Gris"}
+    Integral{"Calcul Image Intégrale"}
+    Cascade{"Classifieurs en Cascade (Haar)"}
+    NMS{"Fusion des Voisins (min_neighbors)"}
+    Predict{"Inférence"}
     
-    J --> K[Non-Maximum Suppression / MinNeighbors]
-    K --> L([y_pred: List of Bounding Boxes x,y,w,h])
+    %% Tensors/DataFrames
+    PreprocTest(["Images Prétraitées"])
+    Model(["Modèle Haar Cascade OpenCV"])
+    Pred(["Prédictions (Bounding Boxes des Visages)"])
     
-    style C fill:#8b5cf6,stroke:#7c3aed,stroke-width:2px,color:#fff
-    style G fill:#f59e0b,stroke:#d97706,stroke-width:2px,color:#fff
-    style L fill:#3b82f6,stroke:#2563eb,stroke-width:2px,color:#fff
+    %% Connections
+    DataTest --> Preproc
+    Preproc --> PreprocTest
+    Params --> Predict
+    Model --> Predict
+    
+    PreprocTest --> Gray
+    Gray --> Integral
+    Integral --> Cascade
+    Cascade --> Predict
+    Predict --> NMS
+    NMS --> Pred
+    
+    %% Styling
+    style DataTest fill:#fbbf24,stroke:#d97706,stroke-width:2px,color:#000
+    style Params fill:#fbbf24,stroke:#d97706,stroke-width:2px,color:#000
+    
+    style Preproc fill:#3b82f6,stroke:#2563eb,stroke-width:2px,color:#fff
+    style Gray fill:#3b82f6,stroke:#2563eb,stroke-width:2px,color:#fff
+    style Integral fill:#3b82f6,stroke:#2563eb,stroke-width:2px,color:#fff
+    style Cascade fill:#3b82f6,stroke:#2563eb,stroke-width:2px,color:#fff
+    style NMS fill:#3b82f6,stroke:#2563eb,stroke-width:2px,color:#fff
+    style Predict fill:#3b82f6,stroke:#2563eb,stroke-width:2px,color:#fff
+    
+    style PreprocTest fill:#10b981,stroke:#059669,stroke-width:2px,color:#fff
+    style Model fill:#10b981,stroke:#059669,stroke-width:2px,color:#fff
+    style Pred fill:#10b981,stroke:#059669,stroke-width:2px,color:#fff
+
+math_theory: |
+  Haar Cascades detect objects using simple Haar-like rectangular features combined in a cascade structure.
+  
+  A Haar feature evaluates the difference between the sums of pixels within adjacent rectangular regions of an image $\textcolor{#ef4444}{\mathbf{X}}$:
+  $$ \textcolor{#3b82f6}{f(x)} = \sum_{\text{black\_rect}} \text{pixels} - \sum_{\text{white\_rect}} \text{pixels} $$
+  This is computed instantaneously using an **Integral Image** representation, where any rectangular sum takes only four array references.
+  
+  The **AdaBoost** algorithm is used to select the most discriminative features out of thousands, forming strong classifiers $H(x)$ from weak decision stumps $h_i(x)$:
+  $$ \textcolor{#8b5cf6}{H(x)} = \text{sign}\left( \sum_{i=1}^T \textcolor{#fbbf24}{\alpha_i} h_i(x) \right) $$
+  
+  These classifiers are arranged in an **Attentional Cascade**. An image sub-window must pass every stage in the cascade to be considered a face. If any stage $\textcolor{#10b981}{S_k}$ rejects the sub-window, computation immediately stops for that window, making the approach extremely computationally efficient:
+  $$ \text{Face Detected} \iff \forall k, \textcolor{#10b981}{S_k(x)} > \text{threshold}_k $$
+
+math_illustration_svg: |
+  <svg viewBox="0 0 800 400" xmlns="http://www.w3.org/2000/svg">
+    <defs>
+      <marker id="arrow" viewBox="0 0 10 10" refX="10" refY="5" markerWidth="6" markerHeight="6" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="#666" /></marker>
+    </defs>
+
+    <rect x="50" y="150" width="80" height="80" fill="#fee2e2" stroke="#ef4444" stroke-width="3" />
+    <text x="90" y="195" font-family="sans-serif" font-size="16" font-weight="bold" fill="#ef4444" text-anchor="middle">Window x</text>
+
+    <!-- Stage 1 -->
+    <rect x="200" y="130" width="100" height="120" rx="8" fill="#d1fae5" stroke="#10b981" stroke-width="3" />
+    <text x="250" y="160" font-family="sans-serif" font-size="14" font-weight="bold" fill="#059669" text-anchor="middle">Stage 1</text>
+    <text x="250" y="180" font-family="sans-serif" font-size="12" fill="#059669" text-anchor="middle">(2 features)</text>
+    
+    <path d="M250,250 L250,320" stroke="#ef4444" stroke-width="3" fill="none" marker-end="url(#arrow)"/>
+    <text x="280" y="280" font-family="sans-serif" font-size="14" font-weight="bold" fill="#ef4444">Reject</text>
+
+    <!-- Stage 2 -->
+    <rect x="380" y="130" width="100" height="120" rx="8" fill="#d1fae5" stroke="#10b981" stroke-width="3" />
+    <text x="430" y="160" font-family="sans-serif" font-size="14" font-weight="bold" fill="#059669" text-anchor="middle">Stage 2</text>
+    <text x="430" y="180" font-family="sans-serif" font-size="12" fill="#059669" text-anchor="middle">(10 features)</text>
+
+    <path d="M430,250 L430,320" stroke="#ef4444" stroke-width="3" fill="none" marker-end="url(#arrow)"/>
+    <text x="460" y="280" font-family="sans-serif" font-size="14" font-weight="bold" fill="#ef4444">Reject</text>
+
+    <!-- Stage N -->
+    <text x="520" y="190" font-family="sans-serif" font-size="24" font-weight="bold" fill="#666">...</text>
+
+    <rect x="560" y="130" width="100" height="120" rx="8" fill="#d1fae5" stroke="#10b981" stroke-width="3" />
+    <text x="610" y="160" font-family="sans-serif" font-size="14" font-weight="bold" fill="#059669" text-anchor="middle">Stage N</text>
+    <text x="610" y="180" font-family="sans-serif" font-size="12" fill="#059669" text-anchor="middle">(200 features)</text>
+
+    <path d="M610,250 L610,320" stroke="#ef4444" stroke-width="3" fill="none" marker-end="url(#arrow)"/>
+
+    <path d="M660,190 L730,190" stroke="#10b981" stroke-width="3" fill="none" marker-end="url(#arrow)"/>
+    <text x="750" y="195" font-family="sans-serif" font-size="16" font-weight="bold" fill="#059669" text-anchor="middle">Face !</text>
+
+    <!-- Arrows -->
+    <path d="M130,190 L200,190" stroke="#666" stroke-width="2" fill="none" marker-end="url(#arrow)"/>
+    <path d="M300,190 L380,190" stroke="#666" stroke-width="2" fill="none" marker-end="url(#arrow)"/>
+    <text x="340" y="180" font-family="sans-serif" font-size="14" font-weight="bold" fill="#3b82f6" text-anchor="middle">Pass</text>
+    <path d="M480,190 L510,190" stroke="#666" stroke-width="2" fill="none" marker-end="url(#arrow)"/>
+    <path d="M530,190 L560,190" stroke="#666" stroke-width="2" fill="none" marker-end="url(#arrow)"/>
+
+  </svg>
 
 _metadata:
   bloc: 3

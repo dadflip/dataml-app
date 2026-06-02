@@ -1,18 +1,96 @@
 id: "model_tensorflow_dnn_classifier"
 name: "Model: TensorFlow/Keras DNN (Classification)"
-description: "Réseau de neurones profond utilisant l'API Keras de TensorFlow."
+description: |
+  Réseau de neurones profond (Deep Neural Network) standard ("Multi-Layer Perceptron") implémenté avec l'API Keras de TensorFlow. Il enchaîne des couches denses, de normalisation par lot (Batch Normalization) et de régularisation (Dropout).
 category: "Réseaux de Neurones"
 tags: ["model", "classification", "tabular", "tensorflow", "keras", "dnn", "deep-learning"]
 applies_to: ["Tabulaire"]
-when_to_use: "Si vous préférez l'écosystème TensorFlow/Keras à PyTorch pour construire des réseaux fully-connected."
+when_to_use: |
+  Jeux de données tabulaires volumineux, lorsque des relations fortement non linéaires et complexes doivent être apprises, et que vous privilégiez l'écosystème TensorFlow pour le passage en production (TF Serving, TFLite).
+use_cases:
+  - "Classification binaire ou multiclasse sur de très grands ensembles de données structurées."
+  - "Développement de modèles tabulaires destinés à être embarqués sur mobile (TFLite)."
+  - "Modélisation hybride combinant des données tabulaires avec d'autres modalités (texte, image) via l'API Fonctionnelle Keras."
 pros:
-  - "Très facile à construire via l'API Sequential."
-  - "Écosystème de déploiement (TF Serving, TFLite)."
+  - "Construction et prototypage extrêmement rapides grâce à l'API de haut niveau Keras."
+  - "Déploiement en production industriel éprouvé via TensorFlow Extended (TFX) et TF Serving."
+  - "Hautement paramétrable (nombre de couches, fonctions d'activation, régularisations)."
 cons:
-  - "Moins 'Pythonic' que PyTorch. Peut avoir des conflits de versions GPU."
+  - "Nécessite souvent beaucoup plus de données que XGBoost ou LightGBM pour être compétitif."
+  - "Exige un prétraitement des données rigoureux (standardisation absolue, imputation des valeurs manquantes)."
+  - "Lourdeur de l'écosystème et conflits fréquents de versions (CUDA/cuDNN)."
 hyperparameters:
-  hidden_layers: "Tailles de couches (ex: '128, 64')."
-  epochs: "Nombre d'époques (ex: 20)."
+  hidden_layers: "Tailles de couches séparées par des virgules (ex: '128, 64')."
+  epochs: "Nombre d'époques d'entraînement (ex: 20)."
+math_theory: |
+  Un réseau DNN propage les entrées $\textcolor{#fbbf24}{x}$ via une succession de transformations. Pour la couche $l$ :
+  $$ \textcolor{#3b82f6}{z^{(l)}} = \textcolor{#8b5cf6}{W^{(l)}} \textcolor{#10b981}{a^{(l-1)}} + \textcolor{#8b5cf6}{b^{(l)}} $$
+  $$ \textcolor{#10b981}{a^{(l)}} = \text{ReLU}(\textcolor{#3b82f6}{z^{(l)}}) $$
+  Pour la classification, la dernière couche utilise l'activation Softmax pour prédire les probabilités $\textcolor{#10b981}{\hat{y}_k}$ :
+  $$ \textcolor{#10b981}{\hat{y}_k} = \frac{e^{\textcolor{#3b82f6}{z_k}}}{\sum_{j} e^{\textcolor{#3b82f6}{z_j}}} $$
+  Les poids $\textcolor{#8b5cf6}{W}$ sont optimisés en minimisant l'entropie croisée $\textcolor{#ef4444}{\mathcal{L}}$.
+math_illustration_svg: |
+  <svg viewBox="0 0 800 400" xmlns="http://www.w3.org/2000/svg">
+    <rect width="800" height="400" fill="#1e1e1e" rx="10" />
+    <text x="400" y="30" fill="#ffffff" font-family="Arial" font-size="20" font-weight="bold" text-anchor="middle">TensorFlow DNN Classifier Architecture</text>
+    
+    <!-- Input -->
+    <rect x="50" y="150" width="80" height="100" fill="#fbbf24" fill-opacity="0.2" stroke="#fbbf24" stroke-width="2" rx="8" />
+    <text x="90" y="205" fill="#fbbf24" font-family="Arial" font-size="24" font-weight="bold" text-anchor="middle">x</text>
+
+    <!-- Dense Layer 1 -->
+    <rect x="180" y="80" width="100" height="240" fill="#3b82f6" fill-opacity="0.2" stroke="#3b82f6" stroke-width="2" rx="8" />
+    <text x="230" y="110" fill="#3b82f6" font-family="Arial" font-size="16" font-weight="bold" text-anchor="middle">Dense L1</text>
+    <rect x="195" y="130" width="70" height="40" fill="#8b5cf6" fill-opacity="0.2" stroke="#8b5cf6" stroke-width="1" rx="4" />
+    <text x="230" y="155" fill="#8b5cf6" font-family="Arial" font-size="14" text-anchor="middle">W^(1), b</text>
+    <rect x="195" y="180" width="70" height="40" fill="#10b981" fill-opacity="0.2" stroke="#10b981" stroke-width="1" rx="4" />
+    <text x="230" y="205" fill="#10b981" font-family="Arial" font-size="14" text-anchor="middle">ReLU</text>
+    <rect x="195" y="230" width="70" height="40" fill="#3b82f6" fill-opacity="0.5" stroke="#3b82f6" stroke-width="1" rx="4" />
+    <text x="230" y="255" fill="#ffffff" font-family="Arial" font-size="12" text-anchor="middle">BatchNorm</text>
+
+    <!-- Dense Layer 2 -->
+    <rect x="330" y="100" width="100" height="200" fill="#3b82f6" fill-opacity="0.2" stroke="#3b82f6" stroke-width="2" rx="8" />
+    <text x="380" y="130" fill="#3b82f6" font-family="Arial" font-size="16" font-weight="bold" text-anchor="middle">Dense L2</text>
+    <rect x="345" y="150" width="70" height="40" fill="#8b5cf6" fill-opacity="0.2" stroke="#8b5cf6" stroke-width="1" rx="4" />
+    <text x="380" y="175" fill="#8b5cf6" font-family="Arial" font-size="14" text-anchor="middle">W^(2), b</text>
+    <rect x="345" y="200" width="70" height="40" fill="#10b981" fill-opacity="0.2" stroke="#10b981" stroke-width="1" rx="4" />
+    <text x="380" y="225" fill="#10b981" font-family="Arial" font-size="14" text-anchor="middle">ReLU</text>
+    <rect x="345" y="250" width="70" height="30" fill="#ef4444" fill-opacity="0.3" stroke="#ef4444" stroke-width="1" rx="4" />
+    <text x="380" y="270" fill="#ffffff" font-family="Arial" font-size="12" text-anchor="middle">Dropout</text>
+
+    <!-- Output Layer -->
+    <rect x="480" y="130" width="100" height="140" fill="#3b82f6" fill-opacity="0.2" stroke="#3b82f6" stroke-width="2" rx="8" />
+    <text x="530" y="160" fill="#3b82f6" font-family="Arial" font-size="16" font-weight="bold" text-anchor="middle">Output</text>
+    <rect x="495" y="180" width="70" height="40" fill="#10b981" fill-opacity="0.4" stroke="#10b981" stroke-width="1" rx="4" />
+    <text x="530" y="205" fill="#ffffff" font-family="Arial" font-size="14" font-weight="bold" text-anchor="middle">Softmax</text>
+
+    <!-- Connections -->
+    <path d="M 130 200 L 180 200" fill="none" stroke="#fbbf24" stroke-width="3" marker-end="url(#tfdnn-arrow-yellow)" />
+    <path d="M 280 200 L 330 200" fill="none" stroke="#10b981" stroke-width="3" marker-end="url(#tfdnn-arrow-green)" />
+    <path d="M 430 200 L 480 200" fill="none" stroke="#10b981" stroke-width="3" marker-end="url(#tfdnn-arrow-green)" />
+    <path d="M 580 200 L 640 200" fill="none" stroke="#10b981" stroke-width="3" marker-end="url(#tfdnn-arrow-green)" />
+
+    <!-- Output Probabilities -->
+    <circle cx="670" cy="200" r="30" fill="#10b981" fill-opacity="0.2" stroke="#10b981" stroke-width="3" />
+    <text x="670" y="206" fill="#10b981" font-family="Arial" font-size="20" font-weight="bold" text-anchor="middle">ŷ_k</text>
+
+    <!-- Loss -->
+    <rect x="580" y="280" width="160" height="60" fill="#ef4444" fill-opacity="0.2" stroke="#ef4444" stroke-width="2" rx="10" />
+    <text x="660" y="305" fill="#ef4444" font-family="Arial" font-size="16" font-weight="bold" text-anchor="middle">Cross-Entropy L</text>
+    <path d="M 670 230 L 670 280" fill="none" stroke="#ef4444" stroke-width="2" marker-end="url(#tfdnn-arrow-red)" />
+
+    <defs>
+      <marker id="tfdnn-arrow-yellow" viewBox="0 0 10 10" refX="10" refY="5" markerWidth="6" markerHeight="6" orient="auto">
+        <path d="M 0 0 L 10 5 L 0 10 z" fill="#fbbf24" />
+      </marker>
+      <marker id="tfdnn-arrow-green" viewBox="0 0 10 10" refX="10" refY="5" markerWidth="6" markerHeight="6" orient="auto">
+        <path d="M 0 0 L 10 5 L 0 10 z" fill="#10b981" />
+      </marker>
+      <marker id="tfdnn-arrow-red" viewBox="0 0 10 10" refX="10" refY="5" markerWidth="6" markerHeight="6" orient="auto">
+        <path d="M 0 0 L 10 5 L 0 10 z" fill="#ef4444" />
+      </marker>
+    </defs>
+  </svg>
 code_template: |
   import pandas as pd
   import numpy as np
@@ -99,19 +177,20 @@ code_template: |
           "val_loss": float(history.history.get('val_loss', [0.0])[-1])
       }
 illustration_mermaid: |
-    graph TD
-      In([Input Features]) --> Dense1(Dense Layer: ReLU)
-      Dense1 --> BN1(Batch Normalization)
-      BN1 --> DO1(Dropout 20%)
-      DO1 --> Dense2(Dense Layer: ReLU)
-      Dense2 --> BN2(Batch Normalization)
-      BN2 --> DO2(Dropout 20%)
-      DO2 --> Out([Output Layer: Softmax/Sigmoid])
-      Out --> Pred([Predictions])
-      
-      style In fill:#f8fafc,stroke:#94a3b8,stroke-width:2px
-      style Out fill:#8b5cf6,stroke:#7c3aed,stroke-width:2px,color:#fff
-      style Pred fill:#10b981,stroke:#059669,stroke-width:2px,color:#fff
+  flowchart LR
+    Data(["Données Tabulaires d'Entrée"])
+    Params[/"Hyperparamètres (layers, epochs)"/]
+    Model{"TensorFlow / Keras DNN (Classifier)"}
+    Pred(["Probabilités / Classes de Sortie"])
+    
+    Data --> Model
+    Params --> Model
+    Model --> Pred
+
+    style Data fill:#10b981,stroke:#059669,stroke-width:2px,color:#fff
+    style Params fill:#fbbf24,stroke:#d97706,stroke-width:2px,color:#000
+    style Model fill:#3b82f6,stroke:#2563eb,stroke-width:2px,color:#fff
+    style Pred fill:#10b981,stroke:#059669,stroke-width:2px,color:#fff
 
 _metadata:
   bloc: 3

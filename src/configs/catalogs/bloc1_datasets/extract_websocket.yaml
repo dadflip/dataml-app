@@ -1,6 +1,16 @@
 id: extract_websocket
 name: 'Extract: WebSocket Stream'
 description: Écoute un WebSocket pendant N secondes et enregistre les trames.
+when_to_use: "Pour capturer un flux de données en temps réel via un protocole WebSocket (événements, ticks de marché)."
+use_cases:
+  - "Enregistrement de cotations boursières ou cryptos depuis un exchange (Binance, Coinbase)."
+  - "Récupération d'un flux d'événements live IoT ou de télémétrie."
+pros:
+  - "Permet de constituer un historique depuis un flux en continu."
+  - "Léger et asynchrone."
+cons:
+  - "Bloquant pendant la durée d'écoute spécifiée."
+  - "Risque de perte de données si la connexion est interrompue (nécessite une stratégie de reconnexion dans un usage avancé)."
 category: 1. Extract
 tags:
 - extract
@@ -58,44 +68,22 @@ code_template: |
   meta = {"source": "websocket", "path": DEST_PATH}
 
 illustration_mermaid: |
-  flowchart TD
-      subgraph Config [Parameters]
-          URL([WS_URL])
-          DUR([DURATION_SEC])
-          DEST([DEST_PATH])
-      end
-
-      subgraph Operations [WebSocket Stream]
-          Conn([websockets.connect])
-          Recv([websocket.recv])
-          Loop([Wait DURATION])
-          Save([Write JSONLines])
-          OutFile[(Local JSONL)]
-      end
-
-      subgraph Outputs [Contract Variables]
-          df((df = pd.DataFrame))
-          target((target_name = ''))
-          task((task_type = 'unknown'))
-          meta((meta: dict))
-      end
-
-      URL --> Conn
-      Conn --> Loop
-      DUR --> Loop
-      Loop --> Recv
-      Recv --> Save
-      DEST --> OutFile
-      Save --> OutFile
-      OutFile -.-> meta
-
-      style Config fill:#f8fafc,stroke:#cbd5e1,stroke-width:2px
-      style Conn fill:#3b82f6,stroke:#1d4ed8,stroke-width:2px,color:#fff
-      style Loop fill:#10b981,stroke:#047857,stroke-width:2px,color:#fff
-      style Recv fill:#f59e0b,stroke:#b45309,stroke-width:2px,color:#fff
-      style Save fill:#8b5cf6,stroke:#6d28d9,stroke-width:2px,color:#fff
-      style OutFile fill:#64748b,stroke:#475569,stroke-width:2px,color:#fff
-      style Outputs fill:#f1f5f9,stroke:#94a3b8,stroke-width:2px
+  flowchart LR
+      A[/"📄 WS_URL"/] --> B{"websockets.connect()"}
+      C[/"🎯 TARGET_COL"/] --> D{"Check TARGET_COL"}
+      B --> E(["📊 df (DataFrame)"])
+      E --> D
+      D --> F(["🎯 target_name"])
+      D --> G(["⚙️ task_type"])
+      D --> H(["ℹ️ meta (source, path)"])
+      style A fill:#fbbf24,stroke:#d97706,stroke-width:2px,color:#000
+      style C fill:#fbbf24,stroke:#d97706,stroke-width:2px,color:#000
+      style B fill:#3b82f6,stroke:#2563eb,stroke-width:2px,color:#fff
+      style D fill:#3b82f6,stroke:#2563eb,stroke-width:2px,color:#fff
+      style E fill:#10b981,stroke:#059669,stroke-width:2px,color:#fff
+      style F fill:#8b5cf6,stroke:#7c3aed,stroke-width:2px,color:#fff
+      style G fill:#8b5cf6,stroke:#7c3aed,stroke-width:2px,color:#fff
+      style H fill:#8b5cf6,stroke:#7c3aed,stroke-width:2px,color:#fff
 
 _metadata:
   bloc: 1

@@ -1,17 +1,67 @@
 id: "model_local_outlier_factor"
 name: "Model: Local Outlier Factor (LOF)"
-description: "Détection d'anomalies basée sur la densité locale de chaque point."
+description: |
+  Algorithme de détection d'anomalies basé sur la densité locale (Local Outlier Factor). Il évalue à quel point la densité autour d'un point est faible comparée à celle de ses voisins, permettant ainsi de repérer des "anomalies locales" dans des jeux de données complexes.
 category: "Détection d'Anomalies (Non-Supervisé)"
 tags: ["model", "anomaly-detection", "tabular", "sklearn", "lof"]
 applies_to: ["Tabulaire"]
-when_to_use: "Pour détecter des anomalies contextuelles (un point très éloigné de son petit voisinage)."
+when_to_use: |
+  Idéal pour identifier des anomalies contextuelles, c'est-à-dire des points qui ne sont pas nécessairement des valeurs extrêmes à l'échelle globale, mais qui sont isolés par rapport à la distribution de leur voisinage direct.
+use_cases:
+  - "Détection de fraude où les comportements frauduleux tentent de se fondre dans la masse mais créent de légères déviations locales."
+  - "Surveillance de serveurs réseau pour déceler des comportements anormaux dans des sous-clusters spécifiques de trafic."
+  - "Contrôle qualité dans la fabrication industrielle pour des composants hétérogènes."
 pros:
-  - "Excellent pour les anomalies locales cachées dans des clusters denses."
+  - "Excellent pour détecter les anomalies locales qui échappent aux méthodes globales (comme Isolation Forest)."
+  - "S'adapte très bien aux ensembles de données contenant des groupes (clusters) de densités différentes."
+  - "Approche non supervisée qui ne nécessite pas d'étiquettes d'entraînement."
 cons:
-  - "Très lent sur les gros datasets (calcul de distances)."
+  - "Très gourmand en ressources et lent sur les grands jeux de données (calcul de distances croisées)."
+  - "Sensible au choix du nombre de voisins (k) et au paramètre de contamination."
+  - "Moins performant si les anomalies forment elles-mêmes des clusters denses."
 hyperparameters:
   n_neighbors: "Nombre de voisins K (ex: 20)."
   contamination: "Proportion d'anomalies attendue (ex: 0.05)."
+math_theory: |
+  L'algorithme Local Outlier Factor (LOF) compare la densité d'un point $\textcolor{#10b981}{x}$ à celle de ses $k$ voisins les plus proches. Il repose sur la densité d'accessibilité locale $\textcolor{#fbbf24}{lrd_k(x)}$. Le score d'anomalie $\textcolor{#ef4444}{LOF_k(x)}$ est le rapport moyen entre le $\textcolor{#fbbf24}{lrd}$ des voisins et le $\textcolor{#fbbf24}{lrd}$ de $\textcolor{#10b981}{x}$ :
+  $$ \textcolor{#ef4444}{LOF_k(x)} = \frac{\sum_{o \in \textcolor{#3b82f6}{N_k(x)}} \frac{\textcolor{#fbbf24}{lrd_k(o)}}{\textcolor{#fbbf24}{lrd_k(x)}}}{|\textcolor{#3b82f6}{N_k(x)}|} $$
+  Un $\textcolor{#ef4444}{LOF} \approx 1$ indique une densité comparable à celle du voisinage (point normal). Un $\textcolor{#ef4444}{LOF} > 1$ indique une densité plus faible, ce qui qualifie le point d'anomalie locale.
+math_illustration_svg: |
+  <svg viewBox="0 0 500 250" xmlns="http://www.w3.org/2000/svg">
+    <rect width="100%" height="100%" fill="#111827" rx="10"/>
+    <text x="250" y="25" fill="#ffffff" font-family="sans-serif" font-size="16" font-weight="bold" text-anchor="middle">Local Outlier Factor (LOF)</text>
+    
+    <!-- Dense Cluster -->
+    <circle cx="120" cy="130" r="5" fill="#3b82f6"/>
+    <circle cx="130" cy="115" r="5" fill="#3b82f6"/>
+    <circle cx="140" cy="140" r="5" fill="#3b82f6"/>
+    <circle cx="110" cy="145" r="5" fill="#3b82f6"/>
+    <circle cx="150" cy="125" r="5" fill="#3b82f6"/>
+    <circle cx="125" cy="150" r="5" fill="#3b82f6"/>
+    <circle cx="135" cy="135" r="5" fill="#3b82f6"/>
+    
+    <!-- Target Point Normal -->
+    <circle cx="130" cy="130" r="6" fill="#10b981"/>
+    <circle cx="130" cy="130" r="25" fill="none" stroke="#10b981" stroke-width="1" stroke-dasharray="3,3"/>
+    <text x="130" y="170" fill="#10b981" font-family="sans-serif" font-size="12" text-anchor="middle">LOF ≈ 1 (Normal)</text>
+
+    <!-- Outlier Point -->
+    <circle cx="350" cy="100" r="6" fill="#ef4444"/>
+    <circle cx="350" cy="100" r="50" fill="none" stroke="#ef4444" stroke-width="1" stroke-dasharray="3,3"/>
+    
+    <!-- Neighbors of Outlier -->
+    <circle cx="310" cy="130" r="5" fill="#3b82f6"/>
+    <circle cx="320" cy="145" r="5" fill="#3b82f6"/>
+    <circle cx="380" cy="125" r="5" fill="#3b82f6"/>
+    
+    <path d="M 350 100 L 310 130" stroke="#fbbf24" stroke-width="1"/>
+    <path d="M 350 100 L 320 145" stroke="#fbbf24" stroke-width="1"/>
+    <path d="M 350 100 L 380 125" stroke="#fbbf24" stroke-width="1"/>
+    
+    <text x="350" y="80" fill="#ef4444" font-family="sans-serif" font-size="12" font-weight="bold" text-anchor="middle">x (Outlier)</text>
+    <text x="350" y="170" fill="#ef4444" font-family="sans-serif" font-size="12" text-anchor="middle">LOF > 1 (Low Density)</text>
+    <text x="400" y="115" fill="#fbbf24" font-family="sans-serif" font-size="12">Reachability dist</text>
+  </svg>
 code_template: |
   import pandas as pd
   import numpy as np
@@ -84,30 +134,28 @@ code_template: |
       
       training_history = {"status": "success", "anomalies_found": int(np.sum(y_pred))}
 illustration_mermaid: |
-  graph TD
-    A[Input Data: X_train] --> B(Preprocessing Pipeline)
-    B --> C[Local Outlier Factor Model]
+  flowchart LR
+    X[/ "Input Data X" /] --> KNN{"Compute k-Nearest Neighbors"}
+    KNN --> LRD{"Calculate Local Reachability Density"}
+    LRD --> LOF{"Compare Density w/ Neighbors"}
+    LOF --> Fitted(["Fitted LOF Space"])
     
-    subgraph LOF Process
-        C --> D[Compute k-nearest neighbors]
-        D --> E[Calculate Local Reachability Density]
-        E --> F[Compare Density with Neighbors]
-        F --> G[Assign LOF Score to X_train]
-    end
+    X_test[/ "New Data X_test" /] --> Map{"Map to LOF Space"}
+    Fitted -.-> Map
+    Map --> Decision{"Is Density << Neighbors?"}
+    Decision -- Yes --> Anomaly(["Anomaly (Class 1)"])
+    Decision -- No --> Normal(["Normal (Class 0)"])
     
-    G --> H[Fitted LOF Space]
-    
-    X_test[Input Data: X_test] --> I(Preprocessing Pipeline)
-    I --> J[Map X_test into LOF Space]
-    H -.-> J
-    J --> K{Is Density << Neighbors?}
-    K -- Yes --> L[Novelty / Anomaly class 1]
-    K -- No --> M[Normal class 0]
-    
-    style C fill:#8b5cf6,stroke:#7c3aed,stroke-width:2px,color:#fff
-    style H fill:#10b981,stroke:#059669,stroke-width:2px,color:#fff
-    style L fill:#ef4444,stroke:#dc2626,stroke-width:2px,color:#fff
-    style M fill:#3b82f6,stroke:#2563eb,stroke-width:2px,color:#fff
+    style X fill:#fbbf24,stroke:#d97706,stroke-width:2px,color:#000
+    style X_test fill:#fbbf24,stroke:#d97706,stroke-width:2px,color:#000
+    style KNN fill:#3b82f6,stroke:#2563eb,stroke-width:2px,color:#fff
+    style LRD fill:#3b82f6,stroke:#2563eb,stroke-width:2px,color:#fff
+    style LOF fill:#3b82f6,stroke:#2563eb,stroke-width:2px,color:#fff
+    style Fitted fill:#8b5cf6,stroke:#7c3aed,stroke-width:2px,color:#fff
+    style Map fill:#3b82f6,stroke:#2563eb,stroke-width:2px,color:#fff
+    style Decision fill:#3b82f6,stroke:#2563eb,stroke-width:2px,color:#fff
+    style Anomaly fill:#ef4444,stroke:#dc2626,stroke-width:2px,color:#fff
+    style Normal fill:#10b981,stroke:#059669,stroke-width:2px,color:#fff
 
 _metadata:
   bloc: 3

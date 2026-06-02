@@ -1,14 +1,43 @@
 id: "transform_smote"
 name: "Transform: SMOTE (Oversampling)"
-description: "Génère des exemples synthétiques pour balancer les classes. Requiert imblearn."
+description: "Genere des exemples synthetiques pour la classe minoritaire afin de reequilibrer la distribution des classes. SMOTE (Synthetic Minority Over-sampling Technique) cree de nouvelles observations en interpolant lineairement entre des echantillons existants de la classe sous-representee et leurs K plus proches voisins."
+math_theory: |
+  Pour chaque echantillon \textcolor{#3b82f6}{x_i} de la classe minoritaire, SMOTE :
+  1. Identifie ses $K$ plus proches voisins parmi les echantillons de la meme classe
+  2. Selectionne aleatoirement un voisin \textcolor{#10b981}{x_{nn}}
+  3. Genere un point synthetique par interpolation lineaire :
+  $$ \textcolor{#ef4444}{x_{new}} = \textcolor{#3b82f6}{x_i} + \textcolor{#fbbf24}{\lambda} \cdot (\textcolor{#10b981}{x_{nn}} - \textcolor{#3b82f6}{x_i}) $$
+  ou $\textcolor{#fbbf24}{\lambda} \sim \mathcal{U}(0, 1)$ est un coefficient aleatoire tire d'une distribution uniforme.
+  Le nombre de points synthetiques generes depend du ratio de reequilibrage souhaite.
+  Variantes courantes : Borderline-SMOTE (ne genere qu'autour des frontieres de decision), ADASYN (adaptatif selon la densite locale).
+math_illustration_svg: |
+  <svg viewBox="0 0 400 200" xmlns="http://www.w3.org/2000/svg">
+    <rect width="100%" height="100%" fill="transparent" />
+    <circle cx="100" cy="150" r="6" fill="#3b82f6" opacity="0.8" />
+    <text x="80" y="145" fill="#3b82f6" font-family="monospace" font-size="12">x_i</text>
+    <circle cx="300" cy="50" r="6" fill="#10b981" opacity="0.8" />
+    <text x="310" y="55" fill="#10b981" font-family="monospace" font-size="12">x_nn</text>
+    <path d="M 100 150 L 300 50" stroke="#64748b" stroke-width="2" stroke-dasharray="5,5" />
+    <circle cx="200" cy="100" r="8" fill="#ef4444" />
+    <text x="215" y="95" fill="#ef4444" font-family="monospace" font-size="12">x_new</text>
+    <text x="145" y="115" fill="#fbbf24" font-family="monospace" font-size="14" font-weight="bold">λ</text>
+  </svg>
 category: "4.1 Preprocessing"
 tags: ["transform", "imbalance", "tabular", "imblearn", "pipeline"]
 applies_to: ["Tabulaire"]
-when_to_use: "Classes très déséquilibrées (ex: Fraude)."
+when_to_use: "A utiliser lorsque vos classes sont tres desequilibrees (ex: 95% vs 5%) et que le modele a tendance a predire uniquement la classe majoritaire. Typique en detection de fraude, diagnostic medical ou detection d'anomalies."
+use_cases:
+  - "Reequilibrage d'un dataset de detection de fraude bancaire (0.1% de cas positifs)."
+  - "Augmentation de la classe minoritaire pour un diagnostic medical rare."
+  - "Amelioration du rappel (recall) d'un modele de classification desequilibre."
 pros:
-  - "Évite le biais majoritaire."
+  - "Evite le biais vers la classe majoritaire et ameliore le rappel sur la classe minoritaire."
+  - "Plus intelligent que le simple sur-echantillonnage (duplication) car il genere de la diversite."
+  - "Compatible avec le pipeline imblearn pour un deploiement propre."
 cons:
-  - "Lent."
+  - "Peut generer des echantillons synthetiques bruites si les classes se chevauchent spatialement."
+  - "Calcul potentiellement lent sur de tres grands datasets (recherche KNN)."
+  - "Ne doit JAMAIS etre applique sur les donnees de test (uniquement sur le train set)."
 hyperparameters:
   sampling_strategy: "auto"
 code_template: |
@@ -26,7 +55,7 @@ code_template: |
       if target_name in df.columns:
           smote = SMOTE()
           
-          # SMOTE est un sampler imblearn. Il s'applique à la fin sur X et y entiers
+          # SMOTE est un sampler imblearn. Il s'applique a la fin sur X et y entiers
           step_name = 'smote'
           pipeline_steps[step_name] = (step_name, smote)
 
@@ -39,15 +68,21 @@ code_template: |
   if 'task_type' not in locals(): task_type = "classification"
   if 'meta' not in locals(): meta = {}
 illustration_mermaid: |
-  graph TD
-    A[Raw Data] --> B{Is target present & SMOTE installed?}
-    B -- Yes --> C[Initialize SMOTE]
-    C --> D[Add to Pipeline Steps]
-    B -- No --> E[Skip SMOTE]
-    D --> F[Update Data Contract Variables]
+  flowchart LR
+    A(["📊 df"]) --> B[/"🎯 target_name"/]
+    B --> C{"⚙️ Verifier classe et imblearn"}
+    C -- "OK" --> D{"⚙️ SMOTE (interpolation KNN)"}
+    C -- "Absent" --> E{"⚙️ Skip"}
+    D --> F(["📊 df (classes equilibrees)"])
     E --> F
-    style A fill:#eff6ff,stroke:#3b82f6,stroke-width:2px
-    style F fill:#10b981,stroke:#059669,stroke-width:2px
+    F --> G(["ℹ️ pipeline_steps"])
+    style A fill:#10b981,stroke:#059669,stroke-width:2px,color:#fff
+    style B fill:#fbbf24,stroke:#d97706,stroke-width:2px,color:#000
+    style C fill:#3b82f6,stroke:#2563eb,stroke-width:2px,color:#fff
+    style D fill:#3b82f6,stroke:#2563eb,stroke-width:2px,color:#fff
+    style E fill:#3b82f6,stroke:#2563eb,stroke-width:2px,color:#fff
+    style F fill:#10b981,stroke:#059669,stroke-width:2px,color:#fff
+    style G fill:#8b5cf6,stroke:#7c3aed,stroke-width:2px,color:#fff
 
 _metadata:
   bloc: 2

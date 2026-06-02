@@ -1,18 +1,67 @@
 id: "model_umap"
 name: "Model: UMAP"
-description: "Uniform Manifold Approximation and Projection. Surpasse t-SNE en vitesse et préserve mieux la structure globale."
+description: |
+  Uniform Manifold Approximation and Projection (UMAP). Technique moderne de réduction de dimension non linéaire. Elle est reconnue pour sa capacité à préserver non seulement la structure locale des données, mais aussi leur structure globale, offrant des visualisations de très haute qualité.
 category: "Réduction de Dimension"
 tags: ["model", "dimensionality-reduction", "tabular", "umap", "visualization"]
 applies_to: ["Tabulaire"]
-when_to_use: "La méthode moderne de choix pour visualiser des clusters en 2D ou 3D."
+when_to_use: |
+  C'est la méthode de référence actuelle pour réduire la dimensionnalité à des fins de visualisation (2D ou 3D) ou comme étape de prétraitement avancée avant un algorithme de clustering ou de classification. Elle supplante largement t-SNE dans la plupart des cas d'usage.
+use_cases:
+  - "Visualisation interactive de clusters complexes en 2D ou 3D (ex: transcriptomique, NLP embeddings)."
+  - "Réduction de dimension préalable pour améliorer l'efficacité d'un algorithme de clustering (ex: UMAP + HDBSCAN)."
+  - "Extraction de caractéristiques non linéaires denses (feature extraction) pour alimenter un modèle prédictif."
+  - "Analyse exploratoire de jeux de données massifs pour identifier des anomalies ou des sous-groupes (cohortes)."
 pros:
-  - "Beaucoup plus rapide que t-SNE."
-  - "Peut transformer de nouvelles données (predict existant)."
+  - "Significativement plus rapide à s'exécuter que t-SNE, même sur des millions de points de données."
+  - "Préserve la topologie globale des données bien mieux que t-SNE (les distances entre clusters ont un sens)."
+  - "Permet de projeter de nouvelles données non vues (méthode `transform`), ce qui manque cruellement à t-SNE."
 cons:
-  - "Nécessite d'installer umap-learn."
+  - "Nécessite l'installation d'une bibliothèque tierce spécifique (umap-learn) non incluse dans scikit-learn."
+  - "Comporte des hyperparamètres sensibles (comme n_neighbors et min_dist) qui modifient drastiquement la projection."
+  - "Fondations mathématiques (géométrie riemannienne, topologie algébrique) complexes à appréhender."
 hyperparameters:
   n_components: "Nombre de dimensions (ex: 2)."
   n_neighbors: "Taille du voisinage (ex: 15)."
+math_theory: |
+  UMAP construit une représentation topologique floue du jeu de données en calculant la probabilité d'arête $\textcolor{#3b82f6}{w_e}$ entre deux points $\textcolor{#10b981}{x_i}$ et $\textcolor{#10b981}{x_j}$ :
+  $$ \textcolor{#3b82f6}{w_e}(\textcolor{#10b981}{x_i}, \textcolor{#10b981}{x_j}) = \exp\left(-\frac{\textcolor{#ef4444}{d(x_i, x_j)} - \textcolor{#fbbf24}{\rho_i}}{\textcolor{#8b5cf6}{\sigma_i}}\right) $$
+  Où $\textcolor{#ef4444}{d}$ est la métrique de distance, $\textcolor{#fbbf24}{\rho_i}$ est la distance au plus proche voisin (garantissant la connectivité locale globale), et $\textcolor{#8b5cf6}{\sigma_i}$ est un facteur de lissage normalisant la densité locale autour de $\textcolor{#10b981}{x_i}$. UMAP optimise ensuite la projection en basse dimension en minimisant la Cross-Entropy entre ce graphe haute dimension et son équivalent en basse dimension.
+math_illustration_svg: |
+  <svg viewBox="0 0 500 250" xmlns="http://www.w3.org/2000/svg">
+    <rect width="100%" height="100%" fill="#1a1a1a" rx="10"/>
+    <text x="250" y="25" fill="#ffffff" font-family="sans-serif" font-size="16" font-weight="bold" text-anchor="middle">UMAP (Uniform Manifold Approximation and Projection)</text>
+    
+    <!-- Central Point -->
+    <circle cx="150" cy="130" r="6" fill="#10b981"/>
+    <text x="135" y="135" fill="#10b981" font-family="sans-serif" font-size="14" font-weight="bold">x_i</text>
+    
+    <!-- Nearest Neighbor -->
+    <circle cx="210" cy="110" r="5" fill="#10b981"/>
+    <text x="220" y="115" fill="#10b981" font-family="sans-serif" font-size="14">x_j</text>
+    
+    <!-- Distance to NN (\rho_i) -->
+    <path d="M 150 130 L 210 110" stroke="#fbbf24" stroke-width="3"/>
+    <text x="170" y="105" fill="#fbbf24" font-family="sans-serif" font-size="14" font-weight="bold">ρ_i (Local Connectivity)</text>
+    
+    <!-- Other neighbors and \sigma_i -->
+    <circle cx="120" cy="70" r="5" fill="#10b981"/>
+    <path d="M 150 130 L 120 70" stroke="#3b82f6" stroke-width="2" stroke-opacity="0.8"/>
+    
+    <circle cx="80" cy="140" r="5" fill="#10b981"/>
+    <path d="M 150 130 L 80 140" stroke="#3b82f6" stroke-width="1.5" stroke-opacity="0.5"/>
+    
+    <circle cx="170" cy="190" r="5" fill="#10b981"/>
+    <path d="M 150 130 L 170 190" stroke="#3b82f6" stroke-width="1" stroke-opacity="0.3"/>
+    
+    <!-- Density representation -->
+    <ellipse cx="150" cy="130" rx="90" ry="80" fill="none" stroke="#8b5cf6" stroke-width="2" stroke-dasharray="5,5"/>
+    <text x="70" y="220" fill="#8b5cf6" font-family="sans-serif" font-size="14" font-weight="bold">σ_i (Local Density scaling)</text>
+    
+    <text x="350" y="100" fill="#3b82f6" font-family="sans-serif" font-size="14" font-weight="bold" text-anchor="middle">w_e (Fuzzy Edge)</text>
+    <path d="M 310 120 C 330 140, 370 140, 390 120" fill="none" stroke="#ef4444" stroke-width="2"/>
+    <text x="350" y="160" fill="#ef4444" font-family="sans-serif" font-size="14" text-anchor="middle">Distance d(x_i, x_j)</text>
+  </svg>
 code_template: |
   import pandas as pd
   import numpy as np
@@ -51,15 +100,14 @@ code_template: |
       training_history = {"status": "success"}
       task_type = "dimensionality_reduction"
 illustration_mermaid: |
-    graph TD
-      In([High-Dimensional Features]) --> Graph(Construct Fuzzy Simplicial Graph)
-      Graph --> Opt(Optimize Low-Dimensional Layout)
-      Opt --> Out([Low-Dimensional Projection])
-      
-      style In fill:#f8fafc,stroke:#94a3b8,stroke-width:2px
-      style Graph fill:#38bdf8,stroke:#0284c7,stroke-width:2px,color:#fff
-      style Opt fill:#8b5cf6,stroke:#7c3aed,stroke-width:2px,color:#fff
-      style Out fill:#10b981,stroke:#059669,stroke-width:2px,color:#fff
+  flowchart LR
+    In[/"Données en Grande Dimension (High-Dimensional Features)"/]:::input --> Graph{"Construction Graphe Simplicial Flou"}:::model
+    Graph --> Opt{"Optimisation Layout Basse Dimension"}:::model
+    Opt --> Out(["Projection Basse Dimension"]):::tensor
+
+    classDef input fill:#fbbf24,stroke:#d97706,stroke-width:2px,color:#000
+    classDef model fill:#3b82f6,stroke:#2563eb,stroke-width:2px,color:#fff
+    classDef tensor fill:#10b981,stroke:#059669,stroke-width:2px,color:#fff
 
 _metadata:
   bloc: 3

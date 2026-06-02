@@ -1,14 +1,20 @@
 id: "model_denoising_autoencoder"
 name: "Model: Denoising Autoencoder (DAE)"
-description: "Réseau non-supervisé entraîné à reconstruire l'entrée originale à partir d'une version volontairement bruitée."
+description: "Architecture de réseau de neurones non-supervisé, conçue pour apprendre des représentations robustes en reconstruisant un signal d'entrée à partir d'une version corrompue (bruitée)."
 category: "Génératif & Non-Supervisé"
 tags: ["model", "unsupervised", "denoising", "pytorch", "autoencoder", "deep-learning"]
 applies_to: ["Tabulaire", "Images"]
-when_to_use: "Pour nettoyer des données bruitées ou extraire des features très robustes."
+when_to_use: "Indiqué pour le nettoyage de données capteurs bruitées, l'imputation de valeurs manquantes, ou la création d'embeddings (features latentes) résilients aux petites variations."
+use_cases:
+  - "Restauration et débruitage d'images ou signaux (ex: imagerie médicale, audio)."
+  - "Nettoyage de signaux de capteurs IoT (filtrage de bruit de fond)."
+  - "Extraction de caractéristiques latentes très robustes pour l'entraînement de modèles aval."
 pros:
-  - "Force le réseau à apprendre une représentation invariante au bruit."
+  - "Force le réseau à capturer la structure fondamentale des données plutôt qu'à mémoriser l'entrée."
+  - "Résiste intrinsèquement au sur-apprentissage grâce au processus stochastique de corruption."
 cons:
-  - "Taille de l'espace latent difficile à calibrer."
+  - "Dimensionnement délicat de l'espace latent et réglage critique du facteur de bruit (`noise_factor`)."
+  - "La fonction de perte quadratique (MSE) tend à produire des reconstructions lissées, perdant les détails fins."
 hyperparameters:
   noise_factor: "Quantité de bruit ajoutée (ex: 0.2)."
   epochs: "Nombre d'époques (ex: 20)."
@@ -95,25 +101,80 @@ code_template: |
           
       training_history = {"status": "success", "loss": final_loss}
 
+math_theory: |
+  L'autoencodeur débruiteur (DAE) apprend à reconstruire une entrée propre $\textcolor{#10b981}{x}$ à partir d'une version intentionnellement corrompue $\textcolor{#fbbf24}{\tilde{x}}$.
+  La corruption est souvent un bruit additif gaussien ou un dropout :
+  
+  $$ \textcolor{#fbbf24}{\tilde{x}} \sim q(\textcolor{#fbbf24}{\tilde{x}} | \textcolor{#10b981}{x}) $$
+  
+  L'encodeur extrait une représentation latente $\textcolor{#8b5cf6}{h}$, et le décodeur produit la reconstruction $\textcolor{#3b82f6}{\hat{x}}$ :
+  
+  $$ \textcolor{#8b5cf6}{h} = f_{\theta}(\textcolor{#fbbf24}{\tilde{x}}) \quad \text{et} \quad \textcolor{#3b82f6}{\hat{x}} = g_{\phi}(\textcolor{#8b5cf6}{h}) $$
+  
+  Le réseau est entraîné pour minimiser l'erreur de reconstruction entre la sortie $\textcolor{#3b82f6}{\hat{x}}$ et l'entrée originale propre $\textcolor{#10b981}{x}$, forçant l'extraction de caractéristiques robustes :
+  
+  $$ \mathcal{L}(\theta, \phi) = || \textcolor{#10b981}{x} - \textcolor{#3b82f6}{\hat{x}} ||^2 $$
+math_illustration_svg: |
+  <svg viewBox="0 0 600 300" xmlns="http://www.w3.org/2000/svg">
+    <!-- Input x -->
+    <rect x="50" y="120" width="40" height="60" rx="5" fill="#10b981" />
+    <text x="70" y="200" fill="#10b981" font-family="sans-serif" font-size="18" text-anchor="middle">x</text>
+    
+    <!-- Corrupt -->
+    <path d="M 90 150 L 140 150" stroke="black" stroke-width="2" marker-end="url(#arrow)" />
+    <circle cx="160" cy="150" r="20" fill="#fbbf24" />
+    <text x="160" y="156" fill="white" font-family="sans-serif" font-size="20" text-anchor="middle">+</text>
+    <text x="160" y="110" fill="#fbbf24" font-family="sans-serif" font-size="16" text-anchor="middle">Noise</text>
+    
+    <!-- Noisy Input -->
+    <path d="M 180 150 L 230 150" stroke="black" stroke-width="2" marker-end="url(#arrow)" />
+    <rect x="230" y="120" width="40" height="60" rx="5" fill="#fbbf24" />
+    <text x="250" y="200" fill="#fbbf24" font-family="sans-serif" font-size="18" text-anchor="middle">x~</text>
+    
+    <!-- Encoder -->
+    <polygon points="300,100 350,130 350,170 300,200" fill="#8b5cf6" />
+    <text x="325" y="220" fill="#8b5cf6" font-family="sans-serif" font-size="16" text-anchor="middle">Enc</text>
+    
+    <!-- Latent -->
+    <rect x="360" y="130" width="20" height="40" rx="3" fill="#8b5cf6" />
+    <text x="370" y="190" fill="#8b5cf6" font-family="sans-serif" font-size="18" text-anchor="middle">h</text>
+    
+    <!-- Decoder -->
+    <polygon points="430,100 380,130 380,170 430,200" fill="#3b82f6" />
+    <text x="405" y="220" fill="#3b82f6" font-family="sans-serif" font-size="16" text-anchor="middle">Dec</text>
+    
+    <!-- Output -->
+    <rect x="450" y="120" width="40" height="60" rx="5" fill="#3b82f6" />
+    <text x="470" y="200" fill="#3b82f6" font-family="sans-serif" font-size="18" text-anchor="middle">x^</text>
+    
+    <!-- Loss -->
+    <path d="M 70 230 L 70 260 L 470 260 L 470 230" stroke="#ef4444" stroke-width="2" fill="none" stroke-dasharray="5,5" />
+    <text x="270" y="255" fill="#ef4444" font-family="sans-serif" font-size="18" font-weight="bold" text-anchor="middle">Loss: || x - x^ ||^2</text>
+    
+    <defs>
+      <marker id="arrow" markerWidth="10" markerHeight="10" refX="9" refY="3" orient="auto" markerUnits="strokeWidth">
+        <path d="M0,0 L0,6 L9,3 z" fill="black" />
+      </marker>
+    </defs>
+  </svg>
 illustration_mermaid: |
-  graph TD
-    subgraph Denoising Autoencoder
-      In([Input Features x]) --> AddNoise(Add Gaussian Noise)
-      AddNoise --> NoisyIn[Noisy Input x_tilde]
-      NoisyIn --> Enc1[Linear 64 + ReLU]
-      Enc1 --> Enc2[Linear 32]
-      Enc2 --> Latent[Latent Space z]
-      Latent --> Dec1[Linear 64 + ReLU]
-      Dec1 --> Dec2[Linear Out + Sigmoid]
-      Dec2 --> Out([Reconstructed x_hat])
-      
-      Out -.-> Loss{MSE Loss}
-      In -.-> Loss
-    end
-    style In fill:#f8fafc,stroke:#94a3b8,stroke-width:1px
-    style Out fill:#f8fafc,stroke:#94a3b8,stroke-width:1px
-    style Loss fill:#fca5a5,stroke:#ef4444,stroke-width:2px
-    style Latent fill:#c4b5fd,stroke:#8b5cf6,stroke-width:2px
+  flowchart LR
+    In(["Input Data (x)"]) --> Noise{"Add Gaussian Noise\nnoise_factor"}
+    Noise --> Enc1{"Encoder Layers"}
+    Enc1 --> Latent(["Latent Space (z)"])
+    Latent --> Dec1{"Decoder Layers"}
+    Dec1 --> Out(["Reconstructed (x_hat)"])
+    
+    In -. "Target" .-> Loss{"MSE Loss"}
+    Out -. "Pred" .-> Loss
+
+    style In fill:#10b981,stroke:#059669,stroke-width:2px,color:#fff
+    style Noise fill:#3b82f6,stroke:#2563eb,stroke-width:2px,color:#fff
+    style Enc1 fill:#3b82f6,stroke:#2563eb,stroke-width:2px,color:#fff
+    style Latent fill:#8b5cf6,stroke:#7c3aed,stroke-width:2px,color:#fff
+    style Dec1 fill:#3b82f6,stroke:#2563eb,stroke-width:2px,color:#fff
+    style Out fill:#10b981,stroke:#059669,stroke-width:2px,color:#fff
+    style Loss fill:#ef4444,stroke:#dc2626,stroke-width:2px,color:#fff
 
 _metadata:
   bloc: 3

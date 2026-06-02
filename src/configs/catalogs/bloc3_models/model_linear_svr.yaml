@@ -1,14 +1,24 @@
 id: "model_linear_svr"
 name: "Model: Linear SVR"
-description: "Support Vector Regressor à noyau strictement linéaire."
+description: |
+  Support Vector Regressor (SVR) à noyau strictement linéaire. Implémentation basée sur liblinear offrant une approche efficace pour les problèmes de régression linéaire à grande échelle avec tolérance d'erreur intégrée.
 category: "Modèles Basés sur la Distance / Marges"
 tags: ["model", "regression", "tabular", "sklearn", "svm", "linear"]
 applies_to: ["Tabulaire"]
-when_to_use: "Régression SVM rapide sur de grands datasets textuels ou hautement dimensionnels."
+when_to_use: |
+  Très utile pour la régression sur des ensembles de données massifs ou possédant un très grand nombre de colonnes (dimensions), notamment lorsque l'on souhaite ignorer de petites erreurs grâce à la marge epsilon.
+use_cases:
+  - "Prédiction de temps d'exécution ou de durée à partir d'un grand nombre d'indicateurs système."
+  - "Évaluation quantitative à partir de caractéristiques textuelles (ex: notation à partir de reviews)."
+  - "Régression robuste dans des espaces de haute dimension où les relations sont principalement linéaires."
 pros:
-  - "Très rapide (implémentation liblinear)."
+  - "Extrêmement rapide à l'entraînement, passe à l'échelle pour des millions d'exemples."
+  - "Tolérance paramétrable (epsilon) permettant de ne pas pénaliser les petites erreurs de prédiction."
+  - "Fournit les poids des caractéristiques (coef_) pour une bonne interprétabilité."
 cons:
-  - "Uniquement linéaire."
+  - "Restriction stricte aux relations linéaires."
+  - "Hyperparamètres (C et epsilon) qui nécessitent souvent un réglage minutieux."
+  - "Très sensible à l'échelle des variables (standardisation obligatoire)."
 hyperparameters:
   C: "Paramètre de régularisation (ex: 1.0)."
   epsilon: "Marge de tolérance d'erreur (ex: 0.0)."
@@ -62,27 +72,76 @@ code_template: |
               
       training_history = {"status": "success", "fitted_on": len(X_train)}
 illustration_mermaid: |
-  graph TD
-    A[Input Data: X_train, y_train] --> B(Preprocessing Pipeline)
-    B --> C[Linear SVR Model]
+  flowchart LR
+    X[/ "Input Features" /] --> SVR{"Linear SVR Model"}
+    Y[/ "Target Y" /] --> SVR
+    SVR --> Tube{"Epsilon-Tube Margin"}
+    Tube --> Penalty{"Penalty C (Errors outside tube)"}
+    Penalty --> Opt{"Optimize Weights W & b"}
+    Opt --> Weights(["Fitted Weights"])
+    Weights --> Pred(["Continuous Prediction"])
     
-    subgraph LinearSVR Training
-        C --> D[Linear Transformation: y = wx + b]
-        D --> E{Epsilon-Tube Margin}
-        E --> F[Penalty C applied to points outside tube]
-        F --> G[Optimize Weights via Coordinate Descent]
-    end
+    style X fill:#fbbf24,stroke:#d97706,stroke-width:2px,color:#000
+    style Y fill:#fbbf24,stroke:#d97706,stroke-width:2px,color:#000
+    style SVR fill:#3b82f6,stroke:#2563eb,stroke-width:2px,color:#fff
+    style Tube fill:#3b82f6,stroke:#2563eb,stroke-width:2px,color:#fff
+    style Penalty fill:#3b82f6,stroke:#2563eb,stroke-width:2px,color:#fff
+    style Opt fill:#3b82f6,stroke:#2563eb,stroke-width:2px,color:#fff
+    style Weights fill:#10b981,stroke:#059669,stroke-width:2px,color:#fff
+    style Pred fill:#10b981,stroke:#059669,stroke-width:2px,color:#fff
+
+math_theory: |
+  Linear Support Vector Regression (SVR) tries to find a linear function that fits the data while tolerating errors within a specified margin $\textcolor{#8b5cf6}{\epsilon}$ (epsilon-tube). It minimizes the L2 norm of the weights along with a penalty for predictions that fall outside the $\epsilon$-tube:
+  
+  $$ \min_{w, b} \left( \frac{1}{2} ||\textcolor{#ef4444}{w}||_2^2 + \textcolor{#fbbf24}{C} \sum_{i=1}^{N} \max(0, |\textcolor{#3b82f6}{y}^{(i)} - (\textcolor{#10b981}{X}^{(i)} \textcolor{#ef4444}{w} + b)| - \textcolor{#8b5cf6}{\epsilon}) \right) $$
+  
+  Where $\textcolor{#ef4444}{w}$ and $b$ parameterize the regression line, $\textcolor{#3b82f6}{y}$ is the continuous target, $\textcolor{#10b981}{X}$ is the feature matrix, $\textcolor{#fbbf24}{C}$ controls the penalty, and $\textcolor{#8b5cf6}{\epsilon}$ defines the width of the insensitive zone.
+
+math_illustration_svg: |
+  <svg viewBox="0 0 500 250" xmlns="http://www.w3.org/2000/svg">
+    <rect width="500" height="250" fill="#ffffff" />
     
-    G --> H[Fitted Model Hyperplane]
+    <!-- Axes -->
+    <line x1="50" y1="200" x2="250" y2="200" stroke="#94a3b8" stroke-width="2" />
+    <line x1="50" y1="200" x2="50" y2="40" stroke="#94a3b8" stroke-width="2" />
     
-    X_test[Input Data: X_test] --> I(Preprocessing Pipeline)
-    I --> J[Apply Learned Weights]
-    H -.-> J
-    J --> K([y_pred: Continuous Predictions])
+    <!-- Epsilon Tube (Background polygon) -->
+    <polygon points="60,140 240,40 240,80 60,180" fill="#8b5cf6" fill-opacity="0.1" />
+
+    <!-- Regression Line (w*x + b) -->
+    <line x1="60" y1="160" x2="240" y2="60" stroke="#ef4444" stroke-width="3" />
+    <text x="245" y="55" font-family="sans-serif" font-size="12" font-weight="bold" fill="#ef4444">w*X + b</text>
+
+    <!-- Margins (+/- epsilon) -->
+    <line x1="60" y1="180" x2="240" y2="80" stroke="#8b5cf6" stroke-width="1.5" stroke-dasharray="4" />
+    <line x1="60" y1="140" x2="240" y2="40" stroke="#8b5cf6" stroke-width="1.5" stroke-dasharray="4" />
+    <text x="100" y="145" font-family="sans-serif" font-size="12" font-weight="bold" fill="#8b5cf6">+ε</text>
+    <text x="100" y="195" font-family="sans-serif" font-size="12" font-weight="bold" fill="#8b5cf6">-ε</text>
+
+    <!-- Data Points inside tube (no penalty) -->
+    <circle cx="80" cy="145" r="4" fill="#10b981" />
+    <circle cx="120" cy="115" r="4" fill="#10b981" />
+    <circle cx="150" cy="100" r="4" fill="#10b981" />
+    <circle cx="180" cy="90" r="4" fill="#10b981" />
+    <circle cx="210" cy="85" r="4" fill="#10b981" />
+
+    <!-- Data Points outside tube (penalty) -->
+    <circle cx="100" cy="80" r="4" fill="#fbbf24" stroke="#f59e0b" stroke-width="1" />
+    <line x1="100" y1="118" x2="100" y2="80" stroke="#fbbf24" stroke-width="2" stroke-dasharray="2" />
     
-    style C fill:#8b5cf6,stroke:#7c3aed,stroke-width:2px,color:#fff
-    style H fill:#10b981,stroke:#059669,stroke-width:2px,color:#fff
-    style K fill:#3b82f6,stroke:#2563eb,stroke-width:2px,color:#fff
+    <circle cx="190" cy="140" r="4" fill="#fbbf24" stroke="#f59e0b" stroke-width="1" />
+    <line x1="190" y1="108" x2="190" y2="140" stroke="#fbbf24" stroke-width="2" stroke-dasharray="2" />
+
+    <!-- Explanation Box -->
+    <rect x="290" y="80" width="190" height="90" rx="8" fill="#f8fafc" stroke="#e2e8f0" stroke-width="2" />
+    <text x="385" y="105" font-family="sans-serif" font-size="12" font-weight="bold" fill="#475569" text-anchor="middle">ε-Insensitive Loss</text>
+    
+    <circle cx="305" cy="130" r="4" fill="#10b981" />
+    <text x="320" y="134" font-family="sans-serif" font-size="11" fill="#475569">Inside tube (Loss = 0)</text>
+    
+    <circle cx="305" cy="150" r="4" fill="#fbbf24" />
+    <text x="320" y="154" font-family="sans-serif" font-size="11" fill="#475569">Outside tube (Penalty: <tspan fill="#fbbf24" font-weight="bold">C</tspan>)</text>
+  </svg>
 
 _metadata:
   bloc: 3

@@ -1,6 +1,16 @@
 id: extract_rest
 name: 'Extract: API REST (JSON)'
-description: Fait un appel GET à une API REST publique.
+description: 'Effectue un appel HTTP GET vers une API REST publique ou privée et sauvegarde la réponse JSON localement.'
+when_to_use: 'Recommandé pour récupérer des données fraîches, des métriques dynamiques ou des catalogues depuis des services web tiers.'
+use_cases:
+  - 'Récupération de données météorologiques ou financières en temps réel.'
+  - 'Synchronisation avec des données d''un autre microservice.'
+pros:
+  - 'Extrêmement flexible et standard (support du format JSON et des requêtes HTTP).'
+  - 'Facile à configurer pour la majorité des API modernes.'
+cons:
+  - 'Ne gère pas la pagination nativement dans ce template de base.'
+  - 'Peut échouer à cause des limites de taux (rate limiting) de l''API.'
 category: 1. Extract
 tags:
 - extract
@@ -43,45 +53,22 @@ code_template: |
   task_type = "unknown"
   meta = {"source": "rest", "path": DEST_PATH}
 illustration_mermaid: |
-    flowchart TD
-    A([FILE_PATH]) --> B[Load EXTRACT_REST]
-    B --> df([df])
-    
-    style A fill:#3b82f6,color:#fff
-    style B fill:#10b981,color:#fff
-    style df fill:#f59e0b,color:#fff
-
-
-        subgraph Operations [REST API Extract]
-            Req([requests.get])
-            Check([response.raise_for_status])
-            Json([response.json])
-            Save([json.dump])
-            OutFile[(JSON File)]
-        end
-
-        subgraph Outputs [Contract Variables]
-            df((df = None))
-            target((target_name = None))
-            task((task_type = 'unknown'))
-            meta((meta: dict))
-        end
-
-        URL --> Req
-        Req --> Check
-        Check --> Json
-        Json --> Save
-        DEST --> OutFile
-        Save --> OutFile
-        OutFile -.-> meta
-
-        style Config fill:#f8fafc,stroke:#cbd5e1,stroke-width:2px
-        style Req fill:#3b82f6,stroke:#1d4ed8,stroke-width:2px,color:#fff
-        style Check fill:#10b981,stroke:#047857,stroke-width:2px,color:#fff
-        style Json fill:#f59e0b,stroke:#b45309,stroke-width:2px,color:#fff
-        style Save fill:#8b5cf6,stroke:#6d28d9,stroke-width:2px,color:#fff
-        style OutFile fill:#14b8a6,stroke:#0f766e,stroke-width:2px,color:#fff
-        style Outputs fill:#f1f5f9,stroke:#94a3b8,stroke-width:2px
+    flowchart LR
+        A[/"📄 API URL"/] --> B{"requests.get()"}
+        C[/"🎯 TARGET_COL"/] --> D{"Check TARGET_COL"}
+        B --> E(["📊 df (Dump JSON)"])
+        E --> D
+        D --> F(["🎯 target_name"])
+        D --> G(["⚙️ task_type"])
+        D --> H(["ℹ️ meta (source: rest)"])
+        style A fill:#fbbf24,stroke:#d97706,stroke-width:2px,color:#000
+        style C fill:#fbbf24,stroke:#d97706,stroke-width:2px,color:#000
+        style B fill:#3b82f6,stroke:#2563eb,stroke-width:2px,color:#fff
+        style D fill:#3b82f6,stroke:#2563eb,stroke-width:2px,color:#fff
+        style E fill:#10b981,stroke:#059669,stroke-width:2px,color:#fff
+        style F fill:#8b5cf6,stroke:#7c3aed,stroke-width:2px,color:#fff
+        style G fill:#8b5cf6,stroke:#7c3aed,stroke-width:2px,color:#fff
+        style H fill:#8b5cf6,stroke:#7c3aed,stroke-width:2px,color:#fff
 
 _metadata:
   bloc: 1

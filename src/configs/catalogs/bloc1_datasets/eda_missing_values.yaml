@@ -1,7 +1,18 @@
 id: eda_missing_values
 name: 'EDA: Valeurs Manquantes'
-description: Calcule le pourcentage de valeurs manquantes par colonne et affiche une
-  heatmap si possible.
+description: Calcule le pourcentage de valeurs manquantes par colonne et génère une heatmap pour visualiser leur répartition temporelle ou structurelle.
+when_to_use: À utiliser lors des premières étapes de nettoyage et d'exploration de données pour décider des stratégies d'imputation ou de suppression.
+use_cases:
+- "Évaluation globale de la qualité d'un jeu de données tabulaire"
+- "Identification de variables à supprimer en raison d'un trop grand nombre de NaNs"
+- "Détection de schémas de valeurs manquantes (ex: liées au temps ou à d'autres variables)"
+pros:
+- "Donne un résumé quantitatif (tableau) et qualitatif (heatmap)"
+- "Visualisation claire des blocs de données manquantes (missingness patterns)"
+- "Facilite la prise de décision pour l'imputation"
+cons:
+- "La heatmap peut être illisible sur des datasets contenant des centaines de milliers de lignes"
+- "Ne détecte pas les valeurs aberrantes ou les valeurs par défaut (comme -999)"
 category: 3. Exploratory Data Analysis
 tags:
 - eda
@@ -31,19 +42,24 @@ code_template: |
       plt.show()
 illustration_mermaid: |
     flowchart TD
-        Input([DataFrame]) --> CalcSum[df.isnull.sum]
-        CalcSum --> CalcPct[Calculate Percentage]
-        CalcPct --> CreateDF[Create Missing Values DataFrame]
-        CreateDF --> Filter[Filter > 0 Missing]
-        Filter --> Check{Any Missing?}
-        Check -- Yes --> Display[[Display Table]]
-        Check -- Yes --> Heatmap{{Seaborn Heatmap of df.isnull}}
-        Check -- No --> Msg[/Print 'No missing values'/]
+        InDF[/ df /] --> IsNull{ isnull_sum }
+        IsNull --> Pct{ calc_percentage }
+        Pct --> CreateDF{ pd_DataFrame }
+        CreateDF --> MissingDF([ missing_df ])
+        InDF --> Heatmap{ sns_heatmap }
+        MissingDF --> Display{ display }
+        Display --> Table([ Missing_Table ])
+        Heatmap --> Fig([ Missing_Heatmap_Fig ])
     
-        style Input fill:#3b82f6,stroke:#2563eb,color:#fff
-        style CreateDF fill:#10b981,stroke:#059669,color:#fff
-        style Heatmap fill:#ec4899,stroke:#db2777,color:#fff
-        style Display fill:#6366f1,stroke:#4f46e5,color:#fff
+        style InDF fill:#fbbf24,stroke:#d97706,stroke-width:2px,color:#000
+        style IsNull fill:#3b82f6,stroke:#2563eb,stroke-width:2px,color:#fff
+        style Pct fill:#3b82f6,stroke:#2563eb,stroke-width:2px,color:#fff
+        style CreateDF fill:#3b82f6,stroke:#2563eb,stroke-width:2px,color:#fff
+        style Heatmap fill:#3b82f6,stroke:#2563eb,stroke-width:2px,color:#fff
+        style Display fill:#3b82f6,stroke:#2563eb,stroke-width:2px,color:#fff
+        style MissingDF fill:#8b5cf6,stroke:#7c3aed,stroke-width:2px,color:#fff
+        style Table fill:#10b981,stroke:#059669,stroke-width:2px,color:#fff
+        style Fig fill:#10b981,stroke:#059669,stroke-width:2px,color:#fff
 
 _metadata:
   bloc: 1

@@ -1,6 +1,18 @@
 id: "load_video"
 name: "Load: Vidéo (MP4, AVI)"
-description: "Ouvre un flux vidéo et charge la première frame (ou X frames) avec OpenCV."
+description: "Ouvre un flux vidéo (par exemple MP4 ou AVI) et charge les premières frames sous forme de données aplaties en utilisant OpenCV."
+when_to_use: "Idéal pour l'extraction de séquences d'images depuis des vidéos dans des cas d'utilisation de vision par ordinateur ou d'analyse d'images."
+use_cases:
+  - "Extraction de frames pour l'entraînement de modèles de classification d'images."
+  - "Prétraitement de données vidéo pour la détection d'objets."
+  - "Analyse d'échantillons vidéo pour l'extraction de caractéristiques visuelles."
+pros:
+  - "Utilise OpenCV pour une compatibilité étendue avec les formats vidéo."
+  - "Extrait automatiquement les métadonnées utiles (FPS, dimensions, nombre total de frames)."
+  - "Limite l'extraction à un échantillon (ex: 10 frames) pour éviter les dépassements de mémoire."
+cons:
+  - "Ne charge pas la vidéo entière, seulement un aperçu (configurable dans le code)."
+  - "Le format d'image aplati n'est pas optimal pour tous les réseaux de neurones sans redimensionnement."
 category: "2. Load"
 tags: ["load", "video", "cv2", "media"]
 code_template: |
@@ -60,21 +72,22 @@ output_variables:
   - task_type
   - meta
 illustration_mermaid: |
-  flowchart TD
-      A([FILE_PATH]) --> B{File Exists?}
-      B -- Yes --> C[cv2.VideoCapture]
-      B -- No --> D[Empty DataFrame]
-      C --> E[Extract metadata: fps, dims]
-      E --> F[Read max 10 frames]
-      F --> G[Convert to RGB & Flatten]
-      G --> H[Create DataFrame]
-      H --> I([df, target_name, task_type, meta])
-      D --> I
-
-      style A fill:#3b82f6,color:#fff
-      style C fill:#10b981,color:#fff
-      style F fill:#10b981,color:#fff
-      style I fill:#f59e0b,color:#fff
+  flowchart LR
+      A[/"📄 FILE_PATH"/] --> B{"cv2.VideoCapture()"}
+      C[/"🎯 'frame_data'"/] --> D{"Set target"}
+      B --> E(["📊 df (Frames)"])
+      E --> D
+      D --> F(["🎯 target_name"])
+      D --> G(["⚙️ task_type"])
+      D --> H(["ℹ️ meta (fps, dims)"])
+      style A fill:#fbbf24,stroke:#d97706,stroke-width:2px,color:#000
+      style C fill:#fbbf24,stroke:#d97706,stroke-width:2px,color:#000
+      style B fill:#3b82f6,stroke:#2563eb,stroke-width:2px,color:#fff
+      style D fill:#3b82f6,stroke:#2563eb,stroke-width:2px,color:#fff
+      style E fill:#10b981,stroke:#059669,stroke-width:2px,color:#fff
+      style F fill:#8b5cf6,stroke:#7c3aed,stroke-width:2px,color:#fff
+      style G fill:#8b5cf6,stroke:#7c3aed,stroke-width:2px,color:#fff
+      style H fill:#8b5cf6,stroke:#7c3aed,stroke-width:2px,color:#fff
 
 
 _metadata:

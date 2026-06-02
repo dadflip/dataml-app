@@ -1,6 +1,18 @@
 id: "load_torchvision"
 name: "Load: Torchvision Dataset"
-description: "Charge un dataset canonique d'imagerie (CIFAR, MNIST, ImageNet) via torchvision."
+description: "Charge un dataset canonique d'imagerie (ex: CIFAR10, MNIST, ImageNet) directement via le module torchvision."
+when_to_use: "Pour démarrer rapidement un projet de vision par ordinateur en PyTorch ou évaluer un modèle sur des benchmarks académiques."
+use_cases:
+  - "Recherche et évaluation d'architectures de réseaux de neurones (CNN, Vision Transformers)."
+  - "Transfer learning à partir de poids pré-entraînés sur des ensembles canoniques."
+  - "Création de baselines pour des problèmes de classification d'images."
+pros:
+  - "Téléchargement, extraction et formatage automatiques."
+  - "Parfaitement intégré avec l'écosystème PyTorch (DataLoader, transforms)."
+  - "Accès immédiat à des datasets de référence très connus."
+cons:
+  - "Rigide : conçu pour des datasets très spécifiques et non pour des données personnalisées."
+  - "La transformation vers un DataFrame Pandas (pour compatibilité) peut être lente ou inappropriée si le volume d'images est massif."
 category: "2. Load"
 tags: ["load", "torchvision", "pytorch", "images"]
 code_template: |
@@ -53,20 +65,22 @@ output_variables:
   - task_type
   - meta
 illustration_mermaid: |
-  flowchart TD
-      A([DATASET_NAME]) --> B{Valid Dataset?}
-      B -- Yes --> C[Download/Load torchvision dataset]
-      B -- No --> D[Empty DataFrame]
-      C --> E[Extract classes & num_samples]
-      E --> F[Extract targets]
-      F --> G[Create DataFrame: sample_index, target]
-      G --> H([df, target_name, task_type, meta])
-      D --> H
-
-      style A fill:#3b82f6,color:#fff
-      style C fill:#10b981,color:#fff
-      style G fill:#10b981,color:#fff
-      style H fill:#f59e0b,color:#fff
+  flowchart LR
+      A[/"📄 DATASET_NAME"/] --> B{"getattr(datasets) & Download"}
+      C[/"🎯 targets"/] --> D{"Extract Classes & Targets"}
+      B --> E(["📊 df (DataFrame)"])
+      E --> D
+      D --> F(["🎯 target_name"])
+      D --> G(["⚙️ task_type"])
+      D --> H(["ℹ️ meta (num_samples)"])
+      style A fill:#fbbf24,stroke:#d97706,stroke-width:2px,color:#000
+      style C fill:#fbbf24,stroke:#d97706,stroke-width:2px,color:#000
+      style B fill:#3b82f6,stroke:#2563eb,stroke-width:2px,color:#fff
+      style D fill:#3b82f6,stroke:#2563eb,stroke-width:2px,color:#fff
+      style E fill:#10b981,stroke:#059669,stroke-width:2px,color:#fff
+      style F fill:#8b5cf6,stroke:#7c3aed,stroke-width:2px,color:#fff
+      style G fill:#8b5cf6,stroke:#7c3aed,stroke-width:2px,color:#fff
+      style H fill:#8b5cf6,stroke:#7c3aed,stroke-width:2px,color:#fff
 
 
 _metadata:

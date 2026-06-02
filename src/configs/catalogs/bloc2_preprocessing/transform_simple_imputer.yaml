@@ -1,14 +1,88 @@
 id: "transform_simple_imputer"
 name: "Transform: Simple Imputer"
-description: "Impute les valeurs manquantes via la moyenne/médiane. Ajouté au preprocessor."
+description: "Remplace les valeurs manquantes (NaN) par une statistique simple calculee sur la colonne : la moyenne, la mediane, le mode (valeur la plus frequente) ou une constante. Traite separement les colonnes numeriques et categoriques pour appliquer la strategie la plus adaptee a chaque type."
+math_theory: |
+  Pour une colonne numerique $\textcolor{#3b82f6}{x_j}$ avec $n$ valeurs observees et $m$ valeurs manquantes (\textcolor{#ef4444}{NaN}) :
+  - **Moyenne** : $\hat{x}_{ij} = \textcolor{#10b981}{\bar{x}_j} = \frac{1}{n} \sum_{k=1}^{n} \textcolor{#3b82f6}{x_{kj}}$
+  - **Mediane** : $\hat{x}_{ij} = \textcolor{#fbbf24}{Q_2(x_j)}$ (50e percentile des valeurs observees)
+  - **Mode** : $\hat{x}_{ij} = \arg\max_v \text{count}(\textcolor{#3b82f6}{x_{kj}} = v)$
+  La \textcolor{#fbbf24}{mediane} est preferee a la \textcolor{#10b981}{moyenne} lorsque la distribution est asymetrique ou contient des outliers, car elle est un estimateur plus robuste de la tendance centrale.
+  Pour les variables categoriques, le \textcolor{#8b5cf6}{mode} (most_frequent) est la strategie standard.
+math_illustration_svg: |
+  <svg viewBox="0 0 400 200" xmlns="http://www.w3.org/2000/svg">
+    <!-- Background -->
+    <rect width="400" height="200" fill="#1e293b" rx="8" />
+    
+    <!-- Data Table Column representation -->
+    <g transform="translate(60, 40)">
+      <rect x="0" y="0" width="60" height="120" rx="4" fill="#334155" stroke="#475569" stroke-width="2" />
+      <text x="30" y="-10" fill="#94a3b8" font-family="sans-serif" font-size="12" font-weight="bold" text-anchor="middle">Feature</text>
+      
+      <!-- Values -->
+      <rect x="5" y="5" width="50" height="20" rx="2" fill="#3b82f6" fill-opacity="0.2" />
+      <text x="30" y="19" fill="#3b82f6" font-family="sans-serif" font-size="12" text-anchor="middle">12.4</text>
+      
+      <rect x="5" y="30" width="50" height="20" rx="2" fill="#ef4444" fill-opacity="0.2" stroke="#ef4444" stroke-width="1" stroke-dasharray="2,2" />
+      <text x="30" y="44" fill="#ef4444" font-family="sans-serif" font-size="12" font-weight="bold" text-anchor="middle">NaN</text>
+      
+      <rect x="5" y="55" width="50" height="20" rx="2" fill="#3b82f6" fill-opacity="0.2" />
+      <text x="30" y="69" fill="#3b82f6" font-family="sans-serif" font-size="12" text-anchor="middle">15.1</text>
+      
+      <rect x="5" y="80" width="50" height="20" rx="2" fill="#ef4444" fill-opacity="0.2" stroke="#ef4444" stroke-width="1" stroke-dasharray="2,2" />
+      <text x="30" y="94" fill="#ef4444" font-family="sans-serif" font-size="12" font-weight="bold" text-anchor="middle">NaN</text>
+    </g>
+
+    <!-- Arrow -->
+    <g transform="translate(150, 100)">
+      <path d="M 0 0 L 40 0" stroke="#10b981" stroke-width="2" stroke-dasharray="4,4" fill="none" />
+      <polygon points="40,-5 48,0 40,5" fill="#10b981" />
+      <text x="20" y="-10" fill="#10b981" font-family="sans-serif" font-size="12" font-weight="bold" text-anchor="middle">Impute</text>
+    </g>
+
+    <!-- Imputed Table Column -->
+    <g transform="translate(230, 40)">
+      <rect x="0" y="0" width="60" height="120" rx="4" fill="#334155" stroke="#475569" stroke-width="2" />
+      <text x="30" y="-10" fill="#10b981" font-family="sans-serif" font-size="12" font-weight="bold" text-anchor="middle">Clean</text>
+      
+      <!-- Values -->
+      <rect x="5" y="5" width="50" height="20" rx="2" fill="#3b82f6" fill-opacity="0.2" />
+      <text x="30" y="19" fill="#3b82f6" font-family="sans-serif" font-size="12" text-anchor="middle">12.4</text>
+      
+      <!-- Imputed Value -->
+      <rect x="5" y="30" width="50" height="20" rx="2" fill="#10b981" fill-opacity="0.2" stroke="#10b981" stroke-width="1" />
+      <text x="30" y="44" fill="#10b981" font-family="sans-serif" font-size="12" font-weight="bold" text-anchor="middle">13.8</text>
+      
+      <rect x="5" y="55" width="50" height="20" rx="2" fill="#3b82f6" fill-opacity="0.2" />
+      <text x="30" y="69" fill="#3b82f6" font-family="sans-serif" font-size="12" text-anchor="middle">15.1</text>
+      
+      <!-- Imputed Value -->
+      <rect x="5" y="80" width="50" height="20" rx="2" fill="#10b981" fill-opacity="0.2" stroke="#10b981" stroke-width="1" />
+      <text x="30" y="94" fill="#10b981" font-family="sans-serif" font-size="12" font-weight="bold" text-anchor="middle">13.8</text>
+    </g>
+    
+    <!-- Legend -->
+    <g transform="translate(320, 80)">
+      <text x="0" y="0" fill="#10b981" font-family="sans-serif" font-size="12" font-weight="bold">Mean</text>
+      <text x="0" y="20" fill="#fbbf24" font-family="sans-serif" font-size="12" font-weight="bold">Median</text>
+      <text x="0" y="40" fill="#8b5cf6" font-family="sans-serif" font-size="12" font-weight="bold">Mode</text>
+    </g>
+  </svg>
 category: "4.1 Preprocessing"
 tags: ["transform", "imputation", "tabular", "sklearn", "pipeline"]
 applies_to: ["Tabulaire"]
-when_to_use: "Dès que des valeurs numériques ou catégorielles manquent."
+when_to_use: "A utiliser des que votre jeu de donnees contient des valeurs manquantes (NaN) dans des colonnes numeriques ou categoriques, en premiere approche rapide et simple."
+use_cases:
+  - "Nettoyage rapide d'un dataset CSV avec quelques valeurs manquantes avant entrainement."
+  - "Imputation de donnees de sondages ou certaines reponses sont vides."
+  - "Preprocessing de donnees tabulaires en production ou la simplicite et la reproductibilite sont primordiales."
 pros:
-  - "Très exportable et robuste en production."
+  - "Tres rapide, simple a comprendre et a deployer en production."
+  - "Parfaitement integre dans le pipeline sklearn (fit/transform)."
+  - "Gere automatiquement les colonnes numeriques et categoriques separement."
 cons:
-  - "Peut biaiser la distribution."
+  - "Peut biaiser la distribution en reduisant la variance (imputation par la moyenne)."
+  - "Ne tient pas compte des correlations entre variables (approche univariee)."
+  - "Inadapte si le mecanisme de donnees manquantes n'est pas aleatoire (MNAR)."
 hyperparameters:
   strategy_num: "mean, median"
   strategy_cat: "most_frequent, constant"
@@ -61,16 +135,21 @@ code_template: |
   if 'task_type' not in locals(): task_type = "classification"
   if 'meta' not in locals(): meta = {}
 illustration_mermaid: |
-  graph TD
-    A[Raw Data] --> B{Are there columns?}
-    B -- Yes --> C[Initialize Numerical & Categorical Imputers]
-    C --> D[Create ColumnTransformer]
-    D --> E[Add to Pipeline Steps]
-    B -- No --> F[Skip SimpleImputer]
-    E --> G[Update Data Contract Variables]
-    F --> G
-    style A fill:#eff6ff,stroke:#3b82f6,stroke-width:2px
-    style G fill:#10b981,stroke:#059669,stroke-width:2px
+  flowchart LR
+    A(["📊 df (avec NaN)"]) --> B[/"📄 STRATEGY_NUM"/]
+    B --> C{"⚙️ Separer Num / Cat"}
+    C --> D{"⚙️ SimpleImputer Num (mediane)"}
+    C --> E{"⚙️ SimpleImputer Cat (mode)"}
+    D --> F(["📊 df (sans NaN)"])
+    E --> F
+    F --> G(["ℹ️ pipeline_steps"])
+    style A fill:#10b981,stroke:#059669,stroke-width:2px,color:#fff
+    style B fill:#fbbf24,stroke:#d97706,stroke-width:2px,color:#000
+    style C fill:#3b82f6,stroke:#2563eb,stroke-width:2px,color:#fff
+    style D fill:#3b82f6,stroke:#2563eb,stroke-width:2px,color:#fff
+    style E fill:#3b82f6,stroke:#2563eb,stroke-width:2px,color:#fff
+    style F fill:#10b981,stroke:#059669,stroke-width:2px,color:#fff
+    style G fill:#8b5cf6,stroke:#7c3aed,stroke-width:2px,color:#fff
 
 _metadata:
   bloc: 2

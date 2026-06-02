@@ -1,6 +1,16 @@
 id: extract_gdrive
 name: 'Extract: Google Drive'
 description: Télécharge un fichier public depuis Google Drive.
+when_to_use: Parfait pour récupérer rapidement des données partagées publiquement par la communauté ou des collaborateurs via des liens Google Drive.
+use_cases:
+  - Récupération de datasets open-source partagés via Drive.
+  - Téléchargement de poids de modèles de machine learning ou de jeux de données massifs.
+pros:
+  - Outil `gdown` très robuste pour le téléchargement de gros fichiers depuis Drive.
+  - Extrêmement simple pour le partage de données ponctuelles.
+cons:
+  - Limité aux fichiers accessibles publiquement avec un lien.
+  - Google Drive impose parfois des limites de téléchargement quotidien (quotas).
 category: 1. Extract
 tags:
 - extract
@@ -44,13 +54,22 @@ code_template: |
   task_type = "unknown"
   meta = {"source": "gdrive", "path": DEST_PATH}
 illustration_mermaid: |
-    flowchart TD
-    A([FILE_PATH]) --> B[Load EXTRACT_GDRIVE]
-    B --> df([df])
-    
-    style A fill:#3b82f6,color:#fff
-    style B fill:#10b981,color:#fff
-    style df fill:#f59e0b,color:#fff
+    flowchart LR
+        A[/"📄 Drive FILE_ID"/] --> B{"Extract GDrive()"}
+        C[/"🎯 TARGET_COL"/] --> D{"Check TARGET_COL"}
+        B --> E(["📊 df (Local File/DataFrame)"])
+        E --> D
+        D --> F(["🎯 target_name"])
+        D --> G(["⚙️ task_type"])
+        D --> H(["ℹ️ meta (...)"])
+        style A fill:#fbbf24,stroke:#d97706,stroke-width:2px,color:#000
+        style C fill:#fbbf24,stroke:#d97706,stroke-width:2px,color:#000
+        style B fill:#3b82f6,stroke:#2563eb,stroke-width:2px,color:#fff
+        style D fill:#3b82f6,stroke:#2563eb,stroke-width:2px,color:#fff
+        style E fill:#10b981,stroke:#059669,stroke-width:2px,color:#fff
+        style F fill:#8b5cf6,stroke:#7c3aed,stroke-width:2px,color:#fff
+        style G fill:#8b5cf6,stroke:#7c3aed,stroke-width:2px,color:#fff
+        style H fill:#8b5cf6,stroke:#7c3aed,stroke-width:2px,color:#fff
 
 
 

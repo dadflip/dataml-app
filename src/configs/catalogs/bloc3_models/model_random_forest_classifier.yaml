@@ -1,15 +1,24 @@
 id: "model_random_forest_classifier"
 name: "Model: Random Forest Classifier"
-description: "Forêt Aléatoire : ensemble d'arbres de décision moyennant leurs prédictions (Bagging)."
+description: |
+  Modèle d'ensemble fondé sur la technique des forêts aléatoires (Random Forest). Il agrège (bagging) un grand nombre d'arbres de décision construits sur des sous-échantillons de données et de variables pour stabiliser et améliorer la classification.
 category: "Modèles Basés sur les Arbres"
 tags: ["model", "classification", "tabular", "sklearn", "ensemble"]
 applies_to: ["Tabulaire"]
-when_to_use: "Presque toujours le meilleur modèle de base à tester en tabular ML."
+when_to_use: |
+  Constitue presque toujours le meilleur point de départ (baseline) incontournable lors de l'exploration initiale de tout problème de classification tabulaire, avant d'envisager des modèles plus complexes (comme les modèles de boosting ou réseaux de neurones).
+use_cases:
+  - "Prédiction de churn (attrition) client sur des bases de données hétérogènes."
+  - "Classification de défauts industriels tolérante aux valeurs aberrantes (outliers)."
+  - "Filtrage initial de variables d'importance (Feature Selection) pour des modèles en aval."
 pros:
-  - "Très robuste à l'overfitting par rapport à un arbre seul."
-  - "Généralement d'excellentes performances par défaut."
+  - "Très grande robustesse au surapprentissage par rapport à un arbre de décision isolé."
+  - "D'excellentes performances par défaut sans nécessiter un réglage fin et laborieux des hyperparamètres."
+  - "Tolérance native aux données non linéaires, sans exiger de mise à l'échelle (scaling)."
 cons:
-  - "Lourd en mémoire (stocke plusieurs arbres profonds)."
+  - "Consommation mémoire importante et temps d'inférence parfois élevé pour de très grandes forêts."
+  - "Difficile à interpréter de bout en bout en raison du très grand nombre d'arbres constitutifs."
+  - "Moins performant que le Gradient Boosting sur certains jeux de données complexes et asymétriques."
 hyperparameters:
   n_estimators: "Nombre d'arbres dans la forêt (ex: 100)."
   max_depth: "Profondeur maximale."
@@ -64,23 +73,118 @@ code_template: |
 
   training_history = []
 illustration_mermaid: |
-  graph TD
-    subgraph Ensemble Approach
-      Input([Features]) --> Preprocessor[[Data Preprocessing]]
-      Preprocessor --> Tree1[Decision Tree 1]
-      Preprocessor --> Tree2[Decision Tree 2]
-      Preprocessor --> TreeN[Decision Tree N]
-    end
-    subgraph Aggregation
-      Tree1 --> Vote{Majority Vote}
-      Tree2 --> Vote
-      TreeN --> Vote
-    end
-    subgraph Output
-      Vote --> Pred([Predictions])
-    end
-    style Input fill:#f8fafc,stroke:#94a3b8,stroke-width:1px
-    style Pred fill:#f8fafc,stroke:#94a3b8,stroke-width:1px
+  flowchart LR
+    In[/ "Features" /]
+    style In fill:#fbbf24,stroke:#d97706,stroke-width:2px,color:#000
+    Pre{"Prétraitement"}
+    style Pre fill:#3b82f6,stroke:#2563eb,stroke-width:2px,color:#fff
+    Boot(["Échantillons Bootstrap"])
+    style Boot fill:#10b981,stroke:#059669,stroke-width:2px,color:#fff
+    Trees{"Arbres de Décision"}
+    style Trees fill:#3b82f6,stroke:#2563eb,stroke-width:2px,color:#fff
+    Vote{"Vote Majoritaire"}
+    style Vote fill:#3b82f6,stroke:#2563eb,stroke-width:2px,color:#fff
+    Pred(["Prédictions Finales"])
+    style Pred fill:#10b981,stroke:#059669,stroke-width:2px,color:#fff
+
+    In --> Pre --> Boot --> Trees --> Vote --> Pred
+
+math_theory: |
+  Random Forest is a bagging (Bootstrap Aggregation) ensemble algorithm that constructs an extensive collection of deep decision trees independently. 
+  
+  For each tree $\textcolor{#fbbf24}{h_b}$, a bootstrap sample of the data is drawn, and at each split, a random subset of features is evaluated. This decorrelates the trees and significantly reduces the variance.
+  
+  The final prediction for a given input $\textcolor{#ef4444}{x}$ is determined by a majority vote across all $\textcolor{#8b5cf6}{B}$ trees in the forest:
+  $$ \textcolor{#3b82f6}{\hat{y}} = \text{mode} \left\{ \textcolor{#fbbf24}{h_1}(\textcolor{#ef4444}{x}), \textcolor{#fbbf24}{h_2}(\textcolor{#ef4444}{x}), \dots, \textcolor{#fbbf24}{h_B}(\textcolor{#ef4444}{x}) \right\} $$
+  
+  Alternatively, for probabilistic predictions, the forest averages the class probabilities predicted by each individual tree:
+  $$ P(y=c|\textcolor{#ef4444}{x}) = \frac{1}{\textcolor{#8b5cf6}{B}} \sum_{b=1}^{\textcolor{#8b5cf6}{B}} \textcolor{#10b981}{P_b}(y=c|\textcolor{#ef4444}{x}) $$
+  
+  Where:
+  - $\textcolor{#3b82f6}{\hat{y}}$ is the final predicted class.
+  - $\textcolor{#8b5cf6}{B}$ is the number of trees (`n_estimators`).
+  - $\textcolor{#fbbf24}{h_b}(\textcolor{#ef4444}{x})$ is the prediction of the $b$-th decision tree.
+  - $\textcolor{#10b981}{P_b}$ is the probability distribution estimated by tree $b$.
+
+math_illustration_svg: |
+  <svg viewBox="0 0 800 400" xmlns="http://www.w3.org/2000/svg">
+    <!-- Background -->
+    <rect width="100%" height="100%" fill="#1e1e1e" rx="10" />
+    
+    <!-- Input Features x -->
+    <rect x="40" y="160" width="80" height="80" fill="#ef4444" rx="8" opacity="0.8" />
+    <text x="80" y="205" fill="white" font-family="sans-serif" font-size="24" text-anchor="middle" font-weight="bold">x</text>
+    <text x="80" y="260" fill="#ef4444" font-family="sans-serif" font-size="14" text-anchor="middle">Input Data</text>
+    
+    <!-- Bootstrap Samples -->
+    <rect x="180" y="60" width="80" height="50" fill="#10b981" rx="5" />
+    <text x="220" y="90" fill="white" font-family="sans-serif" font-size="14" text-anchor="middle">Sample 1</text>
+    
+    <rect x="180" y="160" width="80" height="50" fill="#10b981" rx="5" />
+    <text x="220" y="190" fill="white" font-family="sans-serif" font-size="14" text-anchor="middle">Sample b</text>
+    
+    <text x="220" y="250" fill="white" font-family="sans-serif" font-size="20" text-anchor="middle">⋮</text>
+    
+    <rect x="180" y="280" width="80" height="50" fill="#10b981" rx="5" />
+    <text x="220" y="310" fill="white" font-family="sans-serif" font-size="14" text-anchor="middle">Sample B</text>
+    
+    <!-- Arrows to Bootstraps -->
+    <path d="M 120 200 L 170 85" stroke="#ef4444" stroke-width="2" marker-end="url(#arrow)" fill="none"/>
+    <path d="M 120 200 L 170 185" stroke="#ef4444" stroke-width="2" marker-end="url(#arrow)" fill="none"/>
+    <path d="M 120 200 L 170 305" stroke="#ef4444" stroke-width="2" marker-end="url(#arrow)" fill="none"/>
+    
+    <!-- Trees -->
+    <rect x="320" y="50" width="100" height="70" fill="#fbbf24" rx="5" />
+    <text x="370" y="90" fill="#000" font-family="sans-serif" font-size="16" text-anchor="middle" font-weight="bold">Tree 1</text>
+    <path d="M 370 100 L 350 115 M 370 100 L 390 115" stroke="#1e1e1e" stroke-width="2" fill="none"/>
+    
+    <rect x="320" y="150" width="100" height="70" fill="#fbbf24" rx="5" />
+    <text x="370" y="190" fill="#000" font-family="sans-serif" font-size="16" text-anchor="middle" font-weight="bold">Tree b</text>
+    <path d="M 370 200 L 350 215 M 370 200 L 390 215" stroke="#1e1e1e" stroke-width="2" fill="none"/>
+    
+    <text x="370" y="255" fill="white" font-family="sans-serif" font-size="20" text-anchor="middle">⋮</text>
+    
+    <rect x="320" y="270" width="100" height="70" fill="#fbbf24" rx="5" />
+    <text x="370" y="310" fill="#000" font-family="sans-serif" font-size="16" text-anchor="middle" font-weight="bold">Tree B</text>
+    <path d="M 370 320 L 350 335 M 370 320 L 390 335" stroke="#1e1e1e" stroke-width="2" fill="none"/>
+    
+    <!-- Arrows to Trees -->
+    <path d="M 260 85 L 310 85" stroke="#10b981" stroke-width="2" marker-end="url(#arrow)" fill="none"/>
+    <path d="M 260 185 L 310 185" stroke="#10b981" stroke-width="2" marker-end="url(#arrow)" fill="none"/>
+    <path d="M 260 305 L 310 305" stroke="#10b981" stroke-width="2" marker-end="url(#arrow)" fill="none"/>
+    
+    <!-- Ensemble / Aggregation -->
+    <rect x="520" y="140" width="100" height="120" fill="#8b5cf6" rx="8" />
+    <text x="570" y="180" fill="white" font-family="sans-serif" font-size="16" text-anchor="middle" font-weight="bold">Majority</text>
+    <text x="570" y="200" fill="white" font-family="sans-serif" font-size="16" text-anchor="middle" font-weight="bold">Vote</text>
+    <text x="570" y="225" fill="white" font-family="sans-serif" font-size="14" text-anchor="middle">(Mode)</text>
+    
+    <!-- Arrows to Aggregation -->
+    <path d="M 420 85 L 510 160" stroke="#fbbf24" stroke-width="2" marker-end="url(#arrow)" fill="none"/>
+    <path d="M 420 185 L 510 190" stroke="#fbbf24" stroke-width="2" marker-end="url(#arrow)" fill="none"/>
+    <path d="M 420 305 L 510 230" stroke="#fbbf24" stroke-width="2" marker-end="url(#arrow)" fill="none"/>
+    
+    <!-- Final Output -->
+    <rect x="680" y="175" width="80" height="50" fill="#3b82f6" rx="5" />
+    <text x="720" y="205" fill="white" font-family="sans-serif" font-size="18" text-anchor="middle">ŷ</text>
+    <text x="720" y="245" fill="#3b82f6" font-family="sans-serif" font-size="14" text-anchor="middle">Prediction</text>
+    
+    <path d="M 620 200 L 670 200" stroke="white" stroke-width="2" marker-end="url(#arrow)" fill="none"/>
+    
+    <!-- B indicator -->
+    <path d="M 370 360 L 370 380 L 570 380 L 570 270" stroke="#8b5cf6" stroke-width="2" fill="none" stroke-dasharray="5,5" marker-end="url(#arrow-purple)"/>
+    <text x="470" y="375" fill="#8b5cf6" font-family="sans-serif" font-size="14" text-anchor="middle">Independent Parallel Trees</text>
+    
+    <!-- Defs -->
+    <defs>
+      <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto">
+        <path d="M 0 0 L 10 5 L 0 10 z" fill="white" />
+      </marker>
+      <marker id="arrow-purple" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto">
+        <path d="M 0 0 L 10 5 L 0 10 z" fill="#8b5cf6" />
+      </marker>
+    </defs>
+  </svg>
 
 _metadata:
   bloc: 3

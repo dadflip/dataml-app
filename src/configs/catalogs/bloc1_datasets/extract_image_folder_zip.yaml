@@ -1,7 +1,16 @@
 id: extract_image_folder_zip
 name: 'Extract: Image Folder (from ZIP URL)'
-description: Télécharge une archive ZIP contenant un dossier d'images structuré, puis
-  l'extrait sur le disque.
+description: "Télécharge une archive ZIP contenant un dossier d'images structuré (souvent par classes), puis l'extrait sur le disque local."
+when_to_use: "Lorsque le dataset est un ensemble d'images brutes regroupées dans une archive compressée et exposée via une URL."
+use_cases:
+  - "Projets de classification d'images où chaque dossier correspond à une classe cible."
+  - "Récupération d'assets visuels hébergés de manière statique sur le web."
+pros:
+  - "Combine téléchargement et extraction en une seule étape propre."
+  - "Nettoie automatiquement le fichier ZIP temporaire après extraction."
+cons:
+  - "Nécessite beaucoup d'espace disque (pour le ZIP et les données décompressées)."
+  - "Peut être lent et gourmand en mémoire pour de très grandes archives."
 category: 1. Extract
 tags:
 - extract
@@ -47,13 +56,22 @@ code_template: |
       print(f"[ERREUR EXTRACT] Échec de l'extraction ZIP : {str(e)}")
       raise e
 illustration_mermaid: |
-    flowchart TD
-    A([FILE_PATH]) --> B[Load EXTRACT_IMAGE_FOLDER_ZIP]
-    B --> df([df])
-    
-    style A fill:#3b82f6,color:#fff
-    style B fill:#10b981,color:#fff
-    style df fill:#f59e0b,color:#fff
+    flowchart LR
+        A[/"📄 ZIP HTTP URL"/] --> B{"Download & Extract()"}
+        C[/"🎯 TARGET_COL"/] --> D{"Check TARGET_COL"}
+        B --> E(["📊 Folder Path"])
+        E --> D
+        D --> F(["🎯 target_name"])
+        D --> G(["⚙️ task_type"])
+        D --> H(["ℹ️ meta (source, url)"])
+        style A fill:#fbbf24,stroke:#d97706,stroke-width:2px,color:#000
+        style C fill:#fbbf24,stroke:#d97706,stroke-width:2px,color:#000
+        style B fill:#3b82f6,stroke:#2563eb,stroke-width:2px,color:#fff
+        style D fill:#3b82f6,stroke:#2563eb,stroke-width:2px,color:#fff
+        style E fill:#10b981,stroke:#059669,stroke-width:2px,color:#fff
+        style F fill:#8b5cf6,stroke:#7c3aed,stroke-width:2px,color:#fff
+        style G fill:#8b5cf6,stroke:#7c3aed,stroke-width:2px,color:#fff
+        style H fill:#8b5cf6,stroke:#7c3aed,stroke-width:2px,color:#fff
 
 
 

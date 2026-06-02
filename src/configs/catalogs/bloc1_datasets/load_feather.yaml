@@ -1,6 +1,20 @@
 id: load_feather
 name: 'Load: Fichier Feather'
-description: Charge un dataset au format binaire Apache Arrow Feather (haute vitesse).
+description: |
+  Charge en mémoire des ensembles de données tabulaires au format binaire Feather, basé sur la spécification Apache Arrow. Conçu pour des performances de lecture et d'écriture maximales, ce bloc permet d'importer instantanément (souvent en une fraction de seconde) des millions de lignes, tout en préservant fidèlement les types de données (y compris les catégories et les dates). C'est la méthode de choix pour contourner les limitations de vitesse et de typage associées aux fichiers CSV traditionnels.
+when_to_use: 'Optez pour ce bloc lorsque vous devez charger fréquemment de gros DataFrames Pandas lors de phases de développement itératives, ou comme format de sérialisation intermédiaire hautement performant entre plusieurs étapes de votre pipeline MLOps.'
+use_cases:
+  - 'Reprise rapide d''un pipeline de Machine Learning à partir de caractéristiques (features) préalablement calculées et stockées sur disque.'
+  - 'Échange de gros volumes de données entre des processus Python et R, car le format Feather est agnostique et optimisé pour ces langages.'
+  - 'Mise en cache (caching) de données propres pour accélérer drastiquement le démarrage des scripts d''entraînement itératifs.'
+pros:
+  - 'Performances d''Entrée/Sortie (I/O) exceptionnelles : de loin l''une des méthodes les plus rapides pour lire des données tabulaires en Pandas, grâce à son architecture orientée colonne (columnar memory format).'
+  - 'Garantie d''un typage strict : contrairement au CSV, vous ne perdrez jamais les types de données spécifiques de Pandas (comme datetime, boolean ou categorical) après rechargement.'
+  - 'Aucun parsing coûteux ni inférence de type, car la disposition des données sur le disque correspond exactement à leur disposition en mémoire (zéro copie).'
+cons:
+  - 'Format principalement pensé pour le stockage éphémère ou intermédiaire, et moins adapté pour l''archivage à très long terme comparé à Parquet.'
+  - 'Nécessite impérativement l''installation de la librairie externe pyarrow.'
+  - 'Pas de support natif pour des filtres de type "pushdown" (charger seulement certaines lignes conditionnelles) aussi avancés que ceux disponibles avec le format Parquet.'
 category: 2. Load
 tags:
 - load
@@ -41,23 +55,22 @@ code_template: |
   task_type = "unknown"
   meta = {"format": "feather", "shape": df.shape}
 illustration_mermaid: |
-    flowchart LR
-        A[/"📄 File Path (.feather)"/] --> B{"pd.read_feather()"}
-        B --> C(["📊 df"])
-        D[/"🎯 TARGET_COL"/] --> E{"Check TARGET_COL"}
-        C --> E
-        E --> F(["🎯 target_name"])
-        E --> G(["⚙️ task_type = 'unknown'"])
-        E --> H(["ℹ️ meta (format, shape)"])
-
-        style A fill:#fbbf24,stroke:#d97706,stroke-width:2px
-        style D fill:#fbbf24,stroke:#d97706,stroke-width:2px
-        style B fill:#3b82f6,stroke:#2563eb,stroke-width:2px,color:#fff
-        style E fill:#3b82f6,stroke:#2563eb,stroke-width:2px,color:#fff
-        style C fill:#10b981,stroke:#059669,stroke-width:2px,color:#fff
-        style F fill:#8b5cf6,stroke:#7c3aed,stroke-width:2px,color:#fff
-        style G fill:#8b5cf6,stroke:#7c3aed,stroke-width:2px,color:#fff
-        style H fill:#8b5cf6,stroke:#7c3aed,stroke-width:2px,color:#fff
+  flowchart LR
+      A[/"📄 FILE_PATH (.feather)"/] --> B{"pd.read_feather()"}
+      C[/"🎯 TARGET_COL"/] --> D{"Check TARGET_COL"}
+      B --> E(["📊 df (DataFrame)"])
+      E --> D
+      D --> F(["🎯 target_name"])
+      D --> G(["⚙️ task_type = 'unknown'"])
+      D --> H(["ℹ️ meta (format, shape)"])
+      style A fill:#fbbf24,stroke:#d97706,stroke-width:2px,color:#000
+      style C fill:#fbbf24,stroke:#d97706,stroke-width:2px,color:#000
+      style B fill:#3b82f6,stroke:#2563eb,stroke-width:2px,color:#fff
+      style D fill:#3b82f6,stroke:#2563eb,stroke-width:2px,color:#fff
+      style E fill:#10b981,stroke:#059669,stroke-width:2px,color:#fff
+      style F fill:#8b5cf6,stroke:#7c3aed,stroke-width:2px,color:#fff
+      style G fill:#8b5cf6,stroke:#7c3aed,stroke-width:2px,color:#fff
+      style H fill:#8b5cf6,stroke:#7c3aed,stroke-width:2px,color:#fff
 
 _metadata:
   bloc: 1

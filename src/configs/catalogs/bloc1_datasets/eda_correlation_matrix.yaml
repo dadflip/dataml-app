@@ -1,6 +1,16 @@
 id: eda_correlation_matrix
 name: 'EDA: Matrice de Corrélation'
-description: Affiche une heatmap des corrélations de Pearson.
+description: "Affiche une heatmap représentant la matrice des corrélations de Pearson pour les variables numériques."
+when_to_use: "Pour vérifier les corrélations linéaires entre les caractéristiques numériques d'un jeu de données."
+use_cases:
+  - "Détection de la colinéarité entre les variables indépendantes."
+  - "Identification des variables les plus corrélées à une cible numérique."
+pros:
+  - "Vue d'ensemble rapide des relations linéaires."
+  - "Esthétique et claire grâce à l'utilisation d'une heatmap masquée."
+cons:
+  - "Ne capte que les relations linéaires, pas les non-linéaires."
+  - "Peut être difficile à lire si le nombre de variables est très élevé."
 category: 3. Exploratory Data Analysis
 tags:
 - eda
@@ -30,18 +40,26 @@ code_template: |
       plt.show()
 illustration_mermaid: |
     graph TD
-      A([DataFrame df]) --> B[Select numerical columns]
-      B --> C{Num cols < 2?}
-      C -- Yes --> D[/Print Error/]
-      C -- No --> E[Compute Pearson Correlation]
-      E --> F([Correlation Matrix])
-      F --> G[Generate Upper Triangle Mask]
-      G --> H{{Plot sns.heatmap with mask}}
-      H --> I([Display Correlation Matrix])
-      style A fill:#4F46E5,color:#fff
-      style C fill:#F59E0B,color:#fff
-      style E fill:#06B6D4,color:#fff
-      style H fill:#10B981,color:#fff
+      A[/DataFrame df/] --> B{Select numerical columns}
+      P[/CMAP/] --> H
+      B --> D{Num cols < 2?}
+      D -- Yes --> E([Print Error])
+      D -- No --> F{Compute Pearson Correlation}
+      F --> G([Correlation Matrix])
+      G --> M{Generate Upper Triangle Mask}
+      M --> H{Plot sns.heatmap}
+      H --> I([Display Plot])
+
+      style A fill:#fbbf24,stroke:#d97706,stroke-width:2px,color:#000
+      style P fill:#fbbf24,stroke:#d97706,stroke-width:2px,color:#000
+      style B fill:#3b82f6,stroke:#2563eb,stroke-width:2px,color:#fff
+      style D fill:#3b82f6,stroke:#2563eb,stroke-width:2px,color:#fff
+      style E fill:#8b5cf6,stroke:#7c3aed,stroke-width:2px,color:#fff
+      style F fill:#3b82f6,stroke:#2563eb,stroke-width:2px,color:#fff
+      style G fill:#10b981,stroke:#059669,stroke-width:2px,color:#fff
+      style M fill:#3b82f6,stroke:#2563eb,stroke-width:2px,color:#fff
+      style H fill:#3b82f6,stroke:#2563eb,stroke-width:2px,color:#fff
+      style I fill:#10b981,stroke:#059669,stroke-width:2px,color:#fff
 
 _metadata:
   bloc: 1

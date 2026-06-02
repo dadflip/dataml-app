@@ -2,6 +2,7 @@ import { useMemo, useState } from "react";
 import type { CatalogBlock, ParsedCatalog, PipelineTemplate } from "@/lib/pipeline";
 import { Badge } from "@/components/ui/badge";
 import { CodeBlock } from "@/components/ui/CodeBlock";
+import { MermaidRenderer } from "@/components/MermaidRenderer";
 import { Button } from "@/components/ui/button";
 import {
   ChevronLeft,
@@ -17,7 +18,11 @@ import {
   Workflow,
 } from "lucide-react";
 import { Input } from "@/components/ui/input";
-
+import ReactMarkdown from "react-markdown";
+import remarkMath from "remark-math";
+import rehypeKatex from "rehype-katex";
+import { autoWrapMathColors } from "../lib/utils";
+import "katex/dist/katex.min.css";
 const BLOC_ICONS: Record<number, React.ComponentType<{ className?: string }>> = {
   [-1]: Package, // Custom
   0: Workflow, // Pipelines
@@ -412,12 +417,55 @@ function BlockDetail({
       </header>
 
       {block.illustration_svg && (
-        <div className="overflow-hidden rounded-2xl border border-border bg-card/30" dangerouslySetInnerHTML={{ __html: block.illustration_svg }} />
+        <div 
+          className="overflow-hidden rounded-2xl border border-border bg-card/30 flex justify-center p-4 [&>svg]:max-h-32 [&>svg]:w-auto" 
+          dangerouslySetInnerHTML={{ __html: block.illustration_svg }} 
+        />
+      )}
+
+      {block.illustration_mermaid && (
+        <MermaidRenderer chart={block.illustration_mermaid} />
       )}
 
       {block.when_to_use && (
         <Section title="Quand l'utiliser">
           <p className="text-sm leading-relaxed">{block.when_to_use}</p>
+        </Section>
+      )}
+
+      {block.math_theory && (
+        <Section title="Théorie & Mathématiques">
+          <div className="rounded-xl border border-border bg-card/40 overflow-hidden">
+            <div className="px-4 py-2 border-b border-border/60" style={{ background: "linear-gradient(135deg, oklch(0.18 0.02 280) 0%, oklch(0.14 0.015 260) 100%)" }}>
+              <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground/70">📐 Fondements mathématiques</span>
+            </div>
+            <div className="p-4 prose prose-sm prose-slate max-w-none dark:prose-invert [&_mjx-container]:!inline [&_.katex]:text-foreground [&_code]:text-xs [&_code]:bg-muted/60 [&_code]:px-1.5 [&_code]:py-0.5 [&_code]:rounded">
+              <ReactMarkdown
+                remarkPlugins={[remarkMath]}
+                rehypePlugins={[rehypeKatex]}
+                components={{
+                  code({ className, children, ...props }) {
+                    const match = /language-mermaid/.exec(className || '');
+                    if (match) {
+                      return <MermaidRenderer chart={String(children).replace(/\n$/, '')} />;
+                    }
+                    return <code className={className} {...props}>{children}</code>;
+                  },
+                  pre({ children }) {
+                    return <>{children}</>;
+                  }
+                }}
+              >
+                {autoWrapMathColors(block.math_theory)}
+              </ReactMarkdown>
+            </div>
+            {block.math_illustration_svg && (
+              <div 
+                className="border-t border-border/60 bg-muted/20 p-4 flex justify-center [&>svg]:max-w-full [&>svg]:max-h-48 [&>svg]:h-auto [&>svg]:w-auto"
+                dangerouslySetInnerHTML={{ __html: block.math_illustration_svg }} 
+              />
+            )}
+          </div>
         </Section>
       )}
 

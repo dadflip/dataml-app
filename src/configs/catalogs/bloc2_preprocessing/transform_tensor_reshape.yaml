@@ -1,16 +1,64 @@
 id: "transform_tensor_reshape"
 name: "Transform: Reshape to 3D Tensor (RNN/LSTM)"
-description: "Redimensionne un DataFrame 2D (N_samples, N_features) en 3D (N_samples, Time_steps, Features) pour les réseaux récurrents."
+description: "Redimensionne un DataFrame 2D de forme (N_samples, N_features) en un tenseur 3D de forme (N_samples, Time_steps, Features) requis par les reseaux recurrents (RNN, LSTM, GRU). Cette etape est indispensable car ces architectures attendent des sequences temporelles en entree."
+math_theory: |
+  Un reseau recurrent (RNN/LSTM/GRU) attend un tenseur d'entree de forme :
+  $$ \textcolor{#3b82f6}{X} \in \mathbb{R}^{\textcolor{#10b981}{N} \times \textcolor{#fbbf24}{T} \times \textcolor{#ef4444}{F}} $$
+  ou $\textcolor{#10b981}{N}$ est le nombre d'echantillons, $\textcolor{#fbbf24}{T}$ le nombre de pas de temps (time steps), et $\textcolor{#ef4444}{F}$ le nombre de features par pas de temps.
+  La contrainte de reshape est : $\textcolor{#fbbf24}{T} \times \textcolor{#ef4444}{F} = \textcolor{#8b5cf6}{D}$ ou $\textcolor{#8b5cf6}{D}$ est le nombre total de colonnes du DataFrame original.
+  Par exemple, un DataFrame de forme $(1000, 20)$ peut etre reshape en $(1000, 5, 4)$ (5 pas de temps, 4 features chacun) ou $(1000, 20, 1)$ (20 pas de temps, 1 feature).
+  Le LSTM traite ensuite chaque sequence via ses portes (forget, input, output) avec des poids partages dans le temps.
+math_illustration_svg: |
+  <svg viewBox="0 0 400 200" xmlns="http://www.w3.org/2000/svg">
+    <rect width="100%" height="100%" fill="transparent" />
+    <!-- 2D Table (N x D) -->
+    <rect x="30" y="60" width="80" height="80" fill="#1e293b" stroke="#8b5cf6" stroke-width="2" />
+    <line x1="30" y1="80" x2="110" y2="80" stroke="#8b5cf6" stroke-width="1" />
+    <line x1="30" y1="100" x2="110" y2="100" stroke="#8b5cf6" stroke-width="1" />
+    <line x1="30" y1="120" x2="110" y2="120" stroke="#8b5cf6" stroke-width="1" />
+    <line x1="70" y1="60" x2="70" y2="140" stroke="#8b5cf6" stroke-width="1" stroke-dasharray="2,2" />
+    <text x="70" y="160" fill="#10b981" font-family="monospace" font-size="12" text-anchor="middle">N samples</text>
+    <text x="70" y="50" fill="#8b5cf6" font-family="monospace" font-size="12" text-anchor="middle">D features</text>
+    <!-- Reshape Arrow -->
+    <path d="M 130 100 L 190 100" stroke="#64748b" stroke-width="2" marker-end="url(#arrow_reshape)" />
+    <text x="160" y="90" fill="#64748b" font-family="monospace" font-size="12" text-anchor="middle">Reshape</text>
+    <!-- 3D Tensor (N x T x F) -->
+    <rect x="250" y="50" width="50" height="70" fill="#1e293b" stroke="#3b82f6" stroke-width="1" />
+    <rect x="240" y="60" width="50" height="70" fill="#1e293b" stroke="#3b82f6" stroke-width="1" />
+    <rect x="230" y="70" width="50" height="70" fill="#1e293b" stroke="#ef4444" stroke-width="2" />
+    <line x1="230" y1="90" x2="280" y2="90" stroke="#ef4444" stroke-width="1" />
+    <line x1="230" y1="110" x2="280" y2="110" stroke="#ef4444" stroke-width="1" />
+    <text x="215" y="105" fill="#10b981" font-family="monospace" font-size="12" transform="rotate(-90 215,105)">N</text>
+    <text x="255" y="155" fill="#ef4444" font-family="monospace" font-size="12" text-anchor="middle">F</text>
+    <line x1="285" y1="140" x2="305" y2="120" stroke="#fbbf24" stroke-width="2" marker-end="url(#arrow_reshape_yellow)" />
+    <text x="315" y="125" fill="#fbbf24" font-family="monospace" font-size="12">T steps</text>
+    <defs>
+      <marker id="arrow_reshape" viewBox="0 0 10 10" refX="5" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+        <path d="M 0 0 L 10 5 L 0 10 z" fill="#64748b" />
+      </marker>
+      <marker id="arrow_reshape_yellow" viewBox="0 0 10 10" refX="5" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+        <path d="M 0 0 L 10 5 L 0 10 z" fill="#fbbf24" />
+      </marker>
+    </defs>
+  </svg>
 category: "4.1 Preprocessing"
 tags: ["transform", "reshape", "timeseries", "rnn"]
-applies_to: ["Tabulaire", "Séries Temporelles"]
-when_to_use: "Quand vous voulez injecter des données tabulaires plates dans un LSTM/GRU/RNN."
+applies_to: ["Tabulaire", "Series Temporelles"]
+when_to_use: "A utiliser lorsque vous souhaitez alimenter un reseau recurrent (LSTM, GRU, RNN simple) avec des donnees tabulaires plates qui representent en realite des sequences temporelles."
+use_cases:
+  - "Conversion d'un dataset de capteurs IoT (colonnes = mesures a differents instants) en sequences pour un LSTM."
+  - "Reshape de donnees financieres (cours de bourse sur N jours) pour un modele de prediction de prix LSTM."
+  - "Preparation de donnees medicales (signaux EEG, ECG) pour classification par reseau recurrent."
 pros:
-  - "Rend compatible les séries tabulaires avec les LSTM."
+  - "Rend les donnees tabulaires plates compatibles avec les architectures recurrentes (LSTM, GRU)."
+  - "Compatible avec le pipeline sklearn via FunctionTransformer."
+  - "Tres rapide (simple reshape numpy sans copie de donnees)."
 cons:
-  - "Nécessite que (Time_steps * Features) soit un multiple du nombre de colonnes actuel."
+  - "Le nombre de colonnes doit etre divisible par le nombre de time_steps choisi."
+  - "Le choix du nombre de pas de temps (T) et de features (F) est critique et depend du domaine."
+  - "Le DataFrame est converti en numpy array 3D, perdant les noms de colonnes."
 hyperparameters:
-  time_steps: "Nombre de pas de temps (ex: 1 si chaque feature est un pas de temps de dimension 1, ou N_features si 1 pas temporel)."
+  time_steps: "Nombre de pas de temps."
 code_template: |
   import pandas as pd
   import numpy as np
@@ -38,7 +86,6 @@ code_template: |
           n_features = n_cols // t_steps
           X_reshaped = X_arr.reshape((n_samples, t_steps, n_features))
           
-          # Return un Numpy array plutôt qu'un DataFrame car on passe en 3D
           return X_reshaped
 
       transformer = FunctionTransformer(reshape_3d)
@@ -55,17 +102,20 @@ code_template: |
   if 'task_type' not in locals(): task_type = "classification"
   if 'meta' not in locals(): meta = {}
 illustration_mermaid: |
-  graph TD
-    A[2D DataFrame] --> B[Convert to NumPy Array]
-    B --> C{Cols divisible by Time_steps?}
-    C -- Yes --> D[Reshape to 3D Tensor]
-    C -- No --> E[Raise ValueError]
-    D --> F[FunctionTransformer]
-    F --> G[Add to Pipeline Steps]
-    G --> H[Update Data Contract Variables]
-    E --> H
-    style A fill:#eff6ff,stroke:#3b82f6,stroke-width:2px
-    style H fill:#10b981,stroke:#059669,stroke-width:2px
+  flowchart LR
+    A(["📊 df 2D (N, D)"]) --> B[/"📄 TIME_STEPS"/]
+    B --> C{"⚙️ Verifier divisibilite"}
+    C -- "OK" --> D{"⚙️ np.reshape (N, T, F)"}
+    C -- "Erreur" --> E(["❌ ValueError"])
+    D --> F(["📊 Tensor 3D (N, T, F)"])
+    F --> G(["ℹ️ pipeline_steps"])
+    style A fill:#10b981,stroke:#059669,stroke-width:2px,color:#fff
+    style B fill:#fbbf24,stroke:#d97706,stroke-width:2px,color:#000
+    style C fill:#3b82f6,stroke:#2563eb,stroke-width:2px,color:#fff
+    style D fill:#3b82f6,stroke:#2563eb,stroke-width:2px,color:#fff
+    style E fill:#8b5cf6,stroke:#7c3aed,stroke-width:2px,color:#fff
+    style F fill:#10b981,stroke:#059669,stroke-width:2px,color:#fff
+    style G fill:#8b5cf6,stroke:#7c3aed,stroke-width:2px,color:#fff
 
 _metadata:
   bloc: 2

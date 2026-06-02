@@ -1,14 +1,22 @@
 id: "model_self_organizing_map"
 name: "Model: Self-Organizing Map (SOM / Kohonen)"
-description: "Réseau de neurones non-supervisé produisant une carte 2D préservant la topologie des données."
+description: "Réseau de neurones non-supervisé (Kohonen) qui réduit la dimensionnalité tout en préservant la topologie originelle, projetant des données complexes sur une carte 2D (ou 3D) organisée."
 category: "Génératif & Non-Supervisé"
 tags: ["model", "unsupervised", "clustering", "som", "neural-network"]
 applies_to: ["Tabulaire"]
-when_to_use: "Pour le clustering topologique ou la visualisation 2D."
+when_to_use: "Idéal pour visualiser des structures complexes de données en grande dimension, repérer des anomalies ou segmenter des profils (clustering topologique)."
+use_cases:
+  - "Segmentation de la clientèle selon de nombreux attributs comportementaux."
+  - "Visualisation et cartographie de profils de gènes ou d'expressions cellulaires."
+  - "Détection de fraudes par l'identification de profils déviant de la carte standard."
 pros:
-  - "Préserve la topologie des données."
+  - "Préserve la structure topologique et la proximité spatiale des données."
+  - "Excellente visualisation 2D intuitive des relations multidimensionnelles."
+  - "Robuste au bruit grâce à sa méthode d'apprentissage compétitif."
 cons:
-  - "Lent. Nécessite MiniSom."
+  - "Coûteux en calcul et lent à entraîner, particulièrement sur de grands volumes."
+  - "Délicat à configurer (taille de grille, taux d'apprentissage, rayon de voisinage)."
+  - "Ne gère pas intrinsèquement les données catégorielles sans encodage spécifique."
 hyperparameters:
   x_size: "Largeur de la carte (ex: 10)."
   y_size: "Hauteur de la carte (ex: 10)."
@@ -46,13 +54,77 @@ code_template: |
       full_pipeline = som
       training_history = {"status": "success"}
       task_type = "clustering"
+math_theory: |
+  A Self-Organizing Map (SOM) is a type of competitive artificial neural network that produces a low-dimensional (typically 2D) representation of the input space.
+  
+  1. **Competitive Phase**: For a given input vector $\textcolor{#10b981}{x}$, the Best Matching Unit (BMU) is the node $c$ in the grid with the weight vector $\textcolor{#3b82f6}{W_i}$ closest to $\textcolor{#10b981}{x}$:
+  $$ c = \arg\min_i \| \textcolor{#10b981}{x} - \textcolor{#3b82f6}{W_i} \| $$
+  
+  2. **Cooperative Phase**: A neighborhood function $\textcolor{#fbbf24}{h_{c, i}(t)}$ (often Gaussian) determines how much surrounding nodes are affected. It decreases with distance from the BMU in the grid topology and shrinks over time $t$:
+  $$ \textcolor{#fbbf24}{h_{c, i}(t)} = \exp\left(-\frac{\|r_c - r_i\|^2}{2\sigma^2(t)}\right) $$
+  
+  3. **Adaptive Phase**: The weights of the BMU and its neighbors are updated to move closer to the input vector, controlled by the learning rate $\textcolor{#ef4444}{\alpha(t)}$:
+  $$ \textcolor{#3b82f6}{W_i}(t+1) = \textcolor{#3b82f6}{W_i}(t) + \textcolor{#ef4444}{\alpha(t)} \cdot \textcolor{#fbbf24}{h_{c, i}(t)} \cdot (\textcolor{#10b981}{x} - \textcolor{#3b82f6}{W_i}(t)) $$
+math_illustration_svg: |
+  <svg viewBox="0 0 800 400" xmlns="http://www.w3.org/2000/svg">
+    <!-- Input Data -->
+    <circle cx="150" cy="200" r="15" fill="#d1fae5" stroke="#10b981" stroke-width="4"/>
+    <text x="150" y="240" font-family="sans-serif" font-size="16" font-weight="bold" fill="#10b981" text-anchor="middle">Input x</text>
+    
+    <path d="M170 200 L270 200" stroke="#10b981" stroke-width="3" stroke-dasharray="5,5" marker-end="url(#arrow_green)"/>
+    <text x="220" y="190" font-family="sans-serif" font-size="14" fill="#10b981" text-anchor="middle">Find BMU</text>
+
+    <!-- 2D SOM Grid -->
+    <g transform="translate(350, 80)">
+      <!-- Grid lines -->
+      <path d="M0 0 L240 0 M0 60 L240 60 M0 120 L240 120 M0 180 L240 180 M0 240 L240 240" stroke="#cbd5e1" stroke-width="2"/>
+      <path d="M0 0 L0 240 M60 0 L60 240 M120 0 L120 240 M180 0 L180 240 M240 0 L240 240" stroke="#cbd5e1" stroke-width="2"/>
+      
+      <!-- Nodes -->
+      <!-- Draw regular nodes -->
+      <circle cx="60" cy="60" r="8" fill="#eff6ff" stroke="#3b82f6" stroke-width="2"/>
+      <circle cx="180" cy="60" r="8" fill="#eff6ff" stroke="#3b82f6" stroke-width="2"/>
+      <circle cx="60" cy="180" r="8" fill="#eff6ff" stroke="#3b82f6" stroke-width="2"/>
+      <circle cx="180" cy="180" r="8" fill="#eff6ff" stroke="#3b82f6" stroke-width="2"/>
+      
+      <!-- BMU and neighborhood -->
+      <circle cx="120" cy="120" r="70" fill="#fef3c7" stroke="#fbbf24" stroke-width="2" stroke-dasharray="4,4" fill-opacity="0.5"/>
+      <text x="210" y="110" font-family="sans-serif" font-size="14" font-weight="bold" fill="#fbbf24" text-anchor="middle">Neighborhood h(t)</text>
+      
+      <!-- Affected neighbors -->
+      <circle cx="120" cy="60" r="10" fill="#bfdbfe" stroke="#3b82f6" stroke-width="3"/>
+      <circle cx="60" cy="120" r="10" fill="#bfdbfe" stroke="#3b82f6" stroke-width="3"/>
+      <circle cx="180" cy="120" r="10" fill="#bfdbfe" stroke="#3b82f6" stroke-width="3"/>
+      <circle cx="120" cy="180" r="10" fill="#bfdbfe" stroke="#3b82f6" stroke-width="3"/>
+      
+      <!-- BMU -->
+      <circle cx="120" cy="120" r="14" fill="#3b82f6" stroke="#1d4ed8" stroke-width="3"/>
+      <text x="120" y="150" font-family="sans-serif" font-size="14" font-weight="bold" fill="#1d4ed8" text-anchor="middle">BMU W_c</text>
+      
+      <!-- Arrows pointing inward to BMU (Weight Update) -->
+      <path d="M120 50 L120 100" stroke="#ef4444" stroke-width="2" marker-end="url(#arrow_red)"/>
+      <path d="M50 120 L100 120" stroke="#ef4444" stroke-width="2" marker-end="url(#arrow_red)"/>
+      <path d="M190 120 L140 120" stroke="#ef4444" stroke-width="2" marker-end="url(#arrow_red)"/>
+      <path d="M120 190 L120 140" stroke="#ef4444" stroke-width="2" marker-end="url(#arrow_red)"/>
+    </g>
+    
+    <text x="660" y="200" font-family="sans-serif" font-size="14" font-weight="bold" fill="#ef4444">Update Weights</text>
+    <text x="660" y="220" font-family="sans-serif" font-size="14" fill="#ef4444">towards input x</text>
+
+    <defs>
+      <marker id="arrow_green" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto"><path d="M0 0 L10 5 L0 10 z" fill="#10b981"/></marker>
+      <marker id="arrow_red" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto"><path d="M0 0 L10 5 L0 10 z" fill="#ef4444"/></marker>
+    </defs>
+  </svg>
 illustration_mermaid: |
-    graph LR
-      Data([Features]) --> Model((Machine Learning))
-      Model --> Pred([Predictions])
-      style Model fill:#8b5cf6,stroke:#7c3aed,stroke-width:2px,color:#fff
-      style Data fill:#f8fafc,stroke:#94a3b8,stroke-width:1px
-      style Pred fill:#f8fafc,stroke:#94a3b8,stroke-width:1px
+  flowchart LR
+    Data(["Input Features"]) --> Model{"Self-Organizing Map"}
+    Dim[/"Map Size (X, Y)"/] --> Model
+    Model --> Proj(["2D Projection Map"])
+    style Dim fill:#fbbf24,stroke:#d97706,stroke-width:2px,color:#000
+    style Model fill:#3b82f6,stroke:#2563eb,stroke-width:2px,color:#fff
+    style Data fill:#10b981,stroke:#059669,stroke-width:2px,color:#fff
+    style Proj fill:#10b981,stroke:#059669,stroke-width:2px,color:#fff
 
 _metadata:
   bloc: 3

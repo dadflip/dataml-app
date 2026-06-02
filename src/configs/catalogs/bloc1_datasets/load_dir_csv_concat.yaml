@@ -1,7 +1,18 @@
 id: load_dir_csv_concat
 name: 'Load: Dossier de Fichiers CSV'
-description: Parcourt un dossier et concatène tous les fichiers CSV trouvés en un
-  seul DataFrame.
+description: 'Ce composant explore un répertoire cible afin de détecter, lire et fusionner (concaténer) automatiquement l''ensemble des fichiers au format CSV qu''il contient. Il est pensé pour les environnements de données fragmentées, où des exports successifs, des logs journaliers ou des extractions massives (Big Data) génèrent de multiples fichiers CSV partageant le même schéma (les mêmes colonnes). En utilisant Pandas, le script itère sur chaque fichier, les charge en mémoire en gérant les types de séparateurs paramétrables, et les empile verticalement (axis=0) pour produire un unique DataFrame global prêt pour l''analyse ou l''entraînement de modèles.'
+when_to_use: 'Idéal lorsque vos données tabulaires sont réparties en plusieurs fichiers CSV (par exemple, un fichier par mois ou par machine) et que vous avez besoin de les consolider en une seule table globale pour l''analyse globale ou l''apprentissage.'
+use_cases:
+- 'Consolidation de logs d''événements journaliers ou horaires issus de serveurs.'
+- 'Agrégation d''extractions de bases de données morcelées en plusieurs parties (ex: part_01.csv, part_02.csv).'
+- 'Fusion de données de séries temporelles collectées par plusieurs capteurs distincts au même format.'
+pros:
+- 'Automatisation complète du processus de fusion : plus besoin de concaténer manuellement dans Excel ou via des scripts complexes.'
+- 'Flexibilité grâce au séparateur paramétrable (virgule, point-virgule, tabulation).'
+- 'Tolérance à l''ordre alphabétique ou temporel selon les noms de fichiers gérée nativement par glob.'
+cons:
+- 'Gourmand en mémoire vive (RAM) si la somme totale des CSV est très volumineuse.'
+- 'Suppose que tous les fichiers CSV partagent strictement le même schéma (colonnes identiques), sinon la concaténation créera des colonnes vides (NaN).'
 category: 2. Load
 tags:
 - load
@@ -51,37 +62,22 @@ code_template: |
   meta = {"format": "directory_csv", "files_merged": len(csv_files), "shape": df.shape}
 
 illustration_mermaid: |
-  flowchart TD
-      subgraph Config [Parameters]
-          DIR([DIRECTORY_PATH])
-          SP([SEP])
-      end
-
-      subgraph Operations [CSV Directory Load]
-          Glob([glob *.csv])
-          Read([pd.read_csv loop])
-          Concat([pd.concat])
-      end
-
-      subgraph Outputs [Contract Variables]
-          df((df))
-          target((target_name = ''))
-          task((task_type = 'unknown'))
-          meta((meta: dict))
-      end
-
-      DIR --> Glob
-      Glob --> Read
-      SP --> Read
-      Read --> Concat
-      Concat --> df
-      df -.-> meta
-
-      style Config fill:#f8fafc,stroke:#cbd5e1,stroke-width:2px
-      style Glob fill:#64748b,stroke:#475569,stroke-width:2px,color:#fff
-      style Read fill:#3b82f6,stroke:#1d4ed8,stroke-width:2px,color:#fff
-      style Concat fill:#10b981,stroke:#047857,stroke-width:2px,color:#fff
-      style Outputs fill:#f1f5f9,stroke:#94a3b8,stroke-width:2px
+  flowchart LR
+      A[/"📂 DIRECTORY_PATH"/] --> B{"pd.read_csv & concat"}
+      C[/"🎯 No target"/] --> D{"Set Contract Variables"}
+      B --> E(["📊 df (Merged CSVs)"])
+      E --> D
+      D --> F(["🎯 target_name = ''"])
+      D --> G(["⚙️ task_type = 'unknown'"])
+      D --> H(["ℹ️ meta (format, files, shape)"])
+      style A fill:#fbbf24,stroke:#d97706,stroke-width:2px,color:#000
+      style C fill:#fbbf24,stroke:#d97706,stroke-width:2px,color:#000
+      style B fill:#3b82f6,stroke:#2563eb,stroke-width:2px,color:#fff
+      style D fill:#3b82f6,stroke:#2563eb,stroke-width:2px,color:#fff
+      style E fill:#10b981,stroke:#059669,stroke-width:2px,color:#fff
+      style F fill:#8b5cf6,stroke:#7c3aed,stroke-width:2px,color:#fff
+      style G fill:#8b5cf6,stroke:#7c3aed,stroke-width:2px,color:#fff
+      style H fill:#8b5cf6,stroke:#7c3aed,stroke-width:2px,color:#fff
 _metadata:
   bloc: 1
   section: 2_load

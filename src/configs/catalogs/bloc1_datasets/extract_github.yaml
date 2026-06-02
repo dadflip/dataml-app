@@ -1,6 +1,16 @@
 id: extract_github
 name: 'Extract: GitHub Raw'
 description: Télécharge un fichier brut depuis un dépôt GitHub public.
+when_to_use: Idéal pour extraire des fichiers CSV, JSON ou TXT qui sont stockés directement dans un dépôt public GitHub sans nécessiter un clone complet.
+use_cases:
+  - Récupération de datasets de référence comme seaborn-data ou scikit-learn datasets.
+  - Chargement de configurations ou dictionnaires depuis un dépôt distant.
+pros:
+  - Rapide et direct, évite de cloner tout un dépôt.
+  - Très fiable pour les petits et moyens fichiers.
+cons:
+  - Restreint aux dépôts publics (sauf utilisation d'un token d'accès).
+  - Limité par la taille des fichiers autorisée sur GitHub Raw et les quotas de l'API.
 category: 1. Extract
 tags:
 - extract
@@ -45,13 +55,22 @@ code_template: |
   task_type = "unknown"
   meta = {"source": "github", "path": DEST_PATH}
 illustration_mermaid: |
-    flowchart TD
-    A([FILE_PATH]) --> B[Load EXTRACT_GITHUB]
-    B --> df([df])
-    
-    style A fill:#3b82f6,color:#fff
-    style B fill:#10b981,color:#fff
-    style df fill:#f59e0b,color:#fff
+    flowchart LR
+        A[/"📄 GitHub Raw URL"/] --> B{"Extract GitHub()"}
+        C[/"🎯 TARGET_COL"/] --> D{"Check TARGET_COL"}
+        B --> E(["📊 df (Local File/DataFrame)"])
+        E --> D
+        D --> F(["🎯 target_name"])
+        D --> G(["⚙️ task_type"])
+        D --> H(["ℹ️ meta (...)"])
+        style A fill:#fbbf24,stroke:#d97706,stroke-width:2px,color:#000
+        style C fill:#fbbf24,stroke:#d97706,stroke-width:2px,color:#000
+        style B fill:#3b82f6,stroke:#2563eb,stroke-width:2px,color:#fff
+        style D fill:#3b82f6,stroke:#2563eb,stroke-width:2px,color:#fff
+        style E fill:#10b981,stroke:#059669,stroke-width:2px,color:#fff
+        style F fill:#8b5cf6,stroke:#7c3aed,stroke-width:2px,color:#fff
+        style G fill:#8b5cf6,stroke:#7c3aed,stroke-width:2px,color:#fff
+        style H fill:#8b5cf6,stroke:#7c3aed,stroke-width:2px,color:#fff
 
 
 

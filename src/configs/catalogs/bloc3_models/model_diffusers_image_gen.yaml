@@ -1,14 +1,20 @@
 id: "model_diffusers_image_gen"
 name: "Model: Stable Diffusion Image Gen"
-description: "Modèle génératif (Text-to-Image) via HuggingFace Diffusers."
+description: "Modèle génératif profond (Text-to-Image) utilisant l'architecture Stable Diffusion via la bibliothèque HuggingFace Diffusers."
 category: "Vision par Ordinateur (Pré-entraînés)"
 tags: ["model", "vision", "generative", "diffusers", "stable-diffusion"]
 applies_to: ["Texte"]
-when_to_use: "Pour générer des images à partir d'un prompt texte. Utile pour la data augmentation."
+when_to_use: "Indispensable pour générer des images synthétiques à partir de descriptions textuelles, créer des concepts visuels ou faire de l'augmentation de données d'images."
+use_cases:
+  - "Création de contenu visuel automatisée (marketing, design conceptuel)."
+  - "Génération de données synthétiques (data augmentation) pour entraîner d'autres modèles de vision."
+  - "Prototypage rapide d'idées visuelles à partir de descriptions en langage naturel."
 pros:
-  - "Très puissant."
+  - "Qualité de génération photoréaliste et extrêmement flexible."
+  - "Capacité à comprendre et combiner des concepts sémantiques complexes via l'encodeur CLIP."
 cons:
-  - "Extrêmement lourd. Nécessite obligatoirement un bon GPU et beaucoup de VRAM."
+  - "Exigences matérielles colossales (GPU avec VRAM importante indispensable)."
+  - "Temps de latence élevé pour la génération (nécessite de multiples étapes d'inférence)."
 hyperparameters:
   num_inference_steps: "Nombre d'étapes de diffusion (ex: 20)."
 code_template: |
@@ -36,23 +42,99 @@ code_template: |
       # X_test contient des prompts textes
       y_pred = np.array([f"Image Gen for: {str(p)[:30]}..." for p in X_test])
       
+math_theory: |
+  Stable Diffusion is based on Latent Diffusion Models (LDMs). Instead of operating in the high-dimensional pixel space, it operates in a lower-dimensional latent space produced by a Variational Autoencoder (VAE). The primary objective is to train a U-Net to reverse a forward diffusion process (which adds noise) by predicting the added noise $\textcolor{#10b981}{\epsilon}$. The loss function is:
+  
+  $$ \mathcal{L}_{LDM} = \mathbb{E}_{\textcolor{#ef4444}{z_0}, \textcolor{#10b981}{\epsilon} \sim \mathcal{N}(0, I), t} \left[ \left\| \textcolor{#10b981}{\epsilon} - \textcolor{#3b82f6}{\epsilon_\theta}(\textcolor{#fbbf24}{z_t}, t, \textcolor{#8b5cf6}{\tau_\theta(y)}) \right\|^2 \right] $$
+  
+  Where:
+  - $\textcolor{#ef4444}{z_0}$ is the clean latent representation of the image.
+  - $\textcolor{#10b981}{\epsilon}$ is the true Gaussian noise added to the latent.
+  - $t$ is the timestep of the diffusion process.
+  - $\textcolor{#fbbf24}{z_t}$ is the noisy latent at step $t$.
+  - $\textcolor{#3b82f6}{\epsilon_\theta}$ is the U-Net model predicting the noise.
+  - $\textcolor{#8b5cf6}{\tau_\theta(y)}$ is the text embedding of the prompt $y$ (typically from a CLIP encoder), guiding the generation.
+math_illustration_svg: |
+  <svg viewBox="0 0 800 400" xmlns="http://www.w3.org/2000/svg">
+    <!-- Clean Image & VAE Encoder -->
+    <rect x="20" y="220" width="80" height="80" fill="#f8fafc" stroke="#ef4444" stroke-width="3" rx="8"/>
+    <text x="60" y="265" font-family="sans-serif" font-size="16" font-weight="bold" fill="#ef4444" text-anchor="middle">Image</text>
+    
+    <path d="M100 260 L140 260" stroke="#94a3b8" stroke-width="2" marker-end="url(#arrow)"/>
+    <rect x="140" y="235" width="50" height="50" fill="#f1f5f9" stroke="#94a3b8" stroke-width="2" rx="4"/>
+    <text x="165" y="265" font-family="sans-serif" font-size="12" font-weight="bold" fill="#475569" text-anchor="middle">VAE</text>
+    
+    <path d="M190 260 L230 260" stroke="#94a3b8" stroke-width="2" marker-end="url(#arrow)"/>
+    <rect x="230" y="230" width="60" height="60" fill="#fee2e2" stroke="#ef4444" stroke-width="3" rx="8"/>
+    <text x="260" y="265" font-family="sans-serif" font-size="18" font-weight="bold" fill="#ef4444" text-anchor="middle">z₀</text>
+
+    <!-- Forward Diffusion -->
+    <path d="M290 260 L360 260" stroke="#10b981" stroke-width="3" stroke-dasharray="5,5" marker-end="url(#arrow_green)"/>
+    <text x="325" y="250" font-family="sans-serif" font-size="14" fill="#10b981" text-anchor="middle">+ Noise ε</text>
+
+    <!-- Noisy Latent -->
+    <rect x="360" y="220" width="80" height="80" fill="#fef3c7" stroke="#fbbf24" stroke-width="3" rx="8"/>
+    <text x="400" y="265" font-family="sans-serif" font-size="18" font-weight="bold" fill="#fbbf24" text-anchor="middle">z_t</text>
+    
+    <!-- Text Prompt -->
+    <rect x="320" y="40" width="160" height="50" fill="#f3e8ff" stroke="#8b5cf6" stroke-width="3" rx="8"/>
+    <text x="400" y="70" font-family="sans-serif" font-size="16" font-weight="bold" fill="#8b5cf6" text-anchor="middle">Text Prompt y</text>
+    <path d="M400 90 L400 130" stroke="#8b5cf6" stroke-width="2" marker-end="url(#arrow_purple)"/>
+    <rect x="350" y="130" width="100" height="40" fill="#f1f5f9" stroke="#8b5cf6" stroke-width="2" rx="4"/>
+    <text x="400" y="155" font-family="sans-serif" font-size="12" font-weight="bold" fill="#8b5cf6" text-anchor="middle">CLIP Enc τ_θ</text>
+    <path d="M400 170 L400 220" stroke="#8b5cf6" stroke-width="2" marker-end="url(#arrow_purple)"/>
+
+    <!-- U-Net -->
+    <rect x="520" y="180" width="120" height="160" fill="#eff6ff" stroke="#3b82f6" stroke-width="3" rx="8"/>
+    <text x="580" y="265" font-family="sans-serif" font-size="18" font-weight="bold" fill="#3b82f6" text-anchor="middle">U-Net ε_θ</text>
+    <text x="580" y="290" font-family="sans-serif" font-size="12" fill="#3b82f6" text-anchor="middle">(Denoising)</text>
+
+    <path d="M440 260 L520 260" stroke="#fbbf24" stroke-width="3" marker-end="url(#arrow_yellow)"/>
+    
+    <!-- Time Step -->
+    <circle cx="580" cy="110" r="25" fill="#f8fafc" stroke="#94a3b8" stroke-width="2"/>
+    <text x="580" y="115" font-family="sans-serif" font-size="14" font-weight="bold" fill="#475569" text-anchor="middle">t</text>
+    <path d="M580 135 L580 180" stroke="#94a3b8" stroke-width="2" marker-end="url(#arrow)"/>
+    
+    <!-- Cross Attention from Text to UNet -->
+    <path d="M450 150 Q520 150 520 200" stroke="#8b5cf6" stroke-width="3" stroke-dasharray="4,4" marker-end="url(#arrow_purple)" fill="none"/>
+
+    <!-- Predicted Noise -->
+    <path d="M640 260 L710 260" stroke="#3b82f6" stroke-width="3" marker-end="url(#arrow_blue)"/>
+    <rect x="710" y="235" width="60" height="50" fill="#d1fae5" stroke="#10b981" stroke-width="3" rx="8"/>
+    <text x="740" y="265" font-family="sans-serif" font-size="18" font-weight="bold" fill="#10b981" text-anchor="middle">ε_pred</text>
+    
+    <!-- Loss -->
+    <path d="M325 210 Q325 350 520 350 Q740 350 740 285" stroke="#10b981" stroke-width="2" stroke-dasharray="3,3" fill="none" marker-end="url(#arrow_green)"/>
+    <text x="520" y="375" font-family="sans-serif" font-size="16" font-weight="bold" fill="#ef4444" text-anchor="middle">MSE Loss || ε - ε_pred ||²</text>
+
+    <!-- Definitions for arrows -->
+    <defs>
+      <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto"><path d="M0 0 L10 5 L0 10 z" fill="#94a3b8"/></marker>
+      <marker id="arrow_green" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto"><path d="M0 0 L10 5 L0 10 z" fill="#10b981"/></marker>
+      <marker id="arrow_purple" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto"><path d="M0 0 L10 5 L0 10 z" fill="#8b5cf6"/></marker>
+      <marker id="arrow_yellow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto"><path d="M0 0 L10 5 L0 10 z" fill="#fbbf24"/></marker>
+      <marker id="arrow_blue" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto"><path d="M0 0 L10 5 L0 10 z" fill="#3b82f6"/></marker>
+    </defs>
+  </svg>
 illustration_mermaid: |
-  graph TD
-    subgraph Stable Diffusion Pipeline
-      Prompt([Text Prompt]) --> TextEnc[CLIP Text Encoder]
-      TextEnc --> TextEmb[Text Embeddings]
-      
-      Noise([Random Latent Noise]) --> UNet[U-Net Denoising]
-      TextEmb -.-> UNet
-      
-      UNet --> Denoised[Denoised Latent]
-      Denoised --> VAE[VAE Decoder]
-      VAE --> Image([Generated Image RGB])
-    end
-    style Prompt fill:#f8fafc,stroke:#94a3b8,stroke-width:1px
-    style Noise fill:#e2e8f0,stroke:#64748b,stroke-width:1px
+  flowchart LR
+    Prompt(["Text Prompt"]) --> TextEnc{"CLIP Encoder"}
+    Noise(["Random Latent Noise"]) --> UNet{"U-Net Denoising\nnum_inference_steps"}
+    TextEnc --> TextEmb(["Text Embeddings"])
+    TextEmb --> UNet
+    UNet --> Denoised(["Denoised Latent"])
+    Denoised --> VAE{"VAE Decoder"}
+    VAE --> Image(["Generated Image"])
+
+    style Prompt fill:#10b981,stroke:#059669,stroke-width:2px,color:#fff
+    style Noise fill:#10b981,stroke:#059669,stroke-width:2px,color:#fff
+    style TextEnc fill:#3b82f6,stroke:#2563eb,stroke-width:2px,color:#fff
+    style TextEmb fill:#8b5cf6,stroke:#7c3aed,stroke-width:2px,color:#fff
+    style UNet fill:#3b82f6,stroke:#2563eb,stroke-width:2px,color:#fff
+    style Denoised fill:#10b981,stroke:#059669,stroke-width:2px,color:#fff
+    style VAE fill:#3b82f6,stroke:#2563eb,stroke-width:2px,color:#fff
     style Image fill:#10b981,stroke:#059669,stroke-width:2px,color:#fff
-    style UNet fill:#8b5cf6,stroke:#7c3aed,stroke-width:2px,color:#fff
 
 _metadata:
   bloc: 3

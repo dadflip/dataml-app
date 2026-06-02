@@ -1,6 +1,16 @@
 id: eda_text_sentiment
 name: 'EDA: Distribution des Sentiments'
-description: Analyse la polarité des textes via TextBlob.
+description: "Analyse de la polarité des textes via TextBlob pour afficher la distribution des sentiments (négatif à positif)."
+when_to_use: "Pour mesurer la satisfaction globale ou l'émotion exprimée dans des données textuelles non structurées."
+use_cases:
+  - "Analyser la répartition des sentiments dans des reviews de produits."
+  - "Catégoriser des tweets ou des commentaires selon leur ton."
+pros:
+  - "Très facile à utiliser grâce à la librairie TextBlob (sans entraînement préalable)."
+  - "Donne une indication rapide de la polarité générale du jeu de données."
+cons:
+  - "TextBlob est optimisé pour l'anglais et peut être imprécis sur des jargons spécifiques ou du sarcasme."
+  - "Lent sur de très volumineux datasets à cause du traitement par ligne."
 category: 3. Exploratory Data Analysis
 tags:
 - eda
@@ -30,15 +40,20 @@ code_template: |
       print(f"[EDA] Colonne {TEXT_COL} introuvable.")
 illustration_mermaid: |
     graph TD
-      DF([DataFrame]) --> Check{Check TEXT_COL}
-      Check -- Valid --> Blob{{TextBlob}}
-      Blob -- "polarity" --> Scores[Extract Polarities]
-      Scores --> Plot[sns.histplot]
-      Plot --> Show[plt.show]
-      Check -- Missing --> Err[Print Error]
-      style Blob fill:#d946ef,stroke:#c026d3,stroke-width:2px,color:#fff
-      style Scores fill:#3b82f6,stroke:#2563eb,stroke-width:2px,color:#fff
-      style Plot fill:#10b981,stroke:#059669,stroke-width:2px,color:#fff
+      In1[/df/] --> P1{Check TEXT_COL}
+      In2[/TEXT_COL/] --> P1
+      P1 -- Valide --> P2{TextBlob polarity}
+      P2 --> P3{sns.histplot}
+      P3 --> Out1([Fig: Distribution Polarité])
+      P1 -- Invalide --> Out2([Print Erreur])
+      
+      style In1 fill:#fbbf24,stroke:#d97706,stroke-width:2px,color:#000
+      style In2 fill:#fbbf24,stroke:#d97706,stroke-width:2px,color:#000
+      style P1 fill:#3b82f6,stroke:#2563eb,stroke-width:2px,color:#fff
+      style P2 fill:#3b82f6,stroke:#2563eb,stroke-width:2px,color:#fff
+      style P3 fill:#3b82f6,stroke:#2563eb,stroke-width:2px,color:#fff
+      style Out1 fill:#10b981,stroke:#059669,stroke-width:2px,color:#fff
+      style Out2 fill:#8b5cf6,stroke:#7c3aed,stroke-width:2px,color:#fff
 _metadata:
   bloc: 1
   section: 3_eda

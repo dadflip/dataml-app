@@ -1,14 +1,57 @@
 id: "transform_frequency_encoding"
 name: "Transform: Frequency Encoding"
-description: "Encode par la fréquence d'apparition (%)."
+description: "Encode les variables catégorielles en remplaçant chaque modalité par sa fréquence d'apparition relative dans le jeu de données d'entraînement."
+math_theory: |
+  Soit une variable catégorielle $\textcolor{#3b82f6}{C}$ prenant ses valeurs dans un ensemble de modalités $\{c_1, c_2, \dots, c_k\}$. Pour un jeu de données contenant $\textcolor{#8b5cf6}{N}$ échantillons, si la modalité $\textcolor{#fbbf24}{c_i}$ apparaît $\textcolor{#10b981}{n_i}$ fois, son encodage fréquentiel (normalisé) est défini par la probabilité empirique : $$P(\textcolor{#3b82f6}{C} = \textcolor{#fbbf24}{c_i}) = \frac{\textcolor{#10b981}{n_i}}{\textcolor{#8b5cf6}{N}}$$. Chaque occurrence de la modalité $\textcolor{#fbbf24}{c_i}$ dans les données est ainsi remplacée par le scalaire $\textcolor{#ef4444}{P(C = c_i)} \in [0, 1]$.
+math_illustration_svg: |
+  <svg viewBox="0 0 400 200" xmlns="http://www.w3.org/2000/svg">
+    <defs>
+      <style>
+        .text-title { fill: #f8fafc; font-family: monospace; font-size: 14px; }
+        .text-math { fill: #f8fafc; font-family: monospace; font-size: 12px; }
+        .box-cat { fill: #1e293b; stroke: #3b82f6; stroke-width: 2; rx: 4; }
+        .box-freq { fill: #1e293b; stroke: #ef4444; stroke-width: 2; rx: 4; }
+        .arrow { stroke: #94a3b8; stroke-width: 2; marker-end: url(#arrowhead2); }
+      </style>
+      <marker id="arrowhead2" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
+        <polygon points="0 0, 10 3.5, 0 7" fill="#94a3b8" />
+      </marker>
+    </defs>
+
+    <!-- Input Category -->
+    <text x="20" y="30" class="text-title" fill="#3b82f6">Categories (C)</text>
+    <rect x="20" y="40" width="100" height="140" class="box-cat" />
+    <text x="70" y="65" class="text-math" fill="#fbbf24" text-anchor="middle">Apple</text>
+    <text x="70" y="95" class="text-math" fill="#fbbf24" text-anchor="middle">Apple</text>
+    <text x="70" y="125" class="text-math" fill="#fbbf24" text-anchor="middle">Apple</text>
+    <text x="70" y="155" class="text-math" fill="#10b981" text-anchor="middle">Banana</text>
+
+    <!-- Transformation Arrow -->
+    <line x1="140" y1="110" x2="250" y2="110" class="arrow" />
+    <text x="195" y="90" class="text-math" text-anchor="middle" fill="#ef4444">n_i / N</text>
+    <text x="195" y="130" class="text-math" text-anchor="middle" fill="#8b5cf6">N = 4</text>
+
+    <!-- Encoded Values -->
+    <text x="270" y="30" class="text-title" fill="#ef4444">Frequency</text>
+    <rect x="270" y="40" width="100" height="140" class="box-freq" />
+    <text x="320" y="65" class="text-math" fill="#fbbf24" text-anchor="middle">0.75</text>
+    <text x="320" y="95" class="text-math" fill="#fbbf24" text-anchor="middle">0.75</text>
+    <text x="320" y="125" class="text-math" fill="#fbbf24" text-anchor="middle">0.75</text>
+    <text x="320" y="155" class="text-math" fill="#10b981" text-anchor="middle">0.25</text>
+  </svg>
 category: "4.1 Preprocessing"
 tags: ["transform", "encoding", "tabular", "category_encoders", "pipeline"]
 applies_to: ["Tabulaire"]
-when_to_use: "Quand la fréquence porte une information utile."
+when_to_use: "Particulièrement efficace lorsque la fréquence d'une catégorie est fortement corrélée avec la variable cible (ex: des catégories rares ont un comportement spécifique)."
+use_cases:
+  - "Traitement de variables catégorielles à très haute cardinalité où le One-Hot Encoding produirait une matrice trop creuse."
+  - "Détection de fraude ou de pannes, où la rareté d'un événement (faible fréquence) porte une valeur prédictive majeure."
 pros:
-  - "N'ajoute pas de colonnes."
+  - "Maintient un espace de caractéristiques compact puisqu'il n'ajoute aucune nouvelle colonne."
+  - "Préserve l'information sur la popularité ou la rareté de chaque catégorie."
 cons:
-  - "Nécessite le package category_encoders."
+  - "Nécessite le package externe category_encoders."
+  - "Risque de collision (perte d'information) si deux catégories distinctes possèdent exactement la même fréquence d'apparition."
 hyperparameters: {}
 code_template: |
   import pandas as pd
@@ -37,20 +80,17 @@ code_template: |
           print("[AVERTISSEMENT] Aucune colonne catégorielle trouvée pour l'encodage.")
 
 illustration_mermaid: |
-  graph TD
-    A[Input DataFrame] --> B{ce installed?}
-    B -- Yes --> C[Identify categorical cols]
-    B -- No --> D[Error / Skip]
-    C --> E{Any cat_cols?}
-    E -- Yes --> F[Initialize ce.CountEncoder]
-    E -- No --> G[Skip and Warn]
-    F --> H[Fit & Transform df]
-    H --> I[Update pipeline_steps]
-    I --> J[Frequency Encoded DataFrame]
-    D --> J
-    G --> J
-    style A fill:#eff6ff,stroke:#94a3b8,stroke-width:2px
-    style J fill:#10b981,stroke:#059669,stroke-width:2px,color:#fff
+  flowchart LR
+    A(["📊 df"]) --> B{"⚙️ Filter Categorical Cols"}
+    B --> C{"⚙️ CountEncoder.fit_transform"}
+    C --> D(["📊 df (Encoded)"])
+    C --> E(["ℹ️ pipeline_steps"])
+    
+    style B fill:#3b82f6,stroke:#2563eb,stroke-width:2px,color:#fff
+    style C fill:#3b82f6,stroke:#2563eb,stroke-width:2px,color:#fff
+    style A fill:#10b981,stroke:#059669,stroke-width:2px,color:#fff
+    style D fill:#10b981,stroke:#059669,stroke-width:2px,color:#fff
+    style E fill:#8b5cf6,stroke:#7c3aed,stroke-width:2px,color:#fff
 
 _metadata:
   bloc: 2

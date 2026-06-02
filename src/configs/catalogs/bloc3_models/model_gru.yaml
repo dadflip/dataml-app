@@ -1,18 +1,68 @@
 id: "model_gru"
 name: "Model: GRU (Gated Recurrent Unit)"
-description: "Réseau récurrent moderne similaire au LSTM mais plus rapide et souvent aussi performant."
+description: "Architecture de réseau de neurones récurrents (RNN) dotée de portes (Gated Recurrent Unit), conçue pour capturer les dépendances temporelles de manière plus efficiente qu'un LSTM."
 category: "Réseaux Séquentiels (RNN)"
 tags: ["model", "classification", "timeseries", "pytorch", "gru", "deep-learning"]
 applies_to: ["Séquences", "Séries Temporelles"]
-when_to_use: "Quand le LSTM est trop lent et que vous voulez une architecture récurrente puissante."
+when_to_use: "À utiliser pour traiter des séquences temporelles, du texte ou des données ordonnées, particulièrement lorsque la rapidité d'entraînement est prioritaire ou que les ressources sont limitées par rapport à un LSTM complet."
+use_cases:
+  - "Classification de séries temporelles (détection d'anomalies de capteurs)."
+  - "Traitement du langage naturel (analyse de sentiment)."
+  - "Prévision d'évolution (séries financières, météo)."
+  - "Reconnaissance vocale de base."
 pros:
-  - "Plus rapide que le LSTM (moins de portes)."
+  - "Plus rapide et moins gourmand en mémoire qu'un LSTM (moins de portes à calculer)."
+  - "Souvent aussi performant que le LSTM sur de nombreuses tâches."
+  - "Atténue efficacement le problème de disparition du gradient des RNN classiques."
 cons:
-  - "Légèrement moins performant sur les très longues séquences."
+  - "Légèrement moins performant sur de très longues séquences complexes comparé au LSTM."
+  - "Architecture intrinsèquement séquentielle, difficilement parallélisable par rapport aux Transformers."
+  - "Nécessite un formatage spécifique des données en 3D (batch, temps, features)."
 hyperparameters:
   hidden_size: "Taille de l'état caché (ex: 64)."
   num_layers: "Nombre de couches (ex: 2)."
   epochs: "Nombre d'époques (ex: 10)."
+math_theory: |
+  Le GRU simplifie le LSTM en combinant l'état de cellule et l'état caché, et en utilisant deux portes : la porte de mise à jour $\textcolor{#3b82f6}{z_t}$ et la porte de réinitialisation $\textcolor{#ef4444}{r_t}$.
+  L'état caché $\textcolor{#10b981}{h_t}$ est une interpolation linéaire entre le précédent état $\textcolor{#fbbf24}{h_{t-1}}$ et un nouvel état candidat $\textcolor{#8b5cf6}{\tilde{h}_t}$ :
+  $$ \textcolor{#10b981}{h_t} = (1 - \textcolor{#3b82f6}{z_t}) \odot \textcolor{#fbbf24}{h_{t-1}} + \textcolor{#3b82f6}{z_t} \odot \textcolor{#8b5cf6}{\tilde{h}_t} $$
+  Où l'état candidat dépend de la porte de réinitialisation :
+  $$ \textcolor{#8b5cf6}{\tilde{h}_t} = \tanh(W x_t + U (\textcolor{#ef4444}{r_t} \odot \textcolor{#fbbf24}{h_{t-1}})) $$
+math_illustration_svg: |
+  <svg viewBox="0 0 800 400" xmlns="http://www.w3.org/2000/svg">
+    <rect width="800" height="400" fill="#f8fafc" rx="10"/>
+    <rect x="200" y="80" width="400" height="240" rx="10" fill="#ffffff" stroke="#cbd5e1" stroke-width="2"/>
+    <rect x="50" y="160" width="80" height="40" rx="4" fill="#fbbf24" opacity="0.1" stroke="#fbbf24" stroke-width="2"/>
+    <text x="90" y="185" font-family="sans-serif" font-size="16" font-weight="bold" fill="#d97706" text-anchor="middle">h_{t-1}</text>
+    <path d="M 130 180 L 250 180" stroke="#fbbf24" stroke-width="3" fill="none" marker-end="url(#arrow_yellow)"/>
+    <rect x="250" y="340" width="60" height="40" rx="4" fill="#334155" opacity="0.1" stroke="#334155" stroke-width="2"/>
+    <text x="280" y="365" font-family="sans-serif" font-size="16" font-weight="bold" fill="#334155" text-anchor="middle">x_t</text>
+    <rect x="300" y="120" width="40" height="40" rx="20" fill="#ef4444" opacity="0.2" stroke="#ef4444" stroke-width="2"/>
+    <text x="320" y="145" font-family="sans-serif" font-size="16" font-weight="bold" fill="#ef4444" text-anchor="middle">r</text>
+    <rect x="300" y="240" width="40" height="40" rx="20" fill="#3b82f6" opacity="0.2" stroke="#3b82f6" stroke-width="2"/>
+    <text x="320" y="265" font-family="sans-serif" font-size="16" font-weight="bold" fill="#3b82f6" text-anchor="middle">z</text>
+    <rect x="420" y="120" width="40" height="40" rx="20" fill="#8b5cf6" opacity="0.2" stroke="#8b5cf6" stroke-width="2"/>
+    <text x="440" y="145" font-family="sans-serif" font-size="14" font-weight="bold" fill="#8b5cf6" text-anchor="middle">~h</text>
+    <path d="M 340 140 L 420 140" stroke="#ef4444" stroke-dasharray="4" stroke-width="2" fill="none" marker-end="url(#arrow_red)"/>
+    <path d="M 460 140 L 520 140 L 520 180 L 650 180 L 700 180" stroke="#10b981" stroke-width="3" fill="none" marker-end="url(#arrow_green)"/>
+    <path d="M 340 260 L 520 260 L 520 180" stroke="#3b82f6" stroke-dasharray="4" stroke-width="2" fill="none" marker-end="url(#arrow_blue)"/>
+    <rect x="700" y="160" width="80" height="40" rx="4" fill="#10b981" opacity="0.1" stroke="#10b981" stroke-width="2"/>
+    <text x="740" y="185" font-family="sans-serif" font-size="16" font-weight="bold" fill="#10b981" text-anchor="middle">h_t</text>
+    <defs>
+      <marker id="arrow_red" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto">
+        <path d="M 0 0 L 10 5 L 0 10 z" fill="#ef4444"/>
+      </marker>
+      <marker id="arrow_blue" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto">
+        <path d="M 0 0 L 10 5 L 0 10 z" fill="#3b82f6"/>
+      </marker>
+      <marker id="arrow_yellow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto">
+        <path d="M 0 0 L 10 5 L 0 10 z" fill="#fbbf24"/>
+      </marker>
+      <marker id="arrow_green" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto">
+        <path d="M 0 0 L 10 5 L 0 10 z" fill="#10b981"/>
+      </marker>
+    </defs>
+  </svg>
 code_template: |
   import pandas as pd
   import numpy as np
@@ -91,27 +141,27 @@ code_template: |
       task_type = "classification"
       meta = {}
 illustration_mermaid: |
-  graph TD
-    subgraph Input Sequence
-      X1[Time t=1] --> X2[Time t=2]
-      X2 --> X3[Time t=T]
-    end
-    subgraph GRU Layers
-      X1 --> GRU1[GRU Cell]
-      X2 --> GRU2[GRU Cell]
-      X3 --> GRU3[GRU Cell]
-      GRU1 -->|Hidden State| GRU2
-      GRU2 -->|Hidden State| GRU3
-    end
-    subgraph Output
-      GRU3 --> FC[Fully Connected Layer]
-      FC --> Softmax[Softmax]
-      Softmax --> Pred[Class Prediction]
-    end
-    style GRU1 fill:#8b5cf6,stroke:#7c3aed,stroke-width:2px,color:#fff
-    style GRU2 fill:#8b5cf6,stroke:#7c3aed,stroke-width:2px,color:#fff
-    style GRU3 fill:#8b5cf6,stroke:#7c3aed,stroke-width:2px,color:#fff
-    style FC fill:#ec4899,stroke:#db2777,stroke-width:2px,color:#fff
+  flowchart LR
+    X1[/"Time t=1"/] --> X2[/"Time t=2"/]
+    X2 --> X3[/"Time t=T"/]
+    X1 --> GRU1{"GRU Cell"}
+    X2 --> GRU2{"GRU Cell"}
+    X3 --> GRU3{"GRU Cell"}
+    GRU1 -->|Hidden State| GRU2
+    GRU2 -->|Hidden State| GRU3
+    GRU3 --> FC{"Fully Connected Layer"}
+    FC --> Softmax{"Softmax"}
+    Softmax --> Pred(["Class Prediction"])
+
+    style X1 fill:#fbbf24,stroke:#d97706,stroke-width:2px,color:#000
+    style X2 fill:#fbbf24,stroke:#d97706,stroke-width:2px,color:#000
+    style X3 fill:#fbbf24,stroke:#d97706,stroke-width:2px,color:#000
+    style GRU1 fill:#3b82f6,stroke:#2563eb,stroke-width:2px,color:#fff
+    style GRU2 fill:#3b82f6,stroke:#2563eb,stroke-width:2px,color:#fff
+    style GRU3 fill:#3b82f6,stroke:#2563eb,stroke-width:2px,color:#fff
+    style FC fill:#3b82f6,stroke:#2563eb,stroke-width:2px,color:#fff
+    style Softmax fill:#3b82f6,stroke:#2563eb,stroke-width:2px,color:#fff
+    style Pred fill:#10b981,stroke:#059669,stroke-width:2px,color:#fff
 
 _metadata:
   bloc: 3

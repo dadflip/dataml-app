@@ -1,14 +1,25 @@
 id: "model_transformer_encoder"
 name: "Model: Transformer Encoder (PyTorch)"
-description: "Architecture de base de l'attention multi-têtes (sans le décodeur), similaire à BERT."
+description: |
+  Implémentation from scratch d'un Encodeur Transformer en PyTorch. Il s'agit de l'architecture fondamentale basée sur le mécanisme d'Attention Multi-Têtes (Multi-Head Attention), similaire à celle utilisée dans BERT, mais sans la partie décodeur. Ce modèle apprend les relations contextuelles globales dans des données séquentielles.
 category: "Attention & Transformers"
 tags: ["model", "nlp", "timeseries", "pytorch", "transformer", "attention"]
 applies_to: ["Séquences", "Texte"]
-when_to_use: "Pour un modèle de classification très puissant basé sur l'attention from scratch."
+when_to_use: |
+  Privilégiez ce modèle lorsque vous traitez des données séquentielles complexes (séries temporelles multidimensionnelles ou texte vectorisé) et que vous disposez d'un grand volume de données pour permettre à l'architecture Transformer d'apprendre des représentations efficaces depuis zéro (from scratch).
+use_cases:
+  - "Classification de séquences temporelles avec de fortes dépendances à long terme."
+  - "Analyse de sentiment sur des séquences vectorisées."
+  - "Tâches de reconnaissance de motifs complexes dans des signaux continus (ex: capteurs IoT, ECG)."
+  - "Prototypage d'architectures d'attention personnalisées sur des jeux de données de niche."
 pros:
-  - "Gère le contexte global nativement."
+  - "Capture le contexte global de la séquence sans perte d'information à long terme (contrairement aux RNN/LSTM)."
+  - "Architecture hautement parallélisable, optimisant l'utilisation des ressources GPU."
+  - "Forte capacité de modélisation grâce au mécanisme d'auto-attention (Self-Attention)."
 cons:
-  - "Besoin de beaucoup de données pour converger from scratch."
+  - "Nécessite d'immenses volumes de données d'entraînement pour converger efficacement sans pré-entraînement."
+  - "Complexité computationnelle quadratique $O(n^2)$ par rapport à la longueur de la séquence, limitant la taille des entrées."
+  - "Réglage des hyperparamètres complexe et risque important de surapprentissage sur de petits datasets."
 hyperparameters:
   d_model: "Dimension d'embedding (ex: 64)."
   nhead: "Nombre de têtes d'attention (ex: 4)."
@@ -90,20 +101,68 @@ code_template: |
           full_pipeline = model
       training_history = {"status": "success"}
       task_type = "classification"
+math_theory: |
+  L'Encodeur Transformer repose sur le mécanisme de Multi-Head Self-Attention.
+  Pour une séquence d'entrée $\textcolor{#10b981}{X}$, on projette d'abord $\textcolor{#10b981}{X}$ en trois matrices : Query ($\textcolor{#3b82f6}{Q}$), Key ($\textcolor{#3b82f6}{K}$) et Value ($\textcolor{#3b82f6}{V}$) via des matrices de poids $\textcolor{#8b5cf6}{W}$.
+  
+  $$ \textcolor{#3b82f6}{Q} = \textcolor{#10b981}{X} \textcolor{#8b5cf6}{W_Q}, \quad \textcolor{#3b82f6}{K} = \textcolor{#10b981}{X} \textcolor{#8b5cf6}{W_K}, \quad \textcolor{#3b82f6}{V} = \textcolor{#10b981}{X} \textcolor{#8b5cf6}{W_V} $$
+  
+  Le score d'attention calcule la similarité entre chaque élément, ajustée par la dimension $\textcolor{#fbbf24}{d_k}$ :
+  
+  $$ \text{Attention}(\textcolor{#3b82f6}{Q}, \textcolor{#3b82f6}{K}, \textcolor{#3b82f6}{V}) = \text{softmax}\left(\frac{\textcolor{#3b82f6}{Q} \textcolor{#3b82f6}{K}^T}{\sqrt{\textcolor{#fbbf24}{d_k}}}\right) \textcolor{#3b82f6}{V} $$
+  
+  Ce résultat est ensuite additionné à $\textcolor{#10b981}{X}$ via une connexion résiduelle, puis normalisé et passé dans un réseau Feed-Forward ($\textcolor{#ef4444}{\text{FFN}}$).
+math_illustration_svg: |
+  <svg viewBox="0 0 500 400" xmlns="http://www.w3.org/2000/svg">
+    <rect x="200" y="320" width="100" height="40" rx="5" fill="#10b981" />
+    <text x="250" y="345" fill="white" font-family="sans-serif" font-size="16" text-anchor="middle">Input X</text>
+    
+    <path d="M 250 320 L 250 290" stroke="black" stroke-width="2" marker-end="url(#arrow)" />
+    
+    <!-- Q K V -->
+    <rect x="120" y="250" width="60" height="40" rx="5" fill="#3b82f6" />
+    <text x="150" y="275" fill="white" font-family="sans-serif" font-size="16" text-anchor="middle">Q</text>
+    <rect x="220" y="250" width="60" height="40" rx="5" fill="#3b82f6" />
+    <text x="250" y="275" fill="white" font-family="sans-serif" font-size="16" text-anchor="middle">K</text>
+    <rect x="320" y="250" width="60" height="40" rx="5" fill="#3b82f6" />
+    <text x="350" y="275" fill="white" font-family="sans-serif" font-size="16" text-anchor="middle">V</text>
+    
+    <path d="M 250 290 L 150 290 L 150 290" stroke="black" stroke-width="2" marker-end="url(#arrow)" />
+    <path d="M 250 290 L 350 290 L 350 290" stroke="black" stroke-width="2" marker-end="url(#arrow)" />
+    
+    <!-- Attention -->
+    <rect x="150" y="160" width="200" height="50" rx="10" fill="#8b5cf6" />
+    <text x="250" y="190" fill="white" font-family="sans-serif" font-size="18" text-anchor="middle">Scaled Dot-Product</text>
+    
+    <path d="M 150 250 L 180 210" stroke="black" stroke-width="2" marker-end="url(#arrow)" />
+    <path d="M 250 250 L 250 210" stroke="black" stroke-width="2" marker-end="url(#arrow)" />
+    <path d="M 350 250 L 320 210" stroke="black" stroke-width="2" marker-end="url(#arrow)" />
+    
+    <!-- FFN -->
+    <rect x="180" y="60" width="140" height="50" rx="10" fill="#ef4444" />
+    <text x="250" y="90" fill="white" font-family="sans-serif" font-size="18" text-anchor="middle">Feed Forward</text>
+    
+    <path d="M 250 160 L 250 110" stroke="black" stroke-width="2" marker-end="url(#arrow)" />
+    <path d="M 250 60 L 250 20" stroke="black" stroke-width="2" marker-end="url(#arrow)" />
+    
+    <defs>
+      <marker id="arrow" markerWidth="10" markerHeight="10" refX="9" refY="3" orient="auto" markerUnits="strokeWidth">
+        <path d="M0,0 L0,6 L9,3 z" fill="black" />
+      </marker>
+    </defs>
+  </svg>
 illustration_mermaid: |
-    graph TD
-      In([Input Sequence]) --> Emb(Linear Embedding Layer)
-      Emb --> Enc(Transformer Encoder Layer)
-      Enc --> Enc2(Transformer Encoder Layer N)
-      Enc2 --> MeanPool(Mean Pooling across sequence)
-      MeanPool --> FC(Fully Connected Layer)
-      FC --> Out([Output Logits / Softmax])
-      
-      style In fill:#f8fafc,stroke:#94a3b8,stroke-width:2px
-      style Enc fill:#38bdf8,stroke:#0284c7,stroke-width:2px,color:#fff
-      style Enc2 fill:#38bdf8,stroke:#0284c7,stroke-width:2px,color:#fff
-      style FC fill:#8b5cf6,stroke:#7c3aed,stroke-width:2px,color:#fff
-      style Out fill:#10b981,stroke:#059669,stroke-width:2px,color:#fff
+  flowchart LR
+    In[/"Séquence d'Entrée (Input Sequence)"/]:::input --> Emb{"Couche d'Embedding"}:::model
+    Emb --> Enc{"Encodeur Transformer"}:::model
+    Enc --> MeanPool{"Mean Pooling"}:::metadata
+    MeanPool --> FC{"Couche Linéaire (FC)"}:::model
+    FC --> Out(["Logits / Softmax"]):::tensor
+
+    classDef input fill:#fbbf24,stroke:#d97706,stroke-width:2px,color:#000
+    classDef model fill:#3b82f6,stroke:#2563eb,stroke-width:2px,color:#fff
+    classDef tensor fill:#10b981,stroke:#059669,stroke-width:2px,color:#fff
+    classDef metadata fill:#8b5cf6,stroke:#7c3aed,stroke-width:2px,color:#fff
 
 _metadata:
   bloc: 3

@@ -1,16 +1,72 @@
 id: "model_isolation_forest"
 name: "Model: Isolation Forest"
-description: "Algorithme de détection d'anomalies (Outliers) basé sur des arbres aléatoires."
+description: "Algorithme de détection d'anomalies (Outliers) non-supervisé, basé sur un ensemble d'arbres aléatoires. Il identifie les anomalies en isolant les observations qui nécessitent peu de scissions pour être séparées du reste des données."
 category: "Détection d'Anomalies (Non-Supervisé)"
-tags: ["model", "anomaly-detection", "tabular", "sklearn", "isolation-forest", "ensemble"]
+tags: ["model", "anomaly-detection", "tabular", "sklearn", "isolation-forest", "ensemble", "outliers"]
 applies_to: ["Tabulaire"]
-when_to_use: "Pour trouver de la fraude, des pannes, ou nettoyer un dataset massivement bruité."
+when_to_use: "À privilégier pour détecter des comportements frauduleux, identifier des pannes matérielles, ou nettoyer un jeu de données fortement bruité avant l'entraînement d'autres modèles."
+use_cases:
+  - "Détection de fraudes bancaires : Repérage de transactions atypiques au sein d'un grand volume de paiements."
+  - "Maintenance prédictive : Identification de signaux anormaux émis par des capteurs industriels."
+  - "Nettoyage de données (Data Cleansing) : Élimination automatique des valeurs aberrantes massives d'un dataset."
 pros:
-  - "Très rapide et efficace en haute dimension."
+  - "Algorithme extrêmement rapide et très performant, y compris sur des espaces de grande dimension."
+  - "Très robuste, avec peu d'hypothèses sur la distribution sous-jacente des données."
+  - "Génère un score d'anomalie continu permettant d'ajuster finement le seuil d'alerte."
 cons:
-  - "Requiert de définir un taux de contamination (pourcentage d'anomalies estimé)."
+  - "Nécessite la définition d'un taux de contamination en amont (la proportion estimée d'anomalies dans les données)."
+  - "Interprétabilité locale difficile (comprendre exactement pourquoi un point est anormal au travers des multiples arbres)."
 hyperparameters:
   contamination: "Proportion d'anomalies attendue (ex: 0.05 pour 5%)."
+math_theory: |
+  L'Isolation Forest calcule un score d'anomalie $\textcolor{#3b82f6}{s(x, n)}$ basé sur la profondeur nécessaire pour isoler une observation $\textcolor{#10b981}{x}$ dans un ensemble d'arbres aléatoires. L'anomalie se déduit par l'espérance de la longueur du chemin $\textcolor{#ef4444}{E(h(x))}$ par rapport à la moyenne théorique $\textcolor{#fbbf24}{c(n)}$ :
+  $$ \textcolor{#3b82f6}{s(x, n)} = 2^{-\frac{\textcolor{#ef4444}{E(h(x))}}{\textcolor{#fbbf24}{c(n)}}} $$
+  Si le score tend vers 1, la longueur du chemin est très courte, ce qui indique que l'observation est très facilement "isolable" et donc qu'il s'agit d'une anomalie. Si le score s'approche de 0.5, l'observation est normale.
+math_illustration_svg: |
+  <svg viewBox="0 0 500 250" xmlns="http://www.w3.org/2000/svg">
+    <rect width="100%" height="100%" fill="#1f2937" rx="10"/>
+    <text x="250" y="30" fill="#ffffff" font-family="sans-serif" font-size="16" font-weight="bold" text-anchor="middle">Isolation Forest Algorithm</text>
+    
+    <!-- Tree structure -->
+    <!-- Root -->
+    <circle cx="250" cy="60" r="8" fill="#3b82f6"/>
+    
+    <!-- Level 1 -->
+    <path d="M 250 60 L 150 100" stroke="#6b7280" stroke-width="2"/>
+    <path d="M 250 60 L 350 100" stroke="#6b7280" stroke-width="2"/>
+    <circle cx="150" cy="100" r="8" fill="#3b82f6"/>
+    <circle cx="350" cy="100" r="8" fill="#3b82f6"/>
+    
+    <!-- Anomaly isolated quickly (left path) -->
+    <path d="M 150 100 L 100 140" stroke="#ef4444" stroke-width="3"/>
+    <circle cx="100" cy="140" r="10" fill="#ef4444"/>
+    <text x="100" y="165" fill="#ef4444" font-family="sans-serif" font-size="12" font-weight="bold" text-anchor="middle">Anomaly x</text>
+    <text x="70" y="115" fill="#ef4444" font-family="sans-serif" font-size="12">Short h(x)</text>
+    
+    <path d="M 150 100 L 200 140" stroke="#6b7280" stroke-width="2"/>
+    <circle cx="200" cy="140" r="6" fill="#10b981"/>
+    
+    <!-- Normal point deep in tree (right path) -->
+    <path d="M 350 100 L 300 140" stroke="#6b7280" stroke-width="2"/>
+    <path d="M 350 100 L 400 140" stroke="#6b7280" stroke-width="2"/>
+    <circle cx="300" cy="140" r="8" fill="#3b82f6"/>
+    <circle cx="400" cy="140" r="8" fill="#3b82f6"/>
+    
+    <path d="M 400 140 L 370 180" stroke="#6b7280" stroke-width="2"/>
+    <path d="M 400 140 L 430 180" stroke="#6b7280" stroke-width="2"/>
+    <circle cx="370" cy="180" r="8" fill="#3b82f6"/>
+    <circle cx="430" cy="180" r="6" fill="#10b981"/>
+    
+    <path d="M 370 180 L 350 220" stroke="#10b981" stroke-width="2"/>
+    <circle cx="350" cy="220" r="10" fill="#10b981"/>
+    <text x="350" y="240" fill="#10b981" font-family="sans-serif" font-size="12" font-weight="bold" text-anchor="middle">Normal x</text>
+    <text x="390" y="200" fill="#10b981" font-family="sans-serif" font-size="12">Long h(x)</text>
+    
+    <!-- Score legend -->
+    <rect x="20" y="190" width="160" height="40" rx="5" fill="#374151"/>
+    <text x="100" y="208" fill="#3b82f6" font-family="sans-serif" font-size="12" text-anchor="middle">Score: s(x,n) = 2^(-E(h)/c)</text>
+    <text x="100" y="222" fill="#ef4444" font-family="sans-serif" font-size="10" text-anchor="middle">s → 1 : Anomaly</text>
+  </svg>
 code_template: |
   import pandas as pd
   import numpy as np
@@ -59,26 +115,36 @@ code_template: |
       task_type = "anomaly_detection"
       meta = {}
 illustration_mermaid: |
-  graph TD
-    subgraph Data
-      Points[Data Points]
-    end
-    subgraph Isolation Process
-      Points --> Root[Root Node]
-      Root --> |Random Split| Node1[Node]
-      Root --> |Random Split| Node2[Node]
-      Node1 --> Leaf1[Leaf: Outlier isolated quickly]
-      Node2 --> |More Splits| Leaf2[Leaf: Inlier deeper in tree]
-    end
-    subgraph Scoring
-      Leaf1 --> Score1[Short Path Length = High Anomaly Score]
-      Leaf2 --> Score2[Long Path Length = Low Anomaly Score]
-      Score1 --> Pred[Thresholding]
-      Score2 --> Pred
-    end
+  flowchart LR
+    Points(["Points de Données"])
+    Root{"Nœud Racine"}
+    Node1{"Nœud de Split"}
+    Node2{"Nœud de Split"}
+    Leaf1(["Feuille (Anomalie)"])
+    Leaf2(["Feuille (Normale)"])
+    Score1(["Score d'Anomalie Fort"])
+    Score2(["Score d'Anomalie Faible"])
+    Pred(["Prédiction (0/1)"])
+
+    Points --> Root
+    Root -- "Split Aléatoire" --> Node1
+    Root -- "Split Aléatoire" --> Node2
+    Node1 -- "Peu de splits" --> Leaf1
+    Node2 -- "Multiples splits" --> Leaf2
+    Leaf1 --> Score1
+    Leaf2 --> Score2
+    Score1 --> Pred
+    Score2 --> Pred
+
+    style Points fill:#10b981,stroke:#059669,stroke-width:2px,color:#fff
     style Root fill:#3b82f6,stroke:#2563eb,stroke-width:2px,color:#fff
+    style Node1 fill:#3b82f6,stroke:#2563eb,stroke-width:2px,color:#fff
+    style Node2 fill:#3b82f6,stroke:#2563eb,stroke-width:2px,color:#fff
     style Leaf1 fill:#ef4444,stroke:#dc2626,stroke-width:2px,color:#fff
     style Leaf2 fill:#10b981,stroke:#059669,stroke-width:2px,color:#fff
+    style Score1 fill:#10b981,stroke:#059669,stroke-width:2px,color:#fff
+    style Score2 fill:#10b981,stroke:#059669,stroke-width:2px,color:#fff
+    style Pred fill:#10b981,stroke:#059669,stroke-width:2px,color:#fff
 
 _metadata:
   bloc: 3

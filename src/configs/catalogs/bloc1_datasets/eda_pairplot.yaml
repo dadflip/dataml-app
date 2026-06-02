@@ -1,6 +1,16 @@
 id: eda_pairplot
 name: 'EDA: Pairplot'
 description: Trace les relations bivariées entre les premières variables numériques.
+when_to_use: "À utiliser pour identifier visuellement les corrélations et séparations de classes entre plusieurs variables continues."
+use_cases:
+  - "Recherche de variables redondantes (fortement corrélées)."
+  - "Détection de clusters naturels et de séparabilité des données."
+pros:
+  - "Vision matricielle très dense et riche en informations."
+  - "Affiche à la fois les distributions (diagonale) et les relations croisées."
+cons:
+  - "Extrêmement lent et illisible s'il y a trop de colonnes ou de lignes."
+  - "Ignorera les variables catégorielles non encodées."
 category: 3. Exploratory Data Analysis
 tags:
 - eda
@@ -24,20 +34,28 @@ code_template: |
   plt.show()
 illustration_mermaid: |
     flowchart TD
-        Input([DataFrame & Target Name]) --> SelectCols[Select Top 5 Numeric Cols]
-        SelectCols --> CheckTarget{Target exists?}
-        CheckTarget -- Yes --> TargetCheck{Target in Cols?}
-        TargetCheck -- No --> Append[Append Target to Cols]
-        TargetCheck -- Yes --> FilterDrop[Drop NaNs]
-        Append --> FilterDrop
-        CheckTarget -- No --> FilterDrop
-        FilterDrop --> Plot{{sns.pairplot}}
-        Plot --> Output[/Print Info & Show Plot/]
-    
-        style Input fill:#3b82f6,stroke:#2563eb,color:#fff
-        style SelectCols fill:#10b981,stroke:#059669,color:#fff
-        style Plot fill:#ec4899,stroke:#db2777,color:#fff
-        style Output fill:#f59e0b,stroke:#d97706,color:#fff
+        InDF[/df/]
+        InParams[/target_name, cols/]
+        ProcSelect{select_dtypes}
+        ProcDrop{dropna}
+        ProcPlot{sns.pairplot}
+        OutFig([fig])
+        OutGrid([PairGrid])
+
+        InDF --> ProcSelect
+        ProcSelect --> ProcDrop
+        ProcDrop --> ProcPlot
+        InParams --> ProcPlot
+        ProcPlot --> OutFig
+        ProcPlot --> OutGrid
+
+        style InDF fill:#fbbf24,stroke:#d97706,stroke-width:2px,color:#000
+        style InParams fill:#fbbf24,stroke:#d97706,stroke-width:2px,color:#000
+        style ProcSelect fill:#3b82f6,stroke:#2563eb,stroke-width:2px,color:#fff
+        style ProcDrop fill:#3b82f6,stroke:#2563eb,stroke-width:2px,color:#fff
+        style ProcPlot fill:#3b82f6,stroke:#2563eb,stroke-width:2px,color:#fff
+        style OutFig fill:#10b981,stroke:#059669,stroke-width:2px,color:#fff
+        style OutGrid fill:#8b5cf6,stroke:#7c3aed,stroke-width:2px,color:#fff
 
 _metadata:
   bloc: 1

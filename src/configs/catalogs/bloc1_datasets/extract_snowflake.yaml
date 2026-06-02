@@ -1,6 +1,16 @@
 id: extract_snowflake
 name: 'Extract: Snowflake Data Warehouse'
 description: Interroge un cluster Snowflake via le connecteur officiel Python.
+when_to_use: "Pour récupérer un volume important de données structurées hébergées sur un entrepôt de données Snowflake."
+use_cases:
+  - "Extraction de tables de dimensions ou faits pour l'entraînement d'un modèle."
+  - "Analyse ponctuelle de données massives du Data Warehouse."
+pros:
+  - "Connecteur officiel très performant (utilise pyarrow)."
+  - "Déchargement rapide avec fetch_pandas_all()."
+cons:
+  - "Nécessite des identifiants et un entrepôt virtuel (warehouse) actifs."
+  - "Attention à la volumétrie en RAM si la requête retourne trop de lignes."
 category: 1. Extract
 tags:
 - extract
@@ -69,45 +79,22 @@ code_template: |
   meta = {"source": "snowflake", "path": DEST_PATH}
 
 illustration_mermaid: |
-  flowchart TD
-      subgraph Config [Parameters]
-          CRED([USER / PWD])
-          ACC([ACCOUNT / WH])
-          QRY([QUERY])
-          DEST([DEST_PATH])
-      end
-
-      subgraph Operations [Snowflake Extract]
-          Conn([snowflake.connect])
-          Cur([cursor.execute])
-          Fetch([fetch_pandas_all])
-          Save([to_csv])
-          OutFile[(Local CSV)]
-      end
-
-      subgraph Outputs [Contract Variables]
-          df((df = pd.DataFrame))
-          target((target_name = ''))
-          task((task_type = 'unknown'))
-          meta((meta: dict))
-      end
-
-      CRED & ACC --> Conn
-      Conn --> Cur
-      QRY --> Cur
-      Cur --> Fetch
-      Fetch --> Save
-      DEST --> OutFile
-      Save --> OutFile
-      OutFile -.-> meta
-
-      style Config fill:#f8fafc,stroke:#cbd5e1,stroke-width:2px
-      style Conn fill:#3b82f6,stroke:#1d4ed8,stroke-width:2px,color:#fff
-      style Cur fill:#10b981,stroke:#047857,stroke-width:2px,color:#fff
-      style Fetch fill:#f59e0b,stroke:#b45309,stroke-width:2px,color:#fff
-      style Save fill:#8b5cf6,stroke:#6d28d9,stroke-width:2px,color:#fff
-      style OutFile fill:#64748b,stroke:#475569,stroke-width:2px,color:#fff
-      style Outputs fill:#f1f5f9,stroke:#94a3b8,stroke-width:2px
+  flowchart LR
+      A[/"📄 ACCOUNT & QUERY"/] --> B{"snowflake.connect()"}
+      C[/"🎯 TARGET_COL"/] --> D{"Check TARGET_COL"}
+      B --> E(["📊 df (DataFrame)"])
+      E --> D
+      D --> F(["🎯 target_name"])
+      D --> G(["⚙️ task_type"])
+      D --> H(["ℹ️ meta (source, path)"])
+      style A fill:#fbbf24,stroke:#d97706,stroke-width:2px,color:#000
+      style C fill:#fbbf24,stroke:#d97706,stroke-width:2px,color:#000
+      style B fill:#3b82f6,stroke:#2563eb,stroke-width:2px,color:#fff
+      style D fill:#3b82f6,stroke:#2563eb,stroke-width:2px,color:#fff
+      style E fill:#10b981,stroke:#059669,stroke-width:2px,color:#fff
+      style F fill:#8b5cf6,stroke:#7c3aed,stroke-width:2px,color:#fff
+      style G fill:#8b5cf6,stroke:#7c3aed,stroke-width:2px,color:#fff
+      style H fill:#8b5cf6,stroke:#7c3aed,stroke-width:2px,color:#fff
 
 _metadata:
   bloc: 1

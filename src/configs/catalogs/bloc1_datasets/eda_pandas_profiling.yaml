@@ -1,7 +1,16 @@
 id: eda_pandas_profiling
 name: 'EDA: YData Profiling'
-description: Génère un rapport HTML interactif exhaustif (distributions, corrélations,
-  warnings).
+description: Génère un rapport HTML interactif exhaustif (distributions, corrélations, warnings).
+when_to_use: "Lors de la première découverte d'un jeu de données pour automatiser les vérifications statistiques de base et détecter les valeurs manquantes ou atypiques."
+use_cases:
+  - "Génération de rapport de qualité des données."
+  - "Analyse rapide des statistiques descriptives et corrélations."
+pros:
+  - "Outil clé en main très complet et visuel."
+  - "Met en évidence de nombreux problèmes automatiquement (zéro variance, corrélations fortes, NaNs)."
+cons:
+  - "Lent et très gourmand en mémoire sur de gros volumes."
+  - "La version HTML peut être lourde à charger pour de nombreuses colonnes."
 category: 3. Exploratory Data Analysis
 tags:
 - eda
@@ -25,15 +34,25 @@ code_template: |
   profile.to_notebook_iframe()
 illustration_mermaid: |
     flowchart TD
-        Input([DataFrame]) --> Setup[Init ProfileReport]
-        Setup --> Config[Set minimal mode & explorative]
-        Config --> Generate[Generate HTML Report]
-        Generate --> Output{{Display as Notebook IFrame}}
-    
-        style Input fill:#3b82f6,stroke:#2563eb,color:#fff
-        style Setup fill:#8b5cf6,stroke:#7c3aed,color:#fff
-        style Generate fill:#10b981,stroke:#059669,color:#fff
-        style Output fill:#ec4899,stroke:#db2777,color:#fff
+        InDF[/df/]
+        InParams[/MINIMAL_MODE/]
+        ProcProfile{ProfileReport}
+        ProcRender{to_notebook_iframe}
+        OutProfile([profile_object])
+        OutHTML([HTML_iframe])
+
+        InDF --> ProcProfile
+        InParams --> ProcProfile
+        ProcProfile --> OutProfile
+        OutProfile --> ProcRender
+        ProcRender --> OutHTML
+
+        style InDF fill:#fbbf24,stroke:#d97706,stroke-width:2px,color:#000
+        style InParams fill:#fbbf24,stroke:#d97706,stroke-width:2px,color:#000
+        style ProcProfile fill:#3b82f6,stroke:#2563eb,stroke-width:2px,color:#fff
+        style ProcRender fill:#3b82f6,stroke:#2563eb,stroke-width:2px,color:#fff
+        style OutProfile fill:#8b5cf6,stroke:#7c3aed,stroke-width:2px,color:#fff
+        style OutHTML fill:#10b981,stroke:#059669,stroke-width:2px,color:#fff
 
 _metadata:
   bloc: 1

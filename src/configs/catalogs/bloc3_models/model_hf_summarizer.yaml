@@ -1,14 +1,22 @@
 id: "model_hf_summarizer"
 name: "Model: HuggingFace Text Summarizer"
-description: "Pipeline HuggingFace de résumé automatique de texte (BART ou T5)."
+description: "Modèle de traitement du langage naturel (NLP) basé sur l'architecture Transformer (BART ou T5) permettant de générer automatiquement un résumé d'un texte long sans ré-entraînement (Zero-Shot)."
 category: "Modèles NLP (Pré-entraînés)"
 tags: ["model", "nlp", "summarization", "transformers", "huggingface", "zero-shot", "generative"]
 applies_to: ["Texte"]
-when_to_use: "Quand vous voulez résumer un bloc de texte long en une phrase ou un petit paragraphe."
+when_to_use: "À utiliser pour extraire l'essence d'un grand bloc de texte, condenser des articles, rapports ou transcriptions en un paragraphe concis, en l'absence de données d'entraînement pour créer un modèle sur-mesure."
+use_cases:
+  - "Résumé automatique d'articles de presse."
+  - "Condensation de transcriptions de réunions ou d'appels."
+  - "Génération de descriptions courtes à partir de fiches produits détaillées."
 pros:
-  - "Très impressionnant, génération de texte fluide."
+  - "Génération de texte extrêmement fluide et naturelle (abstractive summarization)."
+  - "Aucun entraînement requis (modèle pré-entraîné prêt à l'emploi)."
+  - "Capacité à comprendre le contexte global du document."
 cons:
-  - "Lent sur CPU. Modèle volumineux."
+  - "Modèle lourd nécessitant beaucoup de ressources de calcul (très lent sur CPU)."
+  - "Limité par la taille du contexte d'entrée (souvent 512 ou 1024 tokens maximum)."
+  - "Risque de génération de faits incorrects (hallucinations)."
 hyperparameters:
   max_length: "Longueur max du résumé (ex: 130)."
   min_length: "Longueur min du résumé (ex: 30)."
@@ -62,24 +70,77 @@ code_template: |
           task_type = "text_generation"
           meta = {}
 illustration_mermaid: |
-  graph TD
-    subgraph Data
-      T[Input Long Text]
-    end
-    subgraph BART Architecture
-      Enc[Encoder Layers]
-      Dec[Decoder Layers]
-      T --> Tokenizer[Tokenizer]
-      Tokenizer --> Enc
-      Enc --> Dec
-      Dec --> Gen[Autoregressive Generation]
-    end
-    subgraph Output
-      Gen --> OutText[Summary Text]
-    end
-    style Enc fill:#8b5cf6,stroke:#7c3aed,stroke-width:2px,color:#fff
-    style Dec fill:#8b5cf6,stroke:#7c3aed,stroke-width:2px,color:#fff
-    style Tokenizer fill:#f59e0b,stroke:#d97706,stroke-width:2px,color:#fff
+  flowchart LR
+    T[/"Input Long Text"/] --> Tokenizer{"Tokenizer"}
+    Tokenizer --> Enc{"Encoder Layers"}
+    Enc --> Dec{"Decoder Layers"}
+    Dec --> Gen{"Autoregressive Generation"}
+    Gen --> OutText(["Summary Text"])
+
+    style T fill:#fbbf24,stroke:#d97706,stroke-width:2px,color:#000
+    style Tokenizer fill:#3b82f6,stroke:#2563eb,stroke-width:2px,color:#fff
+    style Enc fill:#3b82f6,stroke:#2563eb,stroke-width:2px,color:#fff
+    style Dec fill:#3b82f6,stroke:#2563eb,stroke-width:2px,color:#fff
+    style Gen fill:#3b82f6,stroke:#2563eb,stroke-width:2px,color:#fff
+    style OutText fill:#10b981,stroke:#059669,stroke-width:2px,color:#fff
+
+math_theory: |
+  Text summarization relies on an Encoder-Decoder Transformer architecture (e.g., BART or T5). The task is framed as conditional text generation.
+  
+  The model maximizes the likelihood of the summary sequence $\textcolor{#10b981}{Y}$ given the input text $\textcolor{#3b82f6}{X}$, factoring the probability using the chain rule over $T$ steps:
+  
+  $$ P(\textcolor{#10b981}{Y} \mid \textcolor{#3b82f6}{X}) = \prod_{t=1}^{T} P(\textcolor{#10b981}{y_t} \mid \textcolor{#10b981}{y_{<t}}, \textcolor{#fbbf24}{H}) $$
+  
+  where:
+  *   $\textcolor{#3b82f6}{X}$ is the long input document.
+  *   $\textcolor{#fbbf24}{H} = \text{Encoder}(\textcolor{#3b82f6}{X})$ represents the contextualized hidden states of the input.
+  *   $\textcolor{#10b981}{y_t}$ is the generated summary token at step $t$.
+  *   $\textcolor{#10b981}{y_{<t}}$ are the previously generated summary tokens (autoregressive decoding).
+
+math_illustration_svg: |
+  <svg viewBox="0 0 700 350" xmlns="http://www.w3.org/2000/svg">
+    <defs>
+      <marker id="arrow" viewBox="0 0 10 10" refX="10" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+        <path d="M 0 0 L 10 5 L 0 10 z" fill="#6b7280" />
+      </marker>
+      <marker id="arrow-green" viewBox="0 0 10 10" refX="10" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+        <path d="M 0 0 L 10 5 L 0 10 z" fill="#10b981" />
+      </marker>
+    </defs>
+    
+    <!-- Input Text X -->
+    <rect x="20" y="100" width="100" height="150" rx="5" fill="#eff6ff" stroke="#3b82f6" stroke-width="2"/>
+    <text x="70" y="150" text-anchor="middle" font-family="sans-serif" font-size="16" font-weight="bold" fill="#3b82f6">Input Text</text>
+    <text x="70" y="180" text-anchor="middle" font-family="sans-serif" font-size="24" font-weight="bold" fill="#3b82f6">X</text>
+    
+    <line x1="120" y1="175" x2="180" y2="175" stroke="#6b7280" stroke-width="2" marker-end="url(#arrow)"/>
+    
+    <!-- Encoder -->
+    <rect x="180" y="75" width="120" height="200" rx="10" fill="#f8fafc" stroke="#94a3b8" stroke-width="2"/>
+    <text x="240" y="180" text-anchor="middle" font-family="sans-serif" font-size="18" font-weight="bold" fill="#475569">Encoder</text>
+    
+    <line x1="300" y1="175" x2="360" y2="175" stroke="#6b7280" stroke-width="2" marker-end="url(#arrow)"/>
+    
+    <!-- Hidden States H -->
+    <rect x="360" y="145" width="60" height="60" rx="5" fill="#fffbeb" stroke="#fbbf24" stroke-width="2"/>
+    <text x="390" y="180" text-anchor="middle" font-family="sans-serif" font-size="20" font-weight="bold" fill="#fbbf24">H</text>
+    
+    <line x1="420" y1="175" x2="480" y2="175" stroke="#6b7280" stroke-width="2" marker-end="url(#arrow)"/>
+    
+    <!-- Decoder -->
+    <rect x="480" y="75" width="120" height="200" rx="10" fill="#f8fafc" stroke="#94a3b8" stroke-width="2"/>
+    <text x="540" y="180" text-anchor="middle" font-family="sans-serif" font-size="18" font-weight="bold" fill="#475569">Decoder</text>
+    
+    <!-- Autoregressive feedback loop -->
+    <path d="M 690 215 L 690 280 L 540 280 L 540 275" fill="none" stroke="#10b981" stroke-width="2" marker-end="url(#arrow-green)"/>
+    <text x="615" y="270" text-anchor="middle" font-family="sans-serif" font-size="12" font-weight="bold" fill="#10b981">y_&lt;t</text>
+    
+    <line x1="600" y1="175" x2="660" y2="175" stroke="#6b7280" stroke-width="2" marker-end="url(#arrow)"/>
+    
+    <!-- Output Text Y -->
+    <rect x="660" y="135" width="60" height="80" rx="5" fill="#f0fdf4" stroke="#10b981" stroke-width="2"/>
+    <text x="690" y="170" text-anchor="middle" font-family="sans-serif" font-size="16" font-weight="bold" fill="#10b981">y_t</text>
+  </svg>
 
 _metadata:
   bloc: 3

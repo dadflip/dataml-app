@@ -1,17 +1,59 @@
 id: "model_gaussian_mixture"
 name: "Model: Gaussian Mixture Model (GMM)"
-description: "Modèle probabiliste supposant que toutes les données sont générées à partir d'un mélange d'un nombre fini de distributions gaussiennes."
+description: |
+  Modèle probabiliste supposant que toutes les données sont générées à partir d'un mélange d'un nombre fini de distributions gaussiennes, permettant un partitionnement souple (soft clustering).
 category: "Clustering (Non-Supervisé)"
 tags: ["model", "clustering", "tabular", "sklearn", "gmm"]
 applies_to: ["Tabulaire"]
-when_to_use: "Quand vous voulez des probabilités d'appartenance douces (soft clustering) et que les clusters peuvent être elliptiques."
+when_to_use: |
+  À utiliser lorsque vous souhaitez obtenir des probabilités d'appartenance douces (soft clustering) ou que la structure sous-jacente des clusters peut être de forme elliptique plutôt que sphérique (comme pour K-Means).
+use_cases:
+  - "Segmentation de clientèle avec des profils qui se chevauchent."
+  - "Détection d'anomalies en identifiant les points avec une faible probabilité sous le modèle."
+  - "Traitement de l'image (par exemple, la segmentation des couleurs)."
 pros:
-  - "Fournit des probabilités."
-  - "Très flexible sur la forme des clusters."
+  - "Fournit des probabilités d'appartenance pour chaque cluster (soft clustering)."
+  - "Très flexible sur la forme et la taille des clusters grâce aux différentes matrices de covariance."
+  - "Peut être utilisé pour la détection d'anomalies de manière naturelle."
 cons:
-  - "Peut converger vers des minima locaux."
+  - "Peut converger vers des optima locaux, nécessitant souvent plusieurs initialisations."
+  - "Sensible au choix du nombre de composantes."
+  - "Peut être instable avec des ensembles de données de haute dimension."
 hyperparameters:
   n_components: "Nombre de gaussiennes / clusters (ex: 3)."
+math_theory: |
+  Un Gaussian Mixture Model (GMM) suppose que la distribution des données $\textcolor{#10b981}{x}$ est une combinaison linéaire de $K$ composantes gaussiennes. La probabilité globale d'un point est donnée par :
+  $$ P(\textcolor{#10b981}{x}) = \sum_{k=1}^{K} \textcolor{#3b82f6}{\pi_k} \mathcal{N}(\textcolor{#10b981}{x} | \textcolor{#ef4444}{\mu_k}, \textcolor{#fbbf24}{\Sigma_k}) $$
+  Où $\textcolor{#3b82f6}{\pi_k}$ sont les coefficients de mélange (avec $\sum \textcolor{#3b82f6}{\pi_k} = 1$), et $\mathcal{N}$ représente la distribution normale multivariée caractérisée par sa moyenne $\textcolor{#ef4444}{\mu_k}$ et sa matrice de covariance $\textcolor{#fbbf24}{\Sigma_k}$. Le modèle est ajusté itérativement via l'algorithme Espérance-Maximisation (EM).
+math_illustration_svg: |
+  <svg viewBox="0 0 500 250" xmlns="http://www.w3.org/2000/svg">
+    <rect width="100%" height="100%" fill="#1a1a2e" rx="10"/>
+    <text x="250" y="25" fill="#ffffff" font-family="sans-serif" font-size="16" font-weight="bold" text-anchor="middle">Gaussian Mixture Model (GMM)</text>
+    
+    <!-- Cluster 1 (Left) -->
+    <ellipse cx="150" cy="130" rx="60" ry="40" fill="none" stroke="#ef4444" stroke-width="2" stroke-dasharray="4,4"/>
+    <ellipse cx="150" cy="130" rx="30" ry="20" fill="none" stroke="#ef4444" stroke-width="2"/>
+    <circle cx="150" cy="130" r="4" fill="#ef4444"/>
+    <text x="150" y="120" fill="#ef4444" font-family="sans-serif" font-size="14" font-weight="bold" text-anchor="middle">μ_1</text>
+    <text x="180" y="160" fill="#fbbf24" font-family="sans-serif" font-size="14" font-weight="bold">Σ_1</text>
+    <text x="100" y="100" fill="#3b82f6" font-family="sans-serif" font-size="14" font-weight="bold">π_1</text>
+    
+    <!-- Cluster 2 (Right) -->
+    <ellipse cx="330" cy="150" rx="80" ry="50" fill="none" stroke="#fbbf24" stroke-width="2" stroke-dasharray="4,4" transform="rotate(-20 330 150)"/>
+    <ellipse cx="330" cy="150" rx="40" ry="25" fill="none" stroke="#fbbf24" stroke-width="2" transform="rotate(-20 330 150)"/>
+    <circle cx="330" cy="150" r="4" fill="#fbbf24"/>
+    <text x="330" y="140" fill="#ef4444" font-family="sans-serif" font-size="14" font-weight="bold" text-anchor="middle">μ_2</text>
+    <text x="370" y="180" fill="#fbbf24" font-family="sans-serif" font-size="14" font-weight="bold">Σ_2</text>
+    <text x="280" y="110" fill="#3b82f6" font-family="sans-serif" font-size="14" font-weight="bold">π_2</text>
+    
+    <!-- Data point x in overlapping area -->
+    <circle cx="240" cy="135" r="5" fill="#10b981"/>
+    <text x="240" y="125" fill="#10b981" font-family="sans-serif" font-size="16" font-weight="bold" text-anchor="middle">x</text>
+    
+    <!-- Soft assignment lines -->
+    <path d="M 240 135 L 150 130" stroke="#10b981" stroke-width="1" stroke-dasharray="2,2"/>
+    <path d="M 240 135 L 330 150" stroke="#10b981" stroke-width="1" stroke-dasharray="2,2"/>
+  </svg>
 code_template: |
   import pandas as pd
   import numpy as np
@@ -52,18 +94,20 @@ code_template: |
       training_history = {"status": "success", "converged": model.converged_}
 
 illustration_mermaid: |
-  graph TD
-    subgraph Gaussian Mixture Model
-      In([Input Features]) --> EM[Expectation-Maximization]
-      EM --> EStep[E-step: Estimate Probabilities]
-      EStep --> MStep[M-step: Update Means & Covariances]
-      MStep -.-> EM
-      EM --> Proba[Soft Probabilities]
-      Proba --> Out([Cluster Assignment])
-    end
-    style In fill:#f8fafc,stroke:#94a3b8,stroke-width:1px
+  flowchart LR
+    In(["Données d'Entrée"]) --> EM{"Algorithme EM"}
+    NComp[/"Nombre de Composantes"/] --> EM
+    EM --> EStep{"Étape E\n(Estimer Probabilités)"}
+    EStep --> MStep{"Étape M\n(Maj Paramètres)"}
+    MStep -.-> EStep
+    MStep --> Out(["Assignations\n(Soft Clustering)"])
+    
+    style In fill:#10b981,stroke:#059669,stroke-width:2px,color:#fff
     style Out fill:#10b981,stroke:#059669,stroke-width:2px,color:#fff
-    style EM fill:#8b5cf6,stroke:#7c3aed,stroke-width:2px,color:#fff
+    style NComp fill:#fbbf24,stroke:#d97706,stroke-width:2px,color:#000
+    style EM fill:#3b82f6,stroke:#2563eb,stroke-width:2px,color:#fff
+    style EStep fill:#3b82f6,stroke:#2563eb,stroke-width:2px,color:#fff
+    style MStep fill:#3b82f6,stroke:#2563eb,stroke-width:2px,color:#fff
 
 _metadata:
   bloc: 3

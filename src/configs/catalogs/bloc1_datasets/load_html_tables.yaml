@@ -1,12 +1,22 @@
 id: load_html_tables
 name: 'Load: Tableaux HTML'
 description: Parse une page web HTML et extrait tous les tableaux <table> dans une liste de DataFrames.
+when_to_use: À utiliser lorsque vous devez récupérer des données structurées affichées sous forme de tableaux classiques directement depuis une page web ou un fichier HTML local.
+use_cases:
+  - "Web scraping de données statistiques publiques."
+  - "Extraction de données financières depuis des rapports HTML."
+  - "Collecte d'informations depuis des wikis ou catalogues en ligne."
+pros:
+  - "Extraction très rapide et automatique grâce à Pandas (read_html)."
+  - "Permet de récupérer plusieurs tables simultanément."
+cons:
+  - "Nécessite souvent des dépendances supplémentaires comme lxml ou html5lib."
+  - "Les tableaux HTML mal formés ou générés dynamiquement (JavaScript) ne seront pas correctement extraits."
 category: 2. Load
 tags:
 - load
 - html
 - tables
-- pandas
 code_template: |
   import pandas as pd
   import time
@@ -45,13 +55,22 @@ code_template: |
   task_type = "unknown"
   meta = {"format": "html_table", "tables_found": len(dfs), "primary_shape": df.shape}
 illustration_mermaid: |
-  flowchart TD
-      A([FILE_PATH]) --> B[Load HTML_TABLES]
-      B --> df([df])
-      
-      style A fill:#3b82f6,color:#fff
-      style B fill:#10b981,color:#fff
-      style df fill:#f59e0b,color:#fff
+  flowchart LR
+      A[/"📄 FILE_PATH"/] --> B{"pd.read_html()"}
+      C[/"🎯 TARGET_COL"/] --> D{"Check TARGET_COL"}
+      B --> E(["📊 df (DataFrame)"])
+      E --> D
+      D --> F(["🎯 target_name"])
+      D --> G(["⚙️ task_type"])
+      D --> H(["ℹ️ meta (tables_found, shape)"])
+      style A fill:#fbbf24,stroke:#d97706,stroke-width:2px,color:#000
+      style C fill:#fbbf24,stroke:#d97706,stroke-width:2px,color:#000
+      style B fill:#3b82f6,stroke:#2563eb,stroke-width:2px,color:#fff
+      style D fill:#3b82f6,stroke:#2563eb,stroke-width:2px,color:#fff
+      style E fill:#10b981,stroke:#059669,stroke-width:2px,color:#fff
+      style F fill:#8b5cf6,stroke:#7c3aed,stroke-width:2px,color:#fff
+      style G fill:#8b5cf6,stroke:#7c3aed,stroke-width:2px,color:#fff
+      style H fill:#8b5cf6,stroke:#7c3aed,stroke-width:2px,color:#fff
 
 _metadata:
   bloc: 1

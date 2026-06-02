@@ -1,14 +1,64 @@
 id: "transform_image_to_tensor_paths"
 name: "Transform: Image Paths to Tensor"
-description: "Charge les images depuis leurs chemins (paths) et les convertit en tenseurs PyTorch."
+description: "Lit les images directement depuis leurs chemins d'accès sur le disque (paths), effectue un redimensionnement, les convertit en Tenseurs PyTorch (CHW), puis les normalise. Cette fonction combine le chargement I/O et la préparation des tenseurs en une seule étape fluide, gérant les erreurs de lecture à la volée."
+math_theory: |
+  Le pipeline complet modélise une fonction composée sur le chemin de fichier $\textcolor{#3b82f6}{x_p}$ :
+  $$ f(\textcolor{#3b82f6}{x_p}) = (\textcolor{#8b5cf6}{N} \circ \textcolor{#fbbf24}{T_{tensor}} \circ \textcolor{#10b981}{R} \circ \textcolor{#ef4444}{L})(\textcolor{#3b82f6}{x_p}) $$
+  Où :
+  - $\textcolor{#ef4444}{L}$ : Chargement de l'image (décodage JPEG/PNG) $\rightarrow$ matrice spatiale $[0, 255]$
+  - $\textcolor{#10b981}{R}$ : Redimensionnement spatial bilinéaire
+  - $\textcolor{#fbbf24}{T_{tensor}}$ : Projection dans l'espace tensoriel continu $[0, 1]$
+  - $\textcolor{#8b5cf6}{N}$ : Normalisation standard : $\hat{X} = \frac{X - \mu}{\sigma}$ par canal
+  Les images corrompues (où $\textcolor{#ef4444}{L}(\textcolor{#3b82f6}{x_p})$ échoue) sont projetées vers un espace nul et filtrées.
+math_illustration_svg: |
+  <svg viewBox="0 0 400 200" xmlns="http://www.w3.org/2000/svg">
+    <defs>
+      <marker id="arrow" viewBox="0 0 10 10" refX="5" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+        <path d="M 0 0 L 10 5 L 0 10 z" fill="#fbbf24"/>
+      </marker>
+    </defs>
+    <g transform="translate(10, 50)">
+      <path d="M 10 10 L 30 10 L 35 15 L 35 40 L 10 40 Z" fill="none" stroke="#3b82f6" stroke-width="2"/>
+      <text x="22" y="60" fill="#3b82f6" font-family="sans-serif" font-size="12" text-anchor="middle" font-weight="bold">x_p</text>
+
+      <path d="M 45 25 L 75 25" fill="none" stroke="#fbbf24" stroke-width="2" marker-end="url(#arrow)"/>
+      <text x="60" y="15" fill="#ef4444" font-family="sans-serif" font-size="12" text-anchor="middle" font-weight="bold">L</text>
+
+      <rect x="85" y="5" width="40" height="40" fill="none" stroke="#ef4444" stroke-width="2" rx="2"/>
+      <text x="105" y="60" fill="#ef4444" font-family="sans-serif" font-size="12" text-anchor="middle" font-weight="bold">[0, 255]</text>
+
+      <path d="M 135 25 L 165 25" fill="none" stroke="#fbbf24" stroke-width="2" marker-end="url(#arrow)"/>
+      <text x="150" y="15" fill="#10b981" font-family="sans-serif" font-size="12" text-anchor="middle" font-weight="bold">R</text>
+
+      <rect x="175" y="10" width="30" height="30" fill="none" stroke="#10b981" stroke-width="2" rx="2"/>
+      <text x="190" y="60" fill="#10b981" font-family="sans-serif" font-size="12" text-anchor="middle" font-weight="bold">Resize</text>
+
+      <path d="M 215 25 L 245 25" fill="none" stroke="#fbbf24" stroke-width="2" marker-end="url(#arrow)"/>
+      <text x="230" y="15" fill="#fbbf24" font-family="sans-serif" font-size="12" text-anchor="middle" font-weight="bold">T</text>
+
+      <rect x="255" y="10" width="30" height="30" fill="#fbbf24" rx="2"/>
+      <text x="270" y="60" fill="#fbbf24" font-family="sans-serif" font-size="12" text-anchor="middle" font-weight="bold">[0, 1]</text>
+
+      <path d="M 295 25 L 325 25" fill="none" stroke="#fbbf24" stroke-width="2" marker-end="url(#arrow)"/>
+      <text x="310" y="15" fill="#8b5cf6" font-family="sans-serif" font-size="12" text-anchor="middle" font-weight="bold">N</text>
+
+      <rect x="335" y="10" width="30" height="30" fill="#8b5cf6" rx="2"/>
+      <text x="350" y="60" fill="#8b5cf6" font-family="sans-serif" font-size="12" text-anchor="middle" font-weight="bold">N(0,1)</text>
+    </g>
+  </svg>
 category: "4.1 Preprocessing"
 tags: ["transform", "image", "multimedia", "torchvision", "pipeline"]
 applies_to: ["Images"]
-when_to_use: "Indispensable après un load_image_directory pour préparer les CNN."
+when_to_use: "Lorsque le dataframe contient uniquement des chemins de fichiers et qu'il faut directement les exploiter pour entraîner un CNN, par exemple juste après l'utilisation du module `load_image_directory`."
+use_cases:
+  - "Pré-traitement de bout-en-bout pour les datasets d'images volumineux qui ne tiennent pas initialement en mémoire."
+  - "Mise en place de pipelines de Deep Learning simplifiés à partir d'un dossier de fichiers."
 pros:
-  - "Gère le chargement à la volée (via PIL)."
+  - "Centralise les étapes complexes de lecture, redimensionnement et normalisation en un seul bloc pratique."
+  - "Intègre une gestion d'erreur propre : les fichiers corrompus sont ignorés sans faire planter l'application."
 cons:
-  - "La transformation de tout le dataframe peut saturer la RAM si le dataset est énorme."
+  - "Si le jeu de données est massif (dizaines de milliers d'images), charger tous les tenseurs en une seule fois dans la mémoire RAM du DataFrame va causer un 'Out Of Memory' (OOM)."
+  - "Moins flexible qu'un DataLoader PyTorch asynchrone qui charge les batchs à la demande (lazy loading)."
 hyperparameters:
   img_path_col: "Colonne contenant les chemins d'images."
   resize: "Redimensionner les images (ex: 224)."
@@ -65,20 +115,23 @@ code_template: |
       print(f"[AVERTISSEMENT] Colonne '{IMG_PATH_COL}' introuvable.")
 
 illustration_mermaid: |
-  graph TD
-    A[Paths DataFrame] --> B{Dependencies installed?}
-    B -- Yes --> C{Does IMG_PATH_COL exist?}
-    B -- No --> D[Error / Skip]
-    C -- Yes --> E[Initialize Resize, ToTensor, Normalize]
-    C -- No --> F[Warn / Skip]
-    E --> G[Load Image from Path & Apply transforms]
-    G --> H[Drop rows where load failed]
-    H --> I[Update pipeline_steps & df]
-    D --> I
-    F --> I
-    I --> J[Tensor Image Column Added]
-    style A fill:#eff6ff,stroke:#94a3b8,stroke-width:2px
-    style J fill:#10b981,stroke:#059669,stroke-width:2px,color:#fff
+  flowchart LR
+    A(["📊 df (Chemins)"]) --> B{"⚙️ Vérifier Dépendances & Colonne"}
+    B -- "Oui" --> C[/"📄 Taille & Stats"/]
+    C --> D{"⚙️ Load, Resize, ToTensor"}
+    D --> E{"⚙️ Filtrer Échecs"}
+    B -- "Non" --> F{"⚙️ Skip & Warn"}
+    E --> G(["📊 df (+ Tenseurs)"])
+    F --> G
+    G --> H(["ℹ️ pipeline_steps"])
+    style A fill:#10b981,stroke:#059669,stroke-width:2px,color:#fff
+    style B fill:#3b82f6,stroke:#2563eb,stroke-width:2px,color:#fff
+    style C fill:#fbbf24,stroke:#d97706,stroke-width:2px,color:#000
+    style D fill:#3b82f6,stroke:#2563eb,stroke-width:2px,color:#fff
+    style E fill:#3b82f6,stroke:#2563eb,stroke-width:2px,color:#fff
+    style F fill:#3b82f6,stroke:#2563eb,stroke-width:2px,color:#fff
+    style G fill:#10b981,stroke:#059669,stroke-width:2px,color:#fff
+    style H fill:#8b5cf6,stroke:#7c3aed,stroke-width:2px,color:#fff
 
 _metadata:
   bloc: 2

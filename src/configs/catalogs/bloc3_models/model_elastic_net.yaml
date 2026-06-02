@@ -1,14 +1,23 @@
 id: "model_elastic_net"
 name: "Model: ElasticNet"
-description: "Régression ElasticNet combinant les pénalités L1 et L2."
-category: "Model"
+description: |
+  Modèle de régression linéaire qui combine les pénalités L1 (Lasso) et L2 (Ridge). Cette approche hybride permet de bénéficier à la fois de la sélection de variables (via L1 qui force certains coefficients à zéro) et de la stabilité face aux variables fortement corrélées (via L2). Elle est particulièrement efficace lorsque le nombre de variables dépasse le nombre d'observations ou en présence de multicolinéarité.
+category: "Modèle"
 tags: ["model", "regression", "elasticnet"]
 applies_to: ["Tabulaire"]
-when_to_use: "Quand vous voulez un modèle linéaire robuste évitant l'overfitting."
+when_to_use: |
+  À utiliser lorsque vous travaillez avec des données contenant un grand nombre de variables explicatives, dont plusieurs peuvent être fortement corrélées. C'est un excellent choix de référence pour des modèles linéaires plus robustes que la régression simple ou la méthode Ridge seule.
+use_cases:
+  - "Régression sur des jeux de données à très grande dimension (par exemple, la génomique)."
+  - "Modélisation financière avec des indicateurs économiques interdépendants."
+  - "Sélection de caractéristiques avec maintien de groupes de variables corrélées (au lieu de n'en retenir qu'une seule comme le ferait Lasso)."
 pros:
-  - "Gère bien la multicolinéarité."
+  - "Combine les forces de Ridge (stabilité) et Lasso (parcimonie)."
+  - "Gère très bien la multicolinéarité en sélectionnant un groupe de variables corrélées ensemble."
+  - "Performances robustes avec un grand nombre de prédicteurs (p > n)."
 cons:
-  - "Hypothèse de linéarité forte."
+  - "Nécessite le réglage de deux hyperparamètres (alpha et l1_ratio) souvent coûteux en validation croisée."
+  - "Repose fondamentalement sur l'hypothèse de linéarité entre les variables et la cible."
 hyperparameters:
   alpha: "Force de régularisation globale."
   l1_ratio: "Ratio L1 vs L2 (0 = Ridge, 1 = Lasso)."
@@ -65,20 +74,62 @@ code_template: |
       training_history = {"status": "success", "fitted_on": len(X_train)}
 
 illustration_mermaid: |
-  graph TD
-    subgraph ElasticNet Regression
-      In([Input Features]) --> L1[L1 Penalty - Lasso]
-      In --> L2[L2 Penalty - Ridge]
-      In --> Lin[Linear Combination]
-      L1 -.-> Loss[Loss Function Minimization]
-      L2 -.-> Loss
-      Lin -.-> Loss
-      Loss --> Weights[Update Weights]
-      Weights --> Out([Continuous Prediction])
-    end
-    style In fill:#f8fafc,stroke:#94a3b8,stroke-width:1px
+  flowchart LR
+    In[/ "Features (X)" /] --> Model{"ElasticNet\n(Regression)"}
+    Config(["Params\nAlpha, L1_Ratio"]) -.-> Model
+    Model --> Out(["Continuous Prediction\n(y)"])
+    
+    style In fill:#fbbf24,stroke:#d97706,stroke-width:2px,color:#000
+    style Config fill:#8b5cf6,stroke:#7c3aed,stroke-width:2px,color:#fff
+    style Model fill:#3b82f6,stroke:#2563eb,stroke-width:2px,color:#fff
     style Out fill:#10b981,stroke:#059669,stroke-width:2px,color:#fff
-    style Loss fill:#fca5a5,stroke:#ef4444,stroke-width:2px
+
+math_theory: |
+  Elastic Net blends the absolute value penalty (L1/Lasso) and the squared penalty (L2/Ridge) to regularize a linear regression model. The optimization objective minimizes the residual sum of squares plus the combined penalties:
+  
+  $$ \min_{w} \left( \frac{1}{2n} ||\textcolor{#10b981}{X}\textcolor{#ef4444}{w} - \textcolor{#3b82f6}{y}||_2^2 + \textcolor{#fbbf24}{\alpha} \cdot \textcolor{#8b5cf6}{\rho} ||\textcolor{#ef4444}{w}||_1 + \frac{\textcolor{#fbbf24}{\alpha}(1-\textcolor{#8b5cf6}{\rho})}{2} ||\textcolor{#ef4444}{w}||_2^2 \right) $$
+  
+  Where $\textcolor{#fbbf24}{\alpha}$ controls the total regularization strength, and $\textcolor{#8b5cf6}{\rho}$ (`l1_ratio`) determines the balance between L1 (forces exact zeros for feature selection) and L2 (handles correlated features).
+
+math_illustration_svg: |
+  <svg viewBox="0 0 500 250" xmlns="http://www.w3.org/2000/svg">
+    <rect width="500" height="250" fill="#ffffff" />
+    <defs>
+      <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+        <path d="M 0 0 L 10 5 L 0 10 z" fill="#64748b" />
+      </marker>
+    </defs>
+    
+    <!-- Inputs -->
+    <rect x="20" y="80" width="80" height="40" rx="4" fill="#10b981" fill-opacity="0.1" stroke="#10b981" stroke-width="2" />
+    <text x="60" y="105" font-family="monospace" font-size="16" font-weight="bold" fill="#10b981" text-anchor="middle">X &amp; y</text>
+
+    <!-- Optimization Node -->
+    <rect x="180" y="70" width="140" height="60" rx="8" fill="#475569" fill-opacity="0.05" stroke="#475569" stroke-width="2" />
+    <text x="250" y="95" font-family="sans-serif" font-size="14" font-weight="bold" fill="#475569" text-anchor="middle">Minimize Loss</text>
+    <text x="250" y="115" font-family="sans-serif" font-size="12" fill="#475569" text-anchor="middle">MSE + Penalty</text>
+
+    <!-- Penalties -->
+    <rect x="180" y="160" width="65" height="40" rx="4" fill="#8b5cf6" fill-opacity="0.1" stroke="#8b5cf6" stroke-width="2" />
+    <text x="212.5" y="185" font-family="sans-serif" font-size="12" font-weight="bold" fill="#8b5cf6" text-anchor="middle">L1 (ρ)</text>
+
+    <rect x="255" y="160" width="65" height="40" rx="4" fill="#fbbf24" fill-opacity="0.1" stroke="#fbbf24" stroke-width="2" />
+    <text x="287.5" y="185" font-family="sans-serif" font-size="12" font-weight="bold" fill="#fbbf24" text-anchor="middle">L2 (1-ρ)</text>
+    
+    <text x="250" y="220" font-family="sans-serif" font-size="12" font-weight="bold" fill="#fbbf24" text-anchor="middle">Strength: α</text>
+
+    <!-- Output -->
+    <circle cx="430" cy="100" r="25" fill="#ef4444" fill-opacity="0.1" stroke="#ef4444" stroke-width="2" />
+    <text x="430" y="105" font-family="monospace" font-size="20" font-weight="bold" fill="#ef4444" text-anchor="middle">w</text>
+    <text x="430" y="145" font-family="sans-serif" font-size="12" fill="#475569" text-anchor="middle">Sparse &amp; Stable</text>
+
+    <!-- Edges -->
+    <path d="M 100 100 L 170 100" fill="none" stroke="#64748b" stroke-width="2" marker-end="url(#arrow)" />
+    <path d="M 320 100 L 395 100" fill="none" stroke="#64748b" stroke-width="2" marker-end="url(#arrow)" />
+    
+    <path d="M 212.5 160 L 212.5 130" fill="none" stroke="#64748b" stroke-width="2" marker-end="url(#arrow)" stroke-dasharray="4" />
+    <path d="M 287.5 160 L 287.5 130" fill="none" stroke="#64748b" stroke-width="2" marker-end="url(#arrow)" stroke-dasharray="4" />
+  </svg>
 
 _metadata:
   bloc: 3

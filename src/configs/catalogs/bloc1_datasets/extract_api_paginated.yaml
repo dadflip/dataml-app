@@ -1,6 +1,16 @@
 id: extract_api_paginated
 name: 'Extract: API REST (Paginée)'
 description: Extrait toutes les pages d'une API REST qui utilise une pagination (offset/limit).
+when_to_use: À utiliser lorsque vous devez extraire de gros volumes de données depuis une API nécessitant de parcourir plusieurs pages.
+use_cases:
+- Récupération de l'historique des ventes depuis une API e-commerce.
+- Collecte de données publiques sur des plateformes open data.
+pros:
+- Automatise la gestion de la pagination.
+- Permet de gérer la limite de débit (rate-limiting) grâce à des pauses.
+cons:
+- Processus séquentiel qui peut être lent.
+- Risque de timeout ou de coupure réseau sur des extractions longues.
 category: 1. Extract
 tags:
 - extract
@@ -63,13 +73,22 @@ code_template: |
   task_type = "unknown"
   meta = {"source": "api_paginated", "path": DEST_PATH}
 illustration_mermaid: |
-    flowchart TD
-    A([FILE_PATH]) --> B[Load EXTRACT_API_PAGINATED]
-    B --> df([df])
-    
-    style A fill:#3b82f6,color:#fff
-    style B fill:#10b981,color:#fff
-    style df fill:#f59e0b,color:#fff
+    flowchart LR
+        A[/"📄 API Base URL"/] --> B{"Load/Extract Function()"}
+        C[/"🎯 TARGET_COL"/] --> D{"Check TARGET_COL"}
+        B --> E(["📊 df (DataFrame)"])
+        E --> D
+        D --> F(["🎯 target_name"])
+        D --> G(["⚙️ task_type"])
+        D --> H(["ℹ️ meta (...)"])
+        style A fill:#fbbf24,stroke:#d97706,stroke-width:2px,color:#000
+        style C fill:#fbbf24,stroke:#d97706,stroke-width:2px,color:#000
+        style B fill:#3b82f6,stroke:#2563eb,stroke-width:2px,color:#fff
+        style D fill:#3b82f6,stroke:#2563eb,stroke-width:2px,color:#fff
+        style E fill:#10b981,stroke:#059669,stroke-width:2px,color:#fff
+        style F fill:#8b5cf6,stroke:#7c3aed,stroke-width:2px,color:#fff
+        style G fill:#8b5cf6,stroke:#7c3aed,stroke-width:2px,color:#fff
+        style H fill:#8b5cf6,stroke:#7c3aed,stroke-width:2px,color:#fff
 
 
 _metadata:

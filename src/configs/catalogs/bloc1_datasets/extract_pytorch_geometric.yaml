@@ -1,7 +1,16 @@
 id: extract_pytorch_geometric
 name: 'Extract: PyTorch Geometric (Graphs)'
-description: 'Télécharge un dataset de graphes de référence (ex: Cora, CiteSeer, PubMed)
-  vers le dossier local.'
+description: 'Télécharge et met en cache un dataset de graphes de référence (ex: Cora, CiteSeer, PubMed) via la bibliothèque PyTorch Geometric.'
+when_to_use: 'Indispensable lors de l''entraînement ou de l''évaluation de modèles de type Graph Neural Networks (GNN) sur des jeux de données standards.'
+use_cases:
+  - 'Classification de nœuds (Node Classification).'
+  - 'Prédiction de liens (Link Prediction) sur des graphes de citation.'
+pros:
+  - 'Téléchargement et mise en cache gérés automatiquement par la bibliothèque.'
+  - 'Format de données prêt à l''emploi pour l''entraînement de modèles PyTorch.'
+cons:
+  - 'Nécessite l''installation préalable de torch et torch_geometric.'
+  - 'Limité aux datasets publics inclus ou supportés par la bibliothèque.'
 category: 1. Extract
 tags:
 - extract
@@ -46,40 +55,22 @@ code_template: |
       print(f"[ERREUR EXTRACT] Échec de l'extraction du graphe : {str(e)}")
       raise e
 illustration_mermaid: |
-    flowchart TD
-    A([FILE_PATH]) --> B[Load EXTRACT_PYTORCH_GEOMETRIC]
-    B --> df([df])
-    
-    style A fill:#3b82f6,color:#fff
-    style B fill:#10b981,color:#fff
-    style df fill:#f59e0b,color:#fff
-
-
-
-        subgraph Operations [PyTorch Geometric Extract]
-            Import{Check Planetoid}
-            PlanetoidCall([Planetoid Instantiation])
-            Dataset[(Downloaded Graph Dataset)]
-        end
-
-        subgraph Outputs [Contract Variables]
-            df((df = None))
-            target((target_name = None))
-            task((task_type = 'node_classification'))
-            meta((meta: dict))
-        end
-
-        Import -->|Success| PlanetoidCall
-        NAME --> PlanetoidCall
-        DEST --> PlanetoidCall
-        PlanetoidCall -->|Download & Cache| Dataset
-        Dataset -.-> meta
-
-        style Config fill:#f8fafc,stroke:#cbd5e1,stroke-width:2px
-        style Import fill:#ef4444,stroke:#b91c1c,stroke-width:2px,color:#fff
-        style PlanetoidCall fill:#3b82f6,stroke:#1d4ed8,stroke-width:2px,color:#fff
-        style Dataset fill:#10b981,stroke:#047857,stroke-width:2px,color:#fff
-        style Outputs fill:#f1f5f9,stroke:#94a3b8,stroke-width:2px
+    flowchart LR
+        A[/"📄 Nom Dataset"/] --> B{"Planetoid(name)"}
+        C[/"🎯 TARGET_COL"/] --> D{"Check TARGET_COL"}
+        B --> E(["📊 df (Dossier Graphe)"])
+        E --> D
+        D --> F(["🎯 target_name"])
+        D --> G(["⚙️ task_type"])
+        D --> H(["ℹ️ meta (source: pyg)"])
+        style A fill:#fbbf24,stroke:#d97706,stroke-width:2px,color:#000
+        style C fill:#fbbf24,stroke:#d97706,stroke-width:2px,color:#000
+        style B fill:#3b82f6,stroke:#2563eb,stroke-width:2px,color:#fff
+        style D fill:#3b82f6,stroke:#2563eb,stroke-width:2px,color:#fff
+        style E fill:#10b981,stroke:#059669,stroke-width:2px,color:#fff
+        style F fill:#8b5cf6,stroke:#7c3aed,stroke-width:2px,color:#fff
+        style G fill:#8b5cf6,stroke:#7c3aed,stroke-width:2px,color:#fff
+        style H fill:#8b5cf6,stroke:#7c3aed,stroke-width:2px,color:#fff
 
 _metadata:
   bloc: 1

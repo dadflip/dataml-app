@@ -1,15 +1,20 @@
 id: "model_mediapipe_pose"
 name: "Model: MediaPipe Pose Estimation"
-description: "Détection des articulations (squelette) en temps réel par Google."
+description: "Modèle de détection de posture (pose estimation) basé sur Google MediaPipe, capable d'identifier et de suivre les points d'articulation clés du corps humain en temps réel."
 category: "Vision par Ordinateur (Pré-entraînés)"
 tags: ["model", "vision", "pose-estimation", "mediapipe", "google"]
 applies_to: ["Images", "Vidéo"]
-when_to_use: "Pour détecter la posture d'une personne (bras levé, assis, etc.) à partir d'images ou de webcam."
+when_to_use: "Recommandé pour extraire la posture squelettique d'individus à partir de flux vidéo ou d'images statiques, notamment dans les analyses biomécaniques ou d'interactions homme-machine."
+use_cases:
+  - "Analyse posturale dans les applications de fitness, de rééducation physique ou de sport professionnel."
+  - "Détection de gestes ou d'actions spécifiques pour le contrôle d'interfaces (ex. levée de bras, position assise)."
+  - "Suivi des mouvements pour l'animation de personnages virtuels et la réalité augmentée."
 pros:
-  - "Temps réel sur CPU."
-  - "Extrêmement précis pour le suivi de la posture humaine."
+  - "Exécution en temps réel hautement optimisée, performante même sur CPU sans nécessiter d'accélération matérielle lourde."
+  - "Détection robuste et précise offrant des coordonnées squelettiques avec des métriques de visibilité associées."
 cons:
-  - "Ne détecte qu'une personne à la fois par défaut avec ce modèle de base."
+  - "Le modèle standard de MediaPipe limite la détection à une seule personne simultanément dans l'image."
+  - "Sensibilité aux conditions d'éclairage extrêmes ou aux occlusions corporelles majeures."
 hyperparameters:
   min_detection_confidence: "Confiance minimale (ex: 0.5)."
 code_template: |
@@ -65,12 +70,75 @@ code_template: |
       training_history = {"status": "success", "type": "mediapipe_pose"}
       task_type = "keypoint_detection"
 illustration_mermaid: |
-    graph LR
-      Data([Features]) --> Model((Machine Learning))
-      Model --> Pred([Predictions])
-      style Model fill:#8b5cf6,stroke:#7c3aed,stroke-width:2px,color:#fff
-      style Data fill:#f8fafc,stroke:#94a3b8,stroke-width:1px
-      style Pred fill:#f8fafc,stroke:#94a3b8,stroke-width:1px
+  flowchart LR
+    A[/ "Input Images / Video Frames" /]
+    B{"MediaPipe Pose Extraction"}
+    C(["y_pred: Pose Landmarks (JSON)"])
+
+    A --> B
+    B --> C
+
+    style A fill:#fbbf24,stroke:#d97706,stroke-width:2px,color:#000
+    style B fill:#3b82f6,stroke:#2563eb,stroke-width:2px,color:#fff
+    style C fill:#10b981,stroke:#059669,stroke-width:2px,color:#fff
+
+math_theory: |
+  MediaPipe Pose employs a two-stage machine learning pipeline for robust human pose estimation.
+  
+  First, a **Detector** locates the person/Region of Interest (ROI) and predicts an initial bounding box.
+  Then, a **Tracker (Pose Landmark Model)** predicts the 33 3D keypoints from the cropped ROI. For an image crop $\textcolor{#ef4444}{\mathbf{X}_{crop}}$, the model outputs coordinates and visibility probabilities:
+  $$ (\textcolor{#3b82f6}{\mathbf{x}}, \textcolor{#3b82f6}{\mathbf{y}}, \textcolor{#10b981}{\mathbf{z}}, \textcolor{#fbbf24}{\mathbf{v}}) = f_{tracker}(\textcolor{#ef4444}{\mathbf{X}_{crop}}) $$
+  
+  Where:
+  - $\textcolor{#3b82f6}{\mathbf{x}, \mathbf{y}}$ are 2D pixel coordinates normalized to $[0, 1]$.
+  - $\textcolor{#10b981}{\mathbf{z}}$ represents depth relative to the hips, at the same scale as $\mathbf{x}$.
+  - $\textcolor{#fbbf24}{\mathbf{v}} \in [0, 1]$ is the visibility score (probability that the keypoint is visible and not occluded).
+  
+  The tracker's loss is a combination of regression loss for coordinates (e.g., Smooth L1) and binary cross-entropy for visibility:
+  $$ \mathcal{L} = \lambda_{reg} \sum_{i=1}^{33} ||\textcolor{#3b82f6}{\mathbf{p}_i} - \textcolor{#3b82f6}{\mathbf{\hat{p}}_i}||_{smooth\_L1} + \lambda_{vis} \sum_{i=1}^{33} \text{BCE}(\textcolor{#fbbf24}{v_i}, \textcolor{#fbbf24}{\hat{v}_i}) $$
+
+math_illustration_svg: |
+  <svg viewBox="0 0 800 400" xmlns="http://www.w3.org/2000/svg">
+    <defs>
+      <marker id="arrow" viewBox="0 0 10 10" refX="10" refY="5" markerWidth="6" markerHeight="6" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="#666" /></marker>
+    </defs>
+    
+    <rect x="50" y="150" width="80" height="100" rx="8" fill="#fee2e2" stroke="#ef4444" stroke-width="3" />
+    <text x="90" y="195" font-family="sans-serif" font-size="16" font-weight="bold" fill="#ef4444" text-anchor="middle">Image</text>
+
+    <!-- Stage 1 -->
+    <rect x="180" y="150" width="120" height="100" rx="8" fill="#e5e7eb" stroke="#6b7280" stroke-width="3" />
+    <text x="240" y="195" font-family="sans-serif" font-size="16" font-weight="bold" fill="#374151" text-anchor="middle">Pose Detector</text>
+    <text x="240" y="215" font-family="sans-serif" font-size="14" fill="#374151" text-anchor="middle">(Finds ROI)</text>
+
+    <!-- Crop -->
+    <rect x="350" y="150" width="80" height="100" rx="8" fill="#fee2e2" stroke="#ef4444" stroke-width="3" />
+    <text x="390" y="200" font-family="sans-serif" font-size="16" font-weight="bold" fill="#ef4444" text-anchor="middle">X_crop</text>
+
+    <!-- Stage 2 -->
+    <rect x="480" y="130" width="120" height="140" rx="8" fill="#e5e7eb" stroke="#6b7280" stroke-width="3" />
+    <text x="540" y="195" font-family="sans-serif" font-size="16" font-weight="bold" fill="#374151" text-anchor="middle">Pose Tracker</text>
+    <text x="540" y="215" font-family="sans-serif" font-size="14" fill="#374151" text-anchor="middle">(33 Keypoints)</text>
+
+    <!-- Outputs -->
+    <rect x="660" y="90" width="100" height="60" rx="8" fill="#dbeafe" stroke="#3b82f6" stroke-width="3" />
+    <text x="710" y="125" font-family="sans-serif" font-size="16" font-weight="bold" fill="#1d4ed8" text-anchor="middle">2D (x, y)</text>
+
+    <rect x="660" y="170" width="100" height="60" rx="8" fill="#d1fae5" stroke="#10b981" stroke-width="3" />
+    <text x="710" y="205" font-family="sans-serif" font-size="16" font-weight="bold" fill="#059669" text-anchor="middle">Depth (z)</text>
+
+    <rect x="660" y="250" width="100" height="60" rx="8" fill="#fef3c7" stroke="#fbbf24" stroke-width="3" />
+    <text x="710" y="285" font-family="sans-serif" font-size="16" font-weight="bold" fill="#d97706" text-anchor="middle">Visib. (v)</text>
+
+    <!-- Arrows -->
+    <path d="M130,200 L180,200" stroke="#666" stroke-width="2" fill="none" marker-end="url(#arrow)"/>
+    <path d="M300,200 L350,200" stroke="#666" stroke-width="2" fill="none" marker-end="url(#arrow)"/>
+    <path d="M430,200 L480,200" stroke="#666" stroke-width="2" fill="none" marker-end="url(#arrow)"/>
+    
+    <path d="M600,160 L660,120" stroke="#666" stroke-width="2" fill="none" marker-end="url(#arrow)"/>
+    <path d="M600,200 L660,200" stroke="#666" stroke-width="2" fill="none" marker-end="url(#arrow)"/>
+    <path d="M600,240 L660,280" stroke="#666" stroke-width="2" fill="none" marker-end="url(#arrow)"/>
+  </svg>
 
 _metadata:
   bloc: 3

@@ -1,14 +1,22 @@
 id: "model_hf_zeroshot_classifier"
 name: "Model: HuggingFace Zero-Shot Classifier"
-description: "Pipeline HuggingFace permettant de classifier du texte dans des catégories personnalisées sans aucun entraînement."
+description: "Modèle de classification de texte (BART/RoBERTa) capable d'assigner des catégories arbitraires à des documents en utilisant l'inférence en langage naturel (NLI), sans aucun besoin de données d'entraînement préalables."
 category: "Modèles NLP (Pré-entraînés)"
 tags: ["model", "nlp", "classification", "transformers", "huggingface", "zero-shot"]
 applies_to: ["Texte"]
-when_to_use: "Vous avez des catégories métier (ex: 'sport', 'finance', 'politique') mais AUCUNE donnée labellisée pour entraîner."
+when_to_use: "Idéal lors de l'exploration initiale de données textuelles ou lorsqu'il faut classer des textes selon des catégories spécifiques (ex: thématiques métier) mais qu'absolument aucune donnée labellisée n'est disponible pour entraîner un modèle classique."
+use_cases:
+  - "Classification de tickets de support client selon de nouvelles thématiques."
+  - "Catégorisation d'articles de blog ou d'actualités à la volée."
+  - "Filtrage rapide de commentaires ou d'avis (ex: 'positif', 'constructif', 'spam')."
 pros:
-  - "Magique : classifie du texte dans n'importe quelles catégories inventées à la volée."
+  - "Flexibilité totale: les classes sont définies par de simples chaînes de caractères lors de l'inférence."
+  - "Déploiement immédiat sans étape d'entraînement chronophage."
+  - "Performances souvent surprenantes pour des concepts génériques."
 cons:
-  - "Lent (modèle Transformer BART/RoBERTa sous le capot)."
+  - "Temps d'inférence très élevé (nécessite de tester chaque classe potentielle)."
+  - "Moins précis qu'un modèle fine-tuné sur un jeu de données métier spécifique."
+  - "Très gourmand en ressources matérielles (idéalement sur GPU)."
 hyperparameters:
   text_col: "Colonne texte (si dataframe)."
   candidate_labels: "Classes cibles séparées par des virgules (ex: 'sport, cuisine, politique')."
@@ -61,23 +69,77 @@ code_template: |
           task_type = "classification"
           meta = {"classes": labels}
 illustration_mermaid: |
-  graph TD
-    subgraph Input
-      Text[Input Text]
-      Labels[Candidate Labels: sport, cuisine...]
-    end
-    subgraph Zero-Shot Inference NLI
-      Model[BART-Large-MNLI]
-      Text -->|Premise| Model
-      Labels -->|Hypothesis formulation| Model
-      Model --> NLI[Entailment vs Contradiction]
-    end
-    subgraph Output
-      NLI --> Scores[Scores / Probabilities]
-      Scores --> Pred[Predicted Label]
-    end
-    style Model fill:#8b5cf6,stroke:#7c3aed,stroke-width:2px,color:#fff
-    style NLI fill:#10b981,stroke:#059669,stroke-width:2px,color:#fff
+  flowchart LR
+    Text[/"Input Text"/] --> Model{"BART-Large-MNLI"}
+    Labels[/"Candidate Labels"/] --> Model
+    Model --> NLI{"Entailment Inference"}
+    NLI --> Scores(["Scores / Probabilities"])
+    Scores --> Pred(["Predicted Label"])
+
+    style Text fill:#fbbf24,stroke:#d97706,stroke-width:2px,color:#000
+    style Labels fill:#fbbf24,stroke:#d97706,stroke-width:2px,color:#000
+    style Model fill:#3b82f6,stroke:#2563eb,stroke-width:2px,color:#fff
+    style NLI fill:#3b82f6,stroke:#2563eb,stroke-width:2px,color:#fff
+    style Scores fill:#10b981,stroke:#059669,stroke-width:2px,color:#fff
+    style Pred fill:#10b981,stroke:#059669,stroke-width:2px,color:#fff
+
+math_theory: |
+  Zero-shot classification with MNLI models formulates the problem as Natural Language Inference (NLI). 
+  The input text is treated as the **Premise** ($\textcolor{#3b82f6}{P}$), and the candidate label is injected into a template to form the **Hypothesis** ($\textcolor{#10b981}{H}$), such as "This text is about $\textcolor{#10b981}{\text{label}}$".
+  
+  The model outputs logits for Entailment, Contradiction, and Neutral. The probability of the label being true is calculated by taking the softmax over the entailment and contradiction logits (ignoring neutral):
+  
+  $$ P(\textcolor{#10b981}{y} \mid \textcolor{#3b82f6}{X}) = \frac{\exp(\textcolor{#fbbf24}{s_{\text{entail}}})}{\exp(\textcolor{#fbbf24}{s_{\text{entail}}}) + \exp(\textcolor{#ef4444}{s_{\text{contra}}})} $$
+  
+  where:
+  *   $\textcolor{#3b82f6}{X}$ is the input text.
+  *   $\textcolor{#10b981}{y}$ is the candidate label.
+  *   $\textcolor{#fbbf24}{s_{\text{entail}}}$ is the logit for entailment.
+  *   $\textcolor{#ef4444}{s_{\text{contra}}}$ is the logit for contradiction.
+
+math_illustration_svg: |
+  <svg viewBox="0 0 600 300" xmlns="http://www.w3.org/2000/svg">
+    <defs>
+      <marker id="arrow" viewBox="0 0 10 10" refX="10" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+        <path d="M 0 0 L 10 5 L 0 10 z" fill="#9ca3af" />
+      </marker>
+    </defs>
+    
+    <!-- Premise -->
+    <rect x="20" y="50" width="120" height="50" rx="5" fill="#eff6ff" stroke="#3b82f6" stroke-width="2"/>
+    <text x="80" y="75" text-anchor="middle" font-family="sans-serif" font-size="14" font-weight="bold" fill="#3b82f6">Premise (X)</text>
+    <text x="80" y="90" text-anchor="middle" font-family="sans-serif" font-size="10" fill="#3b82f6">"I love my new phone!"</text>
+    
+    <!-- Hypothesis -->
+    <rect x="20" y="150" width="120" height="50" rx="5" fill="#f0fdf4" stroke="#10b981" stroke-width="2"/>
+    <text x="80" y="175" text-anchor="middle" font-family="sans-serif" font-size="14" font-weight="bold" fill="#10b981">Hypothesis (y)</text>
+    <text x="80" y="190" text-anchor="middle" font-family="sans-serif" font-size="10" fill="#10b981">"This is about Tech."</text>
+    
+    <path d="M 140 75 C 180 75, 180 125, 220 125" fill="none" stroke="#9ca3af" stroke-width="2" marker-end="url(#arrow)"/>
+    <path d="M 140 175 C 180 175, 180 125, 220 125" fill="none" stroke="#9ca3af" stroke-width="2" marker-end="url(#arrow)"/>
+    
+    <!-- NLI Model -->
+    <rect x="230" y="95" width="140" height="60" rx="10" fill="#f3f4f6" stroke="#4b5563" stroke-width="2"/>
+    <text x="300" y="125" text-anchor="middle" font-family="sans-serif" font-size="16" font-weight="bold" fill="#374151">NLI Model</text>
+    <text x="300" y="145" text-anchor="middle" font-family="sans-serif" font-size="12" fill="#4b5563">(BART MNLI)</text>
+    
+    <line x1="370" y1="110" x2="410" y2="80" stroke="#9ca3af" stroke-width="2" marker-end="url(#arrow)"/>
+    <line x1="370" y1="140" x2="410" y2="170" stroke="#9ca3af" stroke-width="2" marker-end="url(#arrow)"/>
+    
+    <!-- Logits -->
+    <rect x="420" y="55" width="80" height="40" rx="5" fill="#fffbeb" stroke="#fbbf24" stroke-width="2"/>
+    <text x="460" y="75" text-anchor="middle" font-family="sans-serif" font-size="12" font-weight="bold" fill="#fbbf24">s_entail</text>
+    
+    <rect x="420" y="155" width="80" height="40" rx="5" fill="#fef2f2" stroke="#ef4444" stroke-width="2"/>
+    <text x="460" y="175" text-anchor="middle" font-family="sans-serif" font-size="12" font-weight="bold" fill="#ef4444">s_contra</text>
+    
+    <!-- Softmax -->
+    <path d="M 500 75 C 530 75, 530 110, 545 110" fill="none" stroke="#9ca3af" stroke-width="2" marker-end="url(#arrow)"/>
+    <path d="M 500 175 C 530 175, 530 140, 545 140" fill="none" stroke="#9ca3af" stroke-width="2" marker-end="url(#arrow)"/>
+    
+    <rect x="550" y="105" width="40" height="40" rx="20" fill="#f5f3ff" stroke="#8b5cf6" stroke-width="2"/>
+    <text x="570" y="130" text-anchor="middle" font-family="sans-serif" font-size="14" font-weight="bold" fill="#8b5cf6">P(y)</text>
+  </svg>
 
 _metadata:
   bloc: 3

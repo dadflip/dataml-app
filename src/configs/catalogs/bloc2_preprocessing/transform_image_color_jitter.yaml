@@ -1,14 +1,54 @@
 id: "transform_image_color_jitter"
 name: "Transform: Image Color Jitter"
-description: "Data Augmentation couleur."
+description: "Technique de Data Augmentation qui modifie aléatoirement la luminosité, le contraste, la saturation et la teinte d'une image pour améliorer la robustesse du modèle."
+math_theory: |
+  Le Color Jitter applique des transformations stochastiques dans l'espace colorimétrique. Par exemple, pour la luminosité, si $\textcolor{#3b82f6}{I}$ est l'image originale (les valeurs des pixels), la nouvelle image $\textcolor{#10b981}{I'}$ est obtenue par : $$\textcolor{#10b981}{I'} = \textcolor{#fbbf24}{\alpha} \cdot \textcolor{#3b82f6}{I}$$ où $\textcolor{#fbbf24}{\alpha} \sim \mathcal{U}(1 - \text{jitter}, 1 + \text{jitter})$. Le contraste est ajusté en modulant l'écart à la moyenne de luminance de l'image. La saturation et la teinte (hue) sont souvent ajustées dans l'espace HSV, en perturbant le canal $\textcolor{#8b5cf6}{H}$ (teinte) par un décalage $\textcolor{#ef4444}{\Delta \theta} \sim \mathcal{U}(-\text{jitter}/2, \text{jitter}/2)$ et le canal $\textcolor{#fbbf24}{S}$ (saturation) par un facteur multiplicatif.
+math_illustration_svg: |
+  <svg viewBox="0 0 400 200" xmlns="http://www.w3.org/2000/svg">
+    <defs>
+      <style>
+        .text-title { fill: #f8fafc; font-family: monospace; font-size: 14px; }
+        .text-math { fill: #f8fafc; font-family: monospace; font-size: 12px; }
+        .img-orig { fill: #3b82f6; stroke: #f8fafc; stroke-width: 2; rx: 8; }
+        .img-jitter { fill: #10b981; stroke: #f8fafc; stroke-width: 2; rx: 8; }
+        .box { fill: #1e293b; stroke: #fbbf24; stroke-width: 2; rx: 4; }
+        .arrow { stroke: #94a3b8; stroke-width: 2; marker-end: url(#arrowhead4); }
+      </style>
+      <marker id="arrowhead4" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
+        <polygon points="0 0, 10 3.5, 0 7" fill="#94a3b8" />
+      </marker>
+    </defs>
+
+    <!-- Original Image -->
+    <text x="60" y="30" class="text-title" fill="#3b82f6">Image (I)</text>
+    <rect x="30" y="50" width="100" height="100" class="img-orig" />
+    <circle cx="80" cy="100" r="20" fill="#f8fafc" opacity="0.3" />
+
+    <!-- Transformation -->
+    <line x1="140" y1="100" x2="250" y2="100" class="arrow" />
+    
+    <rect x="155" y="75" width="80" height="50" class="box" />
+    <text x="195" y="95" class="text-math" fill="#fbbf24" text-anchor="middle">α ~ U(...)</text>
+    <text x="195" y="115" class="text-math" fill="#ef4444" text-anchor="middle">Δθ ~ U(...)</text>
+
+    <!-- Augmented Image -->
+    <text x="290" y="30" class="text-title" fill="#10b981">Jittered (I')</text>
+    <rect x="260" y="50" width="100" height="100" class="img-jitter" />
+    <circle cx="310" cy="100" r="20" fill="#f8fafc" opacity="0.8" />
+  </svg>
 category: "4.1 Preprocessing"
 tags: ["transform", "image", "multimedia", "torchvision", "pipeline"]
 applies_to: ["Images"]
-when_to_use: "Robustesse éclairage."
+when_to_use: "À utiliser lors de l'entraînement de modèles de vision par ordinateur pour les rendre invariants aux conditions d'éclairage et aux variations de colorimétrie environnementale."
+use_cases:
+  - "Classification d'images en extérieur où les conditions météorologiques ou l'heure de la journée modifient l'exposition."
+  - "Reconnaissance d'objets sur des appareils avec différentes calibrations de capteurs photographiques."
 pros:
-  - "Généralise bien."
+  - "Augmente considérablement la capacité de généralisation du modèle en simulant divers environnements lumineux."
+  - "Facilement paramétrable pour s'adapter à la distribution des données réelles (jitter_factor ajustable)."
 cons:
-  - "Peut détruire info."
+  - "Peut détruire de l'information sémantique vitale si la couleur est l'unique caractéristique discriminante (ex: trier des citrons jaunes vs citrons verts)."
+  - "L'application de transformations multiples ralentit la boucle de chargement des données si elle n'est pas correctement parallélisée."
 hyperparameters:
   img_col: "Colonne images"
   jitter_factor: "Facteur"
@@ -47,16 +87,17 @@ code_template: |
       print(f"[AVERTISSEMENT] Colonne '{IMG_COL}' introuvable.")
 
 illustration_mermaid: |
-  graph TD
-    A[Image DataFrame] --> B{Does IMG_COL exist?}
-    B -- Yes --> C[Initialize T.ColorJitter]
-    B -- No --> D[Skip and Warn]
-    C --> E[Apply jitter to each PIL Image]
-    E --> F[Update pipeline_steps & df]
-    D --> F
-    F --> G[Jittered Images]
-    style A fill:#eff6ff,stroke:#94a3b8,stroke-width:2px
-    style G fill:#10b981,stroke:#059669,stroke-width:2px,color:#fff
+  flowchart LR
+    A(["📊 df (Images)"]) --> B{"⚙️ T.ColorJitter"}
+    C[/"📄 JITTER_FACTOR"/] -.-> B
+    B --> D(["📊 df (Augmented)"])
+    B --> E(["ℹ️ pipeline_steps"])
+    
+    style C fill:#fbbf24,stroke:#d97706,stroke-width:2px,color:#000
+    style B fill:#3b82f6,stroke:#2563eb,stroke-width:2px,color:#fff
+    style A fill:#10b981,stroke:#059669,stroke-width:2px,color:#fff
+    style D fill:#10b981,stroke:#059669,stroke-width:2px,color:#fff
+    style E fill:#8b5cf6,stroke:#7c3aed,stroke-width:2px,color:#fff
 
 _metadata:
   bloc: 2

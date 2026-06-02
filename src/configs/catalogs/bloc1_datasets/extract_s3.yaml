@@ -1,6 +1,16 @@
 id: extract_s3
 name: 'Extract: AWS S3'
-description: Télécharge un objet depuis un bucket Amazon S3 (requiert boto3).
+description: Télécharge un fichier ou objet depuis un bucket Amazon S3 de manière sécurisée (requiert boto3).
+when_to_use: Lorsque vos données sources sont hébergées sur le service de stockage objet Amazon S3.
+use_cases:
+  - Récupération d'un fichier Parquet ou CSV depuis un Data Lake AWS.
+  - Automatisation de l'ingestion de données cloud vers un environnement local.
+pros:
+  - Intégration robuste et standard avec l'écosystème AWS.
+  - Gestion efficace des fichiers de grande taille.
+cons:
+  - Nécessite la configuration préalable des accès AWS (credentials).
+  - Dépendance externe à la bibliothèque boto3.
 category: 1. Extract
 tags:
 - extract
@@ -47,39 +57,22 @@ code_template: |
   task_type = "unknown"
   meta = {"source": "s3", "path": DEST_PATH}
 illustration_mermaid: |
-    flowchart TD
-    A([FILE_PATH]) --> B[Load EXTRACT_S3]
-    B --> df([df])
-    
-    style A fill:#3b82f6,color:#fff
-    style B fill:#10b981,color:#fff
-    style df fill:#f59e0b,color:#fff
-
-
-
-        subgraph Operations [AWS S3 Extract]
-            BotoClient([boto3.client 's3'])
-            Download([s3.download_file])
-            LocalFile[(Downloaded File)]
-        end
-
-        subgraph Outputs [Contract Variables]
-            df((df = None))
-            target((target_name = None))
-            task((task_type = 'unknown'))
-            meta((meta: dict))
-        end
-
-        BUCKET & KEY & DEST --> Download
-        BotoClient --> Download
-        Download --> LocalFile
-        LocalFile -.-> meta
-
-        style Config fill:#f8fafc,stroke:#cbd5e1,stroke-width:2px
-        style BotoClient fill:#f59e0b,stroke:#b45309,stroke-width:2px,color:#fff
-        style Download fill:#3b82f6,stroke:#1d4ed8,stroke-width:2px,color:#fff
-        style LocalFile fill:#10b981,stroke:#047857,stroke-width:2px,color:#fff
-        style Outputs fill:#f1f5f9,stroke:#94a3b8,stroke-width:2px
+  flowchart LR
+      A[/"📄 BUCKET_NAME / KEY"/] --> B{"s3.download_file()"}
+      C[/"🎯 TARGET_COL"/] --> D{"Check TARGET_COL"}
+      B --> E(["📊 df (File Path)"])
+      E --> D
+      D --> F(["🎯 target_name"])
+      D --> G(["⚙️ task_type"])
+      D --> H(["ℹ️ meta (s3)"])
+      style A fill:#fbbf24,stroke:#d97706,stroke-width:2px,color:#000
+      style C fill:#fbbf24,stroke:#d97706,stroke-width:2px,color:#000
+      style B fill:#3b82f6,stroke:#2563eb,stroke-width:2px,color:#fff
+      style D fill:#3b82f6,stroke:#2563eb,stroke-width:2px,color:#fff
+      style E fill:#10b981,stroke:#059669,stroke-width:2px,color:#fff
+      style F fill:#8b5cf6,stroke:#7c3aed,stroke-width:2px,color:#fff
+      style G fill:#8b5cf6,stroke:#7c3aed,stroke-width:2px,color:#fff
+      style H fill:#8b5cf6,stroke:#7c3aed,stroke-width:2px,color:#fff
 
 _metadata:
   bloc: 1

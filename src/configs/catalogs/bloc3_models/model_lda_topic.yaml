@@ -1,16 +1,22 @@
 id: "model_lda_topic"
 name: "Model: Latent Dirichlet Allocation (LDA)"
-description: "Modèle non-supervisé probabiliste pour la modélisation thématique (Topic Modeling)."
+description: "Modèle probabiliste génératif non-supervisé utilisé pour l'extraction de thématiques (Topic Modeling). Il postule que chaque document est un mélange de sujets et que chaque sujet est une distribution de mots."
 category: "Modèles NLP (Entraînés)"
-tags: ["model", "nlp", "unsupervised", "topic-modeling", "sklearn", "lda"]
+tags: ["model", "nlp", "unsupervised", "topic-modeling", "sklearn", "lda", "text-mining"]
 applies_to: ["Texte"]
-when_to_use: "Quand vous voulez découvrir automatiquement les sujets (topics) cachés dans une grande collection de textes non labellisés."
+when_to_use: "À privilégier pour explorer de larges corpus documentaires non structurés et non labellisés, afin d'en extraire automatiquement les grands thèmes sous-jacents."
+use_cases:
+  - "Veille documentaire : Catégorisation automatique d'articles de presse ou de publications scientifiques."
+  - "Analyse des retours clients : Identification des sujets de plainte ou d'insatisfaction dans les avis en ligne (reviews)."
+  - "Moteurs de recommandation : Proposition de contenus partageant la même distribution thématique que ce que l'utilisateur lit."
 pros:
-  - "Totalement non-supervisé."
-  - "Interprétation probabiliste claire."
+  - "Méthode non supervisée très robuste (pas besoin de données préalablement annotées)."
+  - "Résultats hautement interprétables (chaque sujet est décrit par ses mots les plus fréquents/exclusifs)."
+  - "Approche probabiliste 'douce' (soft clustering) : un document peut appartenir à plusieurs thèmes."
 cons:
-  - "Suppose que les documents sont des mélanges de topics."
-  - "Nécessite d'utiliser CountVectorizer en amont (les entiers sont requis, TF-IDF est sous-optimal)."
+  - "Nécessite la définition du nombre de sujets (topics) en amont, souvent délicat à optimiser."
+  - "Gourmand en ressources et lent sur de très gros corpus (optimisation variationnelle)."
+  - "Sensible au prétraitement : nécessite impérativement une vectorisation par comptage (CountVectorizer) et l'exclusion des mots vides (stopwords)."
 hyperparameters:
   n_components: "Nombre de topics à découvrir (ex: 10)."
 code_template: |
@@ -63,28 +69,117 @@ code_template: |
       print("[MODEL] LDA entraîné avec succès.")
   else:
       print("[ERREUR] Données d'entraînement introuvables.")
+      print("[ERREUR] Données d'entraînement introuvables.")
+math_theory: |
+  Latent Dirichlet Allocation (LDA) est un modèle génératif probabiliste. Il suppose que chaque document est un mélange de sujets (topics) et chaque sujet une distribution sur un vocabulaire de mots.
+  
+  Le processus génératif pour un document $d$ est le suivant :
+  1. Tirer une distribution de sujets $\theta_d \sim \text{Dirichlet}(\textcolor{#fbbf24}{\alpha})$
+  2. Pour chaque sujet $k$, tirer une distribution de mots $\phi_k \sim \text{Dirichlet}(\textcolor{#10b981}{\beta})$
+  3. Pour chaque mot $\textcolor{#ef4444}{w_{d,n}}$ du document $d$ :
+     - Choisir un sujet $\textcolor{#3b82f6}{z_{d,n}} \sim \text{Multinomial}(\theta_d)$
+     - Générer le mot $\textcolor{#ef4444}{w_{d,n}} \sim \text{Multinomial}(\phi_{\textcolor{#3b82f6}{z_{d,n}}})$
+
+  Probabilité jointe du modèle :
+  $$ P(\textcolor{#ef4444}{W}, \textcolor{#3b82f6}{Z}, \Theta, \Phi | \textcolor{#fbbf24}{\alpha}, \textcolor{#10b981}{\beta}) = \prod_{k=1}^{\textcolor{#8b5cf6}{K}} P(\phi_k | \textcolor{#10b981}{\beta}) \prod_{d=1}^{D} P(\theta_d | \textcolor{#fbbf24}{\alpha}) \prod_{n=1}^{N_d} P(\textcolor{#3b82f6}{z_{d,n}} | \theta_d) P(\textcolor{#ef4444}{w_{d,n}} | \phi_{\textcolor{#3b82f6}{z_{d,n}}}) $$
+
+  - $\textcolor{#fbbf24}{\alpha}, \textcolor{#10b981}{\beta}$ : Hyperparamètres de concentration des a priori de Dirichlet
+  - $\theta_d$ : Distribution des sujets pour le document $d$
+  - $\phi_k$ : Distribution des mots pour le sujet $k$
+  - $\textcolor{#3b82f6}{z_{d,n}}$ : L'assignation latente du sujet pour le $n$-ième mot
+  - $\textcolor{#ef4444}{w_{d,n}}$ : Le mot observé
+  - $\textcolor{#8b5cf6}{K}$ : Le nombre total de sujets (topics)
+math_illustration_svg: |
+  <svg viewBox="0 0 600 300" xmlns="http://www.w3.org/2000/svg">
+    <!-- Plate Notation Graphic -->
+    
+    <!-- Beta prior -->
+    <circle cx="100" cy="150" r="15" fill="#10b981" stroke="#059669" stroke-width="2"/>
+    <text x="100" y="155" font-family="sans-serif" font-size="14" fill="#fff" font-weight="bold" text-anchor="middle">β</text>
+    
+    <!-- K Plate -->
+    <rect x="150" y="100" width="100" height="100" rx="10" fill="none" stroke="#8b5cf6" stroke-width="2"/>
+    <text x="235" y="190" font-family="sans-serif" font-size="14" fill="#8b5cf6" font-weight="bold">K</text>
+    
+    <!-- Phi -->
+    <circle cx="200" cy="150" r="20" fill="#fff" stroke="#10b981" stroke-width="2"/>
+    <text x="200" y="155" font-family="sans-serif" font-size="14" fill="#10b981" font-weight="bold" text-anchor="middle">φ</text>
+
+    <!-- Alpha prior -->
+    <circle cx="500" cy="150" r="15" fill="#fbbf24" stroke="#d97706" stroke-width="2"/>
+    <text x="500" y="155" font-family="sans-serif" font-size="14" fill="#fff" font-weight="bold" text-anchor="middle">α</text>
+
+    <!-- M Plate (Documents) -->
+    <rect x="270" y="60" width="190" height="200" rx="10" fill="none" stroke="#888" stroke-width="2"/>
+    <text x="445" y="250" font-family="sans-serif" font-size="14" fill="#888" font-weight="bold">D</text>
+
+    <!-- Theta -->
+    <circle cx="430" cy="150" r="20" fill="#fff" stroke="#fbbf24" stroke-width="2"/>
+    <text x="430" y="155" font-family="sans-serif" font-size="14" fill="#fbbf24" font-weight="bold" text-anchor="middle">θ</text>
+
+    <!-- N Plate (Words) -->
+    <rect x="280" y="90" width="100" height="150" rx="10" fill="none" stroke="#888" stroke-width="2" stroke-dasharray="4"/>
+    <text x="360" y="230" font-family="sans-serif" font-size="14" fill="#888" font-weight="bold">N</text>
+
+    <!-- z (Topic assignment) -->
+    <circle cx="330" cy="120" r="20" fill="#fff" stroke="#3b82f6" stroke-width="2"/>
+    <text x="330" y="125" font-family="sans-serif" font-size="14" fill="#3b82f6" font-weight="bold" text-anchor="middle">z</text>
+
+    <!-- w (Observed Word) -->
+    <circle cx="330" cy="190" r="20" fill="#ef4444" stroke="#b91c1c" stroke-width="2"/>
+    <text x="330" y="195" font-family="sans-serif" font-size="14" fill="#fff" font-weight="bold" text-anchor="middle">w</text>
+
+    <!-- Arrows -->
+    <!-- Beta to Phi -->
+    <line x1="115" y1="150" x2="180" y2="150" stroke="#10b981" stroke-width="2" marker-end="url(#arrow_green)"/>
+    <!-- Alpha to Theta -->
+    <line x1="485" y1="150" x2="450" y2="150" stroke="#fbbf24" stroke-width="2" marker-end="url(#arrow_yellow)"/>
+    <!-- Theta to z -->
+    <path d="M 410 150 Q 370 120 350 120" fill="none" stroke="#fbbf24" stroke-width="2" marker-end="url(#arrow_yellow)"/>
+    <!-- Phi to w -->
+    <path d="M 220 150 Q 280 190 310 190" fill="none" stroke="#10b981" stroke-width="2" marker-end="url(#arrow_green)"/>
+    <!-- z to w -->
+    <line x1="330" y1="140" x2="330" y2="170" stroke="#3b82f6" stroke-width="2" marker-end="url(#arrow_blue)"/>
+
+    <defs>
+      <marker id="arrow_green" viewBox="0 0 10 10" refX="5" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+        <path d="M 0 0 L 10 5 L 0 10 z" fill="#10b981"/>
+      </marker>
+      <marker id="arrow_yellow" viewBox="0 0 10 10" refX="5" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+        <path d="M 0 0 L 10 5 L 0 10 z" fill="#fbbf24"/>
+      </marker>
+      <marker id="arrow_blue" viewBox="0 0 10 10" refX="5" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+        <path d="M 0 0 L 10 5 L 0 10 z" fill="#3b82f6"/>
+      </marker>
+    </defs>
+  </svg>
 illustration_mermaid: |
-  graph TD
-    subgraph Data Input
-      Doc[Corpus of Documents] --> CV[Count Vectorizer]
-      CV --> Matrix[Document-Term Matrix]
-    end
-    subgraph LDA Generative Process
-      Matrix --> Alpha[Dirichlet Prior Alpha: Doc-Topic dist]
-      Matrix --> Beta[Dirichlet Prior Beta: Topic-Word dist]
-      Alpha --> TopicDist[Infer Topic Mixture per Document]
-      Beta --> WordDist[Infer Word Probabilities per Topic]
-      TopicDist --> Opt[Variational Inference Optimization]
-      WordDist --> Opt
-    end
-    subgraph Output
-      Opt --> Preds[Dominant Topic per Document]
-      Opt --> Probas[Topic Probabilities Distribution]
-    end
-    style CV fill:#f59e0b,stroke:#d97706,stroke-width:2px,color:#fff
-    style TopicDist fill:#8b5cf6,stroke:#7c3aed,stroke-width:2px,color:#fff
-    style WordDist fill:#8b5cf6,stroke:#7c3aed,stroke-width:2px,color:#fff
-    style Preds fill:#10b981,stroke:#059669,stroke-width:2px,color:#fff
+  flowchart LR
+    Doc(["Corpus de Textes"])
+    CV{"Vectorisation (Count)"}
+    Matrix(["Matrice Document-Terme"])
+    LDA{"Inférence LDA"}
+    TopicDist(["Mélanges Topics/Doc"])
+    WordDist(["Distribution Mots/Topic"])
+    Dominant(["Topic Dominant"])
+    Probas(["Probabilités des Topics"])
+
+    Doc --> CV
+    CV --> Matrix
+    Matrix --> LDA
+    LDA --> TopicDist
+    LDA --> WordDist
+    TopicDist --> Dominant
+    TopicDist --> Probas
+
+    style Doc fill:#10b981,stroke:#059669,stroke-width:2px,color:#fff
+    style Matrix fill:#10b981,stroke:#059669,stroke-width:2px,color:#fff
+    style TopicDist fill:#10b981,stroke:#059669,stroke-width:2px,color:#fff
+    style WordDist fill:#10b981,stroke:#059669,stroke-width:2px,color:#fff
+    style Dominant fill:#10b981,stroke:#059669,stroke-width:2px,color:#fff
+    style Probas fill:#10b981,stroke:#059669,stroke-width:2px,color:#fff
+    style CV fill:#3b82f6,stroke:#2563eb,stroke-width:2px,color:#fff
+    style LDA fill:#3b82f6,stroke:#2563eb,stroke-width:2px,color:#fff
 
 _metadata:
   bloc: 3

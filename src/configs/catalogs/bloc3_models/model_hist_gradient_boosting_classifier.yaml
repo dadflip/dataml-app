@@ -1,15 +1,22 @@
 id: "model_hist_gradient_boosting_classifier"
 name: "Model: HistGradientBoosting Classifier"
-description: "Implémentation native très rapide de LightGBM directement dans Scikit-Learn."
+description: "Algorithme d'ensemble (Boosting) natif de Scikit-Learn optimisé par binning (histogrammes), très similaire et inspiré de LightGBM pour des performances et une vitesse maximales."
 category: "Modèles Basés sur les Arbres"
 tags: ["model", "classification", "tabular", "sklearn", "ensemble", "boosting"]
 applies_to: ["Tabulaire"]
-when_to_use: "Quand LightGBM n'est pas installé, pour des datasets volumineux (> 10000 échantillons)."
+when_to_use: "À privilégier par défaut pour des tâches de classification sur données tabulaires de taille moyenne à grande (plus de 10 000 échantillons), offrant un excellent compromis entre vitesse et précision sans nécessiter l'installation de bibliothèques externes."
+use_cases:
+  - "Détection de fraude sur des volumes massifs de transactions."
+  - "Prédiction du churn (attrition) client."
+  - "Classification de risque de crédit avec de nombreuses variables."
 pros:
-  - "Beaucoup plus rapide que GradientBoostingClassifier."
-  - "Gère nativement les NaNs."
+  - "Extrêmement rapide par rapport au GradientBoostingClassifier standard (grâce au binning)."
+  - "Gère nativement les valeurs manquantes (NaNs) sans imputation préalable."
+  - "Inclus en natif dans Scikit-Learn (pas de dépendances lourdes supplémentaires)."
 cons:
-  - "Support natif des variables catégorielles nécessite sklearn >= 0.24."
+  - "Ne propose pas d'attribut feature_importances_ natif (nécessite d'utiliser la permutation importance)."
+  - "Moins personnalisable que les bibliothèques dédiées comme XGBoost ou LightGBM."
+  - "Le support natif complet des variables catégorielles peut nécessiter une version récente de scikit-learn."
 hyperparameters:
   max_iter: "Nombre maximum d'arbres (ex: 100)."
   learning_rate: "Taux d'apprentissage (ex: 0.1)."
@@ -50,29 +57,132 @@ code_template: |
       task_type = "classification"
       meta = {}
 illustration_mermaid: |
-  graph TD
-    subgraph Data Input
-      X[Raw Features] --> Bin[Histogram Binning]
-    end
-    subgraph Gradient Boosting Process
-      Bin --> Tree1[Decision Tree 1]
-      Tree1 --> Res1[Compute Residuals]
-      Res1 --> Tree2[Decision Tree 2]
-      Tree2 --> ResN[...]
-      ResN --> TreeN[Decision Tree N]
-    end
-    subgraph Aggregation
-      Tree1 -.-> Sum[Sum Output * Learning Rate]
-      Tree2 -.-> Sum
-      TreeN -.-> Sum
-      Sum --> Sigmoid[Sigmoid/Softmax]
-      Sigmoid --> Pred[Class Predictions]
-    end
-    style Bin fill:#f59e0b,stroke:#d97706,stroke-width:2px,color:#fff
-    style Tree1 fill:#10b981,stroke:#059669,stroke-width:2px,color:#fff
-    style Tree2 fill:#10b981,stroke:#059669,stroke-width:2px,color:#fff
-    style TreeN fill:#10b981,stroke:#059669,stroke-width:2px,color:#fff
+  flowchart LR
+    X[/"Raw Features"/] --> Bin{"Histogram Binning"}
+    Bin --> Tree1{"Decision Tree 1"}
+    Tree1 --> Res1(["Compute Residuals"])
+    Res1 --> Tree2{"Decision Tree 2"}
+    Tree2 --> ResN(["..."])
+    ResN --> TreeN{"Decision Tree N"}
+    
+    Tree1 -.-> Sum{"Sum Output * Learning Rate"}
+    Tree2 -.-> Sum
+    TreeN -.-> Sum
+    
+    Sum --> Sigmoid{"Sigmoid/Softmax"}
+    Sigmoid --> Pred(["Class Predictions"])
+
+    style X fill:#fbbf24,stroke:#d97706,stroke-width:2px,color:#000
+    style Bin fill:#3b82f6,stroke:#2563eb,stroke-width:2px,color:#fff
+    style Tree1 fill:#3b82f6,stroke:#2563eb,stroke-width:2px,color:#fff
+    style Res1 fill:#10b981,stroke:#059669,stroke-width:2px,color:#fff
+    style Tree2 fill:#3b82f6,stroke:#2563eb,stroke-width:2px,color:#fff
+    style ResN fill:#10b981,stroke:#059669,stroke-width:2px,color:#fff
+    style TreeN fill:#3b82f6,stroke:#2563eb,stroke-width:2px,color:#fff
     style Sum fill:#3b82f6,stroke:#2563eb,stroke-width:2px,color:#fff
+    style Sigmoid fill:#3b82f6,stroke:#2563eb,stroke-width:2px,color:#fff
+    style Pred fill:#10b981,stroke:#059669,stroke-width:2px,color:#fff
+
+math_theory: |
+  HistGradientBoosting is a highly efficient implementation of gradient boosting that discretizes continuous features into integer-valued bins (histograms). This dramatically reduces the number of split points evaluated.
+  
+  First, input features $\textcolor{#ef4444}{x}$ are mapped to bins:
+  $$ \tilde{x} = \text{Bin}(\textcolor{#ef4444}{x}, \text{max\_bins}) $$
+  
+  The model then sequentially minimizes a loss function using trees trained on the binned data:
+  $$ \textcolor{#3b82f6}{F_M}(\tilde{x}) = F_0(\tilde{x}) + \sum_{m=1}^{\textcolor{#8b5cf6}{M}} \textcolor{#10b981}{\nu} \cdot \textcolor{#fbbf24}{h_m}(\tilde{x}) $$
+  
+  Where:
+  - $\textcolor{#3b82f6}{F_M}(\tilde{x})$ is the final log-odds prediction.
+  - $\textcolor{#8b5cf6}{M}$ is the maximum number of iterations (`max_iter`).
+  - $\textcolor{#10b981}{\nu}$ is the learning rate.
+  - $\textcolor{#fbbf24}{h_m}$ is the decision tree grown at step $m$ using histogram-based splits.
+  - $\textcolor{#ef4444}{x}$ represents the raw input features.
+
+math_illustration_svg: |
+  <svg viewBox="0 0 800 400" xmlns="http://www.w3.org/2000/svg">
+    <!-- Background -->
+    <rect width="100%" height="100%" fill="#1e1e1e" rx="10" />
+    
+    <!-- Input Features x -->
+    <rect x="20" y="160" width="60" height="80" fill="#ef4444" rx="8" opacity="0.8" />
+    <text x="50" y="205" fill="white" font-family="sans-serif" font-size="24" text-anchor="middle" font-weight="bold">x</text>
+    
+    <!-- Binning Step -->
+    <rect x="120" y="160" width="80" height="80" fill="#8b5cf6" rx="8" opacity="0.9" />
+    <text x="160" y="195" fill="white" font-family="sans-serif" font-size="14" text-anchor="middle">Histogram</text>
+    <text x="160" y="215" fill="white" font-family="sans-serif" font-size="14" text-anchor="middle">Binning</text>
+    <path d="M 85 200 L 110 200" stroke="white" stroke-width="2" marker-end="url(#arrow)" fill="none"/>
+    
+    <text x="160" y="260" fill="#8b5cf6" font-family="sans-serif" font-size="14" text-anchor="middle">x̃ (Binned)</text>
+    
+    <!-- F_0 -->
+    <rect x="260" y="60" width="100" height="50" fill="#333" stroke="#888" stroke-width="2" rx="5" />
+    <text x="310" y="90" fill="white" font-family="sans-serif" font-size="16" text-anchor="middle">F₀(x̃)</text>
+    
+    <!-- Tree 1 -->
+    <rect x="260" y="140" width="100" height="50" fill="#fbbf24" rx="5" opacity="0.9" />
+    <text x="310" y="170" fill="#000" font-family="sans-serif" font-size="16" text-anchor="middle" font-weight="bold">h₁(x̃)</text>
+    
+    <!-- Tree m -->
+    <rect x="260" y="240" width="100" height="50" fill="#fbbf24" rx="5" opacity="0.9" />
+    <text x="310" y="270" fill="#000" font-family="sans-serif" font-size="16" text-anchor="middle" font-weight="bold">h_m(x̃)</text>
+    <text x="310" y="220" fill="white" font-family="sans-serif" font-size="20" text-anchor="middle">⋮</text>
+    
+    <!-- Tree M -->
+    <rect x="260" y="320" width="100" height="50" fill="#fbbf24" rx="5" opacity="0.9" />
+    <text x="310" y="350" fill="#000" font-family="sans-serif" font-size="16" text-anchor="middle" font-weight="bold">h_M(x̃)</text>
+    <text x="310" y="310" fill="white" font-family="sans-serif" font-size="20" text-anchor="middle">⋮</text>
+    
+    <!-- Arrows from Binned x -->
+    <path d="M 205 200 L 250 85" stroke="#8b5cf6" stroke-width="2" marker-end="url(#arrow-purple)" fill="none"/>
+    <path d="M 205 200 L 250 165" stroke="#8b5cf6" stroke-width="2" marker-end="url(#arrow-purple)" fill="none"/>
+    <path d="M 205 200 L 250 265" stroke="#8b5cf6" stroke-width="2" marker-end="url(#arrow-purple)" fill="none"/>
+    <path d="M 205 200 L 250 345" stroke="#8b5cf6" stroke-width="2" marker-end="url(#arrow-purple)" fill="none"/>
+    
+    <!-- Multipliers -->
+    <circle cx="420" cy="165" r="15" fill="#10b981" />
+    <text x="420" y="170" fill="white" font-family="sans-serif" font-size="16" text-anchor="middle">ν</text>
+    <circle cx="420" cy="265" r="15" fill="#10b981" />
+    <text x="420" y="270" fill="white" font-family="sans-serif" font-size="16" text-anchor="middle">ν</text>
+    <circle cx="420" cy="345" r="15" fill="#10b981" />
+    <text x="420" y="350" fill="white" font-family="sans-serif" font-size="16" text-anchor="middle">ν</text>
+    
+    <!-- Arrows to Multipliers -->
+    <path d="M 360 165 L 395 165" stroke="white" stroke-width="2" marker-end="url(#arrow)" fill="none"/>
+    <path d="M 360 265 L 395 265" stroke="white" stroke-width="2" marker-end="url(#arrow)" fill="none"/>
+    <path d="M 360 345 L 395 345" stroke="white" stroke-width="2" marker-end="url(#arrow)" fill="none"/>
+    
+    <!-- Summation -->
+    <circle cx="530" cy="200" r="25" fill="#333" stroke="white" stroke-width="2" />
+    <text x="530" y="210" fill="white" font-family="sans-serif" font-size="30" text-anchor="middle">+</text>
+    
+    <!-- Arrows to Summation -->
+    <path d="M 360 85 L 515 180" stroke="white" stroke-width="2" marker-end="url(#arrow)" fill="none"/>
+    <path d="M 435 165 L 505 190" stroke="white" stroke-width="2" marker-end="url(#arrow)" fill="none"/>
+    <path d="M 435 265 L 505 210" stroke="white" stroke-width="2" marker-end="url(#arrow)" fill="none"/>
+    <path d="M 435 345 L 515 220" stroke="white" stroke-width="2" marker-end="url(#arrow)" fill="none"/>
+    
+    <!-- Output F_M -->
+    <rect x="610" y="175" width="80" height="50" fill="#3b82f6" rx="5" />
+    <text x="650" y="205" fill="white" font-family="sans-serif" font-size="16" text-anchor="middle">F_M(x̃)</text>
+    <path d="M 555 200 L 600 200" stroke="white" stroke-width="2" marker-end="url(#arrow)" fill="none"/>
+    
+    <!-- Sigmoid / Logistic -->
+    <rect x="730" y="175" width="60" height="50" fill="#1e1e1e" stroke="#3b82f6" stroke-width="2" rx="5" />
+    <text x="760" y="205" fill="#3b82f6" font-family="sans-serif" font-size="14" text-anchor="middle">Sigmoid</text>
+    <path d="M 690 200 L 720 200" stroke="white" stroke-width="2" marker-end="url(#arrow)" fill="none"/>
+    
+    <!-- Defs -->
+    <defs>
+      <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto">
+        <path d="M 0 0 L 10 5 L 0 10 z" fill="white" />
+      </marker>
+      <marker id="arrow-purple" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto">
+        <path d="M 0 0 L 10 5 L 0 10 z" fill="#8b5cf6" />
+      </marker>
+    </defs>
+  </svg>
 
 _metadata:
   bloc: 3

@@ -1,17 +1,112 @@
 id: "model_extra_trees_classifier"
 name: "Model: Extra Trees Classifier"
-description: "Extremely Randomized Trees. Variante du Random Forest qui choisit les points de coupure aléatoirement."
+description: |
+  Algorithme d'ensemble basé sur les arbres de décision (Extremely Randomized Trees). Contrairement aux Forêts Aléatoires (Random Forest) qui cherchent le meilleur seuil de coupure pour chaque variable, Extra Trees choisit les seuils de manière purement aléatoire. Cette approche introduit davantage de diversité et réduit significativement la variance du modèle tout en accélérant l'entraînement.
 category: "Modèles Basés sur les Arbres"
 tags: ["model", "classification", "tabular", "sklearn", "ensemble"]
 applies_to: ["Tabulaire"]
-when_to_use: "Quand le Random Forest sur-apprend (overfit) ou pour une exécution plus rapide."
+when_to_use: |
+  À utiliser lorsque le modèle Random Forest a tendance à sur-apprendre (overfitting) sur vos données d'entraînement. C'est également un excellent choix lorsque vous souhaitez un temps d'entraînement plus rapide sans sacrifier significativement la qualité prédictive.
+use_cases:
+  - "Classification de données de grande dimension où la recherche de seuils optimaux est trop coûteuse."
+  - "Extraction rapide d'importance des variables (Feature Importance)."
+  - "Modélisation de données bruitées nécessitant des modèles robustes avec une très faible variance."
 pros:
-  - "Plus rapide à entraîner que Random Forest (ne cherche pas le seuil optimal)."
-  - "Variance généralement plus faible."
+  - "Temps d'entraînement plus rapide que Random Forest (pas d'optimisation locale des seuils)."
+  - "Plus robuste au sur-apprentissage grâce à une variance réduite par l'aléa extrême."
+  - "Performances très compétitives en sortie de boîte, sans ajustement profond."
 cons:
-  - "Biais potentiellement plus élevé que RF."
+  - "L'augmentation de l'aléa peut entraîner un biais légèrement plus élevé."
+  - "Le modèle final reste difficilement interprétable (boîte noire) par rapport à un arbre unique."
 hyperparameters:
   n_estimators: "Nombre d'arbres (ex: 100)."
+math_theory: |
+  L'algorithme Extra Trees (Extremely Randomized Trees) repose sur le même principe que Random Forest (agrégation par Bootstrap ou Bagging d'arbres décisionnels), mais introduit une dose supplémentaire d'aléa.
+  
+  À chaque nœud, au lieu de chercher le seuil de coupure optimal qui maximise le gain d'information pour chaque variable, Extra Trees tire au hasard un seuil $\textcolor{#8b5cf6}{s_j}$ dans l'intervalle empirique de chaque variable sélectionnée $\textcolor{#fbbf24}{X_j}$ :
+  
+  $$ \textcolor{#8b5cf6}{s_j} \sim Uniform(\min(\textcolor{#fbbf24}{X_j}), \max(\textcolor{#fbbf24}{X_j})) $$
+  
+  Parmi ces coupures aléatoires (une par variable testée), l'algorithme sélectionne celle qui offre la meilleure réduction d'impureté $\textcolor{#10b981}{\Delta I}$ (par exemple, Gini) :
+  
+  $$ \textcolor{#10b981}{\Delta I} = \textcolor{#3b82f6}{I(D)} - \left( \frac{|D_{left}|}{|D|} \textcolor{#3b82f6}{I(D_{left})} + \frac{|D_{right}|}{|D|} \textcolor{#3b82f6}{I(D_{right})} \right) $$
+  
+  La prédiction finale $\textcolor{#ef4444}{\hat{y}}$ est la classe majoritaire issue du vote des $T$ arbres :
+  $$ \textcolor{#ef4444}{\hat{y}} = \text{mode}(\{h_1(x), h_2(x), \dots, h_T(x)\}) $$
+math_illustration_svg: |
+  <svg viewBox="0 0 800 400" xmlns="http://www.w3.org/2000/svg">
+    <rect width="800" height="400" fill="#1e1e2f" rx="15" />
+    
+    <text x="400" y="30" fill="#ffffff" font-family="sans-serif" font-weight="bold" font-size="18" text-anchor="middle">Processus de Coupe d'Extra Trees (Comparé à RF)</text>
+    
+    <!-- Random Forest Side -->
+    <g transform="translate(50, 70)">
+      <rect x="0" y="0" width="300" height="300" fill="#2d2d44" rx="8" stroke="#3b82f6" stroke-width="2"/>
+      <text x="150" y="25" fill="#3b82f6" font-family="sans-serif" font-weight="bold" font-size="14" text-anchor="middle">Random Forest (Optimisé)</text>
+      
+      <text x="20" y="60" fill="#ffffff" font-family="sans-serif" font-size="12">1. Évaluer TOUS les seuils possibles</text>
+      <!-- Feature Axis -->
+      <line x1="20" y1="100" x2="280" y2="100" stroke="#ffffff" stroke-width="2"/>
+      <circle cx="50" cy="100" r="4" fill="#fbbf24"/>
+      <circle cx="80" cy="100" r="4" fill="#fbbf24"/>
+      <circle cx="120" cy="100" r="4" fill="#fbbf24"/>
+      <circle cx="190" cy="100" r="4" fill="#fbbf24"/>
+      <circle cx="250" cy="100" r="4" fill="#fbbf24"/>
+      
+      <!-- Tested splits -->
+      <line x1="65" y1="85" x2="65" y2="115" stroke="#ef4444" stroke-dasharray="2,2" stroke-width="1"/>
+      <line x1="100" y1="85" x2="100" y2="115" stroke="#ef4444" stroke-dasharray="2,2" stroke-width="1"/>
+      <line x1="155" y1="85" x2="155" y2="115" stroke="#ef4444" stroke-dasharray="2,2" stroke-width="1"/>
+      <line x1="220" y1="85" x2="220" y2="115" stroke="#ef4444" stroke-dasharray="2,2" stroke-width="1"/>
+      
+      <text x="20" y="160" fill="#ffffff" font-family="sans-serif" font-size="12">2. Choisir le seuil qui maximise le Gain</text>
+      <!-- Best split -->
+      <line x1="155" y1="170" x2="155" y2="230" stroke="#10b981" stroke-width="3"/>
+      <text x="155" y="250" fill="#10b981" font-family="sans-serif" font-weight="bold" font-size="12" text-anchor="middle">Seuil Optimal</text>
+      
+      <text x="150" y="285" fill="#ef4444" font-family="sans-serif" font-size="12" text-anchor="middle">Coûteux en calcul</text>
+    </g>
+
+    <!-- VS text -->
+    <text x="400" y="220" fill="#ffffff" font-family="sans-serif" font-weight="bold" font-size="24" text-anchor="middle">VS</text>
+
+    <!-- Extra Trees Side -->
+    <g transform="translate(450, 70)">
+      <rect x="0" y="0" width="300" height="300" fill="#2d2d44" rx="8" stroke="#8b5cf6" stroke-width="2"/>
+      <text x="150" y="25" fill="#8b5cf6" font-family="sans-serif" font-weight="bold" font-size="14" text-anchor="middle">Extra Trees (Aléatoire)</text>
+      
+      <text x="20" y="60" fill="#ffffff" font-family="sans-serif" font-size="12">1. Tirer 1 seuil ALÉATOIRE par variable</text>
+      <!-- Feature Axis -->
+      <line x1="20" y1="100" x2="280" y2="100" stroke="#ffffff" stroke-width="2"/>
+      <circle cx="50" cy="100" r="4" fill="#fbbf24"/>
+      <circle cx="80" cy="100" r="4" fill="#fbbf24"/>
+      <circle cx="120" cy="100" r="4" fill="#fbbf24"/>
+      <circle cx="190" cy="100" r="4" fill="#fbbf24"/>
+      <circle cx="250" cy="100" r="4" fill="#fbbf24"/>
+      
+      <text x="50" y="120" fill="#fbbf24" font-family="sans-serif" font-size="10" text-anchor="middle">Min</text>
+      <text x="250" y="120" fill="#fbbf24" font-family="sans-serif" font-size="10" text-anchor="middle">Max</text>
+      
+      <!-- Random split (Uniform) -->
+      <path d="M 50 125 L 50 135 L 250 135 L 250 125" fill="none" stroke="#8b5cf6" stroke-width="2"/>
+      <text x="150" y="145" fill="#8b5cf6" font-family="sans-serif" font-size="10" text-anchor="middle">Loi Uniforme</text>
+      
+      <line x1="180" y1="85" x2="180" y2="115" stroke="#8b5cf6" stroke-width="3"/>
+      
+      <text x="20" y="180" fill="#ffffff" font-family="sans-serif" font-size="12">2. Comparer les N seuils aléatoires et garder le meilleur</text>
+      <!-- Arrow down -->
+      <line x1="180" y1="190" x2="180" y2="230" stroke="#10b981" stroke-width="3" marker-end="url(#arrow-green)"/>
+      <text x="180" y="250" fill="#10b981" font-family="sans-serif" font-weight="bold" font-size="12" text-anchor="middle">Seuil Conservé (S_j)</text>
+      
+      <text x="150" y="285" fill="#10b981" font-family="sans-serif" font-size="12" text-anchor="middle">Très rapide + Moins de Variance</text>
+    </g>
+    
+    <defs>
+      <marker id="arrow-green" markerWidth="10" markerHeight="10" refX="9" refY="3" orient="auto" markerUnits="strokeWidth">
+        <path d="M0,0 L0,6 L9,3 z" fill="#10b981" />
+      </marker>
+    </defs>
+  </svg>
 code_template: |
   import pandas as pd
   import numpy as np
@@ -55,21 +150,15 @@ code_template: |
       training_history = {"status": "success", "fitted_on": len(X_train)}
 
 illustration_mermaid: |
-  graph TD
-    subgraph Extra Trees Classifier
-      In([Input Features]) --> T1[Random Tree 1]
-      In --> T2[Random Tree 2]
-      In --> TN[Random Tree N]
-      T1 --> V[Majority Vote]
-      T2 --> V
-      TN --> V
-      V --> Out([Class Prediction])
-    end
-    style In fill:#f8fafc,stroke:#94a3b8,stroke-width:1px
+  flowchart LR
+    In[/ "Features (X)" /] --> Model{"Extra Trees\n(Classifier)"}
+    Config(["Params\nN_Estimators"]) -.-> Model
+    Model --> Out(["Class Prediction\n(Vote)"])
+    
+    style In fill:#fbbf24,stroke:#d97706,stroke-width:2px,color:#000
+    style Config fill:#8b5cf6,stroke:#7c3aed,stroke-width:2px,color:#fff
+    style Model fill:#3b82f6,stroke:#2563eb,stroke-width:2px,color:#fff
     style Out fill:#10b981,stroke:#059669,stroke-width:2px,color:#fff
-    style T1 fill:#8b5cf6,stroke:#7c3aed,stroke-width:2px,color:#fff
-    style T2 fill:#8b5cf6,stroke:#7c3aed,stroke-width:2px,color:#fff
-    style TN fill:#8b5cf6,stroke:#7c3aed,stroke-width:2px,color:#fff
 
 _metadata:
   bloc: 3

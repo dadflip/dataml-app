@@ -1,6 +1,16 @@
 id: extract_smb
 name: 'Extract: Partage Windows (SMB)'
 description: Télécharge un fichier depuis un partage réseau Windows.
+when_to_use: "Lorsqu'il faut importer des données depuis un partage réseau d'entreprise Windows (SMB/CIFS)."
+use_cases:
+  - "Récupération de fichiers plats (CSV, Excel) exportés par un SI sur un serveur de fichiers."
+  - "Accès sécurisé à un répertoire partagé interne."
+pros:
+  - "Intégration native avec les environnements d'entreprise."
+  - "Ne nécessite pas d'agent sur la source, un simple accès réseau suffit."
+cons:
+  - "Peut rencontrer des problèmes de pare-feu ou de droits (Active Directory)."
+  - "Débit limité par le réseau local."
 category: 1. Extract
 tags:
 - extract
@@ -40,33 +50,22 @@ code_template: |
   meta = {"source": "smb", "path": DEST_PATH}
 
 illustration_mermaid: |
-  flowchart TD
-      subgraph Config [Parameters]
-          SMB([SMB_UNC_PATH])
-          DEST([DEST_PATH])
-      end
-
-      subgraph Operations [SMB Extract]
-          Copy([shutil.copy2])
-          LocalFile[(Local File)]
-      end
-
-      subgraph Outputs [Contract Variables]
-          df((df = pd.DataFrame))
-          target((target_name = ''))
-          task((task_type = 'unknown'))
-          meta((meta: dict))
-      end
-
-      SMB --> Copy
-      DEST --> Copy
-      Copy --> LocalFile
-      LocalFile -.-> meta
-
-      style Config fill:#f8fafc,stroke:#cbd5e1,stroke-width:2px
-      style Copy fill:#3b82f6,stroke:#1d4ed8,stroke-width:2px,color:#fff
-      style LocalFile fill:#10b981,stroke:#047857,stroke-width:2px,color:#fff
-      style Outputs fill:#f1f5f9,stroke:#94a3b8,stroke-width:2px
+  flowchart LR
+      A[/"📄 SMB_UNC_PATH"/] --> B{"shutil.copy2()"}
+      C[/"🎯 TARGET_COL"/] --> D{"Check TARGET_COL"}
+      B --> E(["📊 df (DataFrame)"])
+      E --> D
+      D --> F(["🎯 target_name"])
+      D --> G(["⚙️ task_type"])
+      D --> H(["ℹ️ meta (source, path)"])
+      style A fill:#fbbf24,stroke:#d97706,stroke-width:2px,color:#000
+      style C fill:#fbbf24,stroke:#d97706,stroke-width:2px,color:#000
+      style B fill:#3b82f6,stroke:#2563eb,stroke-width:2px,color:#fff
+      style D fill:#3b82f6,stroke:#2563eb,stroke-width:2px,color:#fff
+      style E fill:#10b981,stroke:#059669,stroke-width:2px,color:#fff
+      style F fill:#8b5cf6,stroke:#7c3aed,stroke-width:2px,color:#fff
+      style G fill:#8b5cf6,stroke:#7c3aed,stroke-width:2px,color:#fff
+      style H fill:#8b5cf6,stroke:#7c3aed,stroke-width:2px,color:#fff
 
 _metadata:
   bloc: 1

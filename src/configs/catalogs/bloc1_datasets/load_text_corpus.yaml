@@ -1,6 +1,18 @@
 id: "load_text_corpus"
 name: "Load: Text Corpus (Flat Files)"
-description: "Charge des fichiers textes plats en tant que lignes d'un DataFrame."
+description: "Charge des fichiers textes plats depuis un dossier pour former un corpus, chaque fichier représentant une ligne d'un DataFrame."
+when_to_use: "Pour des tâches de Traitement du Langage Naturel (NLP) où les documents sources sont dispersés dans de multiples fichiers texte (.txt)."
+use_cases:
+  - "Analyse de sentiment sur un ensemble de critiques sauvegardées dans des fichiers texte."
+  - "Classification de documents ou extraction d'entités nommées sur un corpus brut."
+  - "Entraînement de modèles de langage sur de grands ensembles de données textuelles locales."
+pros:
+  - "Conserve la structure d'origine et facilite le parcours de gros dossiers."
+  - "Format texte universel, facile à manipuler ou à auditer."
+  - "Facilite la tokenization ou d'autres tâches de NLP directement à partir des documents bruts."
+cons:
+  - "Très lent à charger si le nombre de fichiers est très élevé."
+  - "Pas de schéma structuré natif, demande souvent des expressions régulières pour structurer."
 category: "2. Load"
 tags: ["load", "text", "nlp", "corpus"]
 code_template: |
@@ -24,18 +36,21 @@ output_variables:
   - meta
 illustration_mermaid: |
     flowchart LR
-        Dir[("Text Files\nDir")] -->|TEXT_DIR| Load(["Load\nText Corpus"])
-        Load --> df(["df (None)"])
-        Load --> target_name(["target_name (None)"])
-        Load --> task_type(["task_type ('unknown')"])
-        Load --> meta(["meta (dict)"])
-
-        style Dir fill:#3b82f6,stroke:#2563eb,stroke-width:2px,color:#fff
-        style Load fill:#eff6ff,stroke:#3b82f6,stroke-width:2px
-        style df fill:#f3f4f6,stroke:#9ca3af,stroke-width:1px
-        style target_name fill:#f3f4f6,stroke:#9ca3af,stroke-width:1px
-        style task_type fill:#f3f4f6,stroke:#9ca3af,stroke-width:1px
-        style meta fill:#f3f4f6,stroke:#9ca3af,stroke-width:1px
+        A[/"📄 TEXT_DIR"/] --> B{"glob.glob() & Read text"}
+        C[/"🎯 TARGET_COL (None)"/] --> D{"Check and format variables"}
+        B --> E(["📊 df (DataFrame)"])
+        E --> D
+        D --> F(["🎯 target_name"])
+        D --> G(["⚙️ task_type"])
+        D --> H(["ℹ️ meta (source, path)"])
+        style A fill:#fbbf24,stroke:#d97706,stroke-width:2px,color:#000
+        style C fill:#fbbf24,stroke:#d97706,stroke-width:2px,color:#000
+        style B fill:#3b82f6,stroke:#2563eb,stroke-width:2px,color:#fff
+        style D fill:#3b82f6,stroke:#2563eb,stroke-width:2px,color:#fff
+        style E fill:#10b981,stroke:#059669,stroke-width:2px,color:#fff
+        style F fill:#8b5cf6,stroke:#7c3aed,stroke-width:2px,color:#fff
+        style G fill:#8b5cf6,stroke:#7c3aed,stroke-width:2px,color:#fff
+        style H fill:#8b5cf6,stroke:#7c3aed,stroke-width:2px,color:#fff
 
 _metadata:
   bloc: 1

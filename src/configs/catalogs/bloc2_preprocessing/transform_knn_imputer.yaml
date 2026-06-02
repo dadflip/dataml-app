@@ -1,14 +1,49 @@
 id: "transform_knn_imputer"
 name: "Transform: KNN Imputer"
-description: "Remplace les valeurs manquantes en se basant sur les K plus proches voisins."
+description: "Remplace les valeurs manquantes (NaN) en imputant la valeur moyenne estimée à partir des K plus proches voisins (KNN). Cette méthode exploite la similarité entre les individus dans l'espace des descripteurs pour inférer la valeur la plus probable pour la donnée manquante."
+math_theory: |
+  Pour une observation $x_i$ avec une caractéristique $j$ manquante (i.e. $x_{ij}$ est NaN), l'imputateur KNN recherche l'ensemble $\mathcal{N}_{\textcolor{#fbbf24}{K}}(x_i)$ des $\textcolor{#fbbf24}{K}$ voisins les plus proches qui possèdent une valeur observée pour la caractéristique $j$.
+  La distance utilisée pour trouver les voisins ignore les valeurs manquantes via une métrique de distance euclidienne pondérée ou ignorante (NaN-Euclidean distance) :
+  $$ \textcolor{#3b82f6}{d_{nan}}(x, y) = \sqrt{\frac{\textcolor{#8b5cf6}{D}}{\textcolor{#8b5cf6}{D_{valide}}} \sum_{d \in V} (x_d - y_d)^2} $$
+  où $V$ est l'ensemble des dimensions non manquantes à la fois pour $x$ et $y$, $\textcolor{#8b5cf6}{D}$ est le nombre total de dimensions, et $\textcolor{#8b5cf6}{D_{valide}}$ la taille de $V$.
+  La valeur imputée est la moyenne de la caractéristique $j$ sur ces voisins, pondérée ou non :
+  $$ \textcolor{#10b981}{\hat{x}_{ij}} = \frac{1}{\textcolor{#fbbf24}{K}} \sum_{k \in \mathcal{N}_{\textcolor{#fbbf24}{K}}(x_i)} x_{kj} $$
+math_illustration_svg: |
+  <svg viewBox="0 0 400 200" xmlns="http://www.w3.org/2000/svg">
+    <g transform="translate(100, 20)">
+      <circle cx="100" cy="80" r="6" fill="#ef4444"/>
+      <text x="100" y="70" fill="#ef4444" font-family="sans-serif" font-size="12" text-anchor="middle" font-weight="bold">x_i (NaN)</text>
+      
+      <circle cx="100" cy="80" r="50" fill="none" stroke="#fbbf24" stroke-width="2" stroke-dasharray="4"/>
+      <text x="135" y="45" fill="#fbbf24" font-family="sans-serif" font-size="12" text-anchor="middle" font-weight="bold">K=3</text>
+
+      <circle cx="70" cy="60" r="4" fill="#3b82f6"/>
+      <circle cx="120" cy="50" r="4" fill="#3b82f6"/>
+      <circle cx="90" cy="110" r="4" fill="#3b82f6"/>
+
+      <path d="M 100 80 L 70 60 M 100 80 L 120 50 M 100 80 L 90 110" fill="none" stroke="#3b82f6" stroke-width="1" stroke-dasharray="2"/>
+      
+      <circle cx="20" cy="20" r="4" fill="#94a3b8"/>
+      <circle cx="180" cy="140" r="4" fill="#94a3b8"/>
+      <circle cx="30" cy="150" r="4" fill="#94a3b8"/>
+
+      <rect x="50" y="150" width="100" height="30" fill="none" stroke="#10b981" stroke-width="2" rx="4"/>
+      <text x="100" y="170" fill="#10b981" font-family="sans-serif" font-size="14" text-anchor="middle" font-weight="bold">Mean(x_k)</text>
+    </g>
+  </svg>
 category: "4.1 Preprocessing"
 tags: ["transform", "imputation", "tabular", "sklearn", "pipeline"]
 applies_to: ["Tabulaire"]
-when_to_use: "Quand on veut une imputation précise."
+when_to_use: "Privilégier cette approche lorsque les relations entre les différentes variables sont fortes (multivariées) et que la simple imputation par la moyenne (univariée) détruirait la variance naturelle ou la corrélation structurelle des données."
+use_cases:
+  - "Nettoyage de bases de données médicales où les paramètres des patients sont intrinsèquement corrélés (ex: âge, IMC, tension)."
+  - "Prétraitement de données de capteurs IoT avec des pannes occasionnelles."
 pros:
-  - "Souvent de bien meilleures performances prédictives."
+  - "Préserve la distribution et les corrélations multivariées mieux que l'imputation par moyenne/médiane univariée."
+  - "Conduit fréquemment à de meilleures performances sur les modèles prédictifs avals."
 cons:
-  - "Coûteux en calcul."
+  - 'La complexité temporelle de la recherche des voisins O(N²) rend cette méthode très lente et coûteuse sur les grands jeux de données.'
+  - 'Sensible au fléau de la dimensionnalité (Curse of Dimensionality) si le jeu de données a de très nombreuses variables.'
 hyperparameters:
   n_neighbors: "Nombre de voisins (ex: 5)."
 code_template: |
@@ -49,19 +84,23 @@ code_template: |
           print("[AVERTISSEMENT] Aucune colonne numérique à imputer.")
 
 illustration_mermaid: |
-  graph TD
-    A[Input DataFrame] --> B[Extract Numeric Columns]
-    B --> C{Any Numeric Cols?}
-    C -- Yes --> D[Initialize KNNImputer]
-    C -- No --> E[Skip]
-    D --> F[ColumnTransformer with remainder='passthrough']
-    F --> G[Fit & Transform df]
-    G --> H[Convert Output to DataFrame]
-    H --> I[Update pipeline_steps & df]
-    E --> I
-    I --> J[Imputed DataFrame]
-    style A fill:#eff6ff,stroke:#94a3b8,stroke-width:2px
-    style J fill:#10b981,stroke:#059669,stroke-width:2px,color:#fff
+  flowchart LR
+    A(["📊 df (Données avec NaN)"]) --> B{"⚙️ Extraire Colonnes Num."}
+    B --> C{"⚙️ Présence ? (Oui/Non)"}
+    C -- "Oui" --> D[/"📄 K (Voisins)"/]
+    D --> E{"⚙️ Fit & Transform KNNImputer"}
+    C -- "Non" --> F{"⚙️ Skip"}
+    E --> G(["📊 df (Valeurs imputées)"])
+    F --> G
+    G --> H(["ℹ️ pipeline_steps"])
+    style A fill:#10b981,stroke:#059669,stroke-width:2px,color:#fff
+    style B fill:#3b82f6,stroke:#2563eb,stroke-width:2px,color:#fff
+    style C fill:#3b82f6,stroke:#2563eb,stroke-width:2px,color:#fff
+    style D fill:#fbbf24,stroke:#d97706,stroke-width:2px,color:#000
+    style E fill:#3b82f6,stroke:#2563eb,stroke-width:2px,color:#fff
+    style F fill:#3b82f6,stroke:#2563eb,stroke-width:2px,color:#fff
+    style G fill:#10b981,stroke:#059669,stroke-width:2px,color:#fff
+    style H fill:#8b5cf6,stroke:#7c3aed,stroke-width:2px,color:#fff
 
 _metadata:
   bloc: 2

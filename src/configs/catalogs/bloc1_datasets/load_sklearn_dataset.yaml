@@ -1,0 +1,76 @@
+id: load_sklearn_dataset
+name: 'Load: Sklearn Dataset'
+description: "Charge un jeu de données intégré depuis sklearn.datasets (ex: iris, breast_cancer, diabetes) dans un DataFrame Pandas."
+when_to_use: "À utiliser pour des tests rapides, des tutoriels ou le prototypage de modèles de machine learning sans avoir à charger des fichiers externes."
+use_cases:
+  - "Évaluation de nouveaux algorithmes sur des données standardisées."
+  - "Création d'exemples reproductibles de pipelines ML."
+  - "Découverte et apprentissage des concepts de base en data science."
+pros:
+  - "Données propres et prêtes à l'emploi (aucun prétraitement requis)."
+  - "Chargement immédiat en mémoire sans configuration complexe."
+  - "Idéal pour valider le fonctionnement d'un script ou d'un modèle."
+cons:
+  - "Taille des jeux de données très restreinte."
+  - "Ne reflète pas la complexité et le bruit des données réelles d'entreprise."
+category: 2. Load
+tags:
+- load
+- sklearn
+- datasets
+- tabular
+code_template: |
+  import pandas as pd
+  from sklearn import datasets
+
+  # [PARAM: DATASET_NAME | string | options: iris, breast_cancer, diabetes, digits, wine]
+  DATASET_NAME = "iris"
+  # [/PARAM]
+
+  print(f"[LOAD] Chargement du dataset sklearn : {DATASET_NAME}...")
+
+  try:
+      if DATASET_NAME == "iris":
+          data = datasets.load_iris(as_frame=True)
+      elif DATASET_NAME == "breast_cancer":
+          data = datasets.load_breast_cancer(as_frame=True)
+      elif DATASET_NAME == "diabetes":
+          data = datasets.load_diabetes(as_frame=True)
+      elif DATASET_NAME == "wine":
+          data = datasets.load_wine(as_frame=True)
+      elif DATASET_NAME == "digits":
+          data = datasets.load_digits(as_frame=True)
+      else:
+          raise ValueError(f"Dataset {DATASET_NAME} non pris en charge.")
+      
+      df = data.frame
+      target_name = "target"
+          
+      print(f"[LOAD] Succès. {df.shape[0]} lignes, {df.shape[1]} colonnes chargées.")
+  except Exception as e:
+      print(f"[ERREUR LOAD] Impossible de charger le dataset : {str(e)}")
+      raise e
+
+  task_type = "classification" if df[target_name].nunique() < 20 else "regression"
+  meta = {"format": "sklearn_bunch", "dataset": DATASET_NAME, "shape": df.shape}
+
+illustration_mermaid: |
+  flowchart LR
+      A[/"📄 DATASET_NAME"/] --> B{"datasets.load_*()"}
+      C[/"🎯 as_frame=True"/] --> D{"Format and Check"}
+      B --> E(["📊 df (DataFrame)"])
+      E --> D
+      D --> F(["🎯 target_name"])
+      D --> G(["⚙️ task_type"])
+      D --> H(["ℹ️ meta (dataset, shape)"])
+      style A fill:#fbbf24,stroke:#d97706,stroke-width:2px,color:#000
+      style C fill:#fbbf24,stroke:#d97706,stroke-width:2px,color:#000
+      style B fill:#3b82f6,stroke:#2563eb,stroke-width:2px,color:#fff
+      style D fill:#3b82f6,stroke:#2563eb,stroke-width:2px,color:#fff
+      style E fill:#10b981,stroke:#059669,stroke-width:2px,color:#fff
+      style F fill:#8b5cf6,stroke:#7c3aed,stroke-width:2px,color:#fff
+      style G fill:#8b5cf6,stroke:#7c3aed,stroke-width:2px,color:#fff
+      style H fill:#8b5cf6,stroke:#7c3aed,stroke-width:2px,color:#fff
+_metadata:
+  bloc: 1
+  section: 2_load

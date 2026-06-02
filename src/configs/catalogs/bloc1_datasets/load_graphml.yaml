@@ -1,6 +1,17 @@
 id: load_graphml
 name: 'Load: Fichier GraphML'
 description: Charge un graphe au format GraphML via NetworkX. Exporte les attributs des noeuds dans df et l'edge_index dans meta.
+when_to_use: À utiliser pour importer des graphes structurés au format XML (GraphML), souvent générés par des outils d'édition de graphes comme yEd ou Gephi.
+use_cases:
+  - "Analyse de topologies de réseaux."
+  - "Étude de flux complexes avec métadonnées."
+  - "Visualisation et traitement de graphes sémantiques."
+pros:
+  - "Format basé sur XML, très extensible et standardisé."
+  - "Prise en charge aisée d'attributs riches pour nœuds et arêtes."
+cons:
+  - "Fichiers souvent verbeux et lourds comparés à d'autres formats."
+  - "Parsing XML plus lent que la lecture de formats tabulaires ou binaires."
 category: 2. Load
 tags:
 - load
@@ -60,13 +71,22 @@ code_template: |
       print(f"[ERREUR LOAD] Échec du chargement GraphML : {str(e)}")
       raise e
 illustration_mermaid: |
-  flowchart TD
-      A([FILE_PATH]) --> B[Load GRAPHML]
-      B --> df([df])
-      
-      style A fill:#3b82f6,color:#fff
-      style B fill:#10b981,color:#fff
-      style df fill:#f59e0b,color:#fff
+  flowchart LR
+      A[/"📄 FILE_PATH"/] --> B{"nx.read_graphml()"}
+      C[/"🎯 TARGET_ATTR"/] --> D{"Check TARGET_ATTR"}
+      B --> E(["📊 df (DataFrame)"])
+      E --> D
+      D --> F(["🎯 target_name"])
+      D --> G(["⚙️ task_type"])
+      D --> H(["ℹ️ meta (format, edge_index)"])
+      style A fill:#fbbf24,stroke:#d97706,stroke-width:2px,color:#000
+      style C fill:#fbbf24,stroke:#d97706,stroke-width:2px,color:#000
+      style B fill:#3b82f6,stroke:#2563eb,stroke-width:2px,color:#fff
+      style D fill:#3b82f6,stroke:#2563eb,stroke-width:2px,color:#fff
+      style E fill:#10b981,stroke:#059669,stroke-width:2px,color:#fff
+      style F fill:#8b5cf6,stroke:#7c3aed,stroke-width:2px,color:#fff
+      style G fill:#8b5cf6,stroke:#7c3aed,stroke-width:2px,color:#fff
+      style H fill:#8b5cf6,stroke:#7c3aed,stroke-width:2px,color:#fff
 
 _metadata:
   bloc: 1

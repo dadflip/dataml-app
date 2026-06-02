@@ -1,15 +1,23 @@
 id: "model_gaussian_nb"
 name: "Model: Gaussian Naive Bayes"
-description: "Méthode probabiliste basée sur le théorème de Bayes, supposant une distribution gaussienne des features."
+description: |
+  Algorithme de classification probabiliste reposant sur le théorème de Bayes avec une forte hypothèse d'indépendance (naïve) entre les caractéristiques, et supposant que les caractéristiques continues suivent une distribution gaussienne (normale).
 category: "Modèles Probabilistes"
 tags: ["model", "classification", "tabular", "sklearn", "bayes"]
 applies_to: ["Tabulaire"]
-when_to_use: "Features continues et indépendantes."
+when_to_use: |
+  Privilégiez ce modèle pour des ensembles de données ayant des caractéristiques continues où l'on peut supposer qu'elles sont indépendantes et qu'elles suivent approximativement une loi normale. Très utile pour établir une ligne de base (baseline) rapide.
+use_cases:
+  - "Classification de textes ou de documents (en conjonction avec des représentations continues)."
+  - "Systèmes de recommandation simples."
+  - "Diagnostic médical de base avec des caractéristiques continues indépendantes."
 pros:
-  - "Très rapide."
-  - "Peu de paramètres."
+  - "Extrêmement rapide à entraîner et à évaluer."
+  - "Très simple, ne nécessite pas ou peu de réglage d'hyperparamètres."
+  - "Gère relativement bien de grandes dimensions avec un faible volume de données."
 cons:
-  - "L'hypothèse d'indépendance des features est souvent fausse."
+  - "L'hypothèse stricte d'indépendance des caractéristiques est rarement vérifiée en pratique (d'où le terme naïf)."
+  - "Produit des probabilités souvent mal calibrées."
 hyperparameters: {}
 code_template: |
   import pandas as pd
@@ -52,19 +60,73 @@ code_template: |
       training_history = {"status": "success", "fitted_on": len(X_train)}
 
 illustration_mermaid: |
-  graph TD
-    subgraph Gaussian Naive Bayes
-      In([Input Features]) --> Prior[Calculate Prior Probabilities]
-      In --> Likelihood[Calculate Gaussian Likelihoods]
-      Prior --> Bayes[Bayes Theorem]
-      Likelihood --> Bayes
-      Bayes --> Max[ArgMax Posterior]
-      Max --> Out([Class Prediction])
-    end
-    style In fill:#f8fafc,stroke:#94a3b8,stroke-width:1px
+  flowchart LR
+    In(["Features (X)"]) --> Prior{"Calcul Probas\nA Priori P(Y)"}
+    In --> Likelihood{"Calcul Vraisemblance\nGaussienne P(X|Y)"}
+    Prior --> Bayes{"Théorème\nde Bayes"}
+    Likelihood --> Bayes
+    Bayes --> Max{"ArgMax\nA Posteriori"}
+    Max --> Out(["Classe Prédite"])
+    
+    style In fill:#10b981,stroke:#059669,stroke-width:2px,color:#fff
     style Out fill:#10b981,stroke:#059669,stroke-width:2px,color:#fff
-    style Bayes fill:#8b5cf6,stroke:#7c3aed,stroke-width:2px,color:#fff
+    style Prior fill:#3b82f6,stroke:#2563eb,stroke-width:2px,color:#fff
+    style Likelihood fill:#3b82f6,stroke:#2563eb,stroke-width:2px,color:#fff
+    style Bayes fill:#3b82f6,stroke:#2563eb,stroke-width:2px,color:#fff
+    style Max fill:#3b82f6,stroke:#2563eb,stroke-width:2px,color:#fff
+math_theory: |
+  Gaussian Naive Bayes utilise le théorème de Bayes et l'hypothèse (naïve) d'indépendance conditionnelle entre les $d$ features.
+  
+  La probabilité a posteriori que l'observation $\textcolor{#fbbf24}{x}$ appartienne à la classe $\textcolor{#8b5cf6}{c}$ est proportionnelle à :
+  $$P(y=\textcolor{#8b5cf6}{c} | \textcolor{#fbbf24}{x}) \propto P(y=\textcolor{#8b5cf6}{c}) \prod_{j=1}^{d} P(\textcolor{#fbbf24}{x}^{(j)} | y=\textcolor{#8b5cf6}{c})$$
+  
+  Les variables continues sont modélisées par des distributions Gaussiennes. La vraisemblance de la $j$-ème feature pour la classe $\textcolor{#8b5cf6}{c}$ est :
+  $$P(\textcolor{#fbbf24}{x}^{(j)} | y=\textcolor{#8b5cf6}{c}) = \frac{1}{\sqrt{2\pi \textcolor{#ef4444}{\sigma}_{jc}^2}} \exp\left(-\frac{(\textcolor{#fbbf24}{x}^{(j)} - \textcolor{#3b82f6}{\mu}_{jc})^2}{2\textcolor{#ef4444}{\sigma}_{jc}^2}\right)$$
+  
+  La prédiction finale $\hat{y}$ est la classe maximisant cette probabilité :
+  $$\hat{y} = \arg\max_{\textcolor{#8b5cf6}{c}} \left[ \log P(y=\textcolor{#8b5cf6}{c}) + \sum_{j=1}^{d} \log P(\textcolor{#fbbf24}{x}^{(j)} | y=\textcolor{#8b5cf6}{c}) \right]$$
+  
+  - $\textcolor{#8b5cf6}{c}$ : Une classe possible.
+  - $P(y=\textcolor{#8b5cf6}{c})$ : La probabilité a priori de la classe (fréquence dans les données).
+  - $\textcolor{#3b82f6}{\mu}_{jc}$ et $\textcolor{#ef4444}{\sigma}_{jc}^2$ : Moyenne et variance de la feature $j$ calculées sur les données de la classe $c$.
+math_illustration_svg: |
+  <svg viewBox="0 0 500 250" xmlns="http://www.w3.org/2000/svg">
+    <rect width="500" height="250" fill="#f8fafc" rx="10" />
+    
+    <!-- Axes limit-->
+    <rect x="50" y="30" width="400" height="190" fill="#ffffff" stroke="#cbd5e1" stroke-width="2" rx="5" />
+    <line x1="50" y1="200" x2="450" y2="200" stroke="#94a3b8" stroke-width="2" />
+    <text x="440" y="215" font-family="Arial" font-size="12" fill="#94a3b8">x (Feature j)</text>
+    
+    <!-- Gaussian 1 (Class 1) - Blue -->
+    <path d="M 50 200 C 100 200, 120 100, 150 100 S 200 200, 250 200 L 50 200 Z" fill="#3b82f6" opacity="0.1" />
+    <path d="M 50 200 C 100 200, 120 100, 150 100 S 200 200, 250 200" fill="none" stroke="#3b82f6" stroke-width="3" />
+    <line x1="150" y1="200" x2="150" y2="100" stroke="#3b82f6" stroke-width="1" stroke-dasharray="4" />
+    <text x="150" y="90" font-family="Arial" font-size="14" fill="#3b82f6" font-weight="bold" text-anchor="middle">μ_1</text>
+    <text x="100" y="80" font-family="Arial" font-size="12" fill="#3b82f6" font-weight="bold">P(x|y=1)</text>
 
-_metadata:
-  bloc: 3
-  section: "1_classification_tabulaire"
+    <!-- Gaussian 2 (Class 2) - Green -->
+    <path d="M 180 200 C 240 200, 260 60, 300 60 S 360 200, 420 200 L 180 200 Z" fill="#10b981" opacity="0.1" />
+    <path d="M 180 200 C 240 200, 260 60, 300 60 S 360 200, 420 200" fill="none" stroke="#10b981" stroke-width="3" />
+    <line x1="300" y1="200" x2="300" y2="60" stroke="#10b981" stroke-width="1" stroke-dasharray="4" />
+    <text x="300" y="50" font-family="Arial" font-size="14" fill="#10b981" font-weight="bold" text-anchor="middle">μ_2</text>
+    <text x="370" y="60" font-family="Arial" font-size="12" fill="#10b981" font-weight="bold">P(x|y=2)</text>
+
+    <!-- Query x -->
+    <line x1="220" y1="220" x2="220" y2="40" stroke="#fbbf24" stroke-width="2" stroke-dasharray="5" />
+    <circle cx="220" cy="200" r="4" fill="#d97706" />
+    <text x="220" y="235" font-family="Arial" font-size="16" fill="#d97706" font-weight="bold" text-anchor="middle">x</text>
+    
+    <!-- Intersections -->
+    <circle cx="220" cy="168" r="6" fill="#3b82f6" />
+    <line x1="220" y1="168" x2="80" y2="168" stroke="#3b82f6" stroke-width="1" stroke-dasharray="2" />
+    
+    <circle cx="220" cy="132" r="6" fill="#10b981" />
+    <line x1="220" y1="132" x2="80" y2="132" stroke="#10b981" stroke-width="1" stroke-dasharray="2" />
+    
+    <!-- Y Axis Labels -->
+    <text x="75" y="130" font-family="Arial" font-size="12" fill="#10b981" font-weight="bold">P2 > P1</text>
+    
+    <!-- Title -->
+    <text x="250" y="20" font-family="Arial" font-size="14" fill="#1e293b" font-weight="bold" text-anchor="middle">Vraisemblances Gaussiennes par Classe</text>
+  </svg>

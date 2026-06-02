@@ -1,6 +1,18 @@
 id: "load_jsonlines"
 name: "Load: Fichier JSONL (JSON Lines)"
 description: "Charge un fichier contenant un objet JSON valide par ligne."
+when_to_use: "Lorsque vous traitez des logs, des historiques d'événements, ou des données textuelles NLP exportées (ex: tweets, reviews) où chaque ligne est un document JSON indépendant."
+use_cases:
+  - "Analyse de fichiers de logs applicatifs ou de télémétrie."
+  - "Traitement de datasets NLP volumineux qui ne tiennent pas dans un JSON classique."
+  - "Ingestion de flux de données (streaming) sauvegardés de manière incrémentale sur disque."
+pros:
+  - "Format très robuste : une ligne corrompue n'invalide pas nécessairement tout le fichier."
+  - "Chargement natif et optimisé via pandas (read_json avec lines=True)."
+  - "Supporte bien les schémas complexes ou imbriqués au sein de chaque ligne."
+cons:
+  - "La consommation mémoire peut être élevée si les objets JSON sont très volumineux."
+  - "L'inférence automatique du schéma (colonnes) par Pandas peut être lente sur de très gros fichiers."
 category: "2. Load"
 tags: ["load", "jsonl", "streaming", "pandas"]
 code_template: |
@@ -29,15 +41,22 @@ code_template: |
   task_type = "unknown"
   meta = {"format": "jsonl", "shape": df.shape}
 illustration_mermaid: |
-    flowchart LR
-        A([JSONL File]) --> B{pd.read_json lines=True}
-        B --> C[(df)]
-        C --> D{{Set Variables}}
-        D --> E([target_name, task_type, meta])
-        style A fill:#f97316,stroke:#c2410c,stroke-width:2px,color:#fff
-        style B fill:#3b82f6,stroke:#2563eb,stroke-width:2px,color:#fff
-        style C fill:#10b981,stroke:#047857,stroke-width:2px,color:#fff
-        style D fill:#8b5cf6,stroke:#6d28d9,stroke-width:2px,color:#fff
+  flowchart LR
+      A[/"📄 FILE_PATH"/] --> B{"pd.read_json()"}
+      C[/"🎯 N/A"/] --> D{"Set Defaults"}
+      B --> E(["📊 df (DataFrame)"])
+      E --> D
+      D --> F(["🎯 target_name"])
+      D --> G(["⚙️ task_type"])
+      D --> H(["ℹ️ meta (jsonl)"])
+      style A fill:#fbbf24,stroke:#d97706,stroke-width:2px,color:#000
+      style C fill:#fbbf24,stroke:#d97706,stroke-width:2px,color:#000
+      style B fill:#3b82f6,stroke:#2563eb,stroke-width:2px,color:#fff
+      style D fill:#3b82f6,stroke:#2563eb,stroke-width:2px,color:#fff
+      style E fill:#10b981,stroke:#059669,stroke-width:2px,color:#fff
+      style F fill:#8b5cf6,stroke:#7c3aed,stroke-width:2px,color:#fff
+      style G fill:#8b5cf6,stroke:#7c3aed,stroke-width:2px,color:#fff
+      style H fill:#8b5cf6,stroke:#7c3aed,stroke-width:2px,color:#fff
 
 _metadata:
   bloc: 1

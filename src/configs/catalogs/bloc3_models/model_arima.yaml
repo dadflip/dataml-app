@@ -1,14 +1,24 @@
 id: "model_arima"
 name: "Model: ARIMA Forecaster"
-description: "Autoregressive Integrated Moving Average. Modèle statistique classique pour les séries temporelles."
+description: |
+  Modèle Auto-Regressive Integrated Moving Average (ARIMA). Modèle statistique classique de référence pour la modélisation et la prévision de séries temporelles univariées, combinant autorégression, différenciation pour la stationnarité, et moyenne mobile sur les erreurs passées.
 category: "Modèles Séries Temporelles"
 tags: ["model", "time-series", "forecasting", "statsmodels", "arima"]
 applies_to: ["Séries Temporelles"]
-when_to_use: "Pour des séries temporelles univariées avec une dépendance linéaire forte dans le temps."
+when_to_use: |
+  À privilégier pour des séries temporelles univariées présentant une dépendance linéaire forte dans le temps, lorsque les données ne sont pas trop volumineuses et que l'explicabilité du modèle est primordiale.
+use_cases:
+  - "Prévision des ventes ou de la demande à court terme basée sur des historiques."
+  - "Modélisation financière classique (ex: cours d'actions, taux de change) comme baseline."
+  - "Prévision de la consommation électrique ou de métriques d'infrastructure informatique."
 pros:
-  - "Très interprétable."
+  - "Modèle très interprétable, reposant sur des fondations statistiques solides."
+  - "Excellent pour les séries courtes où les modèles de deep learning manqueraient de données."
+  - "Fournit naturellement des intervalles de confiance pour les prévisions."
 cons:
-  - "Nécessite que la série soit stationnaire."
+  - "Nécessite que la série soit stationnaire (ou rendue stationnaire via la différenciation 'd')."
+  - "Difficulté à modéliser des relations non linéaires complexes ou des dépendances à long terme."
+  - "L'identification des bons paramètres (p, d, q) peut nécessiter une analyse exploratoire manuelle approfondie ou une recherche sur grille (grid search) coûteuse."
 hyperparameters:
   p: "Ordre Auto-Régressif (AR)."
   d: "Ordre de Différenciation (I)."
@@ -81,37 +91,69 @@ code_template: |
           training_history = {"status": "error", "error_message": str(e)}
 
 illustration_mermaid: |
-    graph TD
-      subgraph Time Series Input
-        Y([y_train - Endogenous])
-        X([X_train - Exogenous Optional])
-      end
+    flowchart LR
+      Y_train(["Série y_train\n(Endogène)"])
+      X_train(["Série X_train\n(Exogène)"])
+      Diff{"Différenciation 'd'\n(Stationnarité)"}
+      AR{"Auto-Régressif 'p'\n(Valeurs passées)"}
+      MA{"Moyenne Mobile 'q'\n(Erreurs passées)"}
+      Exog{"Variables\nExogènes"}
+      Merge{"Agrégation"}
+      Fit{"Modèle Ajusté"}
+      Forecast(["Prévisions ('steps')"])
       
-      subgraph ARIMA Process
-        Y --> Diff[Differencing 'd'\nMake Stationary]
-        Diff --> AR[Auto-Regressive 'p'\nPast Values]
-        Diff --> MA[Moving Average 'q'\nPast Errors]
-        X --> Exog[Exogenous\nVariables]
-        
-        AR --> Merge((Sum))
-        MA --> Merge
-        Exog --> Merge
-      end
+      Y_train --> Diff
+      Diff --> AR
+      Diff --> MA
+      X_train --> Exog
+      AR --> Merge
+      MA --> Merge
+      Exog --> Merge
+      Merge --> Fit
+      Fit --> Forecast
       
-      subgraph Output
-        Merge --> Fit[Fitted Model]
-        Fit --> Forecast([Forecast 'steps'])
-      end
-      
-      style AR fill:#8b5cf6,stroke:#7c3aed,stroke-width:2px,color:#fff
-      style MA fill:#8b5cf6,stroke:#7c3aed,stroke-width:2px,color:#fff
-      style Diff fill:#c4b5fd,stroke:#8b5cf6,stroke-width:1px,color:#000
-      style Exog fill:#c4b5fd,stroke:#8b5cf6,stroke-width:1px,color:#000
-      style Fit fill:#a78bfa,stroke:#7c3aed,stroke-width:1px,color:#fff
-      style Y fill:#f8fafc,stroke:#94a3b8,stroke-width:1px
-      style X fill:#f8fafc,stroke:#94a3b8,stroke-width:1px
-      style Forecast fill:#f8fafc,stroke:#94a3b8,stroke-width:1px
+      style Y_train fill:#10b981,stroke:#059669,stroke-width:2px,color:#fff
+      style X_train fill:#10b981,stroke:#059669,stroke-width:2px,color:#fff
+      style Diff fill:#3b82f6,stroke:#2563eb,stroke-width:2px,color:#fff
+      style AR fill:#3b82f6,stroke:#2563eb,stroke-width:2px,color:#fff
+      style MA fill:#3b82f6,stroke:#2563eb,stroke-width:2px,color:#fff
+      style Exog fill:#3b82f6,stroke:#2563eb,stroke-width:2px,color:#fff
+      style Merge fill:#3b82f6,stroke:#2563eb,stroke-width:2px,color:#fff
+      style Fit fill:#3b82f6,stroke:#2563eb,stroke-width:2px,color:#fff
+      style Forecast fill:#10b981,stroke:#059669,stroke-width:2px,color:#fff
 
+math_theory: |
+  Modèle Auto-Regressive Integrated Moving Average $ARIMA(\textcolor{#10b981}{p}, \textcolor{#8b5cf6}{d}, \textcolor{#fbbf24}{q})$ :
+  $$ \textcolor{#3b82f6}{Y'_{t}} = c + \sum_{i=1}^{\textcolor{#10b981}{p}} \phi_i \textcolor{#3b82f6}{Y'_{t-i}} + \sum_{j=1}^{\textcolor{#fbbf24}{q}} \theta_j \textcolor{#ef4444}{\epsilon_{t-j}} + \textcolor{#ef4444}{\epsilon_t} $$
+  
+  Où :
+  - $\textcolor{#3b82f6}{Y'_{t}}$ est la série temporelle différenciée $\textcolor{#8b5cf6}{d}$ fois pour la rendre stationnaire.
+  - $\textcolor{#10b981}{p}$ est l'ordre de la composante Auto-Régressive (dépendance aux observations passées).
+  - $\textcolor{#fbbf24}{q}$ est l'ordre de la composante Moyenne Mobile (dépendance aux erreurs passées).
+  - $\textcolor{#ef4444}{\epsilon_t}$ représente le bruit blanc (erreur résiduelle) au temps $t$.
+math_illustration_svg: |
+  <svg viewBox="0 0 800 300" xmlns="http://www.w3.org/2000/svg">
+    <rect width="800" height="300" fill="#f8fafc" rx="10"/>
+    <rect x="100" y="50" width="200" height="80" fill="#10b981" fill-opacity="0.1" stroke="#10b981" stroke-width="2" rx="5"/>
+    <text x="200" y="80" font-family="Arial" font-size="16" font-weight="bold" text-anchor="middle" fill="#10b981">Auto-Régressif AR(p)</text>
+    <text x="200" y="105" font-family="Arial" font-size="14" text-anchor="middle" fill="#3b82f6">Σ φ_i * Y'_{t-i}</text>
+    <rect x="100" y="170" width="200" height="80" fill="#fbbf24" fill-opacity="0.1" stroke="#fbbf24" stroke-width="2" rx="5"/>
+    <text x="200" y="200" font-family="Arial" font-size="16" font-weight="bold" text-anchor="middle" fill="#fbbf24">Moyenne Mobile MA(q)</text>
+    <text x="200" y="225" font-family="Arial" font-size="14" text-anchor="middle" fill="#ef4444">Σ θ_j * ε_{t-j}</text>
+    <circle cx="450" cy="150" r="25" fill="#8b5cf6" fill-opacity="0.1" stroke="#8b5cf6" stroke-width="2"/>
+    <text x="450" y="157" font-family="Arial" font-size="20" font-weight="bold" text-anchor="middle" fill="#8b5cf6">+</text>
+    <path d="M 300 90 L 430 135" fill="none" stroke="#6b7280" stroke-width="2" marker-end="url(#arrow)"/>
+    <path d="M 300 210 L 430 165" fill="none" stroke="#6b7280" stroke-width="2" marker-end="url(#arrow)"/>
+    <rect x="550" y="110" width="150" height="80" fill="#3b82f6" fill-opacity="0.1" stroke="#3b82f6" stroke-width="2" rx="5"/>
+    <text x="625" y="145" font-family="Arial" font-size="16" font-weight="bold" text-anchor="middle" fill="#3b82f6">Prédiction Y'_t</text>
+    <text x="625" y="170" font-family="Arial" font-size="12" text-anchor="middle" fill="#8b5cf6">(Série Différenciée d)</text>
+    <line x1="475" y1="150" x2="550" y2="150" stroke="#6b7280" stroke-width="2" marker-end="url(#arrow)"/>
+    <defs>
+      <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+        <path d="M 0 0 L 10 5 L 0 10 z" fill="#6b7280"/>
+      </marker>
+    </defs>
+  </svg>
 _metadata:
   bloc: 3
   section: "3_nlp_and_timeseries"

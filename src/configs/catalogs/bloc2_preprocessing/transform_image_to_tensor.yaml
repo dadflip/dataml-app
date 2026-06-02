@@ -1,14 +1,51 @@
 id: "transform_image_to_tensor"
 name: "Transform: Image ToTensor & Normalize"
-description: "Convertit les images d'une colonne en tenseurs PyTorch."
+description: "Convertit des images PIL ou numpy arrays en Tenseurs PyTorch (format CHW) et normalise leurs valeurs. Cette étape transpose les canaux de couleur et redimensionne les valeurs des pixels dans l'intervalle [0, 1] ou applique une normalisation basée sur la moyenne et l'écart-type d'un dataset de référence (ex: ImageNet)."
+math_theory: |
+  La conversion en tenseur (ToTensor) redimensionne les valeurs d'origine $\textcolor{#3b82f6}{I_{orig}} \in [0, 255]$ vers la plage continue $[0, 1]$ :
+  $$ \textcolor{#fbbf24}{T} = \frac{\textcolor{#3b82f6}{I_{orig}}}{255.0} $$
+  La normalisation standardise ensuite chaque canal de couleur $c \in \{R, G, B\}$ avec la moyenne $\textcolor{#ef4444}{\mu_c}$ et l'écart-type $\textcolor{#8b5cf6}{\sigma_c}$ attendus par les modèles pré-entraînés (ex: $\mu = [0.485, 0.456, 0.406]$, $\sigma = [0.229, 0.224, 0.225]$) :
+  $$ \textcolor{#10b981}{T'_{c}} = \frac{\textcolor{#fbbf24}{T_c} - \textcolor{#ef4444}{\mu_c}}{\textcolor{#8b5cf6}{\sigma_c}} $$
+  Cela centre la distribution des pixels autour de 0, favorisant ainsi la convergence des gradients.
+math_illustration_svg: |
+  <svg viewBox="0 0 400 200" xmlns="http://www.w3.org/2000/svg">
+    <defs>
+      <marker id="arrow" viewBox="0 0 10 10" refX="5" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+        <path d="M 0 0 L 10 5 L 0 10 z" fill="#fbbf24"/>
+      </marker>
+    </defs>
+    <g transform="translate(30, 40)">
+      <rect x="0" y="20" width="60" height="60" fill="#3b82f6" rx="4"/>
+      <text x="30" y="45" fill="#ffffff" font-family="sans-serif" font-size="14" text-anchor="middle" font-weight="bold">255</text>
+      <text x="30" y="65" fill="#e2e8f0" font-family="sans-serif" font-size="10" text-anchor="middle">[0, 255]</text>
+      
+      <path d="M 70 50 L 110 50" fill="none" stroke="#fbbf24" stroke-width="2" marker-end="url(#arrow)"/>
+      <text x="90" y="40" fill="#ef4444" font-family="sans-serif" font-size="10" text-anchor="middle">/ 255</text>
+      
+      <rect x="120" y="20" width="60" height="60" fill="#fbbf24" rx="4"/>
+      <text x="150" y="45" fill="#1e293b" font-family="sans-serif" font-size="14" text-anchor="middle" font-weight="bold">1.0</text>
+      <text x="150" y="65" fill="#475569" font-family="sans-serif" font-size="10" text-anchor="middle">[0, 1]</text>
+
+      <path d="M 190 50 L 230 50" fill="none" stroke="#fbbf24" stroke-width="2" marker-end="url(#arrow)"/>
+      <text x="210" y="40" fill="#8b5cf6" font-family="sans-serif" font-size="10" text-anchor="middle">- μ / σ</text>
+
+      <rect x="240" y="20" width="80" height="60" fill="#10b981" rx="4"/>
+      <text x="280" y="45" fill="#ffffff" font-family="sans-serif" font-size="14" text-anchor="middle" font-weight="bold">~ N(0,1)</text>
+      <text x="280" y="65" fill="#d1fae5" font-family="sans-serif" font-size="10" text-anchor="middle">[-x, +x]</text>
+    </g>
+  </svg>
 category: "4.1 Preprocessing"
 tags: ["transform", "image", "multimedia", "torchvision", "pipeline"]
 applies_to: ["Images"]
-when_to_use: "Étape indispensable avant CNN."
+when_to_use: "Étape de pré-traitement absolument indispensable juste avant de passer les images dans un réseau de neurones convolutif PyTorch, car ces réseaux opèrent mathématiquement sur des tenseurs flottants normalisés."
+use_cases:
+  - "Intégration d'images dans un flux de données PyTorch (Dataset / DataLoader)."
+  - "Préparation au Transfer Learning en alignant la distribution des pixels sur celle d'ImageNet."
 pros:
-  - "Normalisation."
+  - "Accélère la convergence de l'optimiseur grâce à la normalisation statistique des entrées."
+  - "Conforme les données au format natif PyTorch (C x H x W), optimisé pour les convolutions sur GPU."
 cons:
-  - "Lourd en mémoire."
+  - "Convertir et stocker l'intégralité d'un DataFrame de tenseurs en mémoire vive (RAM) peut s'avérer très lourd pour les grands datasets."
 hyperparameters:
   img_col: "Colonne images"
 code_template: |
@@ -45,16 +82,21 @@ code_template: |
       print(f"[AVERTISSEMENT] Colonne '{IMG_COL}' introuvable.")
 
 illustration_mermaid: |
-  graph TD
-    A[Image DataFrame] --> B{Does IMG_COL exist?}
-    B -- Yes --> C[Initialize ToTensor & Normalize]
-    B -- No --> D[Skip and Warn]
-    C --> E[Apply T.Compose to each PIL Image]
-    E --> F[Update pipeline_steps & df]
-    D --> F
-    F --> G[Tensor Images Ready for CNN]
-    style A fill:#eff6ff,stroke:#94a3b8,stroke-width:2px
-    style G fill:#10b981,stroke:#059669,stroke-width:2px,color:#fff
+  flowchart LR
+    A(["📊 df (Images)"]) --> B{"⚙️ Vérifier Colonne"}
+    B -- "Oui" --> C[/"📄 Moyenne / Ecart-Type"/]
+    C --> D{"⚙️ ToTensor & Normalize"}
+    B -- "Non" --> E{"⚙️ Skip & Warn"}
+    D --> F(["📊 df (Tenseurs CHW)"])
+    E --> F
+    F --> G(["ℹ️ pipeline_steps"])
+    style A fill:#10b981,stroke:#059669,stroke-width:2px,color:#fff
+    style B fill:#3b82f6,stroke:#2563eb,stroke-width:2px,color:#fff
+    style C fill:#fbbf24,stroke:#d97706,stroke-width:2px,color:#000
+    style D fill:#3b82f6,stroke:#2563eb,stroke-width:2px,color:#fff
+    style E fill:#3b82f6,stroke:#2563eb,stroke-width:2px,color:#fff
+    style F fill:#10b981,stroke:#059669,stroke-width:2px,color:#fff
+    style G fill:#8b5cf6,stroke:#7c3aed,stroke-width:2px,color:#fff
 
 _metadata:
   bloc: 2

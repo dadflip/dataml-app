@@ -43,13 +43,22 @@ code_template: |
   task_type = "nlp_sequence"
   meta = {"format": "fastq", "num_reads": count}
 illustration_mermaid: |
-  flowchart TD
-      A([FILE_PATH]) --> B[Load FASTQ]
-      B --> df([df])
-      
-      style A fill:#3b82f6,color:#fff
-      style B fill:#10b981,color:#fff
-      style df fill:#f59e0b,color:#fff
+  flowchart LR
+      A[/"📄 FILE_PATH (.fastq)"/] --> B{"SeqIO.parse()"}
+      C[/"🎯 TARGET_COL (N/A)"/] --> D{"Set Attributes"}
+      B --> E(["📊 df (DataFrame)"])
+      E --> D
+      D --> F(["🎯 target_name = ''"])
+      D --> G(["⚙️ task_type = 'nlp_sequence'"])
+      D --> H(["ℹ️ meta (format, num_reads)"])
+      style A fill:#fbbf24,stroke:#d97706,stroke-width:2px,color:#000
+      style C fill:#fbbf24,stroke:#d97706,stroke-width:2px,color:#000
+      style B fill:#3b82f6,stroke:#2563eb,stroke-width:2px,color:#fff
+      style D fill:#3b82f6,stroke:#2563eb,stroke-width:2px,color:#fff
+      style E fill:#10b981,stroke:#059669,stroke-width:2px,color:#fff
+      style F fill:#8b5cf6,stroke:#7c3aed,stroke-width:2px,color:#fff
+      style G fill:#8b5cf6,stroke:#7c3aed,stroke-width:2px,color:#fff
+      style H fill:#8b5cf6,stroke:#7c3aed,stroke-width:2px,color:#fff
 
 _metadata:
   bloc: 1

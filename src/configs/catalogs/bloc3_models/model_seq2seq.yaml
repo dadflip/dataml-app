@@ -1,14 +1,22 @@
 id: "model_seq2seq"
 name: "Model: Sequence-to-Sequence (Seq2Seq)"
-description: "Architecture Encodeur-Décodeur LSTM pour la traduction, le résumé ou la génération de texte."
+description: "Architecture de Deep Learning de type Encodeur-Décodeur (souvent LSTM ou GRU) conçue pour modéliser des séquences, permettant de transformer une séquence d'entrée de taille variable en une séquence de sortie."
 category: "Attention & Transformers"
 tags: ["model", "nlp", "generative", "pytorch", "seq2seq", "deep-learning"]
 applies_to: ["Séquences", "Texte"]
-when_to_use: "Pour traduire, résumer, ou répondre à des questions."
+when_to_use: "Particulièrement adapté pour les problèmes où l'entrée et la sortie sont des séquences de longueurs différentes, comme la traduction ou la génération de texte."
+use_cases:
+  - "Traduction automatique entre deux langues (ex: anglais vers français)."
+  - "Résumé de texte automatique à partir de longs documents."
+  - "Génération de réponses conversationnelles dans des systèmes de chatbots."
 pros:
-  - "Très flexible (taille d'entrée != taille de sortie)."
+  - "Très grande flexibilité pour gérer des séquences de longueurs distinctes (asynchrones)."
+  - "Capture efficacement les dépendances temporelles avec des cellules récurrentes (LSTM)."
+  - "Peut être amélioré par un mécanisme d'attention pour les très longues séquences."
 cons:
-  - "Lent. Souffre sans mécanisme d'attention sur les longues phrases."
+  - "Entraînement gourmand en ressources et lent (goulot d'étranglement séquentiel)."
+  - "Perte d'informations sur de très longues séquences si utilisé sans mécanisme d'attention (oubli de l'encodeur)."
+  - "Complexité de mise au point (tuning des états cachés, teacher forcing, etc.)."
 hyperparameters:
   hidden_size: "Taille de l'état caché (ex: 256)."
   epochs: "Nombre d'époques (ex: 10)."
@@ -159,25 +167,90 @@ code_template: |
           full_pipeline = Pipeline([
               ('model', wrapped_model)
           ])
+math_theory: |
+  L'architecture Seq2Seq repose sur la modélisation conjointe de deux processus avec des cellules LSTM/GRU.
+  L'encodeur traite la séquence d'entrée $\textcolor{#10b981}{X}$ pour produire une séquence d'états cachés $\textcolor{#3b82f6}{h_t}$, dont le dernier sert de vecteur de contexte $\textcolor{#8b5cf6}{c}$.
+  
+  $$ \textcolor{#3b82f6}{h_t} = \text{LSTM}_{enc}(\textcolor{#10b981}{x_t}, \textcolor{#3b82f6}{h_{t-1}}) $$
+  $$ \textcolor{#8b5cf6}{c} = \textcolor{#3b82f6}{h_T} $$
+  
+  Le décodeur utilise ce contexte pour générer itérativement la séquence de sortie $\textcolor{#fbbf24}{y_t}$, en s'appuyant sur son propre état caché $\textcolor{#ef4444}{s_t}$.
+  
+  $$ \textcolor{#ef4444}{s_t} = \text{LSTM}_{dec}(\textcolor{#fbbf24}{y_{t-1}}, \textcolor{#ef4444}{s_{t-1}}, \textcolor{#8b5cf6}{c}) $$
+  $$ P(\textcolor{#fbbf24}{y_t}) = \text{Softmax}(\text{Linear}(\textcolor{#ef4444}{s_t})) $$
+math_illustration_svg: |
+  <svg viewBox="0 0 800 400" xmlns="http://www.w3.org/2000/svg">
+    <!-- Encoder -->
+    <rect x="50" y="150" width="80" height="60" rx="10" fill="#3b82f6" />
+    <text x="90" y="185" fill="white" font-family="sans-serif" font-size="20" text-anchor="middle">LSTM</text>
+    <rect x="180" y="150" width="80" height="60" rx="10" fill="#3b82f6" />
+    <text x="220" y="185" fill="white" font-family="sans-serif" font-size="20" text-anchor="middle">LSTM</text>
+    <rect x="310" y="150" width="80" height="60" rx="10" fill="#3b82f6" />
+    <text x="350" y="185" fill="white" font-family="sans-serif" font-size="20" text-anchor="middle">LSTM</text>
+    
+    <!-- Context Vector -->
+    <rect x="310" y="50" width="80" height="40" rx="5" fill="#8b5cf6" />
+    <text x="350" y="75" fill="white" font-family="sans-serif" font-size="16" text-anchor="middle">c (Context)</text>
+    
+    <!-- Decoder -->
+    <rect x="450" y="150" width="80" height="60" rx="10" fill="#ef4444" />
+    <text x="490" y="185" fill="white" font-family="sans-serif" font-size="20" text-anchor="middle">LSTM</text>
+    <rect x="580" y="150" width="80" height="60" rx="10" fill="#ef4444" />
+    <text x="620" y="185" fill="white" font-family="sans-serif" font-size="20" text-anchor="middle">LSTM</text>
+    <rect x="710" y="150" width="80" height="60" rx="10" fill="#ef4444" />
+    <text x="750" y="185" fill="white" font-family="sans-serif" font-size="20" text-anchor="middle">LSTM</text>
+
+    <!-- Inputs -->
+    <circle cx="90" cy="270" r="20" fill="#10b981" />
+    <text x="90" y="276" fill="white" font-family="sans-serif" font-size="16" text-anchor="middle">x1</text>
+    <circle cx="220" cy="270" r="20" fill="#10b981" />
+    <text x="220" y="276" fill="white" font-family="sans-serif" font-size="16" text-anchor="middle">x2</text>
+    <circle cx="350" cy="270" r="20" fill="#10b981" />
+    <text x="350" y="276" fill="white" font-family="sans-serif" font-size="16" text-anchor="middle">x3</text>
+
+    <!-- Outputs -->
+    <circle cx="490" cy="60" r="20" fill="#fbbf24" />
+    <text x="490" y="66" fill="white" font-family="sans-serif" font-size="16" text-anchor="middle">y1</text>
+    <circle cx="620" cy="60" r="20" fill="#fbbf24" />
+    <text x="620" y="66" fill="white" font-family="sans-serif" font-size="16" text-anchor="middle">y2</text>
+    <circle cx="750" cy="60" r="20" fill="#fbbf24" />
+    <text x="750" y="66" fill="white" font-family="sans-serif" font-size="16" text-anchor="middle">y3</text>
+    
+    <!-- Arrows -->
+    <path d="M 90 250 L 90 210" stroke="black" stroke-width="2" marker-end="url(#arrow)" />
+    <path d="M 220 250 L 220 210" stroke="black" stroke-width="2" marker-end="url(#arrow)" />
+    <path d="M 350 250 L 350 210" stroke="black" stroke-width="2" marker-end="url(#arrow)" />
+
+    <path d="M 130 180 L 180 180" stroke="black" stroke-width="2" marker-end="url(#arrow)" />
+    <path d="M 260 180 L 310 180" stroke="black" stroke-width="2" marker-end="url(#arrow)" />
+    <path d="M 350 150 L 350 90" stroke="black" stroke-width="2" marker-end="url(#arrow)" />
+    <path d="M 390 70 L 490 70 L 490 150" stroke="black" stroke-width="2" fill="none" marker-end="url(#arrow)" />
+    <path d="M 390 180 L 450 180" stroke="black" stroke-width="2" marker-end="url(#arrow)" />
+    <path d="M 530 180 L 580 180" stroke="black" stroke-width="2" marker-end="url(#arrow)" />
+    <path d="M 660 180 L 710 180" stroke="black" stroke-width="2" marker-end="url(#arrow)" />
+
+    <path d="M 490 150 L 490 80" stroke="black" stroke-width="2" marker-end="url(#arrow)" />
+    <path d="M 620 150 L 620 80" stroke="black" stroke-width="2" marker-end="url(#arrow)" />
+    <path d="M 750 150 L 750 80" stroke="black" stroke-width="2" marker-end="url(#arrow)" />
+    
+    <!-- Defs for arrow -->
+    <defs>
+      <marker id="arrow" markerWidth="10" markerHeight="10" refX="9" refY="3" orient="auto" markerUnits="strokeWidth">
+        <path d="M0,0 L0,6 L9,3 z" fill="black" />
+      </marker>
+    </defs>
+  </svg>
 illustration_mermaid: |
-  graph TD
-    subgraph Input Sequence
-      SeqIn[Input Sequence: x1, x2, ..., xT] --> EncoderLSTM
-    end
-    subgraph Encoder
-      EncoderLSTM[Encoder LSTM] --> |"Final Hidden State (h, c)"| Context[Context Vector]
-    end
-    subgraph Decoder
-      Context --> DecoderLSTM[Decoder LSTM]
-      SeqTarget[Target Sequence or Teacher Forcing] --> DecoderLSTM
-      DecoderLSTM --> FC[Linear Layer]
-    end
-    subgraph Output
-      FC --> SeqOut[Output Sequence: y1, y2, ..., yT]
-      SeqOut --> Loss{MSE Loss vs Target}
-    end
-    style SeqIn fill:#f8fafc,stroke:#94a3b8,stroke-width:1px
-    style SeqOut fill:#f8fafc,stroke:#94a3b8,stroke-width:1px
+  flowchart LR
+    SeqIn(["Input Sequence"]) --> Enc{"Encoder LSTM"}
+    Enc --> State(["Context Vector"])
+    State --> Dec{"Decoder LSTM"}
+    Dec --> SeqOut(["Output Sequence"])
+    style Enc fill:#3b82f6,stroke:#2563eb,stroke-width:2px,color:#fff
+    style Dec fill:#3b82f6,stroke:#2563eb,stroke-width:2px,color:#fff
+    style SeqIn fill:#10b981,stroke:#059669,stroke-width:2px,color:#fff
+    style State fill:#8b5cf6,stroke:#7c3aed,stroke-width:2px,color:#fff
+    style SeqOut fill:#10b981,stroke:#059669,stroke-width:2px,color:#fff
 
 _metadata:
   bloc: 3

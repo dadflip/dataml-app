@@ -1,6 +1,17 @@
 id: "load_pdb"
 name: "Load: Protéine 3D PDB"
 description: "Charge les coordonnées atomiques 3D d'une protéine (.pdb) via Biopython."
+when_to_use: "À utiliser pour charger et analyser des structures protéiques 3D expérimentales ou prédites (ex: issues d'AlphaFold) afin d'extraire des caractéristiques géométriques ou physico-chimiques."
+use_cases:
+  - "Prédiction de sites de liaison ou d'interactions protéine-protéine."
+  - "Analyse structurelle et extraction de features pour des graphes moléculaires (GNN)."
+  - "Modélisation des facteurs B (B-factors) ou de la flexibilité de la protéine."
+pros:
+  - "Permet de travailler avec des données spatiales et tridimensionnelles réelles."
+  - "Gère automatiquement l'extraction des modèles, chaînes, résidus et atomes via Biopython."
+cons:
+  - "Le chargement peut être lent pour de très grandes structures multimériques."
+  - "Génère un grand nombre de lignes (une par atome), nécessitant parfois une agrégation au niveau du résidu."
 category: "2. Load"
 tags: ["load", "pdb", "protein", "3d"]
 code_template: |
@@ -59,19 +70,22 @@ output_variables:
   - task_type
   - meta
 illustration_mermaid: |
-  flowchart TD
-      A([FILE_PATH]) --> B{File Exists?}
-      B -- Yes --> C[Bio.PDB.PDBParser]
-      B -- No --> D[Empty DataFrame]
-      C --> E[Extract models, chains, residues, atoms]
-      E --> F[Create DataFrame of coords & bfactors]
-      F --> G([df, target_name, task_type, meta])
-      D --> G
-
-      style A fill:#3b82f6,color:#fff
-      style C fill:#10b981,color:#fff
-      style F fill:#10b981,color:#fff
-      style G fill:#f59e0b,color:#fff
+    flowchart LR
+        A[/"📄 FILE_PATH (data.pdb)"/] --> B{"Biopython Parse()"}
+        C[/"🎯 TARGET_COL"/] --> D{"Check TARGET_COL"}
+        B --> E(["📊 df (Atoms Data)"])
+        E --> D
+        D --> F(["🎯 target_name"])
+        D --> G(["⚙️ task_type"])
+        D --> H(["ℹ️ meta (num_atoms)"])
+        style A fill:#fbbf24,stroke:#d97706,stroke-width:2px,color:#000
+        style C fill:#fbbf24,stroke:#d97706,stroke-width:2px,color:#000
+        style B fill:#3b82f6,stroke:#2563eb,stroke-width:2px,color:#fff
+        style D fill:#3b82f6,stroke:#2563eb,stroke-width:2px,color:#fff
+        style E fill:#10b981,stroke:#059669,stroke-width:2px,color:#fff
+        style F fill:#8b5cf6,stroke:#7c3aed,stroke-width:2px,color:#fff
+        style G fill:#8b5cf6,stroke:#7c3aed,stroke-width:2px,color:#fff
+        style H fill:#8b5cf6,stroke:#7c3aed,stroke-width:2px,color:#fff
 
 _metadata:
   bloc: 1

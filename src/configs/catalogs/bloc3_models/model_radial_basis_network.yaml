@@ -1,14 +1,24 @@
 id: "model_radial_basis_network"
 name: "Model: Radial Basis Function Network (RBFNN)"
-description: "Réseau de neurones dont la couche cachée utilise des fonctions à base radiale (Gaussiennes) au lieu de ReLU."
+description: |
+  Réseau de neurones à base radiale (RBFNN) implémenté en PyTorch, dont la couche cachée utilise des fonctions d'activation gaussiennes centrées sur des prototypes plutôt que des combinaisons linéaires classiques.
 category: "Réseaux Spécialisés"
 tags: ["model", "classification", "tabular", "pytorch", "rbf", "neural-network"]
 applies_to: ["Tabulaire"]
-when_to_use: "Pour des problèmes de classification où les frontières de décision sont locales (non-linéaires)."
+when_to_use: |
+  Idéal pour les problèmes de classification où l'on soupçonne des frontières de décision hautement locales, non-linéaires, en îlots, et lorsque l'interpolation entre points de données proches est cruciale.
+use_cases:
+  - "Classification spatiale de données géographiques où les variables ont des centres d'influence locaux."
+  - "Diagnostic d'anomalies où les états normaux sont confinés à des régions spécifiques de l'espace des descripteurs."
+  - "Modélisation de processus physiques présentant des zones de comportement distinctes."
 pros:
-  - "Apprentissage rapide, bonne interpolation locale."
+  - "Apprentissage potentiellement très rapide (en deux étapes : centres puis poids linéaires)."
+  - "Excellentes capacités d'interpolation locale, offrant une bonne robustesse sur des clusters bien séparés."
+  - "Interprétabilité partielle via l'analyse des centres (prototypes)."
 cons:
-  - "Scale mal avec la dimensionnalité."
+  - "Passe difficilement à l'échelle sur des espaces de très haute dimension (le fléau de la dimension affecte les distances euclidiennes)."
+  - "Le choix du nombre et de la position des centres RBF est critique et fastidieux."
+  - "Peut souffrir face à de grandes quantités de variables non pertinentes."
 hyperparameters:
   n_centers: "Nombre de centres RBF (ex: 20)."
   epochs: "Nombre d'époques (ex: 20)."
@@ -158,24 +168,68 @@ code_template: |
           full_pipeline = Pipeline([
               ('model', wrapped_model)
           ])
+math_theory: |
+  Un réseau RBF est composé d'une couche cachée dont les neurones calculent une distance entre l'entrée $\textcolor{#10b981}{x}$ et des centres $\textcolor{#ef4444}{c_i}$ appris.
+  L'activation radiale est souvent modélisée par une gaussienne, contrôlée par un facteur d'étalement (spread) $\textcolor{#fbbf24}{\beta_i}$ :
+  
+  $$ \textcolor{#3b82f6}{h_i}(\textcolor{#10b981}{x}) = \exp \left( -\textcolor{#fbbf24}{\beta_i} ||\textcolor{#10b981}{x} - \textcolor{#ef4444}{c_i}||^2 \right) $$
+  
+  La sortie $\textcolor{#8b5cf6}{y}$ du réseau est ensuite une simple combinaison linéaire pondérée par $\textcolor{#3b82f6}{w_i}$ de ces activations radiales :
+  
+  $$ \textcolor{#8b5cf6}{y} = \sum_{i=1}^{N} \textcolor{#3b82f6}{w_i} \textcolor{#3b82f6}{h_i}(\textcolor{#10b981}{x}) + b $$
+math_illustration_svg: |
+  <svg viewBox="0 0 500 300" xmlns="http://www.w3.org/2000/svg">
+    <!-- Input -->
+    <circle cx="100" cy="150" r="25" fill="#10b981" />
+    <text x="100" y="155" fill="white" font-family="sans-serif" font-size="18" text-anchor="middle">x</text>
+    
+    <!-- Hidden Layer (RBF) -->
+    <rect x="200" y="50" width="100" height="200" rx="15" fill="none" stroke="#ef4444" stroke-width="2" stroke-dasharray="5,5" />
+    
+    <circle cx="250" cy="90" r="25" fill="#ef4444" />
+    <text x="250" y="95" fill="white" font-family="sans-serif" font-size="16" text-anchor="middle">c_1</text>
+    
+    <circle cx="250" cy="150" r="25" fill="#ef4444" />
+    <text x="250" y="155" fill="white" font-family="sans-serif" font-size="16" text-anchor="middle">c_2</text>
+    
+    <circle cx="250" cy="210" r="25" fill="#ef4444" />
+    <text x="250" y="215" fill="white" font-family="sans-serif" font-size="16" text-anchor="middle">c_3</text>
+    
+    <text x="250" y="280" fill="#fbbf24" font-family="sans-serif" font-size="16" font-weight="bold" text-anchor="middle">Spread β</text>
+    
+    <!-- Weights and Output -->
+    <circle cx="420" cy="150" r="30" fill="#8b5cf6" />
+    <text x="420" y="155" fill="white" font-family="sans-serif" font-size="20" font-weight="bold" text-anchor="middle">y</text>
+    
+    <!-- Connections -->
+    <path d="M 125 150 L 225 90" stroke="#10b981" stroke-width="2" />
+    <path d="M 125 150 L 225 150" stroke="#10b981" stroke-width="2" />
+    <path d="M 125 150 L 225 210" stroke="#10b981" stroke-width="2" />
+    
+    <path d="M 275 90 L 390 140" stroke="#3b82f6" stroke-width="2" />
+    <path d="M 275 150 L 390 150" stroke="#3b82f6" stroke-width="2" />
+    <path d="M 275 210 L 390 160" stroke="#3b82f6" stroke-width="2" />
+    
+    <text x="330" y="110" fill="#3b82f6" font-family="sans-serif" font-size="16" font-weight="bold">w_1</text>
+    <text x="330" y="145" fill="#3b82f6" font-family="sans-serif" font-size="16" font-weight="bold">w_2</text>
+    <text x="330" y="200" fill="#3b82f6" font-family="sans-serif" font-size="16" font-weight="bold">w_3</text>
+  </svg>
 illustration_mermaid: |
-  graph TD
-    subgraph Model Inputs
-      Input([Raw Features]) --> Preprocessor[[Preprocessor]]
-      Preprocessor --> Tensors[(PyTorch Tensors)]
-    end
-    subgraph RBFNN Architecture
-      Tensors --> RBF[RBFLayer: Center Distances]
-      RBF --> |"exp(-beta * dist^2)"| Act(Radial Basis Activation)
-      Act --> FC[Linear Fully Connected]
-    end
-    subgraph Output
-      FC --> Softmax(Softmax)
-      Softmax --> Probs([Class Probabilities])
-      Probs --> Pred([Predictions])
-    end
-    style Input fill:#f8fafc,stroke:#94a3b8,stroke-width:1px
-    style Pred fill:#f8fafc,stroke:#94a3b8,stroke-width:1px
+  flowchart LR
+    In[/ "Données brutes" /]
+    style In fill:#fbbf24,stroke:#d97706,stroke-width:2px,color:#000
+    Pre{"Prétraitement"}
+    style Pre fill:#3b82f6,stroke:#2563eb,stroke-width:2px,color:#fff
+    Tens(["Tenseurs PyTorch"])
+    style Tens fill:#10b981,stroke:#059669,stroke-width:2px,color:#fff
+    RBF{"Couche RBF\n(Distances aux Centres)"}
+    style RBF fill:#3b82f6,stroke:#2563eb,stroke-width:2px,color:#fff
+    FC{"Couche Linéaire"}
+    style FC fill:#3b82f6,stroke:#2563eb,stroke-width:2px,color:#fff
+    Pred(["Prédictions (Softmax)"])
+    style Pred fill:#10b981,stroke:#059669,stroke-width:2px,color:#fff
+
+    In --> Pre --> Tens --> RBF --> FC --> Pred
 
 _metadata:
   bloc: 3

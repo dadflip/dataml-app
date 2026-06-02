@@ -1,14 +1,52 @@
 id: "transform_text_padding"
 name: "Transform: Text Sequence Padding"
-description: "Padding de séquences d'entiers."
+description: "Le padding est une technique essentielle en traitement du langage naturel (NLP) permettant d'uniformiser la longueur des séquences de mots (ou tokens) dans un jeu de données. En ajoutant des zéros (ou une valeur spécifique) aux séquences trop courtes ou en tronquant les séquences trop longues, cette opération garantit que toutes les entrées fournies à un réseau de neurones partagent une dimension identique, prérequis fondamental pour le calcul tensoriel en batch."
+math_theory: |
+  Soit un ensemble de séquences $\textcolor{#3b82f6}{S} = \{\textcolor{#3b82f6}{s_1}, \textcolor{#3b82f6}{s_2}, \dots, \textcolor{#3b82f6}{s_N}\}$ où chaque séquence $\textcolor{#3b82f6}{s_i}$ a une longueur $L_i$. Soit $\textcolor{#fbbf24}{L_{\text{max}}}$ la longueur cible (paramètre `max_len`). La fonction de padding $P(\textcolor{#3b82f6}{s_i}, \textcolor{#fbbf24}{L_{\text{max}}})$ est définie ainsi : si $L_i < \textcolor{#fbbf24}{L_{\text{max}}}$, on concatène un vecteur nul de taille $(\textcolor{#fbbf24}{L_{\text{max}}} - L_i)$ tel que $P(\textcolor{#3b82f6}{s_i}) = [s_{i,1}, s_{i,2}, \dots, s_{i,L_i}, \textcolor{#ef4444}{0, \dots, 0}]$. Si $L_i > \textcolor{#fbbf24}{L_{\text{max}}}$, la séquence est tronquée : $P(\textcolor{#3b82f6}{s_i}) = [s_{i,1}, s_{i,2}, \dots, s_{i,\textcolor{#fbbf24}{L_{\text{max}}}}]$. Ainsi, la matrice résultante $\textcolor{#10b981}{X}$ est de dimension $N \times \textcolor{#fbbf24}{L_{\text{max}}}$.
+math_illustration_svg: |
+  <svg viewBox="0 0 400 200" xmlns="http://www.w3.org/2000/svg">
+    <line x1="280" y1="20" x2="280" y2="180" stroke="#fbbf24" stroke-width="2" stroke-dasharray="5,5" />
+    <text x="280" y="15" fill="#fbbf24" font-family="sans-serif" font-size="12" text-anchor="middle">L_max</text>
+    <g transform="translate(20, 50)">
+      <text x="-10" y="15" fill="#94a3b8" font-family="sans-serif" font-size="12">s_1</text>
+      <rect x="10" y="0" width="40" height="25" fill="#3b82f6" rx="4" />
+      <rect x="55" y="0" width="40" height="25" fill="#3b82f6" rx="4" />
+      <rect x="100" y="0" width="40" height="25" fill="#3b82f6" rx="4" />
+      <rect x="145" y="0" width="40" height="25" fill="#ef4444" fill-opacity="0.3" stroke="#ef4444" stroke-width="1" rx="4" />
+      <text x="165" y="16" fill="#ef4444" font-family="sans-serif" font-size="12" text-anchor="middle">0</text>
+      <rect x="190" y="0" width="40" height="25" fill="#ef4444" fill-opacity="0.3" stroke="#ef4444" stroke-width="1" rx="4" />
+      <text x="210" y="16" fill="#ef4444" font-family="sans-serif" font-size="12" text-anchor="middle">0</text>
+      <rect x="235" y="0" width="40" height="25" fill="#ef4444" fill-opacity="0.3" stroke="#ef4444" stroke-width="1" rx="4" />
+      <text x="255" y="16" fill="#ef4444" font-family="sans-serif" font-size="12" text-anchor="middle">0</text>
+    </g>
+    <g transform="translate(20, 110)">
+      <text x="-10" y="15" fill="#94a3b8" font-family="sans-serif" font-size="12">s_2</text>
+      <rect x="10" y="0" width="40" height="25" fill="#3b82f6" rx="4" />
+      <rect x="55" y="0" width="40" height="25" fill="#3b82f6" rx="4" />
+      <rect x="100" y="0" width="40" height="25" fill="#3b82f6" rx="4" />
+      <rect x="145" y="0" width="40" height="25" fill="#3b82f6" rx="4" />
+      <rect x="190" y="0" width="40" height="25" fill="#3b82f6" rx="4" />
+      <rect x="235" y="0" width="40" height="25" fill="#3b82f6" rx="4" />
+      <rect x="285" y="0" width="40" height="25" fill="#64748b" fill-opacity="0.2" rx="4" stroke="#64748b" stroke-dasharray="2,2"/>
+      <text x="305" y="16" fill="#94a3b8" font-family="sans-serif" font-size="12" text-anchor="middle">cut</text>
+    </g>
+  </svg>
 category: "4.1 Preprocessing"
 tags: ["transform", "nlp", "text", "pandas", "pipeline"]
 applies_to: ["Texte"]
-when_to_use: "RNN/LSTM."
+when_to_use: "Cette étape est indispensable avant l'entraînement de réseaux de neurones récurrents (RNN, LSTM, GRU) ou convolutionnels (CNN 1D) qui requièrent des entrées de taille fixe au sein d'un même batch d'apprentissage."
+use_cases:
+  - "Préparation de corpus textuels pour l'analyse de sentiments."
+  - "Uniformisation de phrases pour des tâches de traduction automatique (seq2seq)."
+  - "Traitement de séries temporelles de longueurs variables avant modélisation."
 pros:
-  - "Batching."
+  - "Permet le traitement parallélisé (batching) sur GPU, accélérant drastiquement l'entraînement."
+  - "Évite les erreurs de dimensionnalité lors des opérations tensorielles dans les frameworks de deep learning."
+  - "Conserve l'ordre séquentiel tout en offrant une structure rigide au modèle."
 cons:
-  - "Mémoire."
+  - "Les zéros ajoutés (padding) peuvent biaiser l'apprentissage si le modèle ne gère pas le masquage (masking)."
+  - "Augmente l'empreinte mémoire pour les jeux de données contenant majoritairement des séquences très courtes mélangées à quelques séquences très longues."
+  - "La troncature (truncating) entraîne inévitablement une perte d'information pour les séquences dépassant la longueur maximale."
 hyperparameters:
   seq_col: "Colonne list"
   max_len: "Longueur"
@@ -61,16 +99,16 @@ code_template: |
   if 'task_type' not in locals(): task_type = "classification"
   if 'meta' not in locals(): meta = {}
 illustration_mermaid: |
-  graph TD
-    A[Raw Data] --> B{Does SEQ_COL exist?}
-    B -- Yes --> C[Initialize FunctionTransformer for Padding]
-    C --> D[Create ColumnTransformer]
-    D --> E[Add to Pipeline Steps]
-    B -- No --> F[Skip Padding]
-    E --> G[Update Data Contract Variables]
-    F --> G
-    style A fill:#eff6ff,stroke:#3b82f6,stroke-width:2px
-    style G fill:#10b981,stroke:#059669,stroke-width:2px
+  flowchart LR
+    A[/ "📄 Params (max_len)" /] --> C
+    B(["📊 df (Séquences)"]) --> C{"⚙️ Pad Sequences"}
+    C --> D(["📊 df (Padded)"])
+    C --> E(["ℹ️ pipeline_steps"])
+    style A fill:#fbbf24,stroke:#d97706,stroke-width:2px,color:#000
+    style C fill:#3b82f6,stroke:#2563eb,stroke-width:2px,color:#fff
+    style B fill:#10b981,stroke:#059669,stroke-width:2px,color:#fff
+    style D fill:#10b981,stroke:#059669,stroke-width:2px,color:#fff
+    style E fill:#8b5cf6,stroke:#7c3aed,stroke-width:2px,color:#fff
 
 _metadata:
   bloc: 2

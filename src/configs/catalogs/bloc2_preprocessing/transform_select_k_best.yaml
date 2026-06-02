@@ -1,14 +1,60 @@
 id: "transform_select_k_best"
 name: "Transform: Select K Best Features"
-description: "Sélectionne les K meilleures variables."
+description: "Selectionne automatiquement les K variables les plus informatives en fonction d'un test statistique univarie (par defaut ANOVA F-test pour la classification). Cela permet de reduire la dimensionnalite en ne gardant que les features les plus correlees a la variable cible."
+math_theory: |
+  Le test ANOVA F utilise par defaut (f_classif) calcule pour chaque variable $\textcolor{#3b82f6}{x_j}$ le rapport F entre la variance inter-classes et la variance intra-classe :
+  $$ \textcolor{#fbbf24}{F_j} = \frac{\text{Variance inter-classes}}{\text{Variance intra-classe}} = \frac{\sum_{c=1}^{C} n_c (\textcolor{#10b981}{\bar{x}_{jc}} - \textcolor{#8b5cf6}{\bar{x}_j})^2 / (C-1)}{\sum_{c=1}^{C} \sum_{i \in c} (\textcolor{#3b82f6}{x_{ij}} - \textcolor{#10b981}{\bar{x}_{jc}})^2 / (N-C)} $$
+  ou $C$ est le nombre de classes, $n_c$ le nombre d'observations dans la classe $c$, $\textcolor{#10b981}{\bar{x}_{jc}}$ la moyenne de la variable $j$ dans la classe $c$, et $\textcolor{#8b5cf6}{\bar{x}_j}$ la moyenne globale.
+  Les $\textcolor{#ef4444}{K}$ variables avec les scores $\textcolor{#fbbf24}{F_j}$ les plus eleves sont retenues.
+  Ce test suppose l'independance des variables (il ne capture pas les interactions entre features).
+math_illustration_svg: |
+  <svg viewBox="0 0 400 200" xmlns="http://www.w3.org/2000/svg">
+    <!-- Background -->
+    <rect width="400" height="200" fill="#1e293b" rx="8" />
+    
+    <!-- ANOVA Concept -->
+    <g transform="translate(40, 150)">
+      <!-- Base Line -->
+      <line x1="0" y1="0" x2="320" y2="0" stroke="#475569" stroke-width="2" />
+      
+      <!-- Class 1 Distribution -->
+      <path d="M 20 0 C 40 0, 50 -80, 70 -80 C 90 -80, 100 0, 120 0" fill="#3b82f6" fill-opacity="0.3" stroke="#3b82f6" stroke-width="2" />
+      <line x1="70" y1="0" x2="70" y2="-80" stroke="#3b82f6" stroke-width="2" stroke-dasharray="4,2" />
+      <text x="70" y="15" fill="#3b82f6" font-family="sans-serif" font-size="12" text-anchor="middle">Mean C1</text>
+      
+      <!-- Class 2 Distribution -->
+      <path d="M 180 0 C 200 0, 210 -80, 230 -80 C 250 -80, 260 0, 280 0" fill="#10b981" fill-opacity="0.3" stroke="#10b981" stroke-width="2" />
+      <line x1="230" y1="0" x2="230" y2="-80" stroke="#10b981" stroke-width="2" stroke-dasharray="4,2" />
+      <text x="230" y="15" fill="#10b981" font-family="sans-serif" font-size="12" text-anchor="middle">Mean C2</text>
+      
+      <!-- Global Mean -->
+      <line x1="150" y1="0" x2="150" y2="-100" stroke="#8b5cf6" stroke-width="2" stroke-dasharray="2,2" />
+      <text x="150" y="-110" fill="#8b5cf6" font-family="sans-serif" font-size="12" font-weight="bold" text-anchor="middle">Global Mean</text>
+      
+      <!-- Inter-class Variance (Between Means) -->
+      <path d="M 70 -40 L 150 -40" stroke="#fbbf24" stroke-width="2" />
+      <path d="M 150 -40 L 230 -40" stroke="#fbbf24" stroke-width="2" />
+      <circle cx="70" cy="-40" r="3" fill="#fbbf24" />
+      <circle cx="230" cy="-40" r="3" fill="#fbbf24" />
+      <text x="150" y="-45" fill="#fbbf24" font-family="sans-serif" font-size="12" font-weight="bold" text-anchor="middle">Inter-Class Variance (High F-score)</text>
+    </g>
+  </svg>
 category: "4.1 Preprocessing"
 tags: ["transform", "feature-engineering", "tabular", "sklearn", "pipeline"]
 applies_to: ["Tabulaire"]
-when_to_use: "Trop de variables peu informatives."
+when_to_use: "A utiliser lorsque votre jeu de donnees a trop de variables (haute dimensionnalite) et que vous souhaitez reduire le bruit en ne gardant que les K features les plus discriminantes."
+use_cases:
+  - "Reduction de dimensionnalite avant un modele de classification sur des donnees genomiques (milliers de genes)."
+  - "Selection des variables les plus pertinentes dans un dataset marketing avec des centaines de features."
+  - "Acceleration de l'entrainement d'un modele en eliminant les variables non informatives."
 pros:
-  - "Accélère l'entraînement."
+  - "Tres rapide a calculer, meme sur de grands datasets."
+  - "Reduit le surapprentissage en eliminant les variables bruitees."
+  - "Fonctionne comme un filtre pre-modele, independant de l'algorithme de ML choisi."
 cons:
-  - "Peut rater des interactions."
+  - "Test univarie : ne detecte pas les interactions entre variables (une variable seule peu informative peut etre cruciale en combinaison avec une autre)."
+  - "Suppose une relation lineaire entre la variable et la cible (ANOVA F-test)."
+  - "Le choix de K est arbitraire et necessite souvent une validation croisee."
 hyperparameters:
   k: "Nombre de variables."
 code_template: |
@@ -50,16 +96,16 @@ code_template: |
   if 'task_type' not in locals(): task_type = "classification"
   if 'meta' not in locals(): meta = {}
 illustration_mermaid: |
-  graph TD
-    A[Raw Data] --> B{Are there numeric columns?}
-    B -- Yes --> C[Initialize SelectKBest]
-    C --> D[Create ColumnTransformer]
-    D --> E[Add to Pipeline Steps]
-    B -- No --> F[Skip SelectKBest]
-    E --> G[Update Data Contract Variables]
-    F --> G
-    style A fill:#eff6ff,stroke:#3b82f6,stroke-width:2px
-    style G fill:#10b981,stroke:#059669,stroke-width:2px
+  flowchart LR
+    A(["📊 df"]) --> B[/"📄 K_FEATURES"/]
+    B --> C{"⚙️ SelectKBest (ANOVA F)"}
+    C --> D(["📊 df (K meilleures features)"])
+    D --> E(["ℹ️ pipeline_steps"])
+    style A fill:#10b981,stroke:#059669,stroke-width:2px,color:#fff
+    style B fill:#fbbf24,stroke:#d97706,stroke-width:2px,color:#000
+    style C fill:#3b82f6,stroke:#2563eb,stroke-width:2px,color:#fff
+    style D fill:#10b981,stroke:#059669,stroke-width:2px,color:#fff
+    style E fill:#8b5cf6,stroke:#7c3aed,stroke-width:2px,color:#fff
 
 _metadata:
   bloc: 2

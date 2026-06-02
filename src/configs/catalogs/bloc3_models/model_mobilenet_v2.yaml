@@ -1,14 +1,21 @@
 id: "model_mobilenet_v2"
 name: "Model: MobileNet V2 (Fine-Tuning)"
-description: "Réseau ultra-léger conçu pour fonctionner sur mobile et processeurs embarqués."
+description: "Réseau de neurones convolutifs (CNN) pré-entraîné de pointe conçu par Google, extrêmement léger et optimisé pour le déploiement sur appareils mobiles ou à faibles ressources (edge computing)."
 category: "Vision par Ordinateur (Modèles Entraînés)"
 tags: ["model", "vision", "classification", "pytorch", "mobilenet", "deep-learning"]
 applies_to: ["Images"]
-when_to_use: "Quand l'objectif final est de déployer l'application sur smartphone ou Raspberry Pi."
+when_to_use: "Privilégier pour des tâches de classification d'images où la rapidité d'inférence, la consommation de mémoire réduite et le déploiement sur des dispositifs embarqués sont des critères prépondérants."
+use_cases:
+  - "Classification visuelle en temps réel sur des applications mobiles (Android/iOS)."
+  - "Déploiement sur des microcontrôleurs ou nano-ordinateurs (ex. Raspberry Pi, Jetson Nano)."
+  - "Détection d'objets embarquée pour des systèmes IoT industriels autonomes."
 pros:
-  - "Extrêmement petit, très rapide."
+  - "Taille de modèle drastiquement réduite, assurant des temps d'inférence fulgurants."
+  - "Utilise des convolutions séparables en profondeur (depthwise separable convolutions) économes en calcul."
+  - "Modèle pré-entraîné sur ImageNet permettant un transfert d'apprentissage très efficace."
 cons:
-  - "Légère baisse de précision comparé à ResNet/EfficientNet."
+  - "Compromis sur la précision de prédiction en comparaison d'architectures plus imposantes comme EfficientNet ou ResNet."
+  - "Peut rencontrer des difficultés à capter des détails à très haute résolution."
 hyperparameters:
   epochs: "Nombre d'époques (ex: 3)."
 code_template: |
@@ -83,35 +90,108 @@ code_template: |
       training_history = {"status": "success", "device": str(device)}
       task_type = "classification"
 illustration_mermaid: |
-  graph TD
-    A[Input Images: X_train] --> B(Preprocessing Pipeline)
-    B --> C[MobileNetV2 Fine-Tuning Component]
+  flowchart LR
+    A[/ "Input Images (X_train)" /]
+    B{"Preprocessing Pipeline"}
+    C{"MobileNetV2 Fine-Tuning"}
+    D{"MobileNet V2 Backbone"}
+    E{"Global Average Pooling"}
+    F{"Custom Classification Head"}
+    G{"CrossEntropy Loss"}
+    H(["Fitted Weights"])
+    I[/ "Test Images (X_test)" /]
+    J{"Predict (Tuned Model)"}
+    K(["y_pred: Class Labels"])
+    L(["y_proba: Softmax Probas"])
+
+    A --> B
+    B --> C
+    C --> D
+    D --> E
+    E --> F
+    F --> G
+    G -.->|Adam Optimizer| F
+    G --> H
     
-    subgraph MobileNet V2 Backbone
-      C --> D[Initial Conv2D]
-      D --> E[Inverted Residual Blocks: Depthwise Separable Convs]
-      E --> F[Feature Extraction Layers]
-      F --> G[Global Average Pooling]
-    end
+    I --> J
+    H -.-> J
+    J --> K
+    J --> L
+
+    style A fill:#fbbf24,stroke:#d97706,stroke-width:2px,color:#000
+    style I fill:#fbbf24,stroke:#d97706,stroke-width:2px,color:#000
+    style B fill:#3b82f6,stroke:#2563eb,stroke-width:2px,color:#fff
+    style C fill:#3b82f6,stroke:#2563eb,stroke-width:2px,color:#fff
+    style D fill:#3b82f6,stroke:#2563eb,stroke-width:2px,color:#fff
+    style E fill:#3b82f6,stroke:#2563eb,stroke-width:2px,color:#fff
+    style F fill:#3b82f6,stroke:#2563eb,stroke-width:2px,color:#fff
+    style G fill:#3b82f6,stroke:#2563eb,stroke-width:2px,color:#fff
+    style J fill:#3b82f6,stroke:#2563eb,stroke-width:2px,color:#fff
+    style H fill:#10b981,stroke:#059669,stroke-width:2px,color:#fff
+    style K fill:#10b981,stroke:#059669,stroke-width:2px,color:#fff
+    style L fill:#10b981,stroke:#059669,stroke-width:2px,color:#fff
+
+math_theory: |
+  MobileNetV2's core innovation is the **Inverted Residual Block** with Linear Bottlenecks, which uses **Depthwise Separable Convolutions** to drastically reduce computation. A standard convolution is split into two steps: a spatial depthwise convolution and a channel-wise pointwise convolution.
+
+  The operation of an inverted residual block can be defined as:
+  $$ \textcolor{#8b5cf6}{\mathbf{Y}} = \textcolor{#3b82f6}{\mathbf{W}_{pw2}} * \text{ReLU6}(\textcolor{#10b981}{\mathbf{W}_{dw}} * \text{ReLU6}(\textcolor{#fbbf24}{\mathbf{W}_{pw1}} * \textcolor{#ef4444}{\mathbf{X}})) + \textcolor{#ef4444}{\mathbf{X}} $$
+  
+  Where:
+  - $\textcolor{#ef4444}{\mathbf{X}}$ is the input tensor of shape $(h, w, c)$.
+  - $\textcolor{#fbbf24}{\mathbf{W}_{pw1}}$ is a $1\times 1$ pointwise convolution that *expands* the channels to $tk$ (where $t$ is the expansion factor).
+  - $\textcolor{#10b981}{\mathbf{W}_{dw}}$ is a $3\times 3$ depthwise convolution applied per channel.
+  - $\textcolor{#3b82f6}{\mathbf{W}_{pw2}}$ is a $1\times 1$ pointwise convolution that projects the channels back to $c$, without a non-linear activation (linear bottleneck).
+  - The skip connection $+\textcolor{#ef4444}{\mathbf{X}}$ is applied only if the stride is 1 and input/output dimensions match.
+
+math_illustration_svg: |
+  <svg viewBox="0 0 800 400" xmlns="http://www.w3.org/2000/svg">
+    <defs>
+      <marker id="arrow" viewBox="0 0 10 10" refX="10" refY="5" markerWidth="6" markerHeight="6" orient="auto">
+        <path d="M0,0 L10,5 L0,10 z" fill="#666" />
+      </marker>
+    </defs>
     
-    subgraph Custom Classification Head
-      G --> H[Replaced Linear Layer: num_classes]
-    end
-    
-    H --> I[CrossEntropy Loss]
-    I -.->|Adam Optimizer| H
-    
-    X_test[Input Images: X_test] --> J(Preprocessing Pipeline)
-    J --> K[Forward Pass on Tuned Model]
-    H -.-> K
-    K --> L([y_pred: Class Labels])
-    K --> M([y_proba: Softmax Probas])
-    
-    style C fill:#8b5cf6,stroke:#7c3aed,stroke-width:2px,color:#fff
-    style E fill:#f59e0b,stroke:#d97706,stroke-width:2px,color:#fff
-    style H fill:#ec4899,stroke:#db2777,stroke-width:2px,color:#fff
-    style L fill:#3b82f6,stroke:#2563eb,stroke-width:2px,color:#fff
-    style M fill:#3b82f6,stroke:#2563eb,stroke-width:2px,color:#fff
+    <rect x="50" y="150" width="80" height="100" rx="8" fill="#fee2e2" stroke="#ef4444" stroke-width="3" />
+    <text x="90" y="200" font-family="sans-serif" font-size="20" font-weight="bold" fill="#ef4444" text-anchor="middle" dominant-baseline="middle">X</text>
+    <text x="90" y="225" font-family="sans-serif" font-size="12" fill="#ef4444" text-anchor="middle">(h, w, c)</text>
+
+    <!-- 1x1 Conv Expand -->
+    <rect x="200" y="100" width="100" height="200" rx="8" fill="#fef3c7" stroke="#fbbf24" stroke-width="3" />
+    <text x="250" y="180" font-family="sans-serif" font-size="16" font-weight="bold" fill="#d97706" text-anchor="middle">1x1 Conv</text>
+    <text x="250" y="205" font-family="sans-serif" font-size="14" fill="#d97706" text-anchor="middle">Expand (t*c)</text>
+    <text x="250" y="230" font-family="sans-serif" font-size="14" font-weight="bold" fill="#d97706" text-anchor="middle">ReLU6</text>
+
+    <!-- 3x3 Dwise -->
+    <rect x="380" y="100" width="100" height="200" rx="8" fill="#d1fae5" stroke="#10b981" stroke-width="3" />
+    <text x="430" y="180" font-family="sans-serif" font-size="16" font-weight="bold" fill="#059669" text-anchor="middle">3x3 Dwise</text>
+    <text x="430" y="205" font-family="sans-serif" font-size="14" fill="#059669" text-anchor="middle">Spatial</text>
+    <text x="430" y="230" font-family="sans-serif" font-size="14" font-weight="bold" fill="#059669" text-anchor="middle">ReLU6</text>
+
+    <!-- 1x1 Conv Project -->
+    <rect x="560" y="150" width="100" height="100" rx="8" fill="#dbeafe" stroke="#3b82f6" stroke-width="3" />
+    <text x="610" y="190" font-family="sans-serif" font-size="16" font-weight="bold" fill="#1d4ed8" text-anchor="middle">1x1 Conv</text>
+    <text x="610" y="215" font-family="sans-serif" font-size="14" fill="#1d4ed8" text-anchor="middle">Project (c)</text>
+
+    <!-- Output Y -->
+    <circle cx="730" cy="200" r="25" fill="#ede9fe" stroke="#8b5cf6" stroke-width="3" />
+    <text x="730" y="205" font-family="sans-serif" font-size="24" font-weight="bold" fill="#8b5cf6" text-anchor="middle" dominant-baseline="middle">+</text>
+
+    <rect x="770" y="150" width="50" height="100" rx="8" fill="#ede9fe" stroke="#8b5cf6" stroke-width="3" />
+    <text x="795" y="200" font-family="sans-serif" font-size="20" font-weight="bold" fill="#8b5cf6" text-anchor="middle" dominant-baseline="middle">Y</text>
+
+    <!-- Arrows -->
+    <path d="M130,200 L190,200" stroke="#666" stroke-width="3" fill="none" marker-end="url(#arrow)"/>
+    <path d="M300,200 L370,200" stroke="#666" stroke-width="3" fill="none" marker-end="url(#arrow)"/>
+    <path d="M480,200 L550,200" stroke="#666" stroke-width="3" fill="none" marker-end="url(#arrow)"/>
+    <path d="M660,200 L695,200" stroke="#666" stroke-width="3" fill="none" marker-end="url(#arrow)"/>
+    <path d="M755,200 L760,200" stroke="#666" stroke-width="3" fill="none" marker-end="url(#arrow)"/>
+
+    <!-- Skip Connection -->
+    <path d="M140,200 L140,70 L730,70 L730,165" stroke="#ef4444" stroke-width="3" stroke-dasharray="5,5" fill="none" marker-end="url(#arrow)"/>
+    <text x="430" y="55" font-family="sans-serif" font-size="14" font-weight="bold" fill="#ef4444" text-anchor="middle">Skip Connection (if stride=1 &amp; channels match)</text>
+  </svg>
+
 
 _metadata:
   bloc: 3

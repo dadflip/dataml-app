@@ -1,6 +1,17 @@
 id: "load_pytorch_geometric"
 name: "Load: PyTorch Geometric (Graph to DataFrame + Edge Index)"
 description: "Charge les données d'un graphe. Exporte les caractéristiques des nœuds dans `df` et cache la matrice d'adjacence `edge_index` dans le dictionnaire `meta` pour respecter le contrat."
+when_to_use: "Idéal pour initialiser des tâches d'apprentissage sur graphes (Graph Neural Networks) en chargeant des datasets standards via la bibliothèque PyTorch Geometric."
+use_cases:
+  - "Classification de nœuds sur des graphes de citations (ex: Cora, Citeseer, Pubmed)."
+  - "Prédiction de liens ou analyse de communautés dans des réseaux complexes."
+  - "Élaboration de GNN pour des tâches relationnelles ou spatiales."
+pros:
+  - "Intégration directe avec les datasets classiques de la recherche en ML."
+  - "Sépare clairement les caractéristiques (nodes) de la topologie (edges) dans le pipeline."
+cons:
+  - "Nécessite l'installation complète de l'écosystème PyTorch et PyTorch Geometric."
+  - "La manipulation des arêtes via `meta` peut sembler moins intuitive qu'un format purement tabulaire."
 category: "2. Load"
 tags: ["load", "graph", "pytorch-geometric", "gnn"]
 code_template: |
@@ -29,16 +40,21 @@ output_variables:
   - meta
 illustration_mermaid: |
     flowchart LR
-      A[fa:fa-project-diagram DATASET_NAME<br/>Cora] -->|PyTorch Geometric| B(fa:fa-cogs Load Graph)
-      B --> C[(df<br/>Node Features)]
-      B --> D{{meta<br/>edge_index}}
-      B --> E([target_name, task_type])
-      
-      style A fill:#3b82f6,stroke:#2563eb,stroke-width:2px,color:#fff
-      style B fill:#10b981,stroke:#059669,stroke-width:2px,color:#fff
-      style C fill:#eff6ff,stroke:#3b82f6,stroke-width:2px
-      style D fill:#fef3c7,stroke:#d97706,stroke-width:2px
-      style E fill:#f3f4f6,stroke:#6b7280,stroke-width:2px
+        A[/"📄 DATASET_NAME (Cora)"/] --> B{"PyTorch Geometric Load()"}
+        C[/"🎯 TARGET_COL"/] --> D{"Check TARGET_COL"}
+        B --> E(["📊 df (Node Features)"])
+        E --> D
+        D --> F(["🎯 target_name"])
+        D --> G(["⚙️ task_type"])
+        D --> H(["ℹ️ meta (edge_index)"])
+        style A fill:#fbbf24,stroke:#d97706,stroke-width:2px,color:#000
+        style C fill:#fbbf24,stroke:#d97706,stroke-width:2px,color:#000
+        style B fill:#3b82f6,stroke:#2563eb,stroke-width:2px,color:#fff
+        style D fill:#3b82f6,stroke:#2563eb,stroke-width:2px,color:#fff
+        style E fill:#10b981,stroke:#059669,stroke-width:2px,color:#fff
+        style F fill:#8b5cf6,stroke:#7c3aed,stroke-width:2px,color:#fff
+        style G fill:#8b5cf6,stroke:#7c3aed,stroke-width:2px,color:#fff
+        style H fill:#8b5cf6,stroke:#7c3aed,stroke-width:2px,color:#fff
 
 _metadata:
   bloc: 1

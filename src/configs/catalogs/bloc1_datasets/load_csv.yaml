@@ -1,6 +1,19 @@
 id: load_csv
 name: 'Load: Fichier CSV'
-description: Charge un fichier CSV plat dans un DataFrame Pandas avec détection d'encodage.
+description: "Charge un fichier de données tabulaires au format CSV (Comma-Separated Values) pour l'importer dans un DataFrame Pandas. Il s'agit du format de données le plus répandu en data science. Ce composant est conçu pour être robuste : il gère intelligemment les fichiers volumineux (en désactivant les alertes de typage mixte) et intègre un mécanisme de secours (fallback) pour tenter une lecture en encodage ISO-8859-1 si l'encodage standard UTF-8 échoue. Il déduit automatiquement la nature de la tâche (classification ou régression) selon le nombre de valeurs uniques de la cible."
+when_to_use: "C'est le bloc d'ingestion de données par défaut. À utiliser pour la grande majorité des jeux de données tabulaires classiques, exports de tableurs, ou résultats de requêtes SQL fournis sous forme de texte plat délimité."
+use_cases:
+  - "Entraînement de modèles de Machine Learning classiques (Régression, Random Forest, XGBoost) sur des données d'entreprise."
+  - "Analyse exploratoire de données (EDA) sur des exports Excel, bases de données relationnelles ou données publiques (Open Data)."
+  - "Tâches de classification (ex: churn, score de crédit) ou de prédiction de séries temporelles."
+pros:
+  - "Universel et extrêmement facile à utiliser (lisible par un humain et compatible avec tous les outils)."
+  - "Gestion d'erreur intelligente (bascule automatique sur un autre encodage en cas d'erreur UTF-8)."
+  - "Déduction automatique et intelligente du type de tâche (classification vs régression) en fonction de la colonne cible."
+cons:
+  - "Lecture plus lente et fichiers plus lourds par rapport à des formats binaires comme Parquet ou Avro."
+  - "Aucune garantie sur les types de données (risque de variables numériques lues comme des chaînes de caractères)."
+  - "Peut saturer la mémoire vive (RAM) si le fichier CSV est plus volumineux que la mémoire disponible."
 category: 2. Load
 tags:
 - load
@@ -47,44 +60,22 @@ code_template: |
   meta = {"format": "csv", "separator": SEP, "shape": df.shape}
 
 illustration_mermaid: |
-  flowchart TD
-      subgraph Config [Parameters]
-          FILE([FILE_PATH])
-          SP([SEP])
-          TAR([TARGET_COL])
-      end
-
-      subgraph Operations [CSV Load]
-          Check([os.path.exists])
-          PdRead([pd.read_csv UTF-8])
-          EncCheck{UnicodeError?}
-          Fallback([pd.read_csv ISO-8859-1])
-      end
-
-      subgraph Outputs [Contract Variables]
-          df((df))
-          target((target_name))
-          task((task_type = 'classification/regression'))
-          meta((meta: dict))
-      end
-
-      FILE --> Check
-      SP --> PdRead
-      Check --> PdRead
-      PdRead --> EncCheck
-      EncCheck -- "No" --> df
-      EncCheck -- "Yes" --> Fallback
-      Fallback --> df
-      TAR -.-> target
-      df -.-> task
-      df -.-> meta
-
-      style Config fill:#f8fafc,stroke:#cbd5e1,stroke-width:2px
-      style Check fill:#64748b,stroke:#475569,stroke-width:2px,color:#fff
-      style PdRead fill:#3b82f6,stroke:#1d4ed8,stroke-width:2px,color:#fff
-      style EncCheck fill:#ef4444,stroke:#991b1b,stroke-width:2px,color:#fff
-      style Fallback fill:#f59e0b,stroke:#b45309,stroke-width:2px,color:#fff
-      style Outputs fill:#f1f5f9,stroke:#94a3b8,stroke-width:2px
+  flowchart LR
+      A[/"📄 FILE_PATH"/] --> B{"pd.read_csv()"}
+      C[/"🎯 TARGET_COL & SEP"/] --> D{"Check TARGET_COL & Task Type"}
+      B --> E(["📊 df (DataFrame)"])
+      E --> D
+      D --> F(["🎯 target_name"])
+      D --> G(["⚙️ task_type (classif/regr)"])
+      D --> H(["ℹ️ meta (format, sep, shape)"])
+      style A fill:#fbbf24,stroke:#d97706,stroke-width:2px,color:#000
+      style C fill:#fbbf24,stroke:#d97706,stroke-width:2px,color:#000
+      style B fill:#3b82f6,stroke:#2563eb,stroke-width:2px,color:#fff
+      style D fill:#3b82f6,stroke:#2563eb,stroke-width:2px,color:#fff
+      style E fill:#10b981,stroke:#059669,stroke-width:2px,color:#fff
+      style F fill:#8b5cf6,stroke:#7c3aed,stroke-width:2px,color:#fff
+      style G fill:#8b5cf6,stroke:#7c3aed,stroke-width:2px,color:#fff
+      style H fill:#8b5cf6,stroke:#7c3aed,stroke-width:2px,color:#fff
 _metadata:
   bloc: 1
   section: 2_load

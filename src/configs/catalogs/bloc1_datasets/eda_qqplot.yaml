@@ -1,6 +1,16 @@
 id: eda_qqplot
 name: 'EDA: QQ-Plot Normalité'
 description: Vérifie graphiquement si les features numériques suivent une loi normale.
+when_to_use: "Pour diagnostiquer la normalité des résidus ou des variables continues avant d'utiliser des modèles paramétriques."
+use_cases:
+  - "Validation de l'hypothèse de normalité pour la régression linéaire."
+  - "Évaluation du besoin d'appliquer une transformation (ex: Box-Cox ou log)."
+pros:
+  - "Meilleur outil visuel pour repérer des queues de distribution épaisses."
+  - "Simple à interpréter avec la droite de référence."
+cons:
+  - "Demande une interprétation humaine, contrairement à un test de Shapiro-Wilk."
+  - "Sensible aux valeurs aberrantes (outliers)."
 category: 3. Exploratory Data Analysis
 tags:
 - eda
@@ -24,18 +34,22 @@ code_template: |
   plt.show()
 illustration_mermaid: |
     flowchart TD
-        Input([DataFrame]) --> SelectCols[Select Top 4 Numeric Cols]
-        SelectCols --> Loop[Loop through columns]
-        Loop --> DropNA[Drop NaNs for Col]
-        DropNA --> ProbPlot[scipy.stats.probplot vs normal dist]
-        ProbPlot --> Subplot{{Add to Subplot 2x2}}
-        Subplot --> Loop
-        Subplot --> Output[/Show Tight Layout Plot/]
-    
-        style Input fill:#3b82f6,stroke:#2563eb,color:#fff
-        style SelectCols fill:#10b981,stroke:#059669,color:#fff
-        style ProbPlot fill:#8b5cf6,stroke:#7c3aed,color:#fff
-        style Subplot fill:#ec4899,stroke:#db2777,color:#fff
+        InDF[/df/]
+        ProcSelect{select_dtypes}
+        ProcProbPlot{stats.probplot}
+        OutFig([fig])
+        OutAxes([ax])
+
+        InDF --> ProcSelect
+        ProcSelect --> ProcProbPlot
+        ProcProbPlot --> OutFig
+        ProcProbPlot --> OutAxes
+
+        style InDF fill:#fbbf24,stroke:#d97706,stroke-width:2px,color:#000
+        style ProcSelect fill:#3b82f6,stroke:#2563eb,stroke-width:2px,color:#fff
+        style ProcProbPlot fill:#3b82f6,stroke:#2563eb,stroke-width:2px,color:#fff
+        style OutFig fill:#10b981,stroke:#059669,stroke-width:2px,color:#fff
+        style OutAxes fill:#8b5cf6,stroke:#7c3aed,stroke-width:2px,color:#fff
 
 _metadata:
   bloc: 1

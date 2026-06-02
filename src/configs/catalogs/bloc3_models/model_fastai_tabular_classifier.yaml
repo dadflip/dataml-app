@@ -1,17 +1,61 @@
 id: "model_fastai_tabular_classifier"
 name: "Model: FastAI Tabular Classifier"
-description: "Framework Deep Learning ultra-productif par-dessus PyTorch. Gère automatiquement les embeddings de catégories."
+description: |
+  Réseau de neurones profond (Deep Learning) spécialisé pour les données tabulaires, construit via la bibliothèque FastAI au-dessus de PyTorch. Sa grande force réside dans la gestion automatique et optimisée des variables catégorielles via la technique des "Entity Embeddings" (plongements), couplée à un entraînement utilisant des pratiques de pointe (ex: "1-cycle policy").
 category: "Réseaux de Neurones"
 tags: ["model", "classification", "tabular", "fastai", "pytorch", "deep-learning"]
 applies_to: ["Tabulaire"]
-when_to_use: "Quand vous voulez les perfs de PyTorch sur du Tabulaire sans écrire la boucle d'entraînement (et pour profiter des entity embeddings)."
+when_to_use: |
+  À utiliser lorsque vous travaillez sur des données tabulaires riches contenant de nombreuses variables catégorielles à forte cardinalité (beaucoup de modalités). C'est la méthode de référence pour introduire le Deep Learning sur du tabulaire sans avoir à construire l'architecture PyTorch de A à Z.
+use_cases:
+  - "Prédiction de churn client avec de multiples identifiants de catégories (produits, villes)."
+  - "Scoring de crédit incluant des codes de classification complexes."
+  - "Extraction de représentations denses (embeddings) utilisables ensuite dans d'autres algorithmes."
 pros:
-  - "Très rapide à coder."
-  - "Gère nativement les embeddings de features catégorielles."
+  - "Création native et transparente des 'Entity Embeddings' pour capturer la sémantique des catégories."
+  - "Convergence accélérée grâce à l'optimisation 'Fit One Cycle'."
+  - "Pipelines de prétraitement intégrés à la bibliothèque (Categorify, FillMissing, Normalize)."
 cons:
-  - "L'API FastAI est très opiniâtre et parfois complexe à intégrer avec Scikit-Learn."
+  - "L'API de FastAI est très spécifique et diffère structurellement des standards scikit-learn, compliquant l'intégration dans des pipelines existants."
+  - "Souvent surpassé par les algorithmes de Gradient Boosting (XGBoost, LightGBM) sur les jeux de données tabulaires classiques."
 hyperparameters:
   epochs: "Nombre d'époques (ex: 5)."
+math_theory: |
+  FastAI remplace chaque variable catégorielle discrète $\textcolor{#ef4444}{c_i}$ par un vecteur dense (Entity Embedding) $\textcolor{#3b82f6}{e_i}$ issu d'une matrice $\textcolor{#8b5cf6}{E}$ :
+  $$ \textcolor{#3b82f6}{e_i} = \textcolor{#8b5cf6}{E} \cdot \text{one\_hot}(\textcolor{#ef4444}{c_i}) $$
+  Les embeddings sont concaténés aux variables continues $\textcolor{#fbbf24}{x_{cont}}$ préalablement normalisées :
+  $$ \textcolor{#10b981}{z} = [\textcolor{#3b82f6}{e_1}, \dots, \textcolor{#3b82f6}{e_k}, \textcolor{#fbbf24}{x_{cont}}] $$
+  Ce vecteur est ensuite traité par un Perceptron Multicouche (MLP) pour la classification.
+math_illustration_svg: |
+  <svg viewBox="0 0 800 400" xmlns="http://www.w3.org/2000/svg">
+    <rect width="800" height="400" fill="#f8fafc" rx="10"/>
+    <rect x="50" y="80" width="100" height="40" rx="4" fill="#ef4444" opacity="0.1" stroke="#ef4444" stroke-width="2"/>
+    <text x="100" y="105" font-family="sans-serif" font-size="16" font-weight="bold" fill="#ef4444" text-anchor="middle">Cat c_i</text>
+    <path d="M 150 100 L 220 100" stroke="#8b5cf6" stroke-width="2" fill="none" marker-end="url(#arrow)"/>
+    <text x="185" y="90" font-family="sans-serif" font-size="14" font-weight="bold" fill="#8b5cf6" text-anchor="middle">E</text>
+    <rect x="220" y="80" width="120" height="40" rx="4" fill="#3b82f6" opacity="0.1" stroke="#3b82f6" stroke-width="2"/>
+    <text x="280" y="105" font-family="sans-serif" font-size="16" font-weight="bold" fill="#3b82f6" text-anchor="middle">Emb e_i</text>
+    <rect x="50" y="220" width="100" height="40" rx="4" fill="#fbbf24" opacity="0.1" stroke="#fbbf24" stroke-width="2"/>
+    <text x="100" y="245" font-family="sans-serif" font-size="16" font-weight="bold" fill="#d97706" text-anchor="middle">Cont x_cont</text>
+    <path d="M 150 240 L 220 240" stroke="#94a3b8" stroke-width="2" fill="none" marker-end="url(#arrow)"/>
+    <rect x="220" y="220" width="120" height="40" rx="4" fill="#fbbf24" opacity="0.1" stroke="#fbbf24" stroke-width="2"/>
+    <text x="280" y="245" font-family="sans-serif" font-size="16" font-weight="bold" fill="#d97706" text-anchor="middle">Normalized</text>
+    <path d="M 340 100 L 400 150" stroke="#3b82f6" stroke-width="2" fill="none" marker-end="url(#arrow)"/>
+    <path d="M 340 240 L 400 190" stroke="#fbbf24" stroke-width="2" fill="none" marker-end="url(#arrow)"/>
+    <rect x="400" y="130" width="80" height="80" rx="8" fill="#10b981" opacity="0.1" stroke="#10b981" stroke-width="2"/>
+    <text x="440" y="175" font-family="sans-serif" font-size="18" font-weight="bold" fill="#10b981" text-anchor="middle">z</text>
+    <path d="M 480 170 L 530 170" stroke="#94a3b8" stroke-width="2" fill="none" marker-end="url(#arrow)"/>
+    <rect x="530" y="110" width="100" height="120" rx="8" fill="#ffffff" stroke="#cbd5e1" stroke-width="2"/>
+    <text x="580" y="175" font-family="sans-serif" font-size="18" font-weight="bold" fill="#334155" text-anchor="middle">MLP</text>
+    <path d="M 630 170 L 680 170" stroke="#94a3b8" stroke-width="2" fill="none" marker-end="url(#arrow)"/>
+    <circle cx="710" cy="170" r="30" fill="#10b981" opacity="0.1" stroke="#10b981" stroke-width="2"/>
+    <text x="710" y="175" font-family="sans-serif" font-size="16" font-weight="bold" fill="#10b981" text-anchor="middle">y_hat</text>
+    <defs>
+      <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto">
+        <path d="M 0 0 L 10 5 L 0 10 z" fill="#94a3b8"/>
+      </marker>
+    </defs>
+  </svg>
 code_template: |
   import pandas as pd
   import numpy as np
@@ -73,23 +117,17 @@ code_template: |
       training_history = {"status": "success"}
 
 illustration_mermaid: |
-  graph TD
-    subgraph FastAI Tabular Classifier
-      In([Tabular Features]) --> Cat[Categorical]
-      In --> Cont[Continuous]
-      Cat --> Emb[Entity Embeddings]
-      Cont --> Norm[Batch Normalization]
-      Emb --> Concat[Concatenation]
-      Norm --> Concat
-      Concat --> Linear1[Linear + ReLU]
-      Linear1 --> Linear2[Linear Output]
-      Linear2 --> Softmax[Softmax]
-      Softmax --> Out([Predicted Class])
-    end
-    style In fill:#f8fafc,stroke:#94a3b8,stroke-width:1px
+  flowchart LR
+    In[/ "Data Tabulaire" /] --> Model{"FastAI\n(TabularLearner)"}
+    Config(["Params\nEpochs"]) -.-> Model
+    Model --> Emb(["Entity Embeddings\n& Normalisation"])
+    Emb --> Out(["Prédictions\n(Softmax)"])
+    
+    style In fill:#fbbf24,stroke:#d97706,stroke-width:2px,color:#000
+    style Config fill:#8b5cf6,stroke:#7c3aed,stroke-width:2px,color:#fff
+    style Model fill:#3b82f6,stroke:#2563eb,stroke-width:2px,color:#fff
+    style Emb fill:#10b981,stroke:#059669,stroke-width:2px,color:#fff
     style Out fill:#10b981,stroke:#059669,stroke-width:2px,color:#fff
-    style Emb fill:#c4b5fd,stroke:#8b5cf6,stroke-width:2px
-    style Linear1 fill:#8b5cf6,stroke:#7c3aed,stroke-width:2px,color:#fff
 
 _metadata:
   bloc: 3

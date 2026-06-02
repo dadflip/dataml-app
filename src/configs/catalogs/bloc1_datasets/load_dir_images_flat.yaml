@@ -1,7 +1,19 @@
 id: load_dir_images_flat
 name: 'Load: Dossier d''Images (Plat)'
-description: Parcourt un dossier et renvoie un DataFrame contenant les chemins absolus
-  de toutes les images. Idéal pour être croisé avec un fichier de labels.
+description: 'Ce module implémente un "crawler" de répertoire conçu pour indexer rapidement des images stockées "à plat" (en vrac) dans un seul et unique dossier, sans notion de sous-dossiers par classe. Le script scanne le répertoire selon un modèle d''extension spécifié (par exemple *.jpg), extrait les chemins absolus et isole l''identifiant unique de chaque fichier (généralement son nom sans extension). Le DataFrame qui en résulte sert de base d''indexation robuste, prête à être fusionnée (join) avec un fichier de métadonnées séparé (comme un fichier CSV contenant des bounding boxes, des labels multiples ou d''autres annotations complexes).'
+when_to_use: 'À privilégier lorsque vos images ne sont pas séparées en sous-dossiers de classes, mais plutôt regroupées dans un gros dossier, et que les informations d''annotation (étiquettes, coordonnées, masques) sont fournies dans un fichier de métadonnées (CSV ou JSON) externe.'
+use_cases:
+- 'Chargement de jeux de données pour la détection d''objets (Object Detection) où une image peut contenir plusieurs objets.'
+- 'Segmentation d''images médicales ou satellitaires.'
+- 'Classification multi-labels où une image appartient à plusieurs catégories simultanément.'
+- 'Projets nécessitant de croiser des images avec des informations contextuelles riches (âge, genre, localisation).'
+pros:
+- 'Idéal pour les workflows avancés en Computer Vision dépassant la simple classification.'
+- 'L''extraction intelligente de "file_id" facilite énormément la jointure (merge) avec les fichiers CSV de labels.'
+- 'Flexibilité sur le filtrage des extensions via le paramètre de recherche.'
+cons:
+- 'Ne fournit pas de labels "out-of-the-box" : une étape de merge avec des données externes est obligatoire.'
+- 'Peut devenir lent si le dossier contient des centaines de milliers de fichiers (limites des systèmes de fichiers).'
 category: 2. Load
 tags:
 - load
@@ -64,26 +76,21 @@ code_template: |
 
 illustration_mermaid: |
   flowchart LR
-      A[/"📂 Directory Path"/] --> B{"glob.glob()"}
-      C[/"⚙️ Extension (e.g. *.jpg)"/] --> B
-      B --> D{"os.path.splitext()"}
-      D -->|Extract file_id| E(["🖼️ Image Files"])
-      E --> F{"pd.DataFrame()"}
-      F --> G[/"📊 df (absolute paths)"/]
-      G --> H(["🎯 target_name = ''"])
-      G --> I(["⚙️ task_type = 'computer_vision'"])
-      G --> J(["ℹ️ meta (format, count)"])
-
-      style A fill:#fbbf24,stroke:#d97706,stroke-width:2px
-      style C fill:#fbbf24,stroke:#d97706,stroke-width:2px
+      A[/"📂 DIRECTORY_PATH"/] --> B{"glob & pd.DataFrame()"}
+      C[/"🎯 No target"/] --> D{"Set Contract Variables"}
+      B --> E(["📊 df (Absolute Paths)"])
+      E --> D
+      D --> F(["🎯 target_name = ''"])
+      D --> G(["⚙️ task_type = 'computer_vision'"])
+      D --> H(["ℹ️ meta (format, count)"])
+      style A fill:#fbbf24,stroke:#d97706,stroke-width:2px,color:#000
+      style C fill:#fbbf24,stroke:#d97706,stroke-width:2px,color:#000
       style B fill:#3b82f6,stroke:#2563eb,stroke-width:2px,color:#fff
       style D fill:#3b82f6,stroke:#2563eb,stroke-width:2px,color:#fff
-      style F fill:#3b82f6,stroke:#2563eb,stroke-width:2px,color:#fff
       style E fill:#10b981,stroke:#059669,stroke-width:2px,color:#fff
-      style G fill:#10b981,stroke:#059669,stroke-width:2px,color:#fff
+      style F fill:#8b5cf6,stroke:#7c3aed,stroke-width:2px,color:#fff
+      style G fill:#8b5cf6,stroke:#7c3aed,stroke-width:2px,color:#fff
       style H fill:#8b5cf6,stroke:#7c3aed,stroke-width:2px,color:#fff
-      style I fill:#8b5cf6,stroke:#7c3aed,stroke-width:2px,color:#fff
-      style J fill:#8b5cf6,stroke:#7c3aed,stroke-width:2px,color:#fff
 
 _metadata:
   bloc: 1

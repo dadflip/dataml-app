@@ -1,6 +1,18 @@
 id: "load_tfrecords"
 name: "Load: TensorFlow Records"
-description: "Charge un dataset stocké sous forme de fichiers .tfrecord (standard TensorFlow)."
+description: "Charge un dataset stocké sous forme de fichiers .tfrecord (format sérialisé standard de TensorFlow)."
+when_to_use: "Indispensable pour travailler efficacement avec l'écosystème TensorFlow, surtout sur des pipelines complexes, des données massives (images, audio) ou des TPU."
+use_cases:
+  - "Entraînement de réseaux de neurones profonds (Deep Learning) via TensorFlow/Keras."
+  - "Chargement de grands ensembles de données qui ne tiennent pas entièrement en mémoire (streaming)."
+  - "Utilisation de données fortement structurées (protobuffers) nécessitant une lecture rapide."
+pros:
+  - "Extrêmement rapide pour l'apprentissage grâce à l'intégration tf.data."
+  - "Stockage sérialisé compact et efficace (Protobuf)."
+  - "Permet le chargement en parallèle et le prefetching de manière native."
+cons:
+  - "Format difficile à inspecter ou à modifier manuellement sans outils spécifiques."
+  - "Nécessite du code de parsing (tf.io.parse_single_example) souvent complexe."
 category: "2. Load"
 tags: ["load", "tfrecords", "tensorflow", "bigdata"]
 code_template: |
@@ -63,22 +75,22 @@ output_variables:
   - task_type
   - meta
 illustration_mermaid: |
-  flowchart TD
-      A([DIRECTORY_PATH]) --> B{Path Exists?}
-      B -- Yes --> C[glob *.tfrecord]
-      B -- No --> D[Empty DataFrame]
-      C --> E{Files Found?}
-      E -- Yes --> F[tf.data.TFRecordDataset]
-      E -- No --> D
-      F --> G[Parse tf.train.Example]
-      G --> H[Create DataFrame limited to 1000]
-      H --> I([df, target_name, task_type, meta])
-      D --> I
-
-      style A fill:#3b82f6,color:#fff
-      style F fill:#10b981,color:#fff
-      style G fill:#10b981,color:#fff
-      style I fill:#f59e0b,color:#fff
+  flowchart LR
+      A[/"📄 DIRECTORY_PATH (*.tfrecord)"/] --> B{"tf.data.TFRecordDataset()"}
+      C[/"🎯 label_col"/] --> D{"Parse Example Check target"}
+      B --> E(["📊 df (DataFrame limited)"])
+      E --> D
+      D --> F(["🎯 target_name"])
+      D --> G(["⚙️ task_type"])
+      D --> H(["ℹ️ meta (num_files)"])
+      style A fill:#fbbf24,stroke:#d97706,stroke-width:2px,color:#000
+      style C fill:#fbbf24,stroke:#d97706,stroke-width:2px,color:#000
+      style B fill:#3b82f6,stroke:#2563eb,stroke-width:2px,color:#fff
+      style D fill:#3b82f6,stroke:#2563eb,stroke-width:2px,color:#fff
+      style E fill:#10b981,stroke:#059669,stroke-width:2px,color:#fff
+      style F fill:#8b5cf6,stroke:#7c3aed,stroke-width:2px,color:#fff
+      style G fill:#8b5cf6,stroke:#7c3aed,stroke-width:2px,color:#fff
+      style H fill:#8b5cf6,stroke:#7c3aed,stroke-width:2px,color:#fff
 
 _metadata:
   bloc: 1

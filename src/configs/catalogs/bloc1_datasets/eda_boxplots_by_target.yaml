@@ -1,6 +1,16 @@
 id: eda_boxplots_by_target
 name: 'EDA: Boxplots vs Target'
-description: Boîtes à moustaches des features numériques séparées par classe cible.
+description: "Affiche des boîtes à moustaches (boxplots) pour visualiser la distribution des variables numériques par classe cible."
+when_to_use: "Pour explorer la relation entre une variable catégorielle (cible) et des variables numériques."
+use_cases:
+  - "Identifier les variables les plus discriminantes pour une classification."
+  - "Détecter les valeurs aberrantes (outliers) pour chaque classe."
+pros:
+  - "Permet de visualiser la médiane, les quartiles et les valeurs extrêmes."
+  - "Idéal pour la sélection de caractéristiques (feature selection)."
+cons:
+  - "Ne montre pas la distribution sous-jacente aussi bien qu'un violin plot."
+  - "Peut devenir illisible s'il y a trop de classes."
 category: 3. Exploratory Data Analysis
 tags:
 - eda
@@ -32,23 +42,34 @@ code_template: |
       print("[EDA] Cible (target_name) introuvable ou non définie.")
 illustration_mermaid: |
     graph TD
-      A([DataFrame df & target_name]) --> B{Target valid & exists?}
-      B -- Yes --> C[Select numerical columns]
+      A[/DataFrame df/] --> B{Target valid & exists?}
+      A2[/target_name/] --> B
+      B -- Yes --> C{Select numerical columns}
       C --> D{Target in num_cols?}
-      D -- Yes --> E[Remove target from num_cols]
+      D -- Yes --> E{Remove target}
       D -- No --> F{Columns > 12?}
       E --> F
-      F -- Yes --> G[Truncate to top 12]
-      F -- No --> H[Keep columns]
-      G --> I[Create Subplots grid]
+      F -- Yes --> G{Truncate to 12}
+      F -- No --> H{Keep columns}
+      G --> I{Create Subplots}
       H --> I
-      I --> J{{Iterate & Plot sns.boxplot}}
+      I --> J{Iterate & Plot sns.boxplot}
       J --> K([Display Boxplots])
-      B -- No --> L[/Print Error/]
-      style A fill:#4F46E5,color:#fff
-      style B fill:#F59E0B,color:#fff
-      style I fill:#06B6D4,color:#fff
-      style J fill:#10B981,color:#fff
+      B -- No --> L([Print Error])
+
+      style A fill:#fbbf24,stroke:#d97706,stroke-width:2px,color:#000
+      style A2 fill:#fbbf24,stroke:#d97706,stroke-width:2px,color:#000
+      style B fill:#3b82f6,stroke:#2563eb,stroke-width:2px,color:#fff
+      style C fill:#3b82f6,stroke:#2563eb,stroke-width:2px,color:#fff
+      style D fill:#3b82f6,stroke:#2563eb,stroke-width:2px,color:#fff
+      style E fill:#3b82f6,stroke:#2563eb,stroke-width:2px,color:#fff
+      style F fill:#3b82f6,stroke:#2563eb,stroke-width:2px,color:#fff
+      style G fill:#3b82f6,stroke:#2563eb,stroke-width:2px,color:#fff
+      style H fill:#3b82f6,stroke:#2563eb,stroke-width:2px,color:#fff
+      style I fill:#3b82f6,stroke:#2563eb,stroke-width:2px,color:#fff
+      style J fill:#3b82f6,stroke:#2563eb,stroke-width:2px,color:#fff
+      style K fill:#10b981,stroke:#059669,stroke-width:2px,color:#fff
+      style L fill:#8b5cf6,stroke:#7c3aed,stroke-width:2px,color:#fff
 
 _metadata:
   bloc: 1

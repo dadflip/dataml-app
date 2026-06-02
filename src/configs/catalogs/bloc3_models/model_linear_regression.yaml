@@ -1,14 +1,24 @@
 id: "model_linear_regression"
 name: "Model: Linear Regression"
-description: "Régression linéaire classique par les moindres carrés ordinaires (OLS)."
+description: |
+  Régression linéaire classique par les moindres carrés ordinaires (OLS). Elle cherche la combinaison linéaire des variables explicatives qui minimise la somme des carrés des résidus (erreur quadratique moyenne).
 category: "Modèles Linéaires"
 tags: ["model", "regression", "tabular", "sklearn", "linear"]
 applies_to: ["Tabulaire"]
-when_to_use: "Modèle de référence basique pour prédire une valeur continue. Nécessite une relation linéaire entre X et y."
+when_to_use: |
+  À utiliser comme modèle de référence (baseline) pour prédire une valeur continue. Idéal lorsque la relation entre les variables explicatives et la cible est supposée linéaire.
+use_cases:
+  - "Évaluation de l'impact direct d'une dépense publicitaire sur les ventes."
+  - "Modélisation de la relation entre la surface d'un bien immobilier et son prix."
+  - "Prédiction de variables biométriques continues simples."
 pros:
-  - "Très rapide, parfaitement interprétable."
+  - "Extrêmement rapide à entraîner, même sur de grands jeux de données."
+  - "Modèle parfaitement interprétable grâce aux coefficients associés à chaque variable."
+  - "Fournit une excellente ligne de base (baseline) avant de tester des modèles plus complexes."
 cons:
-  - "Très sensible aux outliers et à la multicollinéarité."
+  - "Sensibilité extrême aux valeurs aberrantes (outliers) qui peuvent fausser complètement la droite de régression."
+  - "Souffre fortement de la multicollinéarité (variables explicatives corrélées entre elles)."
+  - "Incapable de capturer des relations non linéaires sans ingénierie de caractéristiques complexe."
 hyperparameters: {}
 code_template: |
   import pandas as pd
@@ -41,24 +51,75 @@ code_template: |
       task_type = "regression"
       meta = {}
 illustration_mermaid: |
-  graph TD
-    subgraph Data
-      X[Features X] --> Model
-      Y[Target Y] --> Model
-    end
-    subgraph OLS Regression
-      Model[Ordinary Least Squares] --> Loss[Minimize MSE Loss]
-      Loss --> Weights[Fit Coefficients W]
-      Weights --> Bias[Fit Intercept b]
-    end
-    subgraph Output
-      Weights --> Equation[y = XW + b]
-      Bias --> Equation
-      Equation --> Pred[Continuous Predictions]
-    end
-    style Model fill:#8b5cf6,stroke:#7c3aed,stroke-width:2px,color:#fff
-    style Loss fill:#f59e0b,stroke:#d97706,stroke-width:2px,color:#fff
+  flowchart LR
+    X[/ "Features X" /] --> Model{"Ordinary Least Squares"}
+    Y[/ "Target Y" /] --> Model
+    Model --> Loss{"Minimize MSE Loss"}
+    Loss --> Weights(["Coefficients W"])
+    Loss --> Bias(["Intercept b"])
+    Weights --> Equation{"y = XW + b"}
+    Bias --> Equation
+    Equation --> Pred(["Continuous Prediction"])
+    
+    style X fill:#fbbf24,stroke:#d97706,stroke-width:2px,color:#000
+    style Y fill:#fbbf24,stroke:#d97706,stroke-width:2px,color:#000
+    style Model fill:#3b82f6,stroke:#2563eb,stroke-width:2px,color:#fff
+    style Loss fill:#3b82f6,stroke:#2563eb,stroke-width:2px,color:#fff
+    style Weights fill:#10b981,stroke:#059669,stroke-width:2px,color:#fff
+    style Bias fill:#10b981,stroke:#059669,stroke-width:2px,color:#fff
+    style Equation fill:#3b82f6,stroke:#2563eb,stroke-width:2px,color:#fff
     style Pred fill:#10b981,stroke:#059669,stroke-width:2px,color:#fff
+
+math_theory: |
+  Ordinary Least Squares (OLS) Linear Regression finds the set of weights that minimizes the Residual Sum of Squares (RSS) between the true target and the predicted target. The prediction is a simple linear combination of the input features:
+  
+  $$ \textcolor{#3b82f6}{\hat{y}} = \textcolor{#10b981}{X} \textcolor{#ef4444}{w} $$
+  
+  The optimization problem can be solved in closed form or via gradient descent, minimizing the loss function:
+  
+  $$ \min_{w} \left( || \textcolor{#10b981}{X} \textcolor{#ef4444}{w} - \textcolor{#3b82f6}{y} ||_2^2 \right) $$
+  
+  Where $\textcolor{#10b981}{X}$ is the feature matrix, $\textcolor{#ef4444}{w}$ are the learned coefficients (including the intercept), and $\textcolor{#3b82f6}{y}$ is the ground truth continuous target.
+
+math_illustration_svg: |
+  <svg viewBox="0 0 500 250" xmlns="http://www.w3.org/2000/svg">
+    <rect width="500" height="250" fill="#ffffff" />
+    
+    <!-- Axes -->
+    <line x1="50" y1="200" x2="250" y2="200" stroke="#94a3b8" stroke-width="2" />
+    <line x1="50" y1="200" x2="50" y2="40" stroke="#94a3b8" stroke-width="2" />
+    <text x="150" y="225" font-family="monospace" font-size="14" fill="#10b981" font-weight="bold" text-anchor="middle">Feature X</text>
+    <text x="30" y="120" font-family="monospace" font-size="14" fill="#3b82f6" font-weight="bold" text-anchor="middle" transform="rotate(-90 30 120)">Target y</text>
+
+    <!-- Data points & Residuals -->
+    <g fill="#3b82f6">
+      <circle cx="80" cy="140" r="4" />
+      <circle cx="110" cy="110" r="4" />
+      <circle cx="150" cy="120" r="4" />
+      <circle cx="180" cy="80" r="4" />
+      <circle cx="210" cy="90" r="4" />
+    </g>
+
+    <!-- Regression Line -->
+    <line x1="60" y1="160" x2="230" y2="60" stroke="#ef4444" stroke-width="3" />
+    <text x="240" y="55" font-family="sans-serif" font-size="14" font-weight="bold" fill="#ef4444">w</text>
+
+    <!-- Residuals lines -->
+    <line x1="80" y1="140" x2="80" y2="148" stroke="#f59e0b" stroke-width="2" stroke-dasharray="2" />
+    <line x1="110" y1="110" x2="110" y2="130" stroke="#f59e0b" stroke-width="2" stroke-dasharray="2" />
+    <line x1="150" y1="120" x2="150" y2="107" stroke="#f59e0b" stroke-width="2" stroke-dasharray="2" />
+    <line x1="180" y1="80" x2="180" y2="89" stroke="#f59e0b" stroke-width="2" stroke-dasharray="2" />
+    <line x1="210" y1="90" x2="210" y2="72" stroke="#f59e0b" stroke-width="2" stroke-dasharray="2" />
+
+    <!-- Explanation Box -->
+    <rect x="300" y="80" width="160" height="90" rx="8" fill="#f8fafc" stroke="#e2e8f0" stroke-width="2" />
+    <text x="380" y="110" font-family="sans-serif" font-size="12" font-weight="bold" fill="#475569" text-anchor="middle">Minimize Residuals</text>
+    <line x1="320" y1="130" x2="340" y2="130" stroke="#f59e0b" stroke-width="2" stroke-dasharray="2" />
+    <text x="350" y="134" font-family="sans-serif" font-size="12" fill="#475569">Error (y - y_hat)</text>
+    
+    <line x1="320" y1="150" x2="340" y2="150" stroke="#ef4444" stroke-width="3" />
+    <text x="350" y="154" font-family="sans-serif" font-size="12" fill="#475569">Line (X*w)</text>
+  </svg>
 
 _metadata:
   bloc: 3

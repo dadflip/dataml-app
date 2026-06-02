@@ -1,13 +1,22 @@
 id: load_dir_text_corpus
-name: 'Load: Dossier de Textes (Corpus)'
-description: Parcourt un dossier et lit tous les fichiers textes bruts (.txt) dans
-  un DataFrame.
-category: 2. Load
+name: 'Load Text Directory'
+description: "Charge un dossier contenant de multiples fichiers texte (.txt) dans un DataFrame pandas. Chaque ligne du DataFrame représentera un fichier avec son nom et son contenu complet."
+when_to_use: "À utiliser pour charger un corpus de documents textuels non structurés en préparation pour du Traitement du Langage Naturel (NLP)."
+use_cases:
+  - "Chargement d'articles de presse pour analyse de sentiment."
+  - "Lecture de descriptions produits pour classification thématique."
+pros:
+  - "Très simple à utiliser pour un corpus plat de fichiers .txt."
+  - "Parfait pour initialiser une tâche NLP basique."
+cons:
+  - "Ne gère pas les sous-dossiers (corpus hiérarchique)."
+  - "Peut consommer beaucoup de mémoire si les fichiers texte sont très volumineux."
+category: 2. Data Loading
 tags:
 - load
-- directory
-- text
 - nlp
+- text
+- directory
 code_template: |
   import os
   import glob
@@ -52,24 +61,21 @@ code_template: |
 
 illustration_mermaid: |
   flowchart LR
-      A[/"📂 Directory Path (Texts)"/] --> B{"glob.glob(*.txt)"}
-      B --> C{"Read Content"}
-      C --> D(["📝 Text Data"])
-      D --> E{"pd.DataFrame()"}
-      E --> F(["📊 df (filename, text)"])
-      F --> G(["🎯 target_name = ''"])
-      F --> H(["⚙️ task_type = 'nlp'"])
-      F --> I(["ℹ️ meta (format, doc_count)"])
-
-      style A fill:#fbbf24,stroke:#d97706,stroke-width:2px
+      A[/"📄 Directory Path"/] --> B{"glob.glob() & Read"}
+      C[/"🎯 TARGET_COL"/] --> D{"Check TARGET_COL"}
+      B --> E(["📊 df (filename, text)"])
+      E --> D
+      D --> F(["🎯 target_name = ''"])
+      D --> G(["⚙️ task_type = 'nlp'"])
+      D --> H(["ℹ️ meta (format, doc_count)"])
+      style A fill:#fbbf24,stroke:#d97706,stroke-width:2px,color:#000
+      style C fill:#fbbf24,stroke:#d97706,stroke-width:2px,color:#000
       style B fill:#3b82f6,stroke:#2563eb,stroke-width:2px,color:#fff
-      style C fill:#3b82f6,stroke:#2563eb,stroke-width:2px,color:#fff
-      style E fill:#3b82f6,stroke:#2563eb,stroke-width:2px,color:#fff
-      style D fill:#10b981,stroke:#059669,stroke-width:2px,color:#fff
-      style F fill:#10b981,stroke:#059669,stroke-width:2px,color:#fff
+      style D fill:#3b82f6,stroke:#2563eb,stroke-width:2px,color:#fff
+      style E fill:#10b981,stroke:#059669,stroke-width:2px,color:#fff
+      style F fill:#8b5cf6,stroke:#7c3aed,stroke-width:2px,color:#fff
       style G fill:#8b5cf6,stroke:#7c3aed,stroke-width:2px,color:#fff
       style H fill:#8b5cf6,stroke:#7c3aed,stroke-width:2px,color:#fff
-      style I fill:#8b5cf6,stroke:#7c3aed,stroke-width:2px,color:#fff
 
 _metadata:
   bloc: 1

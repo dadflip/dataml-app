@@ -1,17 +1,69 @@
 id: "model_tabnet_classifier"
 name: "Model: TabNet Classifier (Google)"
-description: "Réseau de neurones basé sur l'attention spécifiquement conçu par Google pour les données tabulaires."
+description: |
+  Réseau de neurones basé sur un mécanisme d'attention séquentiel (Self-Attention) développé par Google Research, spécifiquement conçu pour surpasser les arbres de décision sur des données tabulaires.
 category: "Réseaux de Neurones"
 tags: ["model", "classification", "tabular", "pytorch", "tabnet", "deep-learning"]
 applies_to: ["Tabulaire"]
-when_to_use: "Quand vous voulez un réseau de neurones aussi interprétable qu'un arbre (feature importances explicites)."
+when_to_use: |
+  Lorsqu'on cherche les performances d'un modèle d'apprentissage profond tout en conservant une forte explicabilité (importance des variables au niveau global et local). Excellent sur les données tabulaires de grande dimension.
+use_cases:
+  - "Scoring de crédit et prédiction de risque (nécessite une forte explicabilité réglementaire)."
+  - "Recommandation de produits basée sur des profils utilisateurs tabulaires."
+  - "Prédiction d'attrition (churn) avec identification précise des facteurs décisionnels."
 pros:
-  - "Excellente précision."
-  - "Très interprétable (Self-Attention pour sélectionner les features)."
+  - "Interprétabilité native (masques d'attention) rivalisant avec les modèles à base d'arbres."
+  - "Sélection de variables ('feature selection') intégrée au sein même de l'architecture du réseau."
+  - "Capable d'apprentissage auto-supervisé (Self-Supervised Learning) sur des données non étiquetées."
 cons:
-  - "Nécessite le package 'pytorch-tabnet'."
+  - "Entraînement généralement plus lent et plus coûteux en ressources que XGBoost ou LightGBM."
+  - "Dépendance à une librairie externe spécifique (`pytorch-tabnet`)."
+  - "Sensible au réglage des hyperparamètres complexes (nombre de steps, relaxation, taille du batch)."
 hyperparameters:
   max_epochs: "Nombre max d'époques (ex: 50)."
+math_theory: |
+  TabNet utilise un processus de décision séquentiel où chaque étape sélectionne des variables à l'aide d'un masque :
+  $$ \textcolor{#3b82f6}{M[i]} = \text{sparsemax}(\textcolor{#fbbf24}{a_{i-1}}) $$
+  La décision finale est l'agrégation des sorties activées (ReLU) de chaque étape de décision :
+  $$ \textcolor{#10b981}{d_{out}} = \sum_{i=1}^{N_{steps}} \text{ReLU}(\textcolor{#8b5cf6}{W_i} \cdot \textcolor{#ef4444}{x} \odot \textcolor{#3b82f6}{M[i]}) $$
+  L'importance de chaque feature s'obtient directement via l'agrégation des masques $\textcolor{#3b82f6}{M[i]}$.
+math_illustration_svg: |
+  <svg viewBox="0 0 800 400" xmlns="http://www.w3.org/2000/svg">
+    <rect width="800" height="400" fill="#f8fafc" rx="10"/>
+    <rect x="50" y="170" width="80" height="60" rx="8" fill="#ef4444" opacity="0.1" stroke="#ef4444" stroke-width="2"/>
+    <text x="90" y="205" font-family="sans-serif" font-size="20" font-weight="bold" fill="#ef4444" text-anchor="middle">Input x</text>
+    <path d="M 130 200 L 180 150" stroke="#94a3b8" stroke-width="2" fill="none" marker-end="url(#arrow)"/>
+    <path d="M 130 200 L 180 250" stroke="#94a3b8" stroke-width="2" fill="none" marker-end="url(#arrow)"/>
+    <rect x="200" y="70" width="160" height="120" rx="8" fill="#ffffff" stroke="#cbd5e1" stroke-width="2"/>
+    <text x="280" y="100" font-family="sans-serif" font-size="16" font-weight="bold" fill="#334155" text-anchor="middle">Decision Step 1</text>
+    <rect x="220" y="120" width="120" height="40" rx="4" fill="#fbbf24" opacity="0.2" stroke="#fbbf24" stroke-width="1"/>
+    <text x="280" y="145" font-family="sans-serif" font-size="14" fill="#d97706" text-anchor="middle">Attention a_0</text>
+    <rect x="220" y="170" width="120" height="40" rx="4" fill="#3b82f6" opacity="0.2" stroke="#3b82f6" stroke-width="1"/>
+    <text x="280" y="195" font-family="sans-serif" font-size="14" fill="#2563eb" text-anchor="middle">Mask M[1]</text>
+    <rect x="420" y="210" width="160" height="120" rx="8" fill="#ffffff" stroke="#cbd5e1" stroke-width="2"/>
+    <text x="500" y="240" font-family="sans-serif" font-size="16" font-weight="bold" fill="#334155" text-anchor="middle">Decision Step 2</text>
+    <rect x="440" y="260" width="120" height="40" rx="4" fill="#fbbf24" opacity="0.2" stroke="#fbbf24" stroke-width="1"/>
+    <text x="500" y="285" font-family="sans-serif" font-size="14" fill="#d97706" text-anchor="middle">Attention a_1</text>
+    <rect x="440" y="310" width="120" height="40" rx="4" fill="#3b82f6" opacity="0.2" stroke="#3b82f6" stroke-width="1"/>
+    <text x="500" y="335" font-family="sans-serif" font-size="14" fill="#2563eb" text-anchor="middle">Mask M[2]</text>
+    <path d="M 360 170 C 390 170 390 230 420 230" stroke="#fbbf24" stroke-width="2" fill="none" stroke-dasharray="4" marker-end="url(#arrow)"/>
+    <path d="M 280 210 L 280 260" stroke="#94a3b8" stroke-width="2" fill="none" marker-end="url(#arrow)"/>
+    <circle cx="280" cy="280" r="20" fill="#8b5cf6" opacity="0.1" stroke="#8b5cf6" stroke-width="2"/>
+    <text x="280" y="285" font-family="sans-serif" font-size="14" font-weight="bold" fill="#8b5cf6" text-anchor="middle">W_1</text>
+    <path d="M 500 190 L 500 140" stroke="#94a3b8" stroke-width="2" fill="none" marker-end="url(#arrow)"/>
+    <circle cx="500" cy="120" r="20" fill="#8b5cf6" opacity="0.1" stroke="#8b5cf6" stroke-width="2"/>
+    <text x="500" y="125" font-family="sans-serif" font-size="14" font-weight="bold" fill="#8b5cf6" text-anchor="middle">W_2</text>
+    <rect x="650" y="160" width="100" height="80" rx="8" fill="#10b981" opacity="0.1" stroke="#10b981" stroke-width="2"/>
+    <text x="700" y="195" font-family="sans-serif" font-size="18" font-weight="bold" fill="#10b981" text-anchor="middle">Output</text>
+    <text x="700" y="220" font-family="sans-serif" font-size="16" font-weight="bold" fill="#10b981" text-anchor="middle">d_out</text>
+    <path d="M 300 280 C 450 280 500 200 650 200" stroke="#10b981" stroke-width="2" fill="none" marker-end="url(#arrow)"/>
+    <path d="M 520 120 C 600 120 600 190 650 190" stroke="#10b981" stroke-width="2" fill="none" marker-end="url(#arrow)"/>
+    <defs>
+      <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto">
+        <path d="M 0 0 L 10 5 L 0 10 z" fill="#94a3b8"/>
+      </marker>
+    </defs>
+  </svg>
 code_template: |
   import pandas as pd
   import numpy as np
@@ -65,12 +117,20 @@ code_template: |
       training_history = {"status": "success", "best_cost": float(model.best_cost)}
       task_type = "classification"
 illustration_mermaid: |
-    graph LR
-      Data([Features]) --> Model((Machine Learning))
-      Model --> Pred([Predictions])
-      style Model fill:#8b5cf6,stroke:#7c3aed,stroke-width:2px,color:#fff
-      style Data fill:#f8fafc,stroke:#94a3b8,stroke-width:1px
-      style Pred fill:#f8fafc,stroke:#94a3b8,stroke-width:1px
+  flowchart LR
+    Data(["Données Tabulaires"])
+    Params[/"Hyperparamètres (epochs, steps)"/]
+    Model{"TabNet Classifier (PyTorch)"}
+    Pred(["Probabilités / Classes"])
+    
+    Data --> Model
+    Params --> Model
+    Model --> Pred
+
+    style Data fill:#10b981,stroke:#059669,stroke-width:2px,color:#fff
+    style Params fill:#fbbf24,stroke:#d97706,stroke-width:2px,color:#000
+    style Model fill:#3b82f6,stroke:#2563eb,stroke-width:2px,color:#fff
+    style Pred fill:#10b981,stroke:#059669,stroke-width:2px,color:#fff
 
 _metadata:
   bloc: 3

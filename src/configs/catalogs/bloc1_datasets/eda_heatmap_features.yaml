@@ -1,7 +1,16 @@
 id: eda_heatmap_features
 name: 'EDA: Top Corrélations Target'
-description: Affiche une heatmap ciblée sur les variables les plus corrélées à la
-  target continue.
+description: Affiche une heatmap ciblée sur les variables les plus corrélées à la variable cible continue, permettant d'identifier rapidement les prédicteurs potentiels les plus forts.
+when_to_use: "Pour des tâches de régression, lorsqu'il est nécessaire de filtrer visuellement les variables numériques ayant la plus forte relation linéaire avec la cible."
+use_cases:
+  - "Sélection de caractéristiques (feature selection) par corrélation de Pearson."
+  - "Détection précoce de multicolinéarité entre les variables explicatives sélectionnées."
+pros:
+  - "Met en évidence de manière très lisible le top K des variables les plus importantes."
+  - "Évite l'encombrement visuel d'une heatmap classique contenant toutes les variables."
+cons:
+  - "Ne capture que les relations linéaires."
+  - "Ne fonctionne pas pour les cibles catégorielles (classification) ou les variables non numériques."
 category: 3. Exploratory Data Analysis
 tags:
 - eda
@@ -35,19 +44,24 @@ code_template: |
       print("[EDA] Requiert une cible (target_name) numérique.")
 illustration_mermaid: |
     graph TD
-      A([DataFrame df & target_name]) --> B{Numeric Target Exists?}
-      B -- Yes --> C[Select numerical columns]
-      C --> D[Compute Correlation Matrix]
-      D --> E[Find TOP_K correlated features<br>with target]
-      E --> F[Compute sub-correlation matrix]
-      F --> G{{Plot sns.heatmap}}
-      G --> H([Display Heatmap])
-      B -- No --> I[/Print Error/]
-      style A fill:#4F46E5,color:#fff
-      style B fill:#F59E0B,color:#fff
-      style D fill:#06B6D4,color:#fff
-      style E fill:#06B6D4,color:#fff
-      style G fill:#10B981,color:#fff
+      A[/DataFrame df/] --> B{Check numeric target}
+      A2[/target_name/] --> B
+      B --> C{Select numerical columns}
+      C --> D{Compute Correlation Matrix}
+      A3[/TOP_K/] --> E
+      D --> E{Find TOP_K correlated features}
+      E --> F{Compute sub-correlation matrix}
+      F --> G{Plot sns.heatmap}
+      G --> H([Display Heatmap fig])
+      
+      classDef input fill:#fbbf24,stroke:#d97706,stroke-width:2px,color:#000;
+      classDef process fill:#3b82f6,stroke:#2563eb,stroke-width:2px,color:#fff;
+      classDef outputPrimary fill:#10b981,stroke:#059669,stroke-width:2px,color:#fff;
+      classDef outputSecondary fill:#8b5cf6,stroke:#7c3aed,stroke-width:2px,color:#fff;
+      
+      class A,A2,A3 input;
+      class B,C,D,E,F,G process;
+      class H outputPrimary;
 
 _metadata:
   bloc: 1

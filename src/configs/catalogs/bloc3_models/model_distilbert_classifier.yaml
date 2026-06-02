@@ -1,14 +1,20 @@
 id: "model_distilbert_classifier"
 name: "Model: DistilBERT Classifier (Fine-Tuning)"
-description: "Version allégée de BERT. 40% plus petit, 60% plus rapide, conserve 97% de la performance."
+description: "Modèle de traitement du langage naturel (NLP) basé sur une architecture Transformer distillée. Il offre une version optimisée de BERT, 40% plus petite et 60% plus rapide, tout en conservant 97% de ses capacités de compréhension sémantique."
 category: "Modèles NLP (Entraînés)"
 tags: ["model", "nlp", "classification", "transformers", "huggingface", "distilbert", "deep-learning"]
 applies_to: ["Texte"]
-when_to_use: "Quand vous voulez les performances de BERT mais que l'entraînement/inférence est trop lent."
+when_to_use: "Privilégier DistilBERT pour des tâches de classification de texte nécessitant une compréhension sémantique profonde (contexte, nuances) avec des contraintes de ressources ou de temps d'inférence modérées."
+use_cases:
+  - "Analyse de sentiment poussée sur des avis clients ou des posts sur les réseaux sociaux."
+  - "Catégorisation automatique et routage de tickets de support client."
+  - "Détection d'intentions utilisateur (NLU) complexes."
 pros:
-  - "Bon compromis vitesse/précision."
+  - "Excellent compromis entre vitesse d'exécution, empreinte mémoire et performance prédictive."
+  - "Compréhension fine et bidirectionnelle du contexte grâce à l'architecture Transformer."
 cons:
-  - "Toujours très lourd comparé au TF-IDF."
+  - "Temps d'entraînement (fine-tuning) et d'inférence toujours significativement supérieurs aux méthodes traditionnelles (ex: TF-IDF + SVM)."
+  - "Nécessite préférentiellement une accélération matérielle (GPU) pour être entraîné dans des délais raisonnables."
 hyperparameters:
   epochs: "Nombre d'époques (ex: 3)."
 code_template: |
@@ -100,19 +106,69 @@ code_template: |
       training_history = {"status": "success", "loss": final_loss}
 
 illustration_mermaid: |
-  graph TD
-    subgraph DistilBERT Pipeline
-      In([Text Input]) --> Tokenizer[DistilBert Tokenizer]
-      Tokenizer --> Tokens[Input IDs & Attn Mask]
-      Tokens --> DistilBERT[DistilBERT Base Layers]
-      DistilBERT --> HiddenState[CLS Hidden State]
-      HiddenState --> Classifier[Linear Classification Head]
-      Classifier --> Softmax[Softmax]
-      Softmax --> Out([Predicted Class & Proba])
-    end
-    style In fill:#f8fafc,stroke:#94a3b8,stroke-width:1px
+  flowchart LR
+    In(["Text Input"]) --> Tokenizer{"DistilBert Tokenizer"}
+    Tokenizer --> Tokens(["Input IDs & Attn Mask"])
+    Tokens --> DistilBERT{"DistilBERT Base"}
+    DistilBERT --> HiddenState(["CLS Hidden State"])
+    HiddenState --> Classifier{"Linear Head"}
+    Classifier --> Out(["Predicted Class & Probas"])
+
+    style In fill:#10b981,stroke:#059669,stroke-width:2px,color:#fff
+    style Tokenizer fill:#3b82f6,stroke:#2563eb,stroke-width:2px,color:#fff
+    style Tokens fill:#10b981,stroke:#059669,stroke-width:2px,color:#fff
+    style DistilBERT fill:#3b82f6,stroke:#2563eb,stroke-width:2px,color:#fff
+    style HiddenState fill:#10b981,stroke:#059669,stroke-width:2px,color:#fff
+    style Classifier fill:#3b82f6,stroke:#2563eb,stroke-width:2px,color:#fff
     style Out fill:#10b981,stroke:#059669,stroke-width:2px,color:#fff
-    style DistilBERT fill:#8b5cf6,stroke:#7c3aed,stroke-width:2px,color:#fff
+
+math_theory: |
+  DistilBERT processes text to output a sequence of hidden states. For sequence classification, the hidden state of the `[CLS]` token, denoted as $\textcolor{#ef4444}{h_{\text{CLS}}}$, is extracted as the aggregate representation of the input $\textcolor{#10b981}{X}$.
+  
+  The predicted probability for a class $\textcolor{#3b82f6}{y}$ is given by applying a linear transformation followed by a softmax function:
+  
+  $$ P(\textcolor{#3b82f6}{y} \mid \textcolor{#10b981}{X}) = \text{Softmax}(\textcolor{#fbbf24}{W} \cdot \textcolor{#ef4444}{h_{\text{CLS}}} + \textcolor{#8b5cf6}{b}) $$
+  
+  where:
+  *   $\textcolor{#10b981}{X}$ is the input token sequence.
+  *   $\textcolor{#ef4444}{h_{\text{CLS}}}$ is the contextualized vector for the `[CLS]` token.
+  *   $\textcolor{#fbbf24}{W}$ is the weight matrix of the classification head.
+  *   $\textcolor{#8b5cf6}{b}$ is the bias vector.
+  *   $\textcolor{#3b82f6}{y}$ is the target class.
+
+math_illustration_svg: |
+  <svg viewBox="0 0 500 250" xmlns="http://www.w3.org/2000/svg">
+    <defs>
+      <marker id="arrow" viewBox="0 0 10 10" refX="10" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+        <path d="M 0 0 L 10 5 L 0 10 z" fill="#d1d5db" />
+      </marker>
+    </defs>
+    
+    <rect x="10" y="100" width="40" height="40" rx="5" fill="#f0fdf4" stroke="#10b981" stroke-width="2"/>
+    <text x="30" y="125" text-anchor="middle" font-family="sans-serif" font-size="16" font-weight="bold" fill="#10b981">X</text>
+    
+    <line x1="50" y1="120" x2="80" y2="120" stroke="#d1d5db" stroke-width="2" marker-end="url(#arrow)"/>
+    
+    <rect x="80" y="90" width="90" height="60" rx="5" fill="#f3f4f6" stroke="#4b5563" stroke-width="2"/>
+    <text x="125" y="125" text-anchor="middle" font-family="sans-serif" font-size="14" font-weight="bold" fill="#4b5563">DistilBERT</text>
+    
+    <line x1="170" y1="120" x2="200" y2="120" stroke="#d1d5db" stroke-width="2" marker-end="url(#arrow)"/>
+    
+    <rect x="200" y="100" width="50" height="40" rx="5" fill="#fef2f2" stroke="#ef4444" stroke-width="2"/>
+    <text x="225" y="125" text-anchor="middle" font-family="sans-serif" font-size="14" font-weight="bold" fill="#ef4444">h_CLS</text>
+    
+    <line x1="250" y1="120" x2="280" y2="120" stroke="#d1d5db" stroke-width="2" marker-end="url(#arrow)"/>
+    
+    <rect x="280" y="70" width="90" height="100" rx="5" fill="#fffbeb" stroke="#fbbf24" stroke-width="2"/>
+    <text x="325" y="100" text-anchor="middle" font-family="sans-serif" font-size="12" font-weight="bold" fill="#fbbf24">Linear (W)</text>
+    <text x="325" y="120" text-anchor="middle" font-family="sans-serif" font-size="12" font-weight="bold" fill="#8b5cf6">+ Bias (b)</text>
+    <text x="325" y="145" text-anchor="middle" font-family="sans-serif" font-size="12" font-weight="bold" fill="#4b5563">Softmax</text>
+    
+    <line x1="370" y1="120" x2="400" y2="120" stroke="#d1d5db" stroke-width="2" marker-end="url(#arrow)"/>
+    
+    <rect x="400" y="100" width="50" height="40" rx="5" fill="#eff6ff" stroke="#3b82f6" stroke-width="2"/>
+    <text x="425" y="125" text-anchor="middle" font-family="sans-serif" font-size="16" font-weight="bold" fill="#3b82f6">P(y)</text>
+  </svg>
 
 _metadata:
   bloc: 3

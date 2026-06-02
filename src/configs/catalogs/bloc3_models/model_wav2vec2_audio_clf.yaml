@@ -1,14 +1,22 @@
 id: "model_wav2vec2_audio_clf"
 name: "Model: Wav2Vec2 Audio Classifier"
-description: "Classification audio Zero-Shot ou Feature Extraction via le modèle de Facebook (HuggingFace)."
+description: |
+  Modèle de traitement audio développé par Facebook/Meta, capable d'effectuer une classification Zero-Shot ou une extraction de caractéristiques (Feature Extraction) via l'API HuggingFace.
 category: "Multimédia & Audio"
 tags: ["model", "audio", "classification", "transformers", "huggingface", "wav2vec2"]
 applies_to: ["Audio"]
-when_to_use: "Pour classifier des émotions vocales, des commandes vocales ou extraire des features d'un signal audio."
+when_to_use: |
+  Idéal pour classifier des émotions vocales, interpréter des commandes vocales ou extraire des embeddings profonds d'un signal audio brut.
+use_cases:
+  - "Détection de l'émotion dans les appels au service client."
+  - "Classification de commandes vocales pour la domotique."
+  - "Identification du locuteur ou de la langue."
 pros:
-  - "Très performant sur la voix humaine."
+  - "Extrêmement performant sur les tâches liées à la voix humaine (Speech Recognition)."
+  - "Approche Zero-Shot utilisable directement via pipeline HuggingFace."
 cons:
-  - "Entrées très lourdes (tableaux de fréquences à 16kHz)."
+  - "Traitement gourmand : les tableaux de fréquences (ex. 16kHz) génèrent des entrées très lourdes."
+  - "Sensible au bruit de fond excessif et à la qualité d'échantillonnage."
 hyperparameters: {}
 code_template: |
   import pandas as pd
@@ -51,19 +59,97 @@ code_template: |
           
       training_history = {"status": "success"}
       task_type = "classification"
+math_theory: |
+  Wav2Vec 2.0 learns powerful representations from raw audio in a self-supervised manner, which are then fine-tuned for classification.
+  
+  1. **Feature Encoding**: A multi-layer CNN maps the raw audio sequence $\textcolor{#10b981}{X}$ to latent speech representations $\textcolor{#fbbf24}{Z} = \{z_1, z_2, \dots, z_T\}$.
+  
+  2. **Contextualization**: A Transformer network processes $\textcolor{#fbbf24}{Z}$ (with masking applied) to build contextual representations $\textcolor{#3b82f6}{C} = \{c_1, c_2, \dots, c_T\}$.
+  
+  3. **Contrastive Loss (Pre-training)**: For masked time steps $t$, the model must identify the true quantized latent $\textcolor{#8b5cf6}{q_t}$ from a set of distractors $\textcolor{#ef4444}{K}$, utilizing cosine similarity $\text{sim}$:
+  $$ \mathcal{L}_m = -\log \frac{\exp(\text{sim}(\textcolor{#3b82f6}{c_t}, \textcolor{#8b5cf6}{q_t}) / \kappa)}{\sum_{\tilde{q} \in \textcolor{#ef4444}{K}} \exp(\text{sim}(\textcolor{#3b82f6}{c_t}, \tilde{q}) / \kappa)} $$
+  
+  4. **Fine-Tuning (Classification)**: The representations are pooled (e.g., average pooling) to $\textcolor{#3b82f6}{\bar{c}}$, and a linear classifier assigns the probabilities:
+  $$ \textcolor{#10b981}{\hat{y}} = \text{Softmax}(W \cdot \textcolor{#3b82f6}{\bar{c}} + b) $$
+math_illustration_svg: |
+  <svg viewBox="0 0 800 400" xmlns="http://www.w3.org/2000/svg">
+    <!-- Raw Audio -->
+    <path d="M40 250 Q50 200 60 250 T80 250 T100 250 T120 230 T140 270 T160 250" fill="none" stroke="#10b981" stroke-width="3"/>
+    <text x="100" y="290" font-family="sans-serif" font-size="14" font-weight="bold" fill="#10b981" text-anchor="middle">Raw Audio X</text>
+    
+    <!-- CNN Feature Encoder -->
+    <rect x="190" y="220" width="80" height="60" fill="#fef3c7" stroke="#fbbf24" stroke-width="3" rx="8"/>
+    <text x="230" y="255" font-family="sans-serif" font-size="14" font-weight="bold" fill="#fbbf24" text-anchor="middle">CNN Enc</text>
+    <path d="M165 250 L185 250" stroke="#94a3b8" stroke-width="2" marker-end="url(#arrow)"/>
+    
+    <!-- Latent Z -->
+    <circle cx="310" cy="250" r="15" fill="#fef3c7" stroke="#fbbf24" stroke-width="2"/>
+    <circle cx="350" cy="250" r="15" fill="#fef3c7" stroke="#fbbf24" stroke-width="2"/>
+    <text x="330" y="290" font-family="sans-serif" font-size="14" font-weight="bold" fill="#fbbf24" text-anchor="middle">Latents Z</text>
+    <path d="M275 250 L290 250" stroke="#94a3b8" stroke-width="2" marker-end="url(#arrow)"/>
+
+    <!-- Masking -->
+    <line x1="335" y1="235" x2="365" y2="265" stroke="#ef4444" stroke-width="3"/>
+    <line x1="335" y1="265" x2="365" y2="235" stroke="#ef4444" stroke-width="3"/>
+
+    <!-- Transformer Context -->
+    <rect x="420" y="210" width="100" height="80" fill="#eff6ff" stroke="#3b82f6" stroke-width="3" rx="8"/>
+    <text x="470" y="245" font-family="sans-serif" font-size="14" font-weight="bold" fill="#3b82f6" text-anchor="middle">Transformer</text>
+    <text x="470" y="265" font-family="sans-serif" font-size="12" fill="#3b82f6" text-anchor="middle">Context</text>
+    <path d="M370 250 L415 250" stroke="#94a3b8" stroke-width="2" marker-end="url(#arrow)"/>
+
+    <!-- Context representations C -->
+    <circle cx="560" cy="250" r="15" fill="#eff6ff" stroke="#3b82f6" stroke-width="2"/>
+    <text x="560" y="290" font-family="sans-serif" font-size="14" font-weight="bold" fill="#3b82f6" text-anchor="middle">Context C</text>
+    <path d="M525 250 L540 250" stroke="#94a3b8" stroke-width="2" marker-end="url(#arrow)"/>
+
+    <!-- Quantization Module -->
+    <rect x="420" y="100" width="100" height="60" fill="#f3e8ff" stroke="#8b5cf6" stroke-width="3" rx="8"/>
+    <text x="470" y="130" font-family="sans-serif" font-size="14" font-weight="bold" fill="#8b5cf6" text-anchor="middle">Quantizer</text>
+    <path d="M330 230 Q330 130 415 130" stroke="#fbbf24" stroke-width="2" marker-end="url(#arrow_yellow)" fill="none" stroke-dasharray="4,4"/>
+    
+    <!-- Quantized q -->
+    <circle cx="560" cy="130" r="15" fill="#f3e8ff" stroke="#8b5cf6" stroke-width="2"/>
+    <text x="560" y="170" font-family="sans-serif" font-size="14" font-weight="bold" fill="#8b5cf6" text-anchor="middle">Quant q_t</text>
+    <path d="M525 130 L540 130" stroke="#94a3b8" stroke-width="2" marker-end="url(#arrow)"/>
+
+    <!-- Contrastive Loss -->
+    <path d="M580 250 Q620 250 620 210 Q620 130 580 130" fill="none" stroke="#ef4444" stroke-width="3" stroke-dasharray="5,5" marker-end="url(#arrow_red)"/>
+    <text x="690" y="195" font-family="sans-serif" font-size="16" font-weight="bold" fill="#ef4444" text-anchor="middle">Contrastive L_m</text>
+
+    <!-- Classifier Head -->
+    <rect x="620" y="320" width="80" height="50" fill="#d1fae5" stroke="#10b981" stroke-width="3" rx="8"/>
+    <text x="660" y="350" font-family="sans-serif" font-size="14" font-weight="bold" fill="#10b981" text-anchor="middle">Classifier</text>
+    <path d="M560 270 L560 345 L615 345" stroke="#3b82f6" stroke-width="3" marker-end="url(#arrow_blue)" fill="none"/>
+    <path d="M705 345 L740 345" stroke="#10b981" stroke-width="3" marker-end="url(#arrow_green)"/>
+    <text x="760" y="350" font-family="sans-serif" font-size="16" font-weight="bold" fill="#10b981" text-anchor="middle">ŷ</text>
+
+    <defs>
+      <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto"><path d="M0 0 L10 5 L0 10 z" fill="#94a3b8"/></marker>
+      <marker id="arrow_yellow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto"><path d="M0 0 L10 5 L0 10 z" fill="#fbbf24"/></marker>
+      <marker id="arrow_red" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto"><path d="M0 0 L10 5 L0 10 z" fill="#ef4444"/></marker>
+      <marker id="arrow_blue" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto"><path d="M0 0 L10 5 L0 10 z" fill="#3b82f6"/></marker>
+      <marker id="arrow_green" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto"><path d="M0 0 L10 5 L0 10 z" fill="#10b981"/></marker>
+    </defs>
+  </svg>
 illustration_mermaid: |
-    graph TD
-      In([Raw Audio Signal]) --> CNN(CNN Feature Extractor)
-      CNN --> Trans(Transformer Encoder Context)
-      Trans --> Pool(Mean Pooling)
-      Pool --> FC(Classification Head)
-      FC --> Out([Audio Class Label])
-      
-      style In fill:#f8fafc,stroke:#94a3b8,stroke-width:2px
-      style CNN fill:#38bdf8,stroke:#0284c7,stroke-width:2px,color:#fff
-      style Trans fill:#8b5cf6,stroke:#7c3aed,stroke-width:2px,color:#fff
-      style FC fill:#f59e0b,stroke:#d97706,stroke-width:2px,color:#fff
-      style Out fill:#10b981,stroke:#059669,stroke-width:2px,color:#fff
+  flowchart LR
+    In[/"Configuration :<br/>Zéro-Shot"/] --> |Init| Classifier{"Pipeline HF<br/>Wav2Vec2"}
+    Audio(["Signal Audio Brut<br/>(16kHz)"]) --> CNN{"Extraction de Features<br/>(CNN)"}
+    CNN --> Trans{"Contexte Encodeur<br/>(Transformer)"}
+    Trans --> Pool{"Mean Pooling"}
+    Pool --> FC{"Tête de Classification"}
+    FC --> Classifier
+    Classifier --> Out(["Labels Audio &<br/>Probabilités"])
+    
+    style In fill:#fbbf24,stroke:#d97706,stroke-width:2px,color:#000
+    style Audio fill:#10b981,stroke:#059669,stroke-width:2px,color:#fff
+    style CNN fill:#3b82f6,stroke:#2563eb,stroke-width:2px,color:#fff
+    style Trans fill:#3b82f6,stroke:#2563eb,stroke-width:2px,color:#fff
+    style Pool fill:#3b82f6,stroke:#2563eb,stroke-width:2px,color:#fff
+    style FC fill:#3b82f6,stroke:#2563eb,stroke-width:2px,color:#fff
+    style Classifier fill:#3b82f6,stroke:#2563eb,stroke-width:2px,color:#fff
+    style Out fill:#10b981,stroke:#059669,stroke-width:2px,color:#fff
 
 _metadata:
   bloc: 3

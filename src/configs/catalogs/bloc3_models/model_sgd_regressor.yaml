@@ -1,14 +1,22 @@
 id: "model_sgd_regressor"
 name: "Model: SGD Regressor"
-description: "Régression Linéaire résolue par descente de gradient stochastique."
+description: "Régression linéaire où l'optimisation est effectuée par descente de gradient stochastique (SGD). Solution hautement évolutive pour des données tabulaires massives."
 category: "Modèles Linéaires"
 tags: ["model", "regression", "tabular", "sklearn", "linear", "online-learning"]
 applies_to: ["Tabulaire"]
-when_to_use: "Jeux de données massifs (> 100k lignes) où LinearRegression crashe la RAM."
+when_to_use: "Idéal lorsque le jeu de données est trop vaste pour tenir en mémoire RAM ou quand une approche d'apprentissage continu (online learning) est requise."
+use_cases:
+  - "Prédiction de revenus continus sur des millions de transactions e-commerce."
+  - "Évaluation immobilière à très grande échelle intégrant des flux de données en continu."
+  - "Modélisation de performances sur des capteurs IoT générant d'immenses historiques."
 pros:
-  - "Peut s'entraîner en batchs (partial_fit)."
+  - "Scalabilité extrême (out-of-core learning via `partial_fit`)."
+  - "Flexibilité des fonctions de perte (Huber pour résister aux outliers, Squared Error pour standard)."
+  - "Calcul très rapide comparé aux méthodes de résolution exactes."
 cons:
-  - "Très sensible au scaling."
+  - "Extrêmement sensible à l'échelle des données, exigeant une standardisation stricte."
+  - "Nécessite souvent le réglage fin du taux d'apprentissage (learning rate) pour converger."
+  - "Moins stable que la régression classique (Outils MCO) sur de petits jeux de données."
 hyperparameters:
   loss: "Fonction de perte ('squared_error', 'huber', 'epsilon_insensitive')."
   penalty: "Régularisation ('l2', 'l1', 'elasticnet')."
@@ -19,13 +27,85 @@ code_template: |
 
   # [PARAM: LOSS | string]
   LOSS = "squared_error"
+math_theory: |
+  Le régresseur SGD optimise les coefficients d'un modèle linéaire en mettant à jour les poids pour chaque observation (ou mini-lot), ce qui le rend idéal pour l'apprentissage en ligne.
+
+  La mise à jour avec la perte Squared Error ($L_{SE}$) est :
+  $$ \textcolor{#ef4444}{L}_{SE}(\textcolor{#10b981}{y_t}, \hat{y}_t) = \frac{1}{2} (\textcolor{#10b981}{y_t} - \textcolor{#3b82f6}{w}_t^T \textcolor{#10b981}{x_t})^2 $$
+  $$ \textcolor{#3b82f6}{w}_{t+1} = \textcolor{#3b82f6}{w}_t + \textcolor{#8b5cf6}{\eta_t} \left( (\textcolor{#10b981}{y_t} - \textcolor{#3b82f6}{w}_t^T \textcolor{#10b981}{x_t})\textcolor{#10b981}{x_t} - \frac{\textcolor{#fbbf24}{\alpha}}{N} \nabla R(\textcolor{#3b82f6}{w}_t) \right) $$
+
+  - $\textcolor{#3b82f6}{w}$ : Poids du modèle de régression
+  - $\textcolor{#8b5cf6}{\eta_t}$ : Taux d'apprentissage à l'étape $t$
+  - $\textcolor{#ef4444}{L}_{SE}$ : Erreur quadratique pour l'observation courante
+  - $(\textcolor{#10b981}{x_t}, \textcolor{#10b981}{y_t})$ : Instance stochastique
+  - $\textcolor{#fbbf24}{\alpha}$ : Paramètre de régularisation
+math_illustration_svg: |
+  <svg viewBox="0 0 500 250" xmlns="http://www.w3.org/2000/svg">
+    <!-- Axes -->
+    <line x1="50" y1="220" x2="450" y2="220" stroke="#888" stroke-width="2"/>
+    <line x1="50" y1="220" x2="50" y2="30" stroke="#888" stroke-width="2"/>
+    <text x="460" y="225" font-family="sans-serif" font-size="12" fill="#888">x (Feature)</text>
+    <text x="10" y="20" font-family="sans-serif" font-size="12" fill="#888">y (Target)</text>
+
+    <!-- Data Points -->
+    <g fill="#10b981" opacity="0.6">
+      <circle cx="100" cy="180" r="4"/>
+      <circle cx="150" cy="140" r="4"/>
+      <circle cx="180" cy="160" r="4"/>
+      <circle cx="230" cy="110" r="4"/>
+      <circle cx="280" cy="130" r="4"/>
+      <circle cx="330" cy="80" r="4"/>
+      <circle cx="380" cy="90" r="4"/>
+      <circle cx="420" cy="50" r="4"/>
+    </g>
+
+    <!-- Initial Line w_0 -->
+    <line x1="50" y1="180" x2="450" y2="150" stroke="#3b82f6" stroke-width="2" stroke-dasharray="5" opacity="0.4"/>
+    <text x="380" y="145" font-family="sans-serif" font-size="12" fill="#3b82f6" opacity="0.6">w_0</text>
+
+    <!-- Intermediate Line w_t -->
+    <line x1="50" y1="195" x2="450" y2="100" stroke="#3b82f6" stroke-width="2" stroke-dasharray="5" opacity="0.7"/>
+    <text x="400" y="90" font-family="sans-serif" font-size="12" fill="#3b82f6" opacity="0.8">w_t</text>
+
+    <!-- Final Converged Line w_{t+1} -->
+    <line x1="50" y1="210" x2="450" y2="40" stroke="#3b82f6" stroke-width="3"/>
+    <text x="410" y="30" font-family="sans-serif" font-size="14" fill="#3b82f6" font-weight="bold">w_{t+1}</text>
+
+    <!-- Highlighted point for the current update -->
+    <circle cx="280" cy="130" r="6" fill="#10b981" stroke="#000" stroke-width="1.5"/>
+    <text x="290" y="145" font-family="sans-serif" font-size="12" fill="#10b981" font-weight="bold">(x_t, y_t)</text>
+    
+    <!-- Error vector / update vector -->
+    <!-- The prediction of the intermediate line at x=280 is approx y=135 -->
+    <!-- From point to line -->
+    <line x1="280" y1="130" x2="280" y2="140" stroke="#ef4444" stroke-width="2" marker-end="url(#arrow)"/>
+    <text x="250" y="155" font-family="sans-serif" font-size="12" fill="#ef4444">Error (L)</text>
+    
+    <!-- Defining arrow marker -->
+    <defs>
+      <marker id="arrow" viewBox="0 0 10 10" refX="5" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+        <path d="M 0 0 L 10 5 L 0 10 z" fill="#ef4444"/>
+      </marker>
+    </defs>
+
+    <!-- Equation text showing stochastic update -->
+    <text x="80" y="60" font-family="sans-serif" font-size="12" fill="#8b5cf6">Update pulls line towards (x_t, y_t)</text>
+    <path d="M 280 140 Q 300 130 350 100" fill="none" stroke="#8b5cf6" stroke-width="2" stroke-dasharray="3" marker-end="url(#arrow_purple)"/>
+    <defs>
+      <marker id="arrow_purple" viewBox="0 0 10 10" refX="5" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+        <path d="M 0 0 L 10 5 L 0 10 z" fill="#8b5cf6"/>
+      </marker>
+    </defs>
+  </svg>
 illustration_mermaid: |
-    graph LR
-      Data([Features]) --> Model((Machine Learning))
-      Model --> Pred([Predictions])
-      style Model fill:#8b5cf6,stroke:#7c3aed,stroke-width:2px,color:#fff
-      style Data fill:#f8fafc,stroke:#94a3b8,stroke-width:1px
-      style Pred fill:#f8fafc,stroke:#94a3b8,stroke-width:1px
+  flowchart LR
+    Data(["Feature Matrix"]) --> Model{"SGD Regressor"}
+    Params[/"Loss & Penalty"/] --> Model
+    Model --> Pred(["Continuous Predictions"])
+    style Params fill:#fbbf24,stroke:#d97706,stroke-width:2px,color:#000
+    style Model fill:#3b82f6,stroke:#2563eb,stroke-width:2px,color:#fff
+    style Data fill:#10b981,stroke:#059669,stroke-width:2px,color:#fff
+    style Pred fill:#10b981,stroke:#059669,stroke-width:2px,color:#fff
 
 _metadata:
   bloc: 3

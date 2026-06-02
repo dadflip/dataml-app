@@ -1,16 +1,110 @@
 id: "model_pycaret_automl_regressor"
 name: "Model: PyCaret AutoML (Regression)"
-description: "Recherche automatique du meilleur modèle de régression (XGBoost, CatBoost, RandomForest...)."
+description: |
+  PyCaret est une bibliothèque d'AutoML (Automated Machine Learning) orientée "low-code". Ce modèle orchestre automatiquement l'entraînement et la comparaison de dizaines d'algorithmes de régression (XGBoost, CatBoost, Random Forest, Régression Linéaire, etc.), tout en gérant le prétraitement et la validation croisée, afin de retourner le meilleur modèle selon la métrique choisie.
 category: "AutoML"
 tags: ["model", "automl", "regression", "tabular", "pycaret"]
 applies_to: ["Tabulaire"]
-when_to_use: "Quand vous voulez la meilleure prédiction continue sans chercher manuellement les paramètres."
+when_to_use: |
+  Idéal pour obtenir rapidement une modélisation de référence (baseline) performante sur un problème de prédiction de valeur continue, sans avoir à coder manuellement chaque algorithme et chaque étape de prétraitement.
+use_cases:
+  - "Prédiction de prix immobiliers, d'actions ou de produits en fonction de multiples caractéristiques."
+  - "Estimation de la durée d'un processus ou du temps restant avant maintenance (predictive maintenance)."
+  - "Génération de benchmarks pour évaluer la pertinence de modèles plus complexes développés sur mesure."
 pros:
-  - "Très complet et robuste."
+  - "Gain de temps massif : un pipeline complet (imputation, encodage, entraînement, évaluation) en quelques lignes."
+  - "Inclut nativement les modèles à l'état de l'art (SOTA) comme LightGBM et CatBoost sans configuration supplémentaire."
+  - "Offre de puissantes fonctions d'analyse post-entraînement (SHAP, courbes d'apprentissage, analyse des résidus)."
 cons:
-  - "Lent sur gros volumes."
+  - "Peut s'avérer extrêmement chronophage (lent) si exécuté sur des ensembles de données de très grande taille."
+  - "Le modèle final encapsulé dans l'objet PyCaret est parfois difficile à extraire pour un déploiement hors du framework."
+  - "Les choix de prétraitement par défaut ne sont pas toujours optimaux pour des jeux de données avec des spécificités métiers pointues."
 hyperparameters:
   sort: "Métrique à optimiser ('R2', 'RMSE', 'MAE', 'MAPE')."
+math_theory: |
+  L'AutoML PyCaret pour la régression évalue plusieurs algorithmes $\textcolor{#3b82f6}{\mathcal{M}} = \{M_1, \dots, M_K\}$.
+  Chaque modèle $M_k$ apprend à partir des données $\textcolor{#fbbf24}{D_{train}}$ pour produire une fonction de prédiction continue $\textcolor{#10b981}{\hat{f}_k(x)}$.
+  Le système minimise une métrique d'erreur $\textcolor{#ef4444}{E_k}$ (ex: RMSE, MAE) calculée par validation croisée. Le modèle final $\textcolor{#8b5cf6}{M^*}$ est sélectionné tel que :
+  $$ \textcolor{#8b5cf6}{M^*} = \arg\min_{k \in \{1 \dots K\}} \textcolor{#ef4444}{E_k}(\textcolor{#10b981}{\hat{f}_k}, \textcolor{#fbbf24}{D_{val}}) $$
+math_illustration_svg: |
+  <svg viewBox="0 0 800 400" xmlns="http://www.w3.org/2000/svg">
+    <!-- Background -->
+    <rect width="800" height="400" fill="#1e1e1e" rx="10" />
+    
+    <!-- Title -->
+    <text x="400" y="40" fill="#ffffff" font-family="Arial" font-size="20" font-weight="bold" text-anchor="middle">PyCaret AutoML Regression Pipeline</text>
+
+    <!-- Data Input -->
+    <rect x="50" y="80" width="100" height="240" fill="#fbbf24" fill-opacity="0.2" stroke="#fbbf24" stroke-width="2" rx="8" />
+    <text x="100" y="110" fill="#fbbf24" font-family="Arial" font-size="16" font-weight="bold" text-anchor="middle">D_train</text>
+    <!-- Scatter plot representation -->
+    <circle cx="70" cy="140" r="3" fill="#fbbf24" />
+    <circle cx="90" cy="170" r="3" fill="#fbbf24" />
+    <circle cx="110" cy="150" r="3" fill="#fbbf24" />
+    <circle cx="80" cy="200" r="3" fill="#fbbf24" />
+    <circle cx="120" cy="180" r="3" fill="#fbbf24" />
+    <circle cx="75" cy="230" r="3" fill="#fbbf24" />
+    <circle cx="115" cy="260" r="3" fill="#fbbf24" />
+
+    <!-- Models M_k -->
+    <rect x="250" y="80" width="120" height="50" fill="#3b82f6" fill-opacity="0.2" stroke="#3b82f6" stroke-width="2" rx="8" />
+    <text x="310" y="110" fill="#3b82f6" font-family="Arial" font-size="16" font-weight="bold" text-anchor="middle">M_1 (XGB)</text>
+
+    <rect x="250" y="175" width="120" height="50" fill="#3b82f6" fill-opacity="0.2" stroke="#3b82f6" stroke-width="2" rx="8" />
+    <text x="310" y="205" fill="#3b82f6" font-family="Arial" font-size="16" font-weight="bold" text-anchor="middle">M_k (CatB)</text>
+
+    <rect x="250" y="270" width="120" height="50" fill="#3b82f6" fill-opacity="0.2" stroke="#3b82f6" stroke-width="2" rx="8" />
+    <text x="310" y="300" fill="#3b82f6" font-family="Arial" font-size="16" font-weight="bold" text-anchor="middle">M_K (LinReg)</text>
+
+    <!-- Connect Data to Models -->
+    <path d="M 150 200 C 200 200, 200 105, 250 105" fill="none" stroke="#fbbf24" stroke-width="2" marker-end="url(#arrow-yellow-reg)" />
+    <path d="M 150 200 L 250 200" fill="none" stroke="#fbbf24" stroke-width="2" marker-end="url(#arrow-yellow-reg)" />
+    <path d="M 150 200 C 200 200, 200 295, 250 295" fill="none" stroke="#fbbf24" stroke-width="2" marker-end="url(#arrow-yellow-reg)" />
+
+    <!-- Fitted Models & Errors -->
+    <!-- M_1 -->
+    <path d="M 370 105 L 420 105" fill="none" stroke="#ffffff" stroke-width="2" marker-end="url(#arrow-white-reg)" />
+    <rect x="420" y="80" width="100" height="50" fill="#10b981" fill-opacity="0.2" stroke="#10b981" stroke-width="2" rx="8" />
+    <text x="470" y="110" fill="#10b981" font-family="Arial" font-size="14" font-weight="bold" text-anchor="middle">f_1(x)</text>
+    <rect x="540" y="85" width="70" height="40" fill="#ef4444" fill-opacity="0.2" stroke="#ef4444" stroke-width="2" rx="4" />
+    <text x="575" y="110" fill="#ef4444" font-family="Arial" font-size="14" font-weight="bold" text-anchor="middle">E_1=14.2</text>
+
+    <!-- M_k -->
+    <path d="M 370 200 L 420 200" fill="none" stroke="#ffffff" stroke-width="2" marker-end="url(#arrow-white-reg)" />
+    <rect x="420" y="175" width="100" height="50" fill="#10b981" fill-opacity="0.2" stroke="#10b981" stroke-width="2" rx="8" />
+    <text x="470" y="205" fill="#10b981" font-family="Arial" font-size="14" font-weight="bold" text-anchor="middle">f_k(x)</text>
+    <rect x="540" y="180" width="70" height="40" fill="#ef4444" fill-opacity="0.2" stroke="#ef4444" stroke-width="2" rx="4" />
+    <text x="575" y="205" fill="#ef4444" font-family="Arial" font-size="14" font-weight="bold" text-anchor="middle">E_k=10.5</text>
+
+    <!-- M_K -->
+    <path d="M 370 295 L 420 295" fill="none" stroke="#ffffff" stroke-width="2" marker-end="url(#arrow-white-reg)" />
+    <rect x="420" y="270" width="100" height="50" fill="#10b981" fill-opacity="0.2" stroke="#10b981" stroke-width="2" rx="8" />
+    <text x="470" y="300" fill="#10b981" font-family="Arial" font-size="14" font-weight="bold" text-anchor="middle">f_K(x)</text>
+    <rect x="540" y="275" width="70" height="40" fill="#ef4444" fill-opacity="0.2" stroke="#ef4444" stroke-width="2" rx="4" />
+    <text x="575" y="300" fill="#ef4444" font-family="Arial" font-size="14" font-weight="bold" text-anchor="middle">E_K=22.1</text>
+
+    <!-- Argmin Selection -->
+    <path d="M 610 105 C 640 105, 640 200, 670 200" fill="none" stroke="#ef4444" stroke-dasharray="5,5" stroke-width="2" />
+    <path d="M 610 200 L 670 200" fill="none" stroke="#ef4444" stroke-width="2" marker-end="url(#arrow-red-reg)" />
+    <path d="M 610 295 C 640 295, 640 200, 670 200" fill="none" stroke="#ef4444" stroke-dasharray="5,5" stroke-width="2" />
+
+    <rect x="670" y="160" width="110" height="80" fill="#8b5cf6" fill-opacity="0.2" stroke="#8b5cf6" stroke-width="3" rx="10" />
+    <text x="725" y="195" fill="#8b5cf6" font-family="Arial" font-size="18" font-weight="bold" text-anchor="middle">M*</text>
+    <text x="725" y="220" fill="#8b5cf6" font-family="Arial" font-size="12" text-anchor="middle">Best Regressor</text>
+
+    <!-- Definitions -->
+    <defs>
+      <marker id="arrow-yellow-reg" viewBox="0 0 10 10" refX="10" refY="5" markerWidth="6" markerHeight="6" orient="auto">
+        <path d="M 0 0 L 10 5 L 0 10 z" fill="#fbbf24" />
+      </marker>
+      <marker id="arrow-white-reg" viewBox="0 0 10 10" refX="10" refY="5" markerWidth="6" markerHeight="6" orient="auto">
+        <path d="M 0 0 L 10 5 L 0 10 z" fill="#ffffff" />
+      </marker>
+      <marker id="arrow-red-reg" viewBox="0 0 10 10" refX="10" refY="5" markerWidth="6" markerHeight="6" orient="auto">
+        <path d="M 0 0 L 10 5 L 0 10 z" fill="#ef4444" />
+      </marker>
+    </defs>
+  </svg>
 code_template: |
   import pandas as pd
   import numpy as np
@@ -23,12 +117,47 @@ code_template: |
   # [PARAM: SORT_METRIC | string]
   SORT_METRIC = "R2"
 illustration_mermaid: |
-    graph LR
-      Data([Features]) --> Model((Machine Learning))
-      Model --> Pred([Predictions])
-      style Model fill:#8b5cf6,stroke:#7c3aed,stroke-width:2px,color:#fff
-      style Data fill:#f8fafc,stroke:#94a3b8,stroke-width:1px
-      style Pred fill:#f8fafc,stroke:#94a3b8,stroke-width:1px
+  flowchart LR
+    %% Inputs/Params
+    DataTrain[/ "Données d'Entraînement" /]
+    Params[/ "Hyperparamètres (sort metric)" /]
+    
+    %% Processes/Models
+    Setup{"Configuration Initiale (setup)"}
+    Compare{"Entraînement & Comparaison (compare_models)"}
+    Select{"Sélection du Meilleur Modèle"}
+    Predict{"Inférence (predict_model)"}
+    
+    %% Tensors/DataFrames
+    PycaretEnv(["Environnement PyCaret (Pipeline)"])
+    Grid(["Grille de Résultats (Leaderboard)"])
+    Model(["Meilleur Modèle Ajusté"])
+    Pred(["Prédictions Continues"])
+    
+    %% Connections
+    DataTrain --> Setup
+    Setup --> PycaretEnv
+    PycaretEnv --> Compare
+    Params --> Select
+    Compare --> Grid
+    Grid --> Select
+    Select --> Model
+    Model --> Predict
+    Predict --> Pred
+    
+    %% Styling
+    style DataTrain fill:#fbbf24,stroke:#d97706,stroke-width:2px,color:#000
+    style Params fill:#fbbf24,stroke:#d97706,stroke-width:2px,color:#000
+    
+    style Setup fill:#3b82f6,stroke:#2563eb,stroke-width:2px,color:#fff
+    style Compare fill:#3b82f6,stroke:#2563eb,stroke-width:2px,color:#fff
+    style Select fill:#3b82f6,stroke:#2563eb,stroke-width:2px,color:#fff
+    style Predict fill:#3b82f6,stroke:#2563eb,stroke-width:2px,color:#fff
+    
+    style PycaretEnv fill:#8b5cf6,stroke:#7c3aed,stroke-width:2px,color:#fff
+    style Grid fill:#10b981,stroke:#059669,stroke-width:2px,color:#fff
+    style Model fill:#10b981,stroke:#059669,stroke-width:2px,color:#fff
+    style Pred fill:#10b981,stroke:#059669,stroke-width:2px,color:#fff
 
 _metadata:
   bloc: 3

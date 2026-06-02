@@ -1,6 +1,18 @@
 id: load_matlab
 name: 'Load: Fichier MATLAB (.mat)'
-description: 'Charge les matrices et variables sauvegardées dans un fichier MATLAB.'
+description: "Charge les matrices et variables sauvegardées dans un fichier MATLAB."
+when_to_use: "Lorsque vous travaillez avec des données issues du monde de la recherche, de l'ingénierie (traitement du signal, automatique) ou de vieux projets qui utilisaient l'environnement MATLAB."
+use_cases:
+  - "Migration d'algorithmes et de données de MATLAB vers Python."
+  - "Chargement de séries temporelles (ex: EEG, capteurs) enregistrées via MATLAB/Simulink."
+  - "Import de structures de données scientifiques complexes (matrices creuses, tenseurs)."
+pros:
+  - "Conserve la structure des données d'origine grâce à SciPy."
+  - "Permet de récupérer plusieurs variables distinctes depuis un seul et même fichier `.mat`."
+  - "Idéal pour réutiliser de vieux jeux de données académiques souvent fournis dans ce format."
+cons:
+  - "Ne renvoie pas un DataFrame Pandas prêt à l'emploi (nécessite d'extraire la bonne clé)."
+  - "Peut rencontrer des problèmes de compatibilité avec les versions très récentes ou très anciennes des fichiers `.mat`."
 category: 2. Load
 tags: ["load", "matlab", "scipy", "matrix"]
 code_template: |
@@ -32,12 +44,21 @@ code_template: |
   meta = {"format": "matlab", "variables": [k for k in mat_data.keys() if not k.startswith('__')]}
 illustration_mermaid: |
   flowchart LR
-      A([FILE_PATH]) --> B[Load MATLAB]
-      B --> df([df])
-      
-      style A fill:#3b82f6,color:#fff
-      style B fill:#10b981,color:#fff
-      style df fill:#f59e0b,color:#fff
+      A[/"📄 FILE_PATH"/] --> B{"scipy.io.loadmat()"}
+      C[/"🎯 N/A"/] --> D{"Set Defaults"}
+      B --> E(["📊 df (Empty)"])
+      E --> D
+      D --> F(["🎯 target_name"])
+      D --> G(["⚙️ task_type"])
+      D --> H(["ℹ️ meta (matlab)"])
+      style A fill:#fbbf24,stroke:#d97706,stroke-width:2px,color:#000
+      style C fill:#fbbf24,stroke:#d97706,stroke-width:2px,color:#000
+      style B fill:#3b82f6,stroke:#2563eb,stroke-width:2px,color:#fff
+      style D fill:#3b82f6,stroke:#2563eb,stroke-width:2px,color:#fff
+      style E fill:#10b981,stroke:#059669,stroke-width:2px,color:#fff
+      style F fill:#8b5cf6,stroke:#7c3aed,stroke-width:2px,color:#fff
+      style G fill:#8b5cf6,stroke:#7c3aed,stroke-width:2px,color:#fff
+      style H fill:#8b5cf6,stroke:#7c3aed,stroke-width:2px,color:#fff
 
 _metadata:
   bloc: 1

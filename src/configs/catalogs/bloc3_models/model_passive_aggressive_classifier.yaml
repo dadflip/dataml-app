@@ -1,15 +1,24 @@
 id: "model_passive_aggressive_classifier"
 name: "Model: Passive Aggressive Classifier"
-description: "Algorithme d'apprentissage en ligne, idéal pour traiter d'énormes flux de données séquentiellement."
+description: |
+  Le Passive Aggressive Classifier est un algorithme d'apprentissage en ligne (online learning) pour la classification. Son nom provient de son fonctionnement : il reste "passif" si la prédiction est correcte, mais devient "agressif" en forçant une mise à jour significative des poids s'il se trompe.
 category: "Modèles Linéaires"
 tags: ["model", "classification", "tabular", "sklearn", "online-learning"]
 applies_to: ["Tabulaire"]
-when_to_use: "Données très massives où fit() ne tient pas en RAM (utilise partial_fit en coulisses)."
+when_to_use: |
+  Idéal pour les scénarios impliquant des flux de données continus ou des jeux de données tellement volumineux (Big Data) qu'ils ne tiennent pas en mémoire vive, nécessitant un apprentissage par lots (batch) ou incrémental (`partial_fit()`).
+use_cases:
+  - "Classification de flux de textes en continu, comme la détection de spam ou l'analyse de sentiments sur des réseaux sociaux."
+  - "Apprentissage incrémental sur des logs serveurs massifs où le modèle doit s'adapter en temps réel sans ré-entraînement complet."
+  - "Modélisation de données transactionnelles à très haute fréquence (ex: publicité programmatique, e-commerce)."
 pros:
-  - "Rapide."
-  - "Très utile pour le Big Data NLP."
+  - "Extrêmement rapide et économe en mémoire grâce à son approche d'apprentissage incrémental (online learning)."
+  - "Maintient de bonnes performances même en apprenant observation par observation ou mini-lot par mini-lot."
+  - "S'adapte dynamiquement et rapidement aux changements de distribution dans les flux de données (concept drift)."
 cons:
-  - "Moins performant que des modèles d'ensemble sur des petits datasets."
+  - "Ne fournit pas de probabilités par défaut (pas de méthode `predict_proba()`), ce qui complique l'évaluation des niveaux de confiance."
+  - "Peut être sensible au bruit : une mise à jour 'agressive' sur une donnée erronée ou aberrante peut dégrader le modèle."
+  - "Performances globales souvent inférieures aux modèles d'ensemble (Random Forest, Gradient Boosting) sur des jeux de données de taille moyenne."
 hyperparameters:
   C: "Pénalité maximale."
 code_template: |
@@ -46,13 +55,102 @@ code_template: |
           
       training_history = {"status": "success", "fitted_on": len(X_train)}
       task_type = "classification"
+math_theory: |
+  L'algorithme Passive-Aggressive met à jour ses poids uniquement lorsque la prédiction est incorrecte ou que la marge de confiance (Hinge Loss) est insuffisante.
+
+  Perte (Hinge Loss) pour l'instance $t$ :
+  $$ \textcolor{#ef4444}{L}(\textcolor{#3b82f6}{w}_t, \textcolor{#10b981}{x_t}, \textcolor{#10b981}{y_t}) = \max(0, 1 - \textcolor{#10b981}{y_t}(\textcolor{#3b82f6}{w}_t^T \textcolor{#10b981}{x_t})) $$
+
+  Règle de mise à jour (variante PA-I) :
+  $$ \textcolor{#3b82f6}{w}_{t+1} = \textcolor{#3b82f6}{w}_t + \tau_t \textcolor{#10b981}{y_t} \textcolor{#10b981}{x_t} $$
+  $$ \text{avec } \tau_t = \min\left(\textcolor{#fbbf24}{C}, \frac{\textcolor{#ef4444}{L}(\textcolor{#3b82f6}{w}_t, \textcolor{#10b981}{x_t}, \textcolor{#10b981}{y_t})}{||\textcolor{#10b981}{x_t}||^2}\right) $$
+
+  - $\textcolor{#3b82f6}{w}$ : Vecteur de poids du modèle
+  - $(\textcolor{#10b981}{x_t}, \textcolor{#10b981}{y_t})$ : Instance d'entrée et sa véritable étiquette ($\in \{-1, 1\}$)
+  - $\textcolor{#ef4444}{L}$ : Erreur calculée (Hinge loss)
+  - $\textcolor{#fbbf24}{C}$ : Hyperparamètre qui limite l'agressivité de la mise à jour (pénalité maximale)
+math_illustration_svg: |
+  <svg viewBox="0 0 500 250" xmlns="http://www.w3.org/2000/svg">
+    <!-- Decision Boundary w_t -->
+    <line x1="50" y1="200" x2="450" y2="50" stroke="#3b82f6" stroke-width="2" stroke-dasharray="5"/>
+    <text x="380" y="55" font-family="sans-serif" font-size="12" fill="#3b82f6">w_t (Ancien)</text>
+    
+    <!-- Margins (Hinge = 1) -->
+    <line x1="100" y1="230" x2="500" y2="80" stroke="#888" stroke-width="1" stroke-dasharray="2"/>
+    <line x1="0" y1="170" x2="400" y2="20" stroke="#888" stroke-width="1" stroke-dasharray="2"/>
+    <text x="430" y="115" font-family="sans-serif" font-size="10" fill="#888">Marge = 1</text>
+    
+    <!-- Correctly classified points (Passifs) -->
+    <circle cx="150" cy="80" r="5" fill="#10b981" stroke="#000"/>
+    <text x="160" y="85" font-family="sans-serif" font-size="10" fill="#10b981">Passif (L=0)</text>
+    <circle cx="350" cy="180" r="5" fill="#10b981" stroke="#000"/>
+
+    <!-- Incorrectly classified point (Agressif) -->
+    <circle cx="280" cy="80" r="6" fill="#ef4444" stroke="#000" stroke-width="1.5"/>
+    <text x="290" y="75" font-family="sans-serif" font-size="12" fill="#ef4444" font-weight="bold">x_t (Erreur !)</text>
+    
+    <!-- Distance / Error Vector -->
+    <line x1="280" y1="80" x2="230" y2="135" stroke="#ef4444" stroke-width="2" marker-end="url(#arrow_red)"/>
+    <text x="220" y="105" font-family="sans-serif" font-size="12" fill="#ef4444">Loss > 0</text>
+    
+    <!-- New Decision Boundary w_{t+1} -->
+    <line x1="60" y1="210" x2="380" y2="20" stroke="#3b82f6" stroke-width="3"/>
+    <text x="320" y="30" font-family="sans-serif" font-size="14" fill="#3b82f6" font-weight="bold">w_{t+1} (Nouveau)</text>
+
+    <!-- Update Vector -->
+    <path d="M 230 135 Q 260 110 245 85" fill="none" stroke="#fbbf24" stroke-width="2" stroke-dasharray="3" marker-end="url(#arrow_yellow)"/>
+    <text x="180" y="60" font-family="sans-serif" font-size="12" fill="#fbbf24">Update bornée par C</text>
+
+    <defs>
+      <marker id="arrow_red" viewBox="0 0 10 10" refX="5" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+        <path d="M 0 0 L 10 5 L 0 10 z" fill="#ef4444"/>
+      </marker>
+      <marker id="arrow_yellow" viewBox="0 0 10 10" refX="5" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+        <path d="M 0 0 L 10 5 L 0 10 z" fill="#fbbf24"/>
+      </marker>
+    </defs>
+  </svg>
 illustration_mermaid: |
-    graph LR
-      Data([Features]) --> Model((Machine Learning))
-      Model --> Pred([Predictions])
-      style Model fill:#8b5cf6,stroke:#7c3aed,stroke-width:2px,color:#fff
-      style Data fill:#f8fafc,stroke:#94a3b8,stroke-width:1px
-      style Pred fill:#f8fafc,stroke:#94a3b8,stroke-width:1px
+  flowchart LR
+    %% Inputs/Params
+    DataStream[/ "Flux de Données Continues" /]
+    Params[/ "Hyperparamètres (C)" /]
+    
+    %% Processes/Models
+    CheckLoss{"Vérification de l'Erreur (Hinge Loss)"}
+    Passive{"Maintien des Poids (Passif)"}
+    Aggressive{"Mise à Jour des Poids (Agressif)"}
+    Predict{"Inférence"}
+    
+    %% Tensors/DataFrames
+    Model(["Modèle Passive Aggressive (Poids)"])
+    Pred(["Prédictions de Classe"])
+    
+    %% Connections
+    DataStream --> CheckLoss
+    Params --> Aggressive
+    
+    CheckLoss -- "Marge correcte" --> Passive
+    CheckLoss -- "Erreur ou Marge faible" --> Aggressive
+    
+    Passive --> Model
+    Aggressive --> Model
+    
+    DataStream --> Predict
+    Model --> Predict
+    Predict --> Pred
+    
+    %% Styling
+    style DataStream fill:#fbbf24,stroke:#d97706,stroke-width:2px,color:#000
+    style Params fill:#fbbf24,stroke:#d97706,stroke-width:2px,color:#000
+    
+    style CheckLoss fill:#3b82f6,stroke:#2563eb,stroke-width:2px,color:#fff
+    style Passive fill:#3b82f6,stroke:#2563eb,stroke-width:2px,color:#fff
+    style Aggressive fill:#3b82f6,stroke:#2563eb,stroke-width:2px,color:#fff
+    style Predict fill:#3b82f6,stroke:#2563eb,stroke-width:2px,color:#fff
+    
+    style Model fill:#10b981,stroke:#059669,stroke-width:2px,color:#fff
+    style Pred fill:#10b981,stroke:#059669,stroke-width:2px,color:#fff
 
 _metadata:
   bloc: 3

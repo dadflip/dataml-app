@@ -1,6 +1,17 @@
 id: "load_orc"
 name: "Load: Fichier ORC"
-description: "Charge un fichier Apache ORC (Optimized Row Columnar), standard Hadoop."
+description: "Ce bloc charge un fichier de données au format Apache ORC (Optimized Row Columnar). Conçu pour le Big Data, ce format colonnaire améliore la compression et les temps de lecture comparé à des formats CSV classiques."
+when_to_use: "À privilégier lorsque vous devez ingérer de grandes quantités de données tabulaires hébergées dans un écosystème Big Data ou d'entrepôt de données (Hadoop, Hive)."
+use_cases:
+  - "Traitement de requêtes analytiques lourdes sur des millions de lignes."
+  - "Ingestion de bases de données distribuées pour entraîner des modèles à large échelle."
+  - "Optimisation de l'espace de stockage et de la vitesse de chargement dans les pipelines ETL."
+pros:
+  - "Format très efficace offrant d'excellents taux de compression."
+  - "Lecture rapide grâce à l'organisation en colonnes, native dans Pandas."
+cons:
+  - "Nécessite la librairie pyarrow pour être fonctionnel sous Pandas."
+  - "Moins lisible par un humain ou modifiable via un éditeur de texte qu'un fichier CSV."
 category: "2. Load"
 tags: ["load", "orc", "bigdata", "pandas"]
 code_template: |
@@ -22,17 +33,22 @@ output_variables:
   - task_type
   - meta
 illustration_mermaid: |
-    flowchart LR
-      A[fa:fa-file-alt FILE_PATH<br/>data.orc] -->|pandas read_orc| B(fa:fa-cogs Parse ORC)
-      B --> C[(df<br/>Data Table)]
-      B --> D{{meta<br/>path}}
-      B --> E([target_name, task_type])
-      
-      style A fill:#3b82f6,stroke:#2563eb,stroke-width:2px,color:#fff
-      style B fill:#10b981,stroke:#059669,stroke-width:2px,color:#fff
-      style C fill:#eff6ff,stroke:#3b82f6,stroke-width:2px
-      style D fill:#fef3c7,stroke:#d97706,stroke-width:2px
-      style E fill:#f3f4f6,stroke:#6b7280,stroke-width:2px
+  flowchart LR
+      A[/"📄 FILE_PATH"/] --> B{"pandas read_orc"}
+      C[/"🎯 TARGET_COL"/] --> D{"Check TARGET_COL"}
+      B --> E(["📊 df (DataFrame)"])
+      E --> D
+      D --> F(["🎯 target_name"])
+      D --> G(["⚙️ task_type"])
+      D --> H(["ℹ️ meta (...)"])
+      style A fill:#fbbf24,stroke:#d97706,stroke-width:2px,color:#000
+      style C fill:#fbbf24,stroke:#d97706,stroke-width:2px,color:#000
+      style B fill:#3b82f6,stroke:#2563eb,stroke-width:2px,color:#fff
+      style D fill:#3b82f6,stroke:#2563eb,stroke-width:2px,color:#fff
+      style E fill:#10b981,stroke:#059669,stroke-width:2px,color:#fff
+      style F fill:#8b5cf6,stroke:#7c3aed,stroke-width:2px,color:#fff
+      style G fill:#8b5cf6,stroke:#7c3aed,stroke-width:2px,color:#fff
+      style H fill:#8b5cf6,stroke:#7c3aed,stroke-width:2px,color:#fff
 
 _metadata:
   bloc: 1

@@ -1,6 +1,19 @@
 id: load_geojson
 name: 'Load: GeoJSON (Spatial)'
-description: Charge un fichier de données géospatiales GeoJSON dans un GeoDataFrame.
+description: |
+  Permet d'importer des fichiers contenant des entités géographiques complexes et leurs attributs tabulaires associés depuis le format standard ouvert GeoJSON. En utilisant GeoPandas sous le capot, ce bloc convertit le texte structuré en un objet GeoDataFrame, intégrant nativement la géométrie (points, lignes, polygones) et le système de coordonnées de référence (CRS), rendant les données spatiales prêtes pour le géotraitement et le Machine Learning spatial.
+when_to_use: 'Idéal lorsque vos sources de données proviennent de systèmes d''information géographique (SIG), d''API cartographiques ou d''OpenStreetMap, et que la dimension spatiale (distances, inclusions, intersections) est une composante clé pour vos modèles d''apprentissage.'
+use_cases:
+  - 'Création de cartes choroplèthes et visualisation de clusters spatiaux dans des projets de Data Science urbaine.'
+  - 'Extraction de variables explicatives géographiques (ex: proximité des transports, appartenance à une zone inondable) pour enrichir un modèle tabulaire classique.'
+  - 'Modélisation et prédiction de phénomènes localisés (ex: prix de l''immobilier, propagation de maladies) en exploitant les topologies.'
+pros:
+  - 'L''utilisation de GeoPandas permet de manipuler les données géospatiales avec la même simplicité et syntaxe que Pandas, abaissant considérablement la barrière à l''entrée.'
+  - 'Conserve nativement les méta-informations spatiales essentielles, en particulier le CRS (Coordinate Reference System), évitant les erreurs fréquentes de projection.'
+  - 'Le format GeoJSON est lisible par l''homme et constitue un standard universellement reconnu pour l''échange de données web cartographiques.'
+cons:
+  - 'Le format GeoJSON est extrêmement verbeux (car basé sur du texte pur), entraînant des fichiers très volumineux et des temps de lecture/parsing parfois lents par rapport à des formats binaires comme FlatGeobuf ou GeoParquet.'
+  - 'L''écosystème GeoPandas introduit des dépendances relativement lourdes et parfois complexes à installer (Fiona, GDAL, Shapely, pyproj).'
 category: 2. Load
 tags:
 - load
@@ -42,23 +55,22 @@ code_template: |
   task_type = "spatial_analysis"
   meta = {"format": "geojson", "shape": df.shape, "crs": str(df.crs)}
 illustration_mermaid: |
-    flowchart LR
-        A[/"📄 File Path (.geojson)"/] --> B{"gpd.read_file()"}
-        B --> C(["🗺️ df (GeoDataFrame)"])
-        D[/"🎯 TARGET_COL"/] --> E{"Check TARGET_COL"}
-        C --> E
-        E --> F(["🎯 target_name"])
-        E --> G(["⚙️ task_type = 'spatial_analysis'"])
-        E --> H(["ℹ️ meta (format, shape, crs)"])
-
-        style A fill:#fbbf24,stroke:#d97706,stroke-width:2px
-        style D fill:#fbbf24,stroke:#d97706,stroke-width:2px
-        style B fill:#3b82f6,stroke:#2563eb,stroke-width:2px,color:#fff
-        style E fill:#3b82f6,stroke:#2563eb,stroke-width:2px,color:#fff
-        style C fill:#10b981,stroke:#059669,stroke-width:2px,color:#fff
-        style F fill:#8b5cf6,stroke:#7c3aed,stroke-width:2px,color:#fff
-        style G fill:#8b5cf6,stroke:#7c3aed,stroke-width:2px,color:#fff
-        style H fill:#8b5cf6,stroke:#7c3aed,stroke-width:2px,color:#fff
+  flowchart LR
+      A[/"📄 FILE_PATH (.geojson)"/] --> B{"gpd.read_file()"}
+      C[/"🎯 TARGET_COL"/] --> D{"Check TARGET_COL"}
+      B --> E(["🗺️ df (GeoDataFrame)"])
+      E --> D
+      D --> F(["🎯 target_name"])
+      D --> G(["⚙️ task_type = 'spatial_analysis'"])
+      D --> H(["ℹ️ meta (format, shape, crs)"])
+      style A fill:#fbbf24,stroke:#d97706,stroke-width:2px,color:#000
+      style C fill:#fbbf24,stroke:#d97706,stroke-width:2px,color:#000
+      style B fill:#3b82f6,stroke:#2563eb,stroke-width:2px,color:#fff
+      style D fill:#3b82f6,stroke:#2563eb,stroke-width:2px,color:#fff
+      style E fill:#10b981,stroke:#059669,stroke-width:2px,color:#fff
+      style F fill:#8b5cf6,stroke:#7c3aed,stroke-width:2px,color:#fff
+      style G fill:#8b5cf6,stroke:#7c3aed,stroke-width:2px,color:#fff
+      style H fill:#8b5cf6,stroke:#7c3aed,stroke-width:2px,color:#fff
 
 _metadata:
   bloc: 1

@@ -1,14 +1,22 @@
 id: "model_dbscan"
 name: "Model: DBSCAN Clustering"
-description: "Clustering spatial basé sur la densité. Trouve des formes complexes et détecte le bruit."
+description: "Algorithme de partitionnement spatial basé sur la densité. Identifie des structures de forme complexe et isole efficacement les valeurs aberrantes (bruit)."
 category: "Clustering (Non-Supervisé)"
 tags: ["model", "clustering", "tabular", "sklearn", "dbscan"]
 applies_to: ["Tabulaire"]
-when_to_use: "Quand vous ne connaissez pas le nombre de clusters K, et que les groupes peuvent avoir des formes non-sphériques."
+when_to_use: "À privilégier lorsque le nombre de clusters est inconnu a priori, que les groupes présentent des géométries non-sphériques, ou pour détecter des anomalies dans les données."
+use_cases:
+  - "Détection d'anomalies (fraudes, défauts de fabrication)."
+  - "Regroupement de coordonnées géographiques ou spatiales (GPS, points d'intérêt)."
+  - "Segmentation de clientèle avec identification des comportements atypiques."
 pros:
-  - "N'a pas besoin de K. Sépare bien le bruit (outliers) des vrais clusters."
+  - "Aucune nécessité de spécifier le nombre de clusters (K) à l'avance."
+  - "Excellente capacité à isoler les points aberrants et grande robustesse au bruit."
+  - "Capture efficacement des clusters de formes géométriques arbitraires."
 cons:
-  - "Impossible de faire un 'predict' sur de nouvelles données facilement (transductif)."
+  - "Sensibilité accrue aux paramètres d'entrée (`eps` et `min_samples`), nécessitant un réglage fin."
+  - "Difficulté à gérer des ensembles de données où la densité des clusters varie fortement."
+  - "Nature intrinsèquement transductive rendant l'affectation de nouvelles données complexe."
 hyperparameters:
   eps: "Rayon de voisinage (ex: 0.5). À calibrer très finement !"
   min_samples: "Nombre minimum de points pour former un cluster (ex: 5)."
@@ -85,38 +93,47 @@ code_template: |
       training_history = {"status": "success", "estimated_clusters": n_clusters_, "noise_points": n_noise_}
 
 illustration_mermaid: |
-    graph TD
-      subgraph Density Based Logic
-        P[Point P] --> N[Find Neighbors within radius 'eps']
-        N --> C{Neighbors >= min_samples?}
-        C -- Yes --> Core[Mark as Core Point\nStart new Cluster]
-        C -- No --> B{In a Core Point's neighborhood?}
-        B -- Yes --> Border[Mark as Border Point\nJoin Cluster]
-        B -- No --> Noise[Mark as Noise / Outlier\nCluster = -1]
-      end
-      
-      subgraph Clustering Process
-        Data([X_test]) --> DB[DBSCAN Algorithm]
-        DB --> Core
-        Core --> Expand[Expand Cluster\nRecursively to neighbors]
-        Expand --> Border
-        DB --> Noise
-      end
-      
-      subgraph Output
-        Border --> Assign[Assign Cluster ID]
-        Noise --> AssignOutlier[Assign -1]
-        Assign --> Pred([y_pred])
-        AssignOutlier --> Pred
-      end
-      
-      style DB fill:#8b5cf6,stroke:#7c3aed,stroke-width:2px,color:#fff
-      style Core fill:#c4b5fd,stroke:#8b5cf6,stroke-width:1px,color:#000
-      style Border fill:#c4b5fd,stroke:#8b5cf6,stroke-width:1px,color:#000
-      style Noise fill:#f87171,stroke:#ef4444,stroke-width:1px,color:#fff
-      style Data fill:#f8fafc,stroke:#94a3b8,stroke-width:1px
-      style Pred fill:#f8fafc,stroke:#94a3b8,stroke-width:1px
+  flowchart LR
+    Data(["X_test Data"]) --> DBSCAN{"DBSCAN Algorithm\neps, min_samples"}
+    DBSCAN --> Logic{"Density Logic"}
+    Logic --> Core{"Core / Border Points"}
+    Logic --> Noise{"Noise Points (-1)"}
+    Core --> Pred(["Cluster Labels (y_pred)"])
+    Noise --> Pred
+    
+    style Data fill:#10b981,stroke:#059669,stroke-width:2px,color:#fff
+    style DBSCAN fill:#3b82f6,stroke:#2563eb,stroke-width:2px,color:#fff
+    style Logic fill:#3b82f6,stroke:#2563eb,stroke-width:2px,color:#fff
+    style Core fill:#3b82f6,stroke:#2563eb,stroke-width:2px,color:#fff
+    style Noise fill:#ef4444,stroke:#dc2626,stroke-width:2px,color:#fff
+    style Pred fill:#10b981,stroke:#059669,stroke-width:2px,color:#fff
 
+math_theory: |
+  $$ N_{\textcolor{#3b82f6}{\epsilon}}(p) = \{ q \in D \mid dist(p, q) \le \textcolor{#3b82f6}{\epsilon} \} $$
+  $$ |N_{\textcolor{#3b82f6}{\epsilon}}(p)| \ge \textcolor{#10b981}{min\_samples} $$
+  
+  Où :
+  - $\textcolor{#3b82f6}{\epsilon}$ est le rayon maximal de voisinage.
+  - $\textcolor{#10b981}{min\_samples}$ est le nombre minimum de points requis dans le voisinage pour former une région dense.
+  - Un point respectant cette condition est un point "Cœur" (Core). S'il est dans le voisinage d'un point cœur mais n'a pas assez de voisins, c'est un point "Bord" (Border). Sinon, c'est un bruit ($\textcolor{#ef4444}{Noise}$).
+math_illustration_svg: |
+  <svg viewBox="0 0 500 250" xmlns="http://www.w3.org/2000/svg">
+    <rect width="500" height="250" fill="#f8fafc" rx="10"/>
+    <circle cx="200" cy="125" r="70" fill="#3b82f6" fill-opacity="0.15" stroke="#3b82f6" stroke-dasharray="5"/>
+    <line x1="200" y1="125" x2="260" y2="85" stroke="#3b82f6" stroke-width="2"/>
+    <text x="225" y="95" font-family="Arial" font-size="14" font-weight="bold" fill="#3b82f6">ε</text>
+    <circle cx="200" cy="125" r="8" fill="#10b981"/>
+    <text x="200" y="145" font-family="Arial" font-size="12" font-weight="bold" text-anchor="middle" fill="#10b981">Core Point</text>
+    <circle cx="160" cy="110" r="5" fill="#6b7280"/>
+    <circle cx="220" cy="160" r="5" fill="#6b7280"/>
+    <circle cx="170" cy="160" r="5" fill="#6b7280"/>
+    <circle cx="240" cy="130" r="5" fill="#6b7280"/>
+    <text x="200" y="170" font-family="Arial" font-size="12" text-anchor="middle" fill="#1f2937">|N_ε| ≥ min_samples</text>
+    <circle cx="270" cy="125" r="8" fill="#fbbf24"/>
+    <text x="310" y="130" font-family="Arial" font-size="12" font-weight="bold" text-anchor="middle" fill="#fbbf24">Border</text>
+    <circle cx="420" cy="70" r="8" fill="#ef4444"/>
+    <text x="420" y="90" font-family="Arial" font-size="12" font-weight="bold" text-anchor="middle" fill="#ef4444">Noise / Outlier</text>
+  </svg>
 _metadata:
   bloc: 3
   section: "5_clustering_automl_and_nn"

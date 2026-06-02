@@ -1,7 +1,20 @@
 id: load_dicom
 name: 'Load: Image Médicale DICOM'
-description: Charge une image médicale au format DICOM et extrait ses métadonnées
-  (Patient, Modalité).
+description: "Charge une image ou un scan médical au format standardisé DICOM (Digital Imaging and Communications in Medicine) en utilisant la bibliothèque Pydicom. Ce bloc extrait non seulement la matrice de pixels bruts (l'imagerie elle-même, comme une IRM ou un scanner) sous forme de tableau NumPy, mais il décode également les métadonnées cliniques encapsulées dans le fichier (telles que le nom du patient, le type d'équipement, ou la modalité d'acquisition). Il prépare ainsi un environnement idéal pour des tâches de Computer Vision appliquées au domaine de la santé."
+when_to_use: "À utiliser exclusivement dans le cadre de projets d'imagerie médicale, d'intelligence artificielle en santé, ou de recherche clinique nécessitant de lire des scans issus d'équipements médicaux professionnels."
+use_cases:
+  - "Détection automatisée de tumeurs, de fractures ou d'anomalies sur des radiographies ou IRM."
+  - "Segmentation d'organes à partir de scanners (CT scans) pour la planification chirurgicale."
+  - "Classification de pathologies médicales et assistance au diagnostic radiologique."
+  - "Extraction et anonymisation de données cliniques stockées dans les en-têtes DICOM."
+pros:
+  - "Standard absolu de l'imagerie médicale, incontournable pour les projets cliniques."
+  - "Permet de récupérer simultanément l'image et une richesse exceptionnelle d'informations de contexte (métadonnées)."
+  - "La matrice extraite est directement compatible avec les frameworks de Deep Learning (PyTorch, TensorFlow)."
+cons:
+  - "Fichiers souvent très lourds, surtout pour des IRM ou scanners 3D à haute résolution."
+  - "Nécessite la bibliothèque spécialisée pydicom."
+  - "Le prétraitement (normalisation des intensités, fenêtrage Hounsfield) reste à la charge de l'utilisateur, ce bloc effectuant uniquement l'extraction."
 category: 2. Load
 tags:
 - load
@@ -55,38 +68,22 @@ code_template: |
   }
 
 illustration_mermaid: |
-  flowchart TD
-      subgraph Config [Parameters]
-          FILE([FILE_PATH])
-      end
-
-      subgraph Operations [DICOM Load]
-          Check([os.path.exists])
-          Pydicom([pydicom.dcmread])
-          Pix([dcm.pixel_array])
-          MetaExtract([Extract Patient/Modality])
-      end
-
-      subgraph Outputs [Contract Variables]
-          df((df = pd.DataFrame))
-          target((target_name = ''))
-          task((task_type = 'computer_vision'))
-          meta((meta: dict))
-      end
-
-      FILE --> Check
-      Check --> Pydicom
-      Pydicom --> Pix
-      Pydicom --> MetaExtract
-      Pix -.-> meta
-      MetaExtract -.-> meta
-
-      style Config fill:#f8fafc,stroke:#cbd5e1,stroke-width:2px
-      style Check fill:#64748b,stroke:#475569,stroke-width:2px,color:#fff
-      style Pydicom fill:#3b82f6,stroke:#1d4ed8,stroke-width:2px,color:#fff
-      style Pix fill:#10b981,stroke:#047857,stroke-width:2px,color:#fff
-      style MetaExtract fill:#f59e0b,stroke:#b45309,stroke-width:2px,color:#fff
-      style Outputs fill:#f1f5f9,stroke:#94a3b8,stroke-width:2px
+  flowchart LR
+      A[/"📄 FILE_PATH"/] --> B{"pydicom.dcmread()"}
+      C[/"🩻 DICOM Tags"/] --> D{"Extract Patient/Modality"}
+      B --> E(["📊 df (Empty DataFrame)"])
+      E --> D
+      D --> F(["🎯 target_name = ''"])
+      D --> G(["⚙️ task_type = 'computer_vision'"])
+      D --> H(["ℹ️ meta (shape, patient...)"])
+      style A fill:#fbbf24,stroke:#d97706,stroke-width:2px,color:#000
+      style C fill:#fbbf24,stroke:#d97706,stroke-width:2px,color:#000
+      style B fill:#3b82f6,stroke:#2563eb,stroke-width:2px,color:#fff
+      style D fill:#3b82f6,stroke:#2563eb,stroke-width:2px,color:#fff
+      style E fill:#10b981,stroke:#059669,stroke-width:2px,color:#fff
+      style F fill:#8b5cf6,stroke:#7c3aed,stroke-width:2px,color:#fff
+      style G fill:#8b5cf6,stroke:#7c3aed,stroke-width:2px,color:#fff
+      style H fill:#8b5cf6,stroke:#7c3aed,stroke-width:2px,color:#fff
 
 _metadata:
   bloc: 1

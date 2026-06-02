@@ -1,14 +1,23 @@
 id: "model_graph_convolutional_network"
 name: "Model: Graph Convolutional Network (GCN)"
-description: "Convolutions sur graphe via la matrice d'adjacence pour agréger les features des voisins."
+description: "Réseau de neurones sur graphes utilisant des convolutions via la matrice d'adjacence pour agréger et extraire des caractéristiques topologiques des nœuds."
 category: "Graphes & Réseaux"
 tags: ["model", "graph", "pytorch-geometric", "gcn", "deep-learning"]
 applies_to: ["Graphes"]
-when_to_use: "Pour classifier des noeuds dans un réseau (recommandation, détection de fraude)."
+when_to_use: "Idéal pour les tâches de classification ou de régression sur des structures de graphes (ex: réseaux sociaux, molécules, maillages 3D) où les relations entre entités sont aussi importantes que leurs attributs individuels."
+use_cases:
+  - "Classification de nœuds (détection de fraudeurs dans un réseau transactionnel)."
+  - "Prédiction de liens (systèmes de recommandation)."
+  - "Analyse de structures moléculaires (cheminformatique)."
+  - "Segmentation de maillages 3D."
 pros:
-  - "Performant sur les topologies de graphes."
+  - "Exploite nativement la topologie relationnelle des données."
+  - "Généralise bien à des graphes de tailles variables."
+  - "Souvent très performant par rapport aux modèles tabulaires classiques sur des données liées."
 cons:
-  - "Nécessite PyTorch Geometric et global_edge_index (depuis le transform_graph_adjacency)."
+  - "Nécessite PyTorch Geometric et des données sous forme de graphe explicite (matrice d'adjacence)."
+  - "Coûteux en mémoire pour les très grands graphes."
+  - "Sensible à la qualité du graphe sous-jacent (ex: graphes trop denses ou trop sparses)."
 hyperparameters:
   hidden_channels: "Taille de la couche cachée (ex: 16)."
   epochs: "Nombre d'époques (ex: 100)."
@@ -67,26 +76,26 @@ code_template: |
       task_type = "node_classification"
       meta = {}
 illustration_mermaid: |
-  graph TD
-    subgraph Inputs
-      A[Node Features Matrix X] --> GCN1
-      B[Adjacency / Edge Index] --> GCN1
-    end
-    subgraph Architecture GCN
-      GCN1[GCNConv Layer 1] --> Relu1[ReLU Activation]
-      Relu1 --> Drop[Dropout Layer p=0.5]
-      Drop --> GCN2[GCNConv Layer 2]
-    end
-    subgraph Outputs
-      GCN2 --> Out[Logits / Output]
-      Out --> Softmax[Softmax]
-      Softmax --> Pred[Predicted Node Class]
-    end
+  flowchart LR
+    A[/"Node Features Matrix X"/] --> GCN1{"GCNConv Layer 1"}
+    B[/"Adjacency / Edge Index"/] --> GCN1
+    GCN1 --> Relu1{"ReLU Activation"}
+    Relu1 --> Drop{"Dropout Layer p=0.5"}
+    Drop --> GCN2{"GCNConv Layer 2"}
     B -.-> GCN2
-    style GCN1 fill:#6366f1,stroke:#4f46e5,stroke-width:2px,color:#fff
-    style GCN2 fill:#6366f1,stroke:#4f46e5,stroke-width:2px,color:#fff
+    GCN2 --> Out(["Logits / Output"])
+    Out --> Softmax{"Softmax"}
+    Softmax --> Pred(["Predicted Node Class"])
+
+    style A fill:#fbbf24,stroke:#d97706,stroke-width:2px,color:#000
+    style B fill:#fbbf24,stroke:#d97706,stroke-width:2px,color:#000
+    style GCN1 fill:#3b82f6,stroke:#2563eb,stroke-width:2px,color:#fff
     style Relu1 fill:#3b82f6,stroke:#2563eb,stroke-width:2px,color:#fff
     style Drop fill:#3b82f6,stroke:#2563eb,stroke-width:2px,color:#fff
+    style GCN2 fill:#3b82f6,stroke:#2563eb,stroke-width:2px,color:#fff
+    style Out fill:#10b981,stroke:#059669,stroke-width:2px,color:#fff
+    style Softmax fill:#3b82f6,stroke:#2563eb,stroke-width:2px,color:#fff
+    style Pred fill:#10b981,stroke:#059669,stroke-width:2px,color:#fff
 
 _metadata:
   bloc: 3

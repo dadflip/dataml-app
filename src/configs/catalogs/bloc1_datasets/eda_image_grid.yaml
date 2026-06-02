@@ -1,6 +1,18 @@
 id: eda_image_grid
 name: 'EDA: Grille d''Images'
-description: Affiche un batch d'images en grille.
+description: Affiche un batch d'images sous forme de grille pour une inspection visuelle rapide de la qualité du dataset.
+when_to_use: À utiliser au début d'un projet de vision par ordinateur pour vérifier visuellement le contenu et la validité du jeu de données d'images.
+use_cases:
+- "Vérification de l'intégrité des images après le chargement"
+- "Inspection visuelle des transformations appliquées"
+- "Aperçu global de la diversité du jeu de données"
+pros:
+- "Permet de repérer rapidement les images corrompues"
+- "Très simple et intuitif à interpréter"
+- "Code minimaliste utilisant des standards comme torchvision"
+cons:
+- "Limité au contrôle visuel, sans analyse quantitative"
+- "Peut être gourmand en mémoire pour de larges résolutions"
 category: 3. Exploratory Data Analysis
 tags:
 - eda
@@ -32,18 +44,22 @@ code_template: |
       plt.show()
 illustration_mermaid: |
     flowchart TD
-        Dataset([Image Dataset]) --> Check{Is dataset available?}
-        Check -- Yes --> Extract[Extract First N Images]
-        Extract --> Convert[Convert to PyTorch Tensors]
-        Convert --> Grid[Make Grid of Images]
-        Grid --> Transpose[Permute Dimensions for Matplotlib]
-        Transpose --> Plot{{Display Image Grid}}
-        Check -- No --> Error[/Print Error/]
+        InDataset[/ dataset /] --> Check{ Check_Dataset }
+        InParam[/ NUM_IMAGES /] --> Check
+        Check --> Extract{ Extract_Images }
+        Extract --> Convert{ ToTensor }
+        Convert --> Grid{ make_grid }
+        Grid --> Plot{ imshow }
+        Plot --> Fig([ Image_Grid_Fig ])
         
-        style Dataset fill:#0284c7,stroke:#0369a1,color:#fff
-        style Convert fill:#10b981,stroke:#059669,color:#fff
-        style Grid fill:#8b5cf6,stroke:#7c3aed,color:#fff
-        style Plot fill:#f59e0b,stroke:#d97706,color:#fff
+        style InDataset fill:#fbbf24,stroke:#d97706,stroke-width:2px,color:#000
+        style InParam fill:#fbbf24,stroke:#d97706,stroke-width:2px,color:#000
+        style Check fill:#3b82f6,stroke:#2563eb,stroke-width:2px,color:#fff
+        style Extract fill:#3b82f6,stroke:#2563eb,stroke-width:2px,color:#fff
+        style Convert fill:#3b82f6,stroke:#2563eb,stroke-width:2px,color:#fff
+        style Grid fill:#3b82f6,stroke:#2563eb,stroke-width:2px,color:#fff
+        style Plot fill:#3b82f6,stroke:#2563eb,stroke-width:2px,color:#fff
+        style Fig fill:#10b981,stroke:#059669,stroke-width:2px,color:#fff
 
 _metadata:
   bloc: 1

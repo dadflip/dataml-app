@@ -1,14 +1,45 @@
 id: "transform_count_vectorizer"
 name: "Transform: Count Vectorizer"
-description: "Bag of Words."
+description: "Convertit une collection de documents textuels en une matrice d'occurrences (Bag-of-Words), représentant la fréquence d'apparition de chaque mot."
+math_theory: |
+  Le modèle vectoriel spatial (Bag-of-Words) représente chaque document $\textcolor{#3b82f6}{d}$ par un vecteur de dimension $V$ (taille du vocabulaire). L'élément $\textcolor{#10b981}{x_{i,j}}$ de la matrice correspond au nombre d'occurrences du terme $\textcolor{#fbbf24}{t_j}$ dans le document $\textcolor{#3b82f6}{d_i}$ : $$ \textcolor{#10b981}{x_{i,j}} = \sum_{w \in \textcolor{#3b82f6}{d_i}} \mathbb{I}(w = \textcolor{#fbbf24}{t_j}) $$
+math_illustration_svg: |
+  <svg viewBox="0 0 400 200" xmlns="http://www.w3.org/2000/svg">
+    <rect width="400" height="200" fill="#1e293b" rx="10" />
+    <g transform="translate(30, 40)">
+      <rect x="0" y="0" width="140" height="120" fill="#0f172a" stroke="#3b82f6" stroke-width="2" rx="4" />
+      <text x="70" y="25" fill="#3b82f6" font-family="sans-serif" font-size="14" text-anchor="middle" font-weight="bold">Document d_i</text>
+      <text x="70" y="55" fill="#94a3b8" font-family="sans-serif" font-size="12" text-anchor="middle">"the cat sat</text>
+      <text x="70" y="75" fill="#94a3b8" font-family="sans-serif" font-size="12" text-anchor="middle">on the mat"</text>
+      <circle cx="55" cy="51" r="14" fill="none" stroke="#fbbf24" stroke-width="2" />
+      <circle cx="85" cy="71" r="14" fill="none" stroke="#fbbf24" stroke-width="2" />
+      <text x="135" y="105" fill="#fbbf24" font-family="sans-serif" font-size="12" text-anchor="end">t_j = "the"</text>
+    </g>
+    <path d="M180,100 L210,100" fill="none" stroke="#94a3b8" stroke-width="2" />
+    <polygon points="210,-5 220,0 210,5" transform="translate(0, 100)" fill="#94a3b8" />
+    <g transform="translate(230, 50)">
+      <rect x="0" y="0" width="140" height="100" fill="#0f172a" stroke="#10b981" stroke-width="2" rx="4" />
+      <text x="70" y="25" fill="#10b981" font-family="sans-serif" font-size="14" text-anchor="middle" font-weight="bold">Vector x_i</text>
+      <text x="70" y="55" fill="#94a3b8" font-family="monospace" font-size="14" text-anchor="middle">[0, 1, 2, 1, 0]</text>
+      <line x1="86" y1="62" x2="86" y2="75" stroke="#fbbf24" stroke-width="2" />
+      <text x="86" y="90" fill="#fbbf24" font-family="sans-serif" font-size="12" text-anchor="middle">x_{i,j}=2</text>
+    </g>
+  </svg>
 category: "4.1 Preprocessing"
 tags: ["transform", "nlp", "text", "sklearn", "pipeline"]
 applies_to: ["Texte"]
-when_to_use: "Modèles Naive Bayes."
+when_to_use: "Utile comme première étape d'extraction de caractéristiques (features) pour le NLP classique (Natural Language Processing) ou comme baseline rapide sur du texte."
+use_cases:
+  - "Classification de texte simple avec un modèle Naive Bayes ou Régression Logistique."
+  - "Détection de spam basée sur la présence de mots-clés."
+  - "Analyse de sentiments sur des commentaires très courts."
 pros:
-  - "Simple."
+  - "Implémentation très rapide et facile à interpréter."
+  - "Efficace avec des modèles probabilistes comme Multinomial Naive Bayes."
 cons:
-  - "Donne poids aux mots fréquents."
+  - "Accorde une importance démesurée aux mots très fréquents mais peu informatifs (stopwords, s'ils ne sont pas filtrés)."
+  - "Perd totalement l'ordre séquentiel et le contexte sémantique des mots."
+  - "Peut générer des matrices creuses de très haute dimensionnalité."
 hyperparameters:
   text_col: "Colonne texte"
   max_features: "Nb de features"
@@ -53,22 +84,18 @@ code_template: |
           print(f"[AVERTISSEMENT] La colonne '{TEXT_COL}' n'existe pas dans df.")
 
 illustration_mermaid: |
-  graph TD
-    A[Text Data] --> B{Does TEXT_COL exist?}
-    B -- Yes --> C[Initialize CountVectorizer]
-    B -- No --> D[Skip and Warn]
-    C --> E[ColumnTransformer with remainder='passthrough']
-    E --> F[Fit & Transform Data]
-    F --> G{Is result sparse?}
-    G -- Yes --> H[Convert to Dense Array]
-    G -- No --> I[Keep Array]
-    H --> J[Create new DataFrame with Feature Names]
-    I --> J
-    J --> K[Update pipeline_steps & df]
-    D --> K
-    K --> L[Vectorized Data]
-    style A fill:#eff6ff,stroke:#94a3b8,stroke-width:2px
-    style L fill:#10b981,stroke:#059669,stroke-width:2px,color:#fff
+  flowchart LR
+    A[/ "📄 TEXT_COL" /] --> B{"⚙️ CountVectorizer"}
+    B --> C{"⚙️ ColumnTransformer"}
+    C --> D(["📊 df (Dense Array)"])
+    D --> E(["ℹ️ Feature Names"])
+    D --> F(["ℹ️ pipeline_steps"])
+    style A fill:#fbbf24,stroke:#d97706,stroke-width:2px,color:#000
+    style B fill:#3b82f6,stroke:#2563eb,stroke-width:2px,color:#fff
+    style C fill:#3b82f6,stroke:#2563eb,stroke-width:2px,color:#fff
+    style D fill:#10b981,stroke:#059669,stroke-width:2px,color:#fff
+    style E fill:#8b5cf6,stroke:#7c3aed,stroke-width:2px,color:#fff
+    style F fill:#8b5cf6,stroke:#7c3aed,stroke-width:2px,color:#fff
 
 _metadata:
   bloc: 2

@@ -1,16 +1,73 @@
 id: "model_cnn_2d"
 name: "Model: 2D CNN Custom (Vision)"
-description: "Réseau Convolutif 2D from scratch pour classifier des images (façon LeNet/VGG)."
+description: |
+  Réseau Convolutif 2D implémenté "from scratch". Conçu pour extraire hiérarchiquement des motifs
+  visuels complexes (bords, textures, formes) en deux dimensions, de manière similaire aux architectures classiques comme LeNet ou VGG.
 category: "Réseaux Convolutifs (CNN)"
 tags: ["model", "vision", "classification", "pytorch", "cnn", "deep-learning"]
 applies_to: ["Images"]
-when_to_use: "Pour classifier de petites images (MNIST, CIFAR) sans ResNet pré-entraîné."
+when_to_use: |
+  Pour classifier des images simples ou de petite taille (comme MNIST ou CIFAR) lorsque vous 
+  souhaitez comprendre ou expérimenter une architecture de bout en bout sans modèles pré-entraînés.
+use_cases:
+  - "Classification de chiffres manuscrits (ex: MNIST) ou de petites icônes."
+  - "Détection de défauts visuels simples sur des chaînes de production (contrôle qualité)."
+  - "Objectifs pédagogiques pour maîtriser le fonctionnement d'un réseau convolutif complet."
 pros:
-  - "Léger et transparent."
+  - "Léger, transparent et rapide à s'entraîner sur des données simples."
+  - "Architecture facilement personnalisable de A à Z."
 cons:
-  - "Surchauffe (overfit) rapidement sur des datasets complexes."
+  - "Sujet au surapprentissage (overfitting) sur des jeux de données de taille moyenne/grande."
+  - "Moins performant que des architectures modernes (ResNet, EfficientNet) pré-entraînées."
 hyperparameters:
   epochs: "Nombre d'époques (ex: 5)."
+math_theory: |
+  La convolution 2D extrait des caractéristiques spatiales (bords, textures) en faisant glisser un noyau sur une image.
+  Pour une image d'entrée $\textcolor{#3b82f6}{I}$ et un noyau (filtre) $\textcolor{#10b981}{K}$ de taille $m \times n$, la carte de caractéristiques résultante $\textcolor{#fbbf24}{S}$ aux coordonnées $(i, j)$ est :
+  $$\textcolor{#fbbf24}{S_{i, j}} = \sigma \left( \sum_{u=0}^{m-1} \sum_{v=0}^{n-1} \textcolor{#3b82f6}{I_{i+u, j+v}} \cdot \textcolor{#10b981}{K_{u, v}} + \textcolor{#8b5cf6}{b} \right)$$
+  où $\textcolor{#8b5cf6}{b}$ est un biais et $\sigma$ l'activation (souvent ReLU : $\max(0, x)$).
+  Le Max Pooling réduit ensuite la résolution spatiale en sélectionnant la valeur maximale dans une fenêtre $p \times p$, permettant une invariance aux petites translations.
+math_illustration_svg: |
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 400">
+    <defs>
+      <marker id="arrow2D" markerWidth="10" markerHeight="10" refX="9" refY="3" orient="auto" markerUnits="strokeWidth">
+        <path d="M0,0 L0,6 L9,3 z" fill="#8b5cf6" />
+      </marker>
+    </defs>
+  
+    <!-- Input Image Grid -->
+    <text x="50" y="50" font-family="sans-serif" font-size="18" fill="#3b82f6">Image (I)</text>
+    <g transform="translate(50, 70)">
+      <rect x="0" y="0" width="150" height="150" fill="none" stroke="#3b82f6" stroke-width="2"/>
+      <path d="M 50 0 L 50 150 M 100 0 L 100 150 M 0 50 L 150 50 M 0 100 L 150 100" stroke="#3b82f6" stroke-width="1"/>
+      <!-- Highlighted patch -->
+      <rect x="0" y="0" width="100" height="100" fill="#3b82f6" fill-opacity="0.3" stroke="#10b981" stroke-width="3" stroke-dasharray="4"/>
+    </g>
+  
+    <!-- Filter -->
+    <text x="250" y="120" font-family="sans-serif" font-size="24" fill="#10b981">X</text>
+    <text x="290" y="50" font-family="sans-serif" font-size="18" fill="#10b981">Kernel (K)</text>
+    <g transform="translate(290, 95)">
+      <rect x="0" y="0" width="100" height="100" fill="none" stroke="#10b981" stroke-width="2"/>
+      <path d="M 50 0 L 50 100 M 0 50 L 100 50" stroke="#10b981" stroke-width="1"/>
+      <text x="25" y="30" fill="#10b981" font-family="sans-serif" font-size="14" text-anchor="middle">w_11</text>
+      <text x="75" y="30" fill="#10b981" font-family="sans-serif" font-size="14" text-anchor="middle">w_12</text>
+      <text x="25" y="80" fill="#10b981" font-family="sans-serif" font-size="14" text-anchor="middle">w_21</text>
+      <text x="75" y="80" fill="#10b981" font-family="sans-serif" font-size="14" text-anchor="middle">w_22</text>
+    </g>
+  
+    <!-- Output Feature Map -->
+    <path d="M 420 145 L 480 145" stroke="#8b5cf6" stroke-width="3" marker-end="url(#arrow2D)"/>
+    
+    <text x="520" y="50" font-family="sans-serif" font-size="18" fill="#fbbf24">Feature Map (S)</text>
+    <g transform="translate(520, 95)">
+      <rect x="0" y="0" width="100" height="100" fill="none" stroke="#fbbf24" stroke-width="2"/>
+      <path d="M 50 0 L 50 100 M 0 50 L 100 50" stroke="#fbbf24" stroke-width="1"/>
+      <!-- Highlighted output pixel -->
+      <rect x="0" y="0" width="50" height="50" fill="#fbbf24" fill-opacity="0.8"/>
+      <text x="25" y="30" fill="#000" font-family="sans-serif" font-size="14" text-anchor="middle">S_00</text>
+    </g>
+  </svg>
 code_template: |
   import pandas as pd
   import numpy as np
@@ -123,53 +180,29 @@ code_template: |
           full_pipeline = model
 
 illustration_mermaid: |
-    graph TD
-      subgraph Input
-        Data([Image Data: N x C x H x W])
-      end
-      
-      subgraph Feature Extraction
-        Conv1[Conv2D<br/>16 filters, 3x3]
-        Relu1[ReLU]
-        Pool1[MaxPool2D<br/>2x2]
-        
-        Conv2[Conv2D<br/>32 filters, 3x3]
-        Relu2[ReLU]
-        Pool2[MaxPool2D<br/>2x2]
-      end
-      
-      subgraph Classification
-        AvgPool[AdaptiveAvgPool2D]
-        Flat[Flatten]
-        FC[Linear<br/>Output: Num Classes]
-      end
-      
-      subgraph Output
-        Softmax[Softmax / Logits]
-        Preds([Class Predictions])
-      end
-      
-      Data --> Conv1
-      Conv1 --> Relu1
-      Relu1 --> Pool1
-      Pool1 --> Conv2
-      Conv2 --> Relu2
-      Relu2 --> Pool2
-      Pool2 --> AvgPool
-      AvgPool --> Flat
-      Flat --> FC
-      FC --> Softmax
-      Softmax --> Preds
+  flowchart LR
+    Data[/"Images (N x C x H x W)"/]
+    Conv1{"Conv2D (16 filtres)\n+ ReLU + MaxPool"}
+    Conv2{"Conv2D (32 filtres)\n+ ReLU + MaxPool"}
+    AvgPool{"AdaptiveAvgPool2D\n+ Flatten"}
+    FC{"Couche Dense (Linéaire)"}
+    SM{"Softmax"}
+    Pred(["Prédictions (Classes)"])
 
-      style Conv1 fill:#8b5cf6,stroke:#7c3aed,stroke-width:2px,color:#fff
-      style Conv2 fill:#8b5cf6,stroke:#7c3aed,stroke-width:2px,color:#fff
-      style Relu1 fill:#c4b5fd,stroke:#8b5cf6,stroke-width:1px,color:#000
-      style Relu2 fill:#c4b5fd,stroke:#8b5cf6,stroke-width:1px,color:#000
-      style Pool1 fill:#8b5cf6,stroke:#7c3aed,stroke-width:2px,color:#fff
-      style Pool2 fill:#8b5cf6,stroke:#7c3aed,stroke-width:2px,color:#fff
-      style FC fill:#8b5cf6,stroke:#7c3aed,stroke-width:2px,color:#fff
-      style Data fill:#f8fafc,stroke:#94a3b8,stroke-width:1px
-      style Preds fill:#f8fafc,stroke:#94a3b8,stroke-width:1px
+    Data --> Conv1
+    Conv1 --> Conv2
+    Conv2 --> AvgPool
+    AvgPool --> FC
+    FC --> SM
+    SM --> Pred
+
+    style Data fill:#fbbf24,stroke:#d97706,stroke-width:2px,color:#000
+    style Conv1 fill:#3b82f6,stroke:#2563eb,stroke-width:2px,color:#fff
+    style Conv2 fill:#3b82f6,stroke:#2563eb,stroke-width:2px,color:#fff
+    style AvgPool fill:#3b82f6,stroke:#2563eb,stroke-width:2px,color:#fff
+    style FC fill:#3b82f6,stroke:#2563eb,stroke-width:2px,color:#fff
+    style SM fill:#3b82f6,stroke:#2563eb,stroke-width:2px,color:#fff
+    style Pred fill:#10b981,stroke:#059669,stroke-width:2px,color:#fff
 
 _metadata:
   bloc: 3

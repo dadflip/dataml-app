@@ -1,6 +1,22 @@
 id: load_edgelist
 name: 'Load: Edge List (CSV/TSV)'
-description: Charge un graphe défini par une liste d'arêtes (source, target) dans un fichier CSV ou TSV. Construit le df des noeuds et l'edge_index dans meta.
+description: >
+  Charge un graphe relationnel à partir d'un fichier tabulaire simple (CSV ou TSV) listant exclusivement ses arêtes sous forme de paires (source, cible). 
+  Il reconstruit automatiquement la topologie du réseau et permet l'intégration optionnelle d'un fichier séparé contenant les caractéristiques (features) des nœuds. 
+  À la sortie, il fournit un DataFrame représentant les nœuds et un 'edge_index' structuré dans les métadonnées pour l'analyse de graphes.
+when_to_use: >
+  Utilisez ce composant lorsque vos données de graphe sont sauvegardées de manière très rudimentaire et tabulaire, typiquement lors de l'export de bases de données relationnelles ou d'interactions par paires, et que vous souhaitez reconstruire le graphe en mémoire.
+use_cases:
+  - "Analyse de graphes de transactions financières pour la détection de fraudes."
+  - "Modélisation des réseaux d'interactions protéines-protéines en bio-informatique."
+  - "Systèmes de recommandation basés sur un graphe bipartite d'interactions utilisateurs-articles."
+pros:
+  - "Extrêmement flexible, supportant n'importe quel fichier CSV/TSV basique décrivant des connexions."
+  - "Permet d'associer un fichier complémentaire pour enrichir les nœuds avec des caractéristiques (features)."
+  - "Formate automatiquement les arêtes (edge_index) pour la compatibilité avec les réseaux de neurones sur graphes."
+cons:
+  - "L'absence de métadonnées intrinsèques dans l'Edge List nécessite parfois de manipuler les index de manière précautionneuse."
+  - "Moins performant que des bases de graphes dédiées pour l'interrogation directe en mémoire."
 category: 2. Load
 tags:
 - load
@@ -70,13 +86,22 @@ code_template: |
       print(f"[ERREUR LOAD] Échec du chargement Edge List : {str(e)}")
       raise e
 illustration_mermaid: |
-  flowchart TD
-      A([FILE_PATH]) --> B[Load EDGELIST]
-      B --> df([df])
-      
-      style A fill:#3b82f6,color:#fff
-      style B fill:#10b981,color:#fff
-      style df fill:#f59e0b,color:#fff
+  flowchart LR
+      A[/"📄 File Path (Edge List)"/] --> B{"nx.from_pandas_edgelist()"}
+      C[/"🎯 TARGET_COL"/] --> D{"Check TARGET_COL"}
+      B --> E(["📊 df (nodes)"])
+      E --> D
+      D --> F(["🎯 target_name = ''"])
+      D --> G(["⚙️ task_type = 'graph_unsupervised'"])
+      D --> H(["ℹ️ meta (edge_index, shape)"])
+      style A fill:#fbbf24,stroke:#d97706,stroke-width:2px,color:#000
+      style C fill:#fbbf24,stroke:#d97706,stroke-width:2px,color:#000
+      style B fill:#3b82f6,stroke:#2563eb,stroke-width:2px,color:#fff
+      style D fill:#3b82f6,stroke:#2563eb,stroke-width:2px,color:#fff
+      style E fill:#10b981,stroke:#059669,stroke-width:2px,color:#fff
+      style F fill:#8b5cf6,stroke:#7c3aed,stroke-width:2px,color:#fff
+      style G fill:#8b5cf6,stroke:#7c3aed,stroke-width:2px,color:#fff
+      style H fill:#8b5cf6,stroke:#7c3aed,stroke-width:2px,color:#fff
 
 _metadata:
   bloc: 1

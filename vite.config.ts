@@ -40,4 +40,14 @@ export default defineConfig({
       }
     }),
   ],
+  optimizeDeps: {
+    include: [
+      'lucide-react',
+      'recharts',
+      'mermaid',
+      '@monaco-editor/react',
+      'react-markdown',
+      'react-syntax-highlighter'
+    ]
+  }
 });

@@ -1,14 +1,22 @@
 id: "model_siamese_network"
 name: "Model: Siamese Network (Few-Shot)"
-description: "Deux réseaux jumeaux partageant les mêmes poids, entraînés à comparer deux entrées par distance euclidienne."
+description: "Architecture de Deep Learning composée de deux réseaux jumeaux (partageant les mêmes poids) conçue pour comparer deux entrées et évaluer leur similarité via une distance dans un espace latent."
 category: "Réseaux Spécialisés"
 tags: ["model", "few-shot", "similarity", "pytorch", "siamese", "deep-learning"]
 applies_to: ["Images", "Tabulaire"]
-when_to_use: "Pour la vérification d'identité (visages), la détection de duplicatas, ou le few-shot learning."
+when_to_use: "Idéal pour les problèmes où le nombre d'exemples par classe est très faible (Few-Shot Learning) ou pour des tâches de vérification (s'agit-il de la même entité ?)."
+use_cases:
+  - "Vérification faciale ou biométrique (comparaison d'une photo d'identité avec un badge)."
+  - "Détection de doublons ou quasi-doublons dans une base de données de produits ou d'annonces."
+  - "Recherche de similarité sémantique entre deux textes (Sentence-BERT)."
 pros:
-  - "Fonctionne avec très peu d'exemples par classe."
+  - "Performant même avec très peu d'exemples étiquetés par classe."
+  - "Généralise bien aux nouvelles classes non vues durant l'entraînement (Zero-Shot potentiel)."
+  - "Apprend un espace de représentation sémantiquement très riche (embeddings)."
 cons:
-  - "Nécessite de construire des paires (positives/négatives)."
+  - "La préparation des données (génération de paires positives et négatives) est complexe."
+  - "Entraînement gourmand en calcul et dépendant de la fonction de perte (Contrastive, Triplet Margin)."
+  - "Le choix des paires (hard negative mining) influence drastiquement les performances."
 hyperparameters:
   embedding_dim: "Dimension de l'espace d'embedding (ex: 32)."
   epochs: "Nombre d'époques (ex: 10)."
@@ -98,13 +106,96 @@ code_template: |
           full_pipeline = model
       training_history = {"status": "success", "loss": float(loss)}
       task_type = "similarity"
+math_theory: |
+  A Siamese Network computes a similarity metric between two inputs using twin networks with shared weights.
+  
+  1. **Embeddings**: Two inputs, $\textcolor{#10b981}{x_1}$ and $\textcolor{#10b981}{x_2}$, are passed through the same network $f_\theta$ to produce latent embeddings:
+  $$ e_1 = \textcolor{#3b82f6}{f_\theta}(\textcolor{#10b981}{x_1}), \quad e_2 = \textcolor{#3b82f6}{f_\theta}(\textcolor{#10b981}{x_2}) $$
+  
+  2. **Distance Metric**: The Euclidean distance $D$ between the embeddings is calculated:
+  $$ D_w(\textcolor{#10b981}{x_1}, \textcolor{#10b981}{x_2}) = \| e_1 - e_2 \|_2 $$
+  
+  3. **Contrastive Loss**: The network is trained using a contrastive loss function. Let $\textcolor{#8b5cf6}{Y} = 1$ if the inputs are from the same class (positive pair) and $\textcolor{#8b5cf6}{Y} = 0$ if they are from different classes (negative pair). With a margin $\textcolor{#fbbf24}{m}$:
+  $$ \mathcal{L} = \textcolor{#8b5cf6}{Y} \cdot \frac{1}{2} D_w^2 + (1 - \textcolor{#8b5cf6}{Y}) \cdot \frac{1}{2} \max(0, \textcolor{#fbbf24}{m} - D_w)^2 $$
+  This pulls positive pairs together and pushes negative pairs apart up to distance $\textcolor{#fbbf24}{m}$.
+math_illustration_svg: |
+  <svg viewBox="0 0 800 400" xmlns="http://www.w3.org/2000/svg">
+    <!-- Input 1 -->
+    <rect x="40" y="80" width="80" height="60" fill="#d1fae5" stroke="#10b981" stroke-width="3" rx="8"/>
+    <text x="80" y="115" font-family="sans-serif" font-size="16" font-weight="bold" fill="#10b981" text-anchor="middle">Input x₁</text>
+    
+    <path d="M120 110 L180 110" stroke="#94a3b8" stroke-width="2" marker-end="url(#arrow)"/>
+    
+    <!-- Subnetwork 1 -->
+    <rect x="190" y="70" width="120" height="80" fill="#eff6ff" stroke="#3b82f6" stroke-width="3" rx="8"/>
+    <text x="250" y="115" font-family="sans-serif" font-size="18" font-weight="bold" fill="#3b82f6" text-anchor="middle">Twin Net f_θ</text>
+    
+    <path d="M310 110 L370 110" stroke="#3b82f6" stroke-width="2" marker-end="url(#arrow_blue)"/>
+    
+    <!-- Embedding 1 -->
+    <circle cx="410" cy="110" r="30" fill="#fef3c7" stroke="#fbbf24" stroke-width="3"/>
+    <text x="410" y="115" font-family="sans-serif" font-size="16" font-weight="bold" fill="#fbbf24" text-anchor="middle">e₁</text>
+    
+    <!-- Input 2 -->
+    <rect x="40" y="260" width="80" height="60" fill="#d1fae5" stroke="#10b981" stroke-width="3" rx="8"/>
+    <text x="80" y="295" font-family="sans-serif" font-size="16" font-weight="bold" fill="#10b981" text-anchor="middle">Input x₂</text>
+    
+    <path d="M120 290 L180 290" stroke="#94a3b8" stroke-width="2" marker-end="url(#arrow)"/>
+    
+    <!-- Subnetwork 2 -->
+    <rect x="190" y="250" width="120" height="80" fill="#eff6ff" stroke="#3b82f6" stroke-width="3" rx="8"/>
+    <text x="250" y="295" font-family="sans-serif" font-size="18" font-weight="bold" fill="#3b82f6" text-anchor="middle">Twin Net f_θ</text>
+
+    <!-- Shared Weights Link -->
+    <path d="M250 150 L250 250" stroke="#3b82f6" stroke-width="3" stroke-dasharray="6,6" fill="none"/>
+    <rect x="180" y="185" width="140" height="30" fill="#ffffff" stroke="#3b82f6" stroke-width="2" rx="4"/>
+    <text x="250" y="205" font-family="sans-serif" font-size="12" font-weight="bold" fill="#3b82f6" text-anchor="middle">Shared Weights</text>
+    
+    <path d="M310 290 L370 290" stroke="#3b82f6" stroke-width="2" marker-end="url(#arrow_blue)"/>
+    
+    <!-- Embedding 2 -->
+    <circle cx="410" cy="290" r="30" fill="#fef3c7" stroke="#fbbf24" stroke-width="3"/>
+    <text x="410" y="295" font-family="sans-serif" font-size="16" font-weight="bold" fill="#fbbf24" text-anchor="middle">e₂</text>
+    
+    <!-- Distance Metric -->
+    <path d="M440 125 L500 170" stroke="#fbbf24" stroke-width="2" marker-end="url(#arrow_yellow)"/>
+    <path d="M440 275 L500 230" stroke="#fbbf24" stroke-width="2" marker-end="url(#arrow_yellow)"/>
+
+    <rect x="510" y="160" width="120" height="80" fill="#f3e8ff" stroke="#8b5cf6" stroke-width="3" rx="8"/>
+    <text x="570" y="195" font-family="sans-serif" font-size="16" font-weight="bold" fill="#8b5cf6" text-anchor="middle">Distance D_w</text>
+    <text x="570" y="220" font-family="sans-serif" font-size="14" fill="#8b5cf6" text-anchor="middle">|| e₁ - e₂ ||₂</text>
+
+    <path d="M630 200 L680 200" stroke="#8b5cf6" stroke-width="2" marker-end="url(#arrow_purple)"/>
+
+    <!-- Contrastive Loss -->
+    <rect x="690" y="160" width="90" height="80" fill="#fee2e2" stroke="#ef4444" stroke-width="3" rx="8"/>
+    <text x="735" y="195" font-family="sans-serif" font-size="16" font-weight="bold" fill="#ef4444" text-anchor="middle">Loss L</text>
+    <text x="735" y="220" font-family="sans-serif" font-size="12" fill="#ef4444" text-anchor="middle">(Y, margin m)</text>
+
+    <defs>
+      <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto"><path d="M0 0 L10 5 L0 10 z" fill="#94a3b8"/></marker>
+      <marker id="arrow_blue" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto"><path d="M0 0 L10 5 L0 10 z" fill="#3b82f6"/></marker>
+      <marker id="arrow_yellow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto"><path d="M0 0 L10 5 L0 10 z" fill="#fbbf24"/></marker>
+      <marker id="arrow_purple" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto"><path d="M0 0 L10 5 L0 10 z" fill="#8b5cf6"/></marker>
+    </defs>
+  </svg>
 illustration_mermaid: |
-    graph LR
-      Data([Features]) --> Model((Machine Learning))
-      Model --> Pred([Predictions])
-      style Model fill:#8b5cf6,stroke:#7c3aed,stroke-width:2px,color:#fff
-      style Data fill:#f8fafc,stroke:#94a3b8,stroke-width:1px
-      style Pred fill:#f8fafc,stroke:#94a3b8,stroke-width:1px
+  flowchart LR
+    Input1(["Input 1"]) --> Net1{"Twin Subnetwork"}
+    Input2(["Input 2"]) --> Net2{"Twin Subnetwork (Shared Weights)"}
+    Net1 --> Emb1(["Embedding 1"])
+    Net2 --> Emb2(["Embedding 2"])
+    Emb1 --> Dist{"Distance / Similarity"}
+    Emb2 --> Dist
+    Dist --> Pred(["Match Probability"])
+    style Net1 fill:#3b82f6,stroke:#2563eb,stroke-width:2px,color:#fff
+    style Net2 fill:#3b82f6,stroke:#2563eb,stroke-width:2px,color:#fff
+    style Dist fill:#3b82f6,stroke:#2563eb,stroke-width:2px,color:#fff
+    style Input1 fill:#10b981,stroke:#059669,stroke-width:2px,color:#fff
+    style Input2 fill:#10b981,stroke:#059669,stroke-width:2px,color:#fff
+    style Emb1 fill:#10b981,stroke:#059669,stroke-width:2px,color:#fff
+    style Emb2 fill:#10b981,stroke:#059669,stroke-width:2px,color:#fff
+    style Pred fill:#10b981,stroke:#059669,stroke-width:2px,color:#fff
 
 _metadata:
   bloc: 3

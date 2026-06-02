@@ -1,15 +1,24 @@
 id: "model_ridge_classifier"
 name: "Model: Ridge Classifier"
-description: "Classifieur basé sur la régression Ridge. Convertit la cible en {-1, 1} et applique une régression avec pénalité L2."
+description: |
+  Classifieur linéaire reposant sur la régression Ridge. Il convertit le problème de classification binaire ou multiclasse en transformant la cible en valeurs {-1, 1} et en résolvant un problème de régression sous pénalité L2 (régularisation de Tikhonov).
 category: "Modèles Linéaires"
 tags: ["model", "classification", "tabular", "sklearn", "linear"]
 applies_to: ["Tabulaire"]
-when_to_use: "Quand vous avez beaucoup de variables colinéaires (multicolinéarité)."
+when_to_use: |
+  Particulièrement indiqué lorsque votre jeu de données tabulaire présente un grand nombre de variables explicatives fortement corrélées entre elles (multicolinéarité) ou lorsque le nombre de variables dépasse le nombre d'observations.
+use_cases:
+  - "Analyse de données génomiques (microarrays) où les gènes (variables) sont très nombreux et corrélés."
+  - "Classification de textes sous forme de vecteurs TF-IDF denses (bag-of-words)."
+  - "Tâches de classification nécessitant une interprétabilité maximale (via les coefficients) et une très faible latence."
 pros:
-  - "Très rapide (résolution analytique possible)."
-  - "Moins sensible au sur-apprentissage que la régression logistique sans pénalité."
+  - "Extrêmement rapide à entraîner grâce à l'existence d'une solution analytique fermée (Cholesky, SVD)."
+  - "Bien plus robuste au surapprentissage que la régression logistique standard grâce à la pénalité L2."
+  - "Gère élégamment les problèmes de multicolinéarité sans exclure de variables."
 cons:
-  - "Ne fournit pas de probabilités natives (predict_proba indisponible)."
+  - "Ne produit pas de probabilités natives d'appartenance aux classes (predict_proba indisponible)."
+  - "Ne réalise pas de sélection de variables stricte (contrairement à Lasso), tous les coefficients restent non nuls."
+  - "Performance limitée sur des problèmes présentant des frontières de décision hautement non-linéaires."
 hyperparameters:
   alpha: "Force de régularisation (ex: 1.0). Plus c'est grand, plus c'est robuste au bruit."
 code_template: |
@@ -61,26 +70,77 @@ code_template: |
               feature_importances = pd.Series(coefs, index=X_train.columns).sort_values(ascending=False).head(20).to_dict()
 
   training_history = []
+math_theory: |
+  The Ridge Classifier transforms classification into a linear regression problem with L2 regularization (Tikhonov regularization), providing a fast, closed-form analytic solution.
+  
+  1. **Label Conversion**: Binary class labels $\textcolor{#10b981}{y_{bin}} \in \{0, 1\}$ are converted to $\textcolor{#8b5cf6}{y} \in \{-1, 1\}$.
+  
+  2. **Ridge Regression Objective**: The weights $\textcolor{#3b82f6}{w}$ are optimized to minimize the squared difference between the linear projection and the target values, penalized by the L2 norm of the weights controlled by $\textcolor{#fbbf24}{\alpha}$:
+  $$ \min_{\textcolor{#3b82f6}{w}} \| \textcolor{#10b981}{X} \textcolor{#3b82f6}{w} - \textcolor{#8b5cf6}{y} \|_2^2 + \textcolor{#fbbf24}{\alpha} \| \textcolor{#3b82f6}{w} \|_2^2 $$
+  
+  3. **Analytic Solution**: Because the objective is convex and smooth, the exact global minimum can be found via the normal equation:
+  $$ \textcolor{#3b82f6}{\hat{w}} = (\textcolor{#10b981}{X}^T \textcolor{#10b981}{X} + \textcolor{#fbbf24}{\alpha} I)^{-1} \textcolor{#10b981}{X}^T \textcolor{#8b5cf6}{y} $$
+  
+  4. **Decision Rule**: Predictions are made by taking the sign of the linear projection:
+  $$ \hat{y}_{pred} = \text{sign}(\textcolor{#10b981}{X}_{test} \textcolor{#3b82f6}{\hat{w}}) $$
+math_illustration_svg: |
+  <svg viewBox="0 0 800 400" xmlns="http://www.w3.org/2000/svg">
+    <!-- Input Features X -->
+    <rect x="40" y="160" width="80" height="100" fill="#d1fae5" stroke="#10b981" stroke-width="3" rx="4"/>
+    <text x="80" y="215" font-family="sans-serif" font-size="24" font-weight="bold" fill="#10b981" text-anchor="middle">X</text>
+    
+    <!-- Target Y -->
+    <rect x="150" y="160" width="30" height="100" fill="#f3e8ff" stroke="#8b5cf6" stroke-width="3" rx="4"/>
+    <text x="165" y="215" font-family="sans-serif" font-size="20" font-weight="bold" fill="#8b5cf6" text-anchor="middle">y</text>
+    <text x="165" y="280" font-family="sans-serif" font-size="12" font-weight="bold" fill="#8b5cf6" text-anchor="middle">{-1, 1}</text>
+
+    <path d="M200 210 L250 210" stroke="#94a3b8" stroke-width="2" marker-end="url(#arrow)"/>
+    
+    <!-- Analytic Solver -->
+    <rect x="260" y="150" width="280" height="120" fill="#eff6ff" stroke="#3b82f6" stroke-width="3" rx="8"/>
+    <text x="400" y="180" font-family="sans-serif" font-size="16" font-weight="bold" fill="#3b82f6" text-anchor="middle">Ridge Solver (Closed Form)</text>
+    <text x="400" y="215" font-family="sans-serif" font-size="20" fill="#3b82f6" text-anchor="middle">ŵ = (XᵀX + αI)⁻¹ Xᵀy</text>
+    
+    <!-- Regularization Alpha -->
+    <rect x="360" y="80" width="80" height="40" fill="#fef3c7" stroke="#fbbf24" stroke-width="3" rx="8"/>
+    <text x="400" y="105" font-family="sans-serif" font-size="16" font-weight="bold" fill="#fbbf24" text-anchor="middle">Penalty α</text>
+    <path d="M400 120 L400 145" stroke="#fbbf24" stroke-width="2" marker-end="url(#arrow_yellow)"/>
+
+    <!-- Optimized Weights -->
+    <path d="M540 210 L590 210" stroke="#3b82f6" stroke-width="2" marker-end="url(#arrow_blue)"/>
+    <rect x="600" y="170" width="30" height="80" fill="#eff6ff" stroke="#3b82f6" stroke-width="3" rx="4"/>
+    <text x="615" y="215" font-family="sans-serif" font-size="20" font-weight="bold" fill="#3b82f6" text-anchor="middle">ŵ</text>
+    
+    <!-- Decision Bound -->
+    <path d="M630 210 L680 210" stroke="#94a3b8" stroke-width="2" marker-end="url(#arrow)"/>
+    <rect x="690" y="170" width="80" height="80" fill="#f8fafc" stroke="#64748b" stroke-width="3" rx="40"/>
+    <text x="730" y="205" font-family="sans-serif" font-size="16" font-weight="bold" fill="#64748b" text-anchor="middle">Sign()</text>
+    <text x="730" y="225" font-family="sans-serif" font-size="14" fill="#64748b" text-anchor="middle">-1 or 1</text>
+
+    <defs>
+      <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto"><path d="M0 0 L10 5 L0 10 z" fill="#94a3b8"/></marker>
+      <marker id="arrow_yellow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto"><path d="M0 0 L10 5 L0 10 z" fill="#fbbf24"/></marker>
+      <marker id="arrow_blue" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto"><path d="M0 0 L10 5 L0 10 z" fill="#3b82f6"/></marker>
+    </defs>
+  </svg>
 illustration_mermaid: |
-  graph TD
-    subgraph Data Pipeline
-      Input([Raw Features]) --> Preprocessor[[Data Preprocessing]]
-      Preprocessor --> Features[Scaled Features]
-    end
-    subgraph Ridge Optimization
-      Features --> LinearCombo[Linear Combination: W*X + b]
-      Target[(Labels: -1, 1)] --> Loss{Squared Error Loss}
-      LinearCombo --> Loss
-      Loss --> L2[+ L2 Penalty: alpha * ||W||^2]
-      L2 --> Opt((Analytical Solver))
-    end
-    subgraph Output
-      Opt --> Weights[Optimized Weights W]
-      Weights --> Predict[Sign(W*X + b)]
-      Predict --> Pred([Class Predictions])
-    end
-    style Input fill:#f8fafc,stroke:#94a3b8,stroke-width:1px
-    style Pred fill:#f8fafc,stroke:#94a3b8,stroke-width:1px
+  flowchart LR
+    In[/ "Features" /]
+    style In fill:#fbbf24,stroke:#d97706,stroke-width:2px,color:#000
+    Pre{"Mise à l'Échelle\n(Scaler)"}
+    style Pre fill:#3b82f6,stroke:#2563eb,stroke-width:2px,color:#fff
+    Scale(["Features Standardisées"])
+    style Scale fill:#10b981,stroke:#059669,stroke-width:2px,color:#fff
+    Opt{"Optimiseur Analytique\n+ Pénalité L2 (Alpha)"}
+    style Opt fill:#3b82f6,stroke:#2563eb,stroke-width:2px,color:#fff
+    W(["Poids W optimisés"])
+    style W fill:#8b5cf6,stroke:#7c3aed,stroke-width:2px,color:#fff
+    Sign{"Fonction Signe"}
+    style Sign fill:#3b82f6,stroke:#2563eb,stroke-width:2px,color:#fff
+    Pred(["Classe (+1 ou -1)"])
+    style Pred fill:#10b981,stroke:#059669,stroke-width:2px,color:#fff
+
+    In --> Pre --> Scale --> Opt --> W --> Sign --> Pred
 
 _metadata:
   bloc: 3

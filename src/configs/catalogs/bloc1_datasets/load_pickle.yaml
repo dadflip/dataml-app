@@ -1,6 +1,17 @@
 id: "load_pickle"
 name: "Load: Python Pickle (.pkl)"
 description: "Désérialise un objet Python binaire natif (ex: DataFrame, Modèle, Dictionnaire)."
+when_to_use: "Utilisez ce composant pour charger des structures de données complexes Python, des DataFrames pré-traités ou des modèles d'apprentissage automatique précédemment sauvegardés."
+use_cases:
+  - "Chargement rapide de DataFrames Pandas intermédiaires avec leurs types exacts."
+  - "Récupération d'états de calcul, de dictionnaires imbriqués ou de listes complexes."
+  - "Déploiement de pipelines nécessitant la restauration d'objets Python personnalisés."
+pros:
+  - "Très rapide pour lire des données spécifiques à Python."
+  - "Conserve 100% de la structure originale et des types de l'objet."
+cons:
+  - "Problèmes potentiels de sécurité (les fichiers Pickle peuvent exécuter du code malveillant)."
+  - "Dépendance à la version de Python et des bibliothèques (un pickle Pandas ancien peut mal se charger)."
 category: "2. Load"
 tags: ["load", "pickle", "python", "binary"]
 code_template: |
@@ -22,12 +33,21 @@ output_variables:
   - meta
 illustration_mermaid: |
     flowchart LR
-    A([FILE_PATH]) --> B[Load PICKLE]
-    B --> df([df])
-    
-    style A fill:#3b82f6,color:#fff
-    style B fill:#10b981,color:#fff
-    style df fill:#f59e0b,color:#fff
+        A[/"📄 FILE_PATH (data.pickle)"/] --> B{"pandas.read_pickle()"}
+        C[/"🎯 TARGET_COL"/] --> D{"Check TARGET_COL"}
+        B --> E(["📊 df (Python Object)"])
+        E --> D
+        D --> F(["🎯 target_name"])
+        D --> G(["⚙️ task_type"])
+        D --> H(["ℹ️ meta (path)"])
+        style A fill:#fbbf24,stroke:#d97706,stroke-width:2px,color:#000
+        style C fill:#fbbf24,stroke:#d97706,stroke-width:2px,color:#000
+        style B fill:#3b82f6,stroke:#2563eb,stroke-width:2px,color:#fff
+        style D fill:#3b82f6,stroke:#2563eb,stroke-width:2px,color:#fff
+        style E fill:#10b981,stroke:#059669,stroke-width:2px,color:#fff
+        style F fill:#8b5cf6,stroke:#7c3aed,stroke-width:2px,color:#fff
+        style G fill:#8b5cf6,stroke:#7c3aed,stroke-width:2px,color:#fff
+        style H fill:#8b5cf6,stroke:#7c3aed,stroke-width:2px,color:#fff
 
 
 _metadata:

@@ -1,6 +1,16 @@
 id: eda_image_color_channels
 name: 'EDA: Canaux RGB Séparés'
-description: Affiche séparément les canaux Rouge, Vert, Bleu d'une image.
+description: Affiche séparément les canaux de couleurs (Rouge, Vert, Bleu) pour une image RGB donnée issue du jeu de données.
+when_to_use: "Pour l'analyse de données visuelles (Computer Vision) afin de vérifier l'intensité de chaque canal et repérer d'éventuels biais de couleur."
+use_cases:
+  - "Vérification de la séparation correcte des couleurs lors du prétraitement (ex: ordre des canaux RGB vs BGR)."
+  - "Détection de motifs spécifiques apparaissant dans un canal particulier."
+pros:
+  - "Fournit une compréhension approfondie de la composition des images."
+  - "Convertit automatiquement les tenseurs PyTorch en formats affichables."
+cons:
+  - "Inutile pour des images en niveaux de gris (1 canal)."
+  - "Se focalise uniquement sur le premier échantillon du dataset s'il n'est pas modifié."
 category: 3. Exploratory Data Analysis
 tags:
 - eda
@@ -39,27 +49,24 @@ code_template: |
       print("[EDA] Dataset non trouvé ou vide.")
 illustration_mermaid: |
     graph TD
-      A([Dataset]) --> B{Dataset valid & not empty?}
-      B -- Yes --> C[Get first sample]
-      C --> D{Is Tensor?}
-      D -- No --> E[Convert to Tensor]
-      D -- Yes --> F[Image Tensor]
-      E --> F
-      F --> G{Channels == 3?}
-      G -- Yes --> H{{Plot Original Image}}
-      H --> I{{Plot Red Channel}}
-      I --> J{{Plot Green Channel}}
-      J --> K{{Plot Blue Channel}}
-      K --> L([Display Plot Grid])
-      G -- No --> M[/Print Error: Not RGB/]
-      B -- No --> N[/Print Error: No Dataset/]
-      style A fill:#4F46E5,color:#fff
-      style B fill:#F59E0B,color:#fff
-      style G fill:#F59E0B,color:#fff
-      style H fill:#10B981,color:#fff
-      style I fill:#EF4444,color:#fff
-      style J fill:#22C55E,color:#fff
-      style K fill:#3B82F6,color:#fff
+      A[/Dataset dataset/] --> B{Check dataset}
+      B --> C{Get first sample image}
+      C --> D{Convert to Tensor}
+      D --> E{Check if 3 channels}
+      E --> F{Plot Original Image}
+      F --> G{Plot Red Channel}
+      G --> H{Plot Green Channel}
+      H --> I{Plot Blue Channel}
+      I --> J([Display Plot Grid fig])
+      
+      classDef input fill:#fbbf24,stroke:#d97706,stroke-width:2px,color:#000;
+      classDef process fill:#3b82f6,stroke:#2563eb,stroke-width:2px,color:#fff;
+      classDef outputPrimary fill:#10b981,stroke:#059669,stroke-width:2px,color:#fff;
+      classDef outputSecondary fill:#8b5cf6,stroke:#7c3aed,stroke-width:2px,color:#fff;
+      
+      class A input;
+      class B,C,D,E,F,G,H,I process;
+      class J outputPrimary;
 
 _metadata:
   bloc: 1

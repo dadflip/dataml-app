@@ -1,6 +1,16 @@
 id: extract_ftp
 name: 'Extract: Serveur FTP'
 description: Télécharge un fichier depuis un serveur FTP public ou privé.
+when_to_use: Utile pour s'interfacer avec des systèmes legacy ou des partenaires externes qui mettent à disposition des fichiers plats (CSV, JSON, XML) via un serveur FTP.
+use_cases:
+  - Rapatriement de fichiers de transactions bancaires ou commerciales.
+  - Téléchargement d'archives ou de données publiques.
+pros:
+  - Standard universel, très répandu dans les environnements professionnels historiques.
+  - Facile à automatiser et scripter.
+cons:
+  - Protocole FTP standard non chiffré (contrairement à SFTP/FTPS).
+  - Gestion parfois délicate des modes actif/passif derrière des pare-feux.
 category: 1. Extract
 tags:
 - extract
@@ -46,13 +56,22 @@ code_template: |
   task_type = "unknown"
   meta = {"source": "ftp", "path": DEST_PATH}
 illustration_mermaid: |
-    flowchart TD
-    A([FILE_PATH]) --> B[Load EXTRACT_FTP]
-    B --> df([df])
-    
-    style A fill:#3b82f6,color:#fff
-    style B fill:#10b981,color:#fff
-    style df fill:#f59e0b,color:#fff
+    flowchart LR
+        A[/"📄 FTP_HOST / FTP_PATH"/] --> B{"Extract FTP()"}
+        C[/"🎯 TARGET_COL"/] --> D{"Check TARGET_COL"}
+        B --> E(["📊 df (Local File/DataFrame)"])
+        E --> D
+        D --> F(["🎯 target_name"])
+        D --> G(["⚙️ task_type"])
+        D --> H(["ℹ️ meta (...)"])
+        style A fill:#fbbf24,stroke:#d97706,stroke-width:2px,color:#000
+        style C fill:#fbbf24,stroke:#d97706,stroke-width:2px,color:#000
+        style B fill:#3b82f6,stroke:#2563eb,stroke-width:2px,color:#fff
+        style D fill:#3b82f6,stroke:#2563eb,stroke-width:2px,color:#fff
+        style E fill:#10b981,stroke:#059669,stroke-width:2px,color:#fff
+        style F fill:#8b5cf6,stroke:#7c3aed,stroke-width:2px,color:#fff
+        style G fill:#8b5cf6,stroke:#7c3aed,stroke-width:2px,color:#fff
+        style H fill:#8b5cf6,stroke:#7c3aed,stroke-width:2px,color:#fff
 
 
 

@@ -1,6 +1,16 @@
 id: extract_scraper_bs4
 name: 'Extract: Web Scraping (BeautifulSoup)'
 description: Extrait le code HTML brut d'une page statique via BeautifulSoup.
+when_to_use: Pour récupérer des données textuelles sur des sites web traditionnels sans exécution JavaScript.
+use_cases:
+  - Scraping d'articles de blog ou de documentation technique.
+  - Collecte de données publiques sur des sites à structure HTML simple.
+pros:
+  - Extrêmement rapide et léger (requêtes HTTP simples).
+  - Très populaire avec une vaste documentation disponible.
+cons:
+  - Incapable de lire le contenu généré dynamiquement via JavaScript.
+  - Sensible aux changements de structure HTML (balises, classes).
 category: 1. Extract
 tags:
 - extract
@@ -46,49 +56,22 @@ code_template: |
   task_type = "unknown"
   meta = {"source": "scraping_bs4", "path": DEST_PATH}
 illustration_mermaid: |
-    flowchart TD
-    A([FILE_PATH]) --> B[Load EXTRACT_SCRAPER_BS4]
-    B --> df([df])
-    
-    style A fill:#3b82f6,color:#fff
-    style B fill:#10b981,color:#fff
-    style df fill:#f59e0b,color:#fff
-
-
-
-        subgraph Operations [BeautifulSoup Scraping]
-            Req([requests.get])
-            Check([raise_for_status])
-            Soup([BeautifulSoup parsing])
-            Prettify([soup.prettify])
-            Write([Write to Local File])
-            OutFile[(HTML File)]
-        end
-
-        subgraph Outputs [Contract Variables]
-            df((df = None))
-            target((target_name = None))
-            task((task_type = 'unknown'))
-            meta((meta: dict))
-        end
-
-        URL --> Req
-        Req --> Check
-        Check -->|response.content| Soup
-        Soup --> Prettify
-        Prettify --> Write
-        DEST --> OutFile
-        Write --> OutFile
-        OutFile -.-> meta
-
-        style Config fill:#f8fafc,stroke:#cbd5e1,stroke-width:2px
-        style Req fill:#3b82f6,stroke:#1d4ed8,stroke-width:2px,color:#fff
-        style Check fill:#f59e0b,stroke:#b45309,stroke-width:2px,color:#fff
-        style Soup fill:#10b981,stroke:#047857,stroke-width:2px,color:#fff
-        style Prettify fill:#8b5cf6,stroke:#6d28d9,stroke-width:2px,color:#fff
-        style Write fill:#ec4899,stroke:#be185d,stroke-width:2px,color:#fff
-        style OutFile fill:#14b8a6,stroke:#0f766e,stroke-width:2px,color:#fff
-        style Outputs fill:#f1f5f9,stroke:#94a3b8,stroke-width:2px
+  flowchart LR
+      A[/"📄 TARGET_URL"/] --> B{"requests.get() + bs4"}
+      C[/"🎯 TARGET_COL"/] --> D{"Check TARGET_COL"}
+      B --> E(["📊 df (HTML Path)"])
+      E --> D
+      D --> F(["🎯 target_name"])
+      D --> G(["⚙️ task_type"])
+      D --> H(["ℹ️ meta (bs4)"])
+      style A fill:#fbbf24,stroke:#d97706,stroke-width:2px,color:#000
+      style C fill:#fbbf24,stroke:#d97706,stroke-width:2px,color:#000
+      style B fill:#3b82f6,stroke:#2563eb,stroke-width:2px,color:#fff
+      style D fill:#3b82f6,stroke:#2563eb,stroke-width:2px,color:#fff
+      style E fill:#10b981,stroke:#059669,stroke-width:2px,color:#fff
+      style F fill:#8b5cf6,stroke:#7c3aed,stroke-width:2px,color:#fff
+      style G fill:#8b5cf6,stroke:#7c3aed,stroke-width:2px,color:#fff
+      style H fill:#8b5cf6,stroke:#7c3aed,stroke-width:2px,color:#fff
 
 _metadata:
   bloc: 1

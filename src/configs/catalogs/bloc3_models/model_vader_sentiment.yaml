@@ -1,17 +1,56 @@
 id: "model_vader_sentiment"
 name: "Model: VADER Sentiment Analyzer"
-description: "Modèle NLP pré-entraîné basé sur des règles lexicographiques, optimisé pour les sentiments sur les réseaux sociaux."
+description: |
+  Valence Aware Dictionary and sEntiment Reasoner (VADER). Modèle NLP basé sur un lexique et des règles (heuristiques), spécifiquement optimisé pour analyser l'intensité et la polarité des sentiments exprimés dans des textes informels (comme ceux des réseaux sociaux).
 category: "Modèles NLP (Pré-entraînés)"
 tags: ["model", "nlp", "sentiment", "nltk", "pretrained"]
 applies_to: ["Texte"]
-when_to_use: "Pour obtenir un score de sentiment (-1 à 1) instantané sans aucune donnée d'entraînement."
+when_to_use: |
+  À utiliser pour analyser rapidement (Zero-Shot) le sentiment de textes courts et informels (tweets, avis clients, commentaires) contenant potentiellement des émojis, de l'argot, des majuscules ou une ponctuation expressive, sans avoir besoin d'entraîner un modèle.
+use_cases:
+  - "Analyse de sentiment sur les réseaux sociaux (ex: X/Twitter, Reddit, Facebook)."
+  - "Évaluation instantanée de la satisfaction client via des avis produits ou des retours d'utilisateurs."
+  - "Génération d'un score de polarité ('compound score') à utiliser comme nouvelle variable dans un autre modèle prédictif."
+  - "Surveillance en temps réel (monitoring) pour déclencher des alertes sur des pics de sentiments négatifs."
 pros:
-  - "Aucun entraînement requis (Zero-Shot)."
-  - "Très rapide et gère les émojis, majuscules et ponctuations."
+  - "Utilisable immédiatement sans aucun entraînement préalable (Zero-Shot) et extrêmement rapide en inférence."
+  - "Gère nativement les spécificités du web : émojis, abréviations, majuscules, répétitions de ponctuation (!!!)."
+  - "Fournit un score global normalisé ('compound') très pratique allant de -1 (extrêmement négatif) à +1 (extrêmement positif)."
 cons:
-  - "Principalement conçu pour l'anglais."
+  - "Nativement conçu et optimisé uniquement pour l'anglais ; nécessite une traduction préalable pour les autres langues."
+  - "Performance inférieure aux modèles de langage (LLM/Transformers) sur des textes complexes, longs ou très sarcastiques."
+  - "Étant basé sur des lexiques et des règles fixes, il manque de compréhension sémantique contextuelle profonde."
 hyperparameters:
   text_col: "Nom de la colonne contenant le texte brut (si DataFrame en entrée)."
+math_theory: |
+  VADER (Valence Aware Dictionary and sEntiment Reasoner) combine un lexique riche avec des règles heuristiques spécifiques (majuscules, ponctuation, modificateurs de degré).
+  Pour chaque mot évalué, un score de valence empirique $\textcolor{#3b82f6}{v}_i$ est ajusté par des amplificateurs/réducteurs $\textcolor{#fbbf24}{h}_i$ (ex: MAJUSCULES, "!!!").
+  La somme totale des valences ajustées est $x = \sum (\textcolor{#3b82f6}{v}_i + \textcolor{#fbbf24}{h}_i)$.
+  Le score final composé $\textcolor{#ef4444}{C}$ est normalisé entre -1 et +1 en utilisant une constante de normalisation $\textcolor{#8b5cf6}{\alpha}$ (typ. $\textcolor{#8b5cf6}{\alpha} = 15$) :
+  $$ \textcolor{#ef4444}{C} = \frac{x}{\sqrt{x^2 + \textcolor{#8b5cf6}{\alpha}}} $$
+math_illustration_svg: |
+  <svg viewBox="0 0 800 400" xmlns="http://www.w3.org/2000/svg">
+    <rect x="0" y="0" width="800" height="400" fill="#1e293b" rx="10"/>
+    <text x="400" y="40" fill="#ffffff" font-family="sans-serif" font-size="22" font-weight="bold" text-anchor="middle">VADER Sentiment</text>
+    <rect x="50" y="150" width="150" height="100" fill="#3b82f6" fill-opacity="0.2" stroke="#3b82f6" stroke-width="2" rx="5"/>
+    <text x="125" y="195" fill="#3b82f6" font-family="sans-serif" font-size="16" font-weight="bold" text-anchor="middle">Valence v_i</text>
+    <text x="125" y="225" fill="#3b82f6" font-family="sans-serif" font-size="14" text-anchor="middle">(Lexicon Mapping)</text>
+    <path d="M210 200 L270 200" stroke="#ffffff" stroke-width="2" marker-end="url(#arrow)" />
+    <rect x="280" y="150" width="180" height="100" fill="#fbbf24" fill-opacity="0.2" stroke="#fbbf24" stroke-width="2" rx="5"/>
+    <text x="370" y="195" fill="#fbbf24" font-family="sans-serif" font-size="16" font-weight="bold" text-anchor="middle">Heuristics h_i</text>
+    <text x="370" y="225" fill="#fbbf24" font-family="sans-serif" font-size="14" text-anchor="middle">(ALL CAPS, "!!!")</text>
+    <path d="M470 200 L530 200" stroke="#ffffff" stroke-width="2" marker-end="url(#arrow)" />
+    <rect x="540" y="100" width="220" height="200" fill="#ef4444" fill-opacity="0.2" stroke="#ef4444" stroke-width="2" rx="5"/>
+    <text x="650" y="150" fill="#ef4444" font-family="sans-serif" font-size="16" font-weight="bold" text-anchor="middle">Compound Score C</text>
+    <text x="650" y="190" fill="#ef4444" font-family="sans-serif" font-size="14" text-anchor="middle">Summed and Normalized</text>
+    <rect x="560" y="220" width="180" height="50" fill="#8b5cf6" fill-opacity="0.2" stroke="#8b5cf6" stroke-width="2" rx="5"/>
+    <text x="650" y="250" fill="#8b5cf6" font-family="sans-serif" font-size="14" font-weight="bold" text-anchor="middle">Alpha Normalization</text>
+    <defs>
+      <marker id="arrow" markerWidth="10" markerHeight="10" refX="9" refY="3" orient="auto">
+        <path d="M0,0 L0,6 L9,3 z" fill="#ffffff" />
+      </marker>
+    </defs>
+  </svg>
 code_template: |
   import pandas as pd
   import numpy as np
@@ -25,18 +64,17 @@ code_template: |
   # [PARAM: TEXT_COL | string]
   TEXT_COL = "text"
 illustration_mermaid: |
-    graph TD
-      In([Raw Text]) --> Token(VADER Tokenization)
-      Token --> Lexicon(VADER Lexicon lookup)
-      Lexicon --> Rule(Heuristics: Caps, Punctuation, Modifiers)
-      Rule --> Score(Compute Compound Score)
-      Score --> Out([Sentiment Score -1 to 1])
-      
-      style In fill:#f8fafc,stroke:#94a3b8,stroke-width:2px
-      style Token fill:#38bdf8,stroke:#0284c7,stroke-width:2px,color:#fff
-      style Lexicon fill:#8b5cf6,stroke:#7c3aed,stroke-width:2px,color:#fff
-      style Rule fill:#f59e0b,stroke:#d97706,stroke-width:2px,color:#fff
-      style Out fill:#10b981,stroke:#059669,stroke-width:2px,color:#fff
+  flowchart LR
+    In[/"Texte Brut (Raw Text)"/]:::input --> Token{"Tokenisation VADER"}:::model
+    Token --> Lexicon(["Recherche Lexique VADER"]):::metadata
+    Lexicon --> Rule{"Heuristiques (Casse, Ponctuation)"}:::model
+    Rule --> Score{"Calcul Score Composé"}:::model
+    Score --> Out(["Score Sentiment (-1 à 1)"]):::tensor
+
+    classDef input fill:#fbbf24,stroke:#d97706,stroke-width:2px,color:#000
+    classDef model fill:#3b82f6,stroke:#2563eb,stroke-width:2px,color:#fff
+    classDef tensor fill:#10b981,stroke:#059669,stroke-width:2px,color:#fff
+    classDef metadata fill:#8b5cf6,stroke:#7c3aed,stroke-width:2px,color:#fff
 
 _metadata:
   bloc: 3

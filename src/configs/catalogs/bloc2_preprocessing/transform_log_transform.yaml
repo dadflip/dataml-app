@@ -1,14 +1,34 @@
 id: "transform_log_transform"
 name: "Transform: Log Transform (log1p)"
-description: "Applique log(1+x)."
+description: "La transformation logarithmique (via la fonction log1p) applique un logarithme naturel incrémenté de 1 aux valeurs numériques. Cette méthode est extrêmement puissante pour atténuer l'impact des valeurs aberrantes (outliers) et stabiliser la variance des variables présentant une asymétrie positive forte. Elle permet souvent de rapprocher la distribution empirique des données vers une forme s'apparentant à une distribution normale, ce qui facilite grandement l'apprentissage des algorithmes linéaires."
+math_theory: |
+  La transformation log1p est définie par la fonction $\textcolor{#3b82f6}{f(x)} = \ln(1 + \textcolor{#10b981}{x})$. Cette formulation mathématique garantit que la fonction reste définie et retourne $0$ lorsque $\textcolor{#10b981}{x} = 0$, résolvant ainsi le problème du logarithme standard $\ln(0)$ qui tend vers $-\infty$. Elle requiert néanmoins que le domaine de définition soit restreint aux réels $\textcolor{#10b981}{x} > -1$.
+math_illustration_svg: |
+  <svg viewBox="0 0 400 200" xmlns="http://www.w3.org/2000/svg">
+    <rect width="400" height="200" fill="#1e293b" rx="8"/>
+    <path d="M 50 150 L 350 150" stroke="#94a3b8" stroke-width="2"/>
+    <path d="M 100 180 L 100 20" stroke="#94a3b8" stroke-width="2"/>
+    <path d="M 50 180 L 50 20" stroke="#ef4444" stroke-width="2" stroke-dasharray="5,5"/>
+    <text x="50" y="15" fill="#ef4444" font-family="sans-serif" font-size="12" text-anchor="middle">x = -1</text>
+    <path d="M 55 190 Q 70 160 100 150 Q 150 120 200 105 Q 280 85 350 75" fill="none" stroke="#3b82f6" stroke-width="3"/>
+    <circle cx="100" cy="150" r="4" fill="#fbbf24"/>
+    <text x="110" y="165" fill="#fbbf24" font-family="sans-serif" font-size="12">(0,0)</text>
+    <text x="250" y="60" fill="#3b82f6" font-family="sans-serif" font-size="16" font-style="italic">f(x) = ln(1+x)</text>
+  </svg>
 category: "4.1 Preprocessing"
 tags: ["transform", "scaling", "tabular", "numpy", "pipeline"]
 applies_to: ["Tabulaire"]
-when_to_use: "Distribution très asymétrique."
+when_to_use: "Essentiel pour le traitement de variables financières, de comptages, ou toute caractéristique présentant une forte asymétrie vers la droite (skewness) avec une longue traîne. À utiliser avant l'application de modèles linéaires qui présupposent la normalité des résidus."
+use_cases:
+  - "Transformation de variables monétaires (salaires, prix, revenus)."
+  - "Lissage de métriques comportementales asymétriques (nombre de clics, nombre de vues)."
 pros:
-  - "Rapproche de la loi normale."
+  - "Réduit significativement la sensibilité du modèle aux valeurs aberrantes extrêmes."
+  - "Convertit les relations multiplicatives (exponentielles) en relations additives, facilitant la modélisation linéaire."
+  - "Gère proprement les valeurs nulles grâce à l'ajout de la constante $1$."
 cons:
-  - "Ne marche que sur variables >= 0."
+  - "Strictement inapplicable aux valeurs fortement négatives ($x \\le -1$)."
+  - "Rend l'interprétation directe des coefficients du modèle moins intuitive par rapport à l'échelle d'origine."
 hyperparameters:
   columns: "Colonnes à transformer (séparées par virgule)."
 code_template: |
@@ -51,22 +71,17 @@ code_template: |
           print("[AVERTISSEMENT] Aucune des colonnes spécifiées n'existe dans df.")
 
 illustration_mermaid: |
-  graph TD
-    A[Input DataFrame] --> B{COLUMNS provided?}
-    B -- Yes --> C[Parse columns list]
-    B -- No --> D[Skip and return original]
-    C --> E{Do columns exist in df?}
-    E -- Yes --> F[Initialize log1p FunctionTransformer]
-    E -- No --> G[Skip and Warn]
-    F --> H[ColumnTransformer remainder='passthrough']
-    H --> I[Fit & Transform Data]
-    I --> J[Convert to DataFrame]
-    J --> K[Update pipeline_steps & df]
-    D --> K
-    G --> K
-    K --> L[Log-Transformed Data]
-    style A fill:#eff6ff,stroke:#94a3b8,stroke-width:2px
-    style L fill:#10b981,stroke:#059669,stroke-width:2px,color:#fff
+  flowchart LR
+    A[/"📄 COLUMNS"/] --> B{"⚙️ log1p Transform"}
+    C(["📊 df Input"]) --> B
+    B --> D(["📊 df Transformed"])
+    B --> E(["ℹ️ pipeline_steps"])
+
+    style A fill:#fbbf24,stroke:#d97706,stroke-width:2px,color:#000
+    style B fill:#3b82f6,stroke:#2563eb,stroke-width:2px,color:#fff
+    style C fill:#10b981,stroke:#059669,stroke-width:2px,color:#fff
+    style D fill:#10b981,stroke:#059669,stroke-width:2px,color:#fff
+    style E fill:#8b5cf6,stroke:#7c3aed,stroke-width:2px,color:#fff
 
 _metadata:
   bloc: 2

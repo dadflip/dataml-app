@@ -1,6 +1,17 @@
 id: "load_pajek"
 name: "Load: Fichier Pajek (.net)"
-description: "Charge un graphe au format Pajek (.net) via NetworkX. Exporte les attributs des noeuds dans df et l'edge_index dans meta."
+description: "Ce composant charge une structure de graphe depuis un fichier au format Pajek (.net). Il s'appuie sur la bibliothèque NetworkX pour extraire les caractéristiques des nœuds dans une DataFrame et conserver les relations (les arêtes) dans les métadonnées."
+when_to_use: "À utiliser pour charger des réseaux complexes ou sociaux à analyser via des modèles d'apprentissage sur graphe (Graph Neural Networks) ou pour des analyses de centralité."
+use_cases:
+  - "Analyse de la propagation d'informations dans un réseau social."
+  - "Détection de communautés ou de structures sous-jacentes dans des graphes de communication."
+  - "Prédiction de liens (Link Prediction) ou classification de nœuds (Node Classification)."
+pros:
+  - "Prend en charge la structure riche des graphes (nœuds, arêtes, poids)."
+  - "Sépare intelligemment les attributs des nœuds et la topologie du graphe (`edge_index`)."
+cons:
+  - "Le traitement des graphes très denses via NetworkX peut être lent en Python pur."
+  - "Nécessite la bibliothèque `networkx` qui peut demander des conversions supplémentaires pour PyTorch Geometric."
 category: "2. Load"
 tags: ["load", "graph", "pajek", "networkx"]
 code_template: |
@@ -27,17 +38,22 @@ output_variables:
   - task_type
   - meta
 illustration_mermaid: |
-    flowchart LR
-      A[fa:fa-project-diagram FILE_PATH<br/>graph.net] -->|networkx| B(fa:fa-cogs Read Pajek Graph)
-      B --> C[(df<br/>Node Attributes)]
-      B --> D{{meta<br/>edge_index}}
-      B --> E([target_name, task_type])
-      
-      style A fill:#3b82f6,stroke:#2563eb,stroke-width:2px,color:#fff
-      style B fill:#10b981,stroke:#059669,stroke-width:2px,color:#fff
-      style C fill:#eff6ff,stroke:#3b82f6,stroke-width:2px
-      style D fill:#fef3c7,stroke:#d97706,stroke-width:2px
-      style E fill:#f3f4f6,stroke:#6b7280,stroke-width:2px
+  flowchart LR
+      A[/"📄 FILE_PATH"/] --> B{"Read Pajek Graph"}
+      C[/"🎯 TARGET_COL"/] --> D{"Check TARGET_COL"}
+      B --> E(["📊 df (DataFrame)"])
+      E --> D
+      D --> F(["🎯 target_name"])
+      D --> G(["⚙️ task_type"])
+      D --> H(["ℹ️ meta (...)"])
+      style A fill:#fbbf24,stroke:#d97706,stroke-width:2px,color:#000
+      style C fill:#fbbf24,stroke:#d97706,stroke-width:2px,color:#000
+      style B fill:#3b82f6,stroke:#2563eb,stroke-width:2px,color:#fff
+      style D fill:#3b82f6,stroke:#2563eb,stroke-width:2px,color:#fff
+      style E fill:#10b981,stroke:#059669,stroke-width:2px,color:#fff
+      style F fill:#8b5cf6,stroke:#7c3aed,stroke-width:2px,color:#fff
+      style G fill:#8b5cf6,stroke:#7c3aed,stroke-width:2px,color:#fff
+      style H fill:#8b5cf6,stroke:#7c3aed,stroke-width:2px,color:#fff
 
 _metadata:
   bloc: 1

@@ -1,7 +1,20 @@
 id: load_adjacency_matrix
 name: 'Load: Matrice d''Adjacence (CSV)'
-description: Charge un graphe défini par une matrice d'adjacence carrée dans un fichier
-  CSV. Construit le df des noeuds et l'edge_index dans meta.
+description: "Charge un graphe défini par une matrice d'adjacence carrée stockée dans un fichier CSV, en s'appuyant sur la bibliothèque NetworkX. Ce bloc permet de transformer directement des données tabulaires décrivant des relations (une matrice N x N) en une structure de graphe exploitable par les modèles d'apprentissage automatique. Il construit automatiquement un DataFrame pour les caractéristiques des nœuds et extrait la liste des arêtes (edge_index) pour les intégrer dans les métadonnées (meta), rendant les données prêtes pour des algorithmes de Graph Neural Networks (GNN) ou des analyses topologiques."
+when_to_use: "À utiliser lorsque vous disposez de données relationnelles ou de réseaux (réseaux sociaux, réseaux de transport, molécules) représentées sous la forme d'une matrice carrée où les lignes et colonnes correspondent aux nœuds, et les valeurs aux poids des arêtes."
+use_cases:
+  - "Modélisation de réseaux sociaux (connexions entre utilisateurs)."
+  - "Optimisation de flux ou de logistique (distances entre villes ou hubs)."
+  - "Analyse de graphes de connaissances et détection de communautés."
+  - "Prédiction de liens manquants ou classification de nœuds (via GNN)."
+pros:
+  - "Intégration native avec NetworkX pour une manipulation aisée du graphe."
+  - "Construction automatique des structures edge_index essentielles au Deep Learning sur graphes."
+  - "Flexibilité pour attacher des caractéristiques (features) supplémentaires aux nœuds si un fichier annexe est fourni."
+cons:
+  - "Peu efficace en mémoire pour les très grands graphes clairsemés (sparse), car une matrice carrée pleine (dense) est chargée."
+  - "Nécessite que la matrice soit parfaitement carrée et correctement formatée."
+  - "Dépendance forte à NetworkX, qui peut être lent sur de très larges volumes de données."
 category: 2. Load
 tags:
 - load
@@ -66,40 +79,22 @@ code_template: |
       raise e
 
 illustration_mermaid: |
-  flowchart TD
-      subgraph Config [Parameters]
-          FILE([FILE_PATH])
-          FEAT([NODE_FEATURES_PATH])
-      end
-
-      subgraph Operations [Adjacency Matrix Load]
-          Read([pd.read_csv adj_matrix])
-          NetX([nx.from_numpy_array])
-          FeatLoad([Load Node Features or Create])
-          Edges([Extract edge_index])
-      end
-
-      subgraph Outputs [Contract Variables]
-          df((df))
-          target((target_name = ''))
-          task((task_type = 'graph_unsupervised'))
-          meta((meta: dict))
-      end
-
-      FILE --> Read
-      Read --> NetX
-      NetX --> Edges
-      FEAT --> FeatLoad
-      NetX --> FeatLoad
-      FeatLoad --> df
-      Edges -.-> meta
-
-      style Config fill:#f8fafc,stroke:#cbd5e1,stroke-width:2px
-      style Read fill:#3b82f6,stroke:#1d4ed8,stroke-width:2px,color:#fff
-      style NetX fill:#10b981,stroke:#047857,stroke-width:2px,color:#fff
-      style FeatLoad fill:#f59e0b,stroke:#b45309,stroke-width:2px,color:#fff
-      style Edges fill:#8b5cf6,stroke:#6d28d9,stroke-width:2px,color:#fff
-      style Outputs fill:#f1f5f9,stroke:#94a3b8,stroke-width:2px
+  flowchart LR
+      A[/"📄 FILE_PATH"/] --> B{"Load Adjacency Matrix"}
+      C[/"📄 NODE_FEATURES_PATH"/] --> D{"Check Features & Compile"}
+      B --> E(["📊 df (Features DataFrame)"])
+      E --> D
+      D --> F(["🎯 target_name = ''"])
+      D --> G(["⚙️ task_type = 'graph_unsupervised'"])
+      D --> H(["ℹ️ meta (edge_index, node_list)"])
+      style A fill:#fbbf24,stroke:#d97706,stroke-width:2px,color:#000
+      style C fill:#fbbf24,stroke:#d97706,stroke-width:2px,color:#000
+      style B fill:#3b82f6,stroke:#2563eb,stroke-width:2px,color:#fff
+      style D fill:#3b82f6,stroke:#2563eb,stroke-width:2px,color:#fff
+      style E fill:#10b981,stroke:#059669,stroke-width:2px,color:#fff
+      style F fill:#8b5cf6,stroke:#7c3aed,stroke-width:2px,color:#fff
+      style G fill:#8b5cf6,stroke:#7c3aed,stroke-width:2px,color:#fff
+      style H fill:#8b5cf6,stroke:#7c3aed,stroke-width:2px,color:#fff
 
 _metadata:
   bloc: 1

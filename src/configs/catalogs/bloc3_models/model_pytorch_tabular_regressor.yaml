@@ -1,19 +1,64 @@
 id: "model_pytorch_tabular_regressor"
 name: "Model: PyTorch Deep Neural Network (Regression)"
-description: "Réseau de neurones artificiels (DNN) profond customisé écrit en PyTorch pour la régression continue."
+description: |
+  Réseau de neurones artificiels (DNN) profond sur mesure développé en PyTorch, conçu spécifiquement pour adresser les défis de la régression continue avec des données tabulaires.
 category: "Réseaux de Neurones"
 tags: ["model", "regression", "tabular", "pytorch", "dnn", "deep-learning"]
 applies_to: ["Tabulaire"]
-when_to_use: "Pour des tâches de régression extrêmement complexes nécessitant l'utilisation du GPU et une forte non-linéarité."
+when_to_use: |
+  Recommandé pour des tâches de régression extrêmement complexes nécessitant l'exploitation du calcul sur GPU et impliquant des relations fortement non-linéaires que les algorithmes traditionnels peinent à modéliser.
+use_cases:
+  - "Prévision de la demande énergétique avec une grande quantité de facteurs exogènes interactifs."
+  - "Estimation précise de prix immobiliers à partir de bases de données hétérogènes massives."
+  - "Régression sur des données financières à haute dimensionnalité."
 pros:
-  - "Très flexible, contrôle absolu."
-  - "Profite de l'accélération matérielle."
+  - "Excellente expressivité et capacité d'adaptation pour modéliser des signaux complexes."
+  - "Profite nativement de l'accélération matérielle (GPU/MPS) pour un entraînement rapide sur de vastes jeux de données."
+  - "Entièrement personnalisable de l'architecture réseau jusqu'à l'optimiseur."
 cons:
-  - "Sensible au scaling (StandardScaler quasi obligatoire pour X et y)."
+  - "Sensibilité exacerbée au scaling (mise à l'échelle des variables explicatives et cibles obligatoire)."
+  - "Risque important de surapprentissage en l'absence de régularisation stricte (Dropout, Weight Decay)."
+  - "Longue durée de recherche pour trouver la topologie optimale du réseau."
 hyperparameters:
   hidden_layers: "Tailles de couches cachées (ex: '256, 128, 64')."
   epochs: "Nombre d'époques (ex: 20)."
   learning_rate: "Taux d'apprentissage (ex: 0.001)."
+math_theory: |
+  Le régresseur par réseau de neurones calcule ses activations à chaque couche cachée $l$ selon :
+  $$ \textcolor{#3b82f6}{h^{\textcolor{#3b82f6}{(l)}}} = \text{ReLU}(\textcolor{#8b5cf6}{W^{\textcolor{#8b5cf6}{(l)}}} \textcolor{#fbbf24}{h^{\textcolor{#fbbf24}{(l-1)}}} + \textcolor{#8b5cf6}{b^{\textcolor{#8b5cf6}{(l)}}}) $$
+  avec $\textcolor{#fbbf24}{h^{\textcolor{#fbbf24}{(0)}}} = \textcolor{#ef4444}{x}$. 
+  La dernière couche produit une valeur continue unique :
+  $$ \textcolor{#10b981}{\hat{y}} = \textcolor{#8b5cf6}{W^{\textcolor{#8b5cf6}{(L)}}} \textcolor{#3b82f6}{h^{\textcolor{#3b82f6}{(L-1)}}} + \textcolor{#8b5cf6}{b^{\textcolor{#8b5cf6}{(L)}}} $$
+  L'entraînement s'effectue en minimisant l'erreur quadratique moyenne (MSE) entre les prédictions et les valeurs réelles.
+math_illustration_svg: |
+  <svg viewBox="0 0 800 400" xmlns="http://www.w3.org/2000/svg">
+    <rect width="800" height="400" fill="#f8fafc" rx="10"/>
+    <rect x="50" y="100" width="80" height="200" rx="8" fill="#ef4444" opacity="0.1" stroke="#ef4444" stroke-width="2"/>
+    <text x="90" y="205" font-family="sans-serif" font-size="18" font-weight="bold" fill="#ef4444" text-anchor="middle">Input x</text>
+    <path d="M 130 150 L 230 150" stroke="#8b5cf6" stroke-width="2" fill="none" opacity="0.5"/>
+    <path d="M 130 250 L 230 250" stroke="#8b5cf6" stroke-width="2" fill="none" opacity="0.5"/>
+    <path d="M 130 150 L 230 250" stroke="#8b5cf6" stroke-width="2" fill="none" opacity="0.5"/>
+    <path d="M 130 250 L 230 150" stroke="#8b5cf6" stroke-width="2" fill="none" opacity="0.5"/>
+    <rect x="230" y="60" width="80" height="280" rx="8" fill="#fbbf24" opacity="0.1" stroke="#fbbf24" stroke-width="2"/>
+    <text x="270" y="205" font-family="sans-serif" font-size="18" font-weight="bold" fill="#d97706" text-anchor="middle">h^(1)</text>
+    <path d="M 310 150 L 410 150" stroke="#8b5cf6" stroke-width="2" fill="none" opacity="0.5"/>
+    <path d="M 310 250 L 410 250" stroke="#8b5cf6" stroke-width="2" fill="none" opacity="0.5"/>
+    <path d="M 310 150 L 410 250" stroke="#8b5cf6" stroke-width="2" fill="none" opacity="0.5"/>
+    <path d="M 310 250 L 410 150" stroke="#8b5cf6" stroke-width="2" fill="none" opacity="0.5"/>
+    <rect x="410" y="80" width="80" height="240" rx="8" fill="#3b82f6" opacity="0.1" stroke="#3b82f6" stroke-width="2"/>
+    <text x="450" y="205" font-family="sans-serif" font-size="18" font-weight="bold" fill="#3b82f6" text-anchor="middle">h^(L-1)</text>
+    <path d="M 490 150 L 590 200" stroke="#8b5cf6" stroke-width="2" fill="none" marker-end="url(#arrow)"/>
+    <path d="M 490 250 L 590 200" stroke="#8b5cf6" stroke-width="2" fill="none" marker-end="url(#arrow)"/>
+    <text x="540" y="170" font-family="sans-serif" font-size="14" font-weight="bold" fill="#8b5cf6" text-anchor="middle">W^(L)</text>
+    <circle cx="630" cy="200" r="40" fill="#10b981" opacity="0.1" stroke="#10b981" stroke-width="2"/>
+    <text x="630" y="205" font-family="sans-serif" font-size="18" font-weight="bold" fill="#10b981" text-anchor="middle">y_hat</text>
+    <text x="630" y="260" font-family="sans-serif" font-size="14" fill="#10b981" text-anchor="middle">Continuous</text>
+    <defs>
+      <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto">
+        <path d="M 0 0 L 10 5 L 0 10 z" fill="#94a3b8"/>
+      </marker>
+    </defs>
+  </svg>
 code_template: |
   import pandas as pd
   import numpy as np
@@ -148,35 +193,24 @@ code_template: |
               ('model', wrapped_model)
           ])
 illustration_mermaid: |
-  graph TD
-    subgraph Data Pipeline
-      Input([Raw Features]) --> Preprocessor[[Data Preprocessing]]
-      Preprocessor --> Tensors[(PyTorch Tensors)]
-      Tensors --> Dataloader[[DataLoader Batching]]
-    end
-    subgraph Neural Network Architecture
-      Dataloader --> L1[Linear Layer]
-      L1 --> R1(ReLU)
-      R1 --> B1(BatchNorm + Dropout)
-      B1 --> L2[Linear Layer]
-      L2 --> R2(ReLU)
-      R2 --> B2(BatchNorm + Dropout)
-      B2 --> L3[Linear Layer]
-      L3 --> R3(ReLU)
-      R3 --> B3(BatchNorm + Dropout)
-      B3 --> L_out[Linear Output Layer]
-    end
-    subgraph Loss & Opt
-      L_out --> Loss{MSELoss}
-      Target[(Continuous Labels)] --> Loss
-      Loss --> Opt[[Adam Optimizer]]
-      Opt --> |Updates weights| L1
-    end
-    subgraph Evaluation
-      L_out --> Preds([Continuous Predictions])
-    end
-    style Input fill:#f8fafc,stroke:#94a3b8,stroke-width:1px
-    style Preds fill:#f8fafc,stroke:#94a3b8,stroke-width:1px
+  flowchart LR
+    In[/ "Données brutes" /]
+    style In fill:#fbbf24,stroke:#d97706,stroke-width:2px,color:#000
+    Pre{"Prétraitement"}
+    style Pre fill:#3b82f6,stroke:#2563eb,stroke-width:2px,color:#fff
+    Tens(["Tenseurs PyTorch"])
+    style Tens fill:#10b981,stroke:#059669,stroke-width:2px,color:#fff
+    Net{"Réseau de Neurones\n(Linear, ReLU, BatchNorm)"}
+    style Net fill:#3b82f6,stroke:#2563eb,stroke-width:2px,color:#fff
+    Loss{"MSE Loss"}
+    style Loss fill:#3b82f6,stroke:#2563eb,stroke-width:2px,color:#fff
+    Pred(["Prédictions Continues"])
+    style Pred fill:#10b981,stroke:#059669,stroke-width:2px,color:#fff
+    Opt(["Optimiseur Adam"])
+    style Opt fill:#8b5cf6,stroke:#7c3aed,stroke-width:2px,color:#fff
+
+    In --> Pre --> Tens --> Net --> Loss --> Pred
+    Loss -.->|"Update weights"| Opt -.-> Net
 
 _metadata:
   bloc: 3

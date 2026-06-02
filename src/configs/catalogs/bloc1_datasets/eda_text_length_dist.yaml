@@ -1,6 +1,15 @@
 id: eda_text_length_dist
 name: 'EDA: Longueur Textes'
-description: Histogramme de la taille des documents textuels.
+description: "Histogramme de la taille des documents textuels pour visualiser la distribution du nombre de mots."
+when_to_use: "Lorsqu'on analyse un jeu de données contenant du texte brut (NLP) pour vérifier l'homogénéité et la longueur des documents."
+use_cases:
+  - "Déterminer la longueur maximale (max_length) avant d'appliquer un modèle de tokenization."
+  - "Repérer des documents anormalement courts ou longs."
+pros:
+  - "Calcul simple et rapide basé sur l'espacement (split)."
+  - "Fournit les statistiques de base (max, moyenne)."
+cons:
+  - "Le comptage par `.split()` est basique et ne vaut pas une vraie tokenisation linguistique."
 category: 3. Exploratory Data Analysis
 tags:
 - eda
@@ -28,13 +37,22 @@ code_template: |
       print(f"[EDA] Colonne {TEXT_COL} introuvable.")
 illustration_mermaid: |
     graph TD
-      DF([DataFrame]) --> Check{Check TEXT_COL}
-      Check -- Valid --> Calc[Calculate word counts]
-      Calc --> Hist[sns.histplot]
-      Hist --> Show[plt.show & Print stats]
-      Check -- Missing --> Err[Print Error]
-      style Calc fill:#3b82f6,stroke:#2563eb,stroke-width:2px,color:#fff
-      style Hist fill:#8b5cf6,stroke:#7c3aed,stroke-width:2px,color:#fff
+      In1[/df/] --> P1{Check TEXT_COL}
+      In2[/TEXT_COL/] --> P1
+      P1 -- Valide --> P2{Calcul longueurs}
+      P2 --> P3{sns.histplot}
+      P3 --> Out1([Fig: Histogramme])
+      P3 --> Out2([Print Stats])
+      P1 -- Invalide --> Out3([Print Erreur])
+      
+      style In1 fill:#fbbf24,stroke:#d97706,stroke-width:2px,color:#000
+      style In2 fill:#fbbf24,stroke:#d97706,stroke-width:2px,color:#000
+      style P1 fill:#3b82f6,stroke:#2563eb,stroke-width:2px,color:#fff
+      style P2 fill:#3b82f6,stroke:#2563eb,stroke-width:2px,color:#fff
+      style P3 fill:#3b82f6,stroke:#2563eb,stroke-width:2px,color:#fff
+      style Out1 fill:#10b981,stroke:#059669,stroke-width:2px,color:#fff
+      style Out2 fill:#8b5cf6,stroke:#7c3aed,stroke-width:2px,color:#fff
+      style Out3 fill:#8b5cf6,stroke:#7c3aed,stroke-width:2px,color:#fff
 _metadata:
   bloc: 1
   section: 3_eda

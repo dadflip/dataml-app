@@ -1,16 +1,88 @@
 id: "model_cnn_3d"
 name: "Model: 3D CNN (Video/Volume)"
-description: "Réseau Convolutif 3D, capte le contexte spatial ET temporel. Pour la vidéo ou l'imagerie médicale volumétrique."
+description: |
+  Réseau Convolutif 3D conçu pour traiter des données volumétriques, captant simultanément
+  les dimensions spatiales et la profondeur (ou la dimension temporelle pour des séquences d'images).
 category: "Réseaux Convolutifs (CNN)"
 tags: ["model", "vision", "video", "classification", "pytorch", "cnn-3d", "deep-learning"]
 applies_to: ["Vidéo", "Volumes"]
-when_to_use: "Pour classifier des actions dans des vidéos ou de l'imagerie médicale volumétrique (IRM 3D)."
+when_to_use: |
+  Essentiel pour l'analyse de données comportant une troisième dimension physique ou temporelle,
+  telles que la vidéo, l'imagerie médicale (IRM, Scanner), ou des modélisations 3D.
+use_cases:
+  - "Classification d'actions ou de mouvements dans des séquences vidéo."
+  - "Détection de tumeurs ou d'anomalies dans des IRM/Scanners 3D."
+  - "Analyse de flux d'images satellites temporelles (évolution de terrain)."
 pros:
-  - "Capte la dimension temporelle de l'image (mouvement)."
+  - "Capture avec précision la dynamique spatio-temporelle ou volumétrique."
+  - "Maintient l'intégrité de la corrélation entre les couches profondes du tenseur."
 cons:
-  - "Extrêmement lourd en VRAM."
+  - "Extrêmement lourd en calcul et gourmand en mémoire (VRAM)."
+  - "Nécessite souvent de grandes quantités de données et d'augmentations de données complexes."
 hyperparameters:
   epochs: "Nombre d'époques (ex: 5)."
+math_theory: |
+  La convolution 3D étend le principe de la 2D à un volume spatial ou à une séquence d'images (vidéo).
+  Le noyau $\textcolor{#10b981}{K}$ possède désormais trois dimensions : profondeur, hauteur, largeur ($d \times m \times n$).
+  La valeur du tenseur de sortie $\textcolor{#fbbf24}{O}$ à la position $(x, y, z)$ est :
+  $$\textcolor{#fbbf24}{O_{x, y, z}} = \sum_{w=0}^{d-1} \sum_{u=0}^{m-1} \sum_{v=0}^{n-1} \textcolor{#3b82f6}{V_{x+w, y+u, z+v}} \cdot \textcolor{#10b981}{K_{w, u, v}} + \textcolor{#8b5cf6}{b}$$
+  Cette opération permet d'extraire non seulement les caractéristiques spatiales dans chaque plan 2D, mais aussi l'évolution temporelle ou la continuité structurelle le long de l'axe de profondeur $z$.
+math_illustration_svg: |
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 400">
+    <defs>
+      <marker id="arrow3D" markerWidth="10" markerHeight="10" refX="9" refY="3" orient="auto" markerUnits="strokeWidth">
+        <path d="M0,0 L0,6 L9,3 z" fill="#8b5cf6" />
+      </marker>
+    </defs>
+  
+    <!-- Input Volume -->
+    <text x="50" y="50" font-family="sans-serif" font-size="18" fill="#3b82f6">Input Volume (V)</text>
+    <g transform="translate(50, 100)">
+      <!-- Back face -->
+      <rect x="40" y="-40" width="100" height="100" fill="none" stroke="#3b82f6" stroke-width="2"/>
+      <!-- Connecting lines -->
+      <line x1="0" y1="0" x2="40" y2="-40" stroke="#3b82f6" stroke-width="2"/>
+      <line x1="100" y1="0" x2="140" y2="-40" stroke="#3b82f6" stroke-width="2"/>
+      <line x1="100" y1="100" x2="140" y2="60" stroke="#3b82f6" stroke-width="2"/>
+      <line x1="0" y1="100" x2="40" y2="60" stroke="#3b82f6" stroke-width="2"/>
+      <!-- Front face -->
+      <rect x="0" y="0" width="100" height="100" fill="#3b82f6" fill-opacity="0.2" stroke="#3b82f6" stroke-width="2"/>
+      <!-- Kernel applied region -->
+      <rect x="0" y="0" width="40" height="40" fill="#10b981" fill-opacity="0.4" stroke="#10b981" stroke-width="2"/>
+      <rect x="16" y="-16" width="40" height="40" fill="none" stroke="#10b981" stroke-width="2" stroke-dasharray="2"/>
+      <line x1="0" y1="0" x2="16" y2="-16" stroke="#10b981" stroke-width="2"/>
+      <line x1="40" y1="0" x2="56" y2="-16" stroke="#10b981" stroke-width="2"/>
+      <line x1="40" y1="40" x2="56" y2="24" stroke="#10b981" stroke-width="2"/>
+      <line x1="0" y1="40" x2="16" y2="24" stroke="#10b981" stroke-width="2"/>
+    </g>
+  
+    <!-- Filter -->
+    <text x="320" y="50" font-family="sans-serif" font-size="18" fill="#10b981">3D Kernel (K)</text>
+    <g transform="translate(320, 100)">
+      <rect x="20" y="-20" width="50" height="50" fill="none" stroke="#10b981" stroke-width="2"/>
+      <line x1="0" y1="0" x2="20" y2="-20" stroke="#10b981" stroke-width="2"/>
+      <line x1="50" y1="0" x2="70" y2="-20" stroke="#10b981" stroke-width="2"/>
+      <line x1="50" y1="50" x2="70" y2="30" stroke="#10b981" stroke-width="2"/>
+      <line x1="0" y1="50" x2="20" y2="30" stroke="#10b981" stroke-width="2"/>
+      <rect x="0" y="0" width="50" height="50" fill="#10b981" fill-opacity="0.4" stroke="#10b981" stroke-width="2"/>
+    </g>
+  
+    <!-- Connection -->
+    <path d="M 430 120 L 520 120" stroke="#8b5cf6" stroke-width="3" marker-end="url(#arrow3D)"/>
+  
+    <!-- Output Volume -->
+    <text x="560" y="50" font-family="sans-serif" font-size="18" fill="#fbbf24">Feature Volume (O)</text>
+    <g transform="translate(560, 100)">
+      <rect x="30" y="-30" width="70" height="70" fill="none" stroke="#fbbf24" stroke-width="2"/>
+      <line x1="0" y1="0" x2="30" y2="-30" stroke="#fbbf24" stroke-width="2"/>
+      <line x1="70" y1="0" x2="100" y2="-30" stroke="#fbbf24" stroke-width="2"/>
+      <line x1="70" y1="70" x2="100" y2="40" stroke="#fbbf24" stroke-width="2"/>
+      <line x1="0" y1="70" x2="30" y2="40" stroke="#fbbf24" stroke-width="2"/>
+      <rect x="0" y="0" width="70" height="70" fill="#fbbf24" fill-opacity="0.2" stroke="#fbbf24" stroke-width="2"/>
+      <!-- Highlighted pixel in output -->
+      <circle cx="0" cy="0" r="5" fill="#ef4444" />
+    </g>
+  </svg>
 code_template: |
   import pandas as pd
   import numpy as np
@@ -145,53 +217,29 @@ code_template: |
           full_pipeline = model
 
 illustration_mermaid: |
-    graph TD
-      subgraph Input
-        Data([Volumetric Data: N x C x D x H x W])
-      end
-      
-      subgraph 3D Feature Extraction
-        Conv1[Conv3D<br/>16 filters, 3x3x3]
-        Relu1[ReLU]
-        Pool1[MaxPool3D<br/>2x2x2]
-        
-        Conv2[Conv3D<br/>32 filters, 3x3x3]
-        Relu2[ReLU]
-        Pool2[MaxPool3D<br/>2x2x2]
-      end
-      
-      subgraph Classification
-        AvgPool[AdaptiveAvgPool3D]
-        Flat[Flatten]
-        FC[Linear<br/>Output: Num Classes]
-      end
-      
-      subgraph Output
-        Softmax[Softmax / Logits]
-        Preds([Class Predictions])
-      end
-      
-      Data --> Conv1
-      Conv1 --> Relu1
-      Relu1 --> Pool1
-      Pool1 --> Conv2
-      Conv2 --> Relu2
-      Relu2 --> Pool2
-      Pool2 --> AvgPool
-      AvgPool --> Flat
-      Flat --> FC
-      FC --> Softmax
-      Softmax --> Preds
+  flowchart LR
+    Data[/"Volume (N x C x D x H x W)"/]
+    Conv1{"Conv3D (16 filtres)\n+ ReLU + MaxPool3D"}
+    Conv2{"Conv3D (32 filtres)\n+ ReLU + MaxPool3D"}
+    AvgPool{"AdaptiveAvgPool3D\n+ Flatten"}
+    FC{"Couche Dense (Linéaire)"}
+    SM{"Softmax"}
+    Pred(["Prédictions (Classes)"])
 
-      style Conv1 fill:#8b5cf6,stroke:#7c3aed,stroke-width:2px,color:#fff
-      style Conv2 fill:#8b5cf6,stroke:#7c3aed,stroke-width:2px,color:#fff
-      style Relu1 fill:#c4b5fd,stroke:#8b5cf6,stroke-width:1px,color:#000
-      style Relu2 fill:#c4b5fd,stroke:#8b5cf6,stroke-width:1px,color:#000
-      style Pool1 fill:#8b5cf6,stroke:#7c3aed,stroke-width:2px,color:#fff
-      style Pool2 fill:#8b5cf6,stroke:#7c3aed,stroke-width:2px,color:#fff
-      style FC fill:#8b5cf6,stroke:#7c3aed,stroke-width:2px,color:#fff
-      style Data fill:#f8fafc,stroke:#94a3b8,stroke-width:1px
-      style Preds fill:#f8fafc,stroke:#94a3b8,stroke-width:1px
+    Data --> Conv1
+    Conv1 --> Conv2
+    Conv2 --> AvgPool
+    AvgPool --> FC
+    FC --> SM
+    SM --> Pred
+
+    style Data fill:#fbbf24,stroke:#d97706,stroke-width:2px,color:#000
+    style Conv1 fill:#3b82f6,stroke:#2563eb,stroke-width:2px,color:#fff
+    style Conv2 fill:#3b82f6,stroke:#2563eb,stroke-width:2px,color:#fff
+    style AvgPool fill:#3b82f6,stroke:#2563eb,stroke-width:2px,color:#fff
+    style FC fill:#3b82f6,stroke:#2563eb,stroke-width:2px,color:#fff
+    style SM fill:#3b82f6,stroke:#2563eb,stroke-width:2px,color:#fff
+    style Pred fill:#10b981,stroke:#059669,stroke-width:2px,color:#fff
 
 _metadata:
   bloc: 3

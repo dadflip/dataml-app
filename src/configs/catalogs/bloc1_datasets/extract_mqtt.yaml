@@ -1,7 +1,16 @@
 id: extract_mqtt
 name: 'Extract: Serveur MQTT (IoT)'
-description: 'S''abonne à un topic MQTT (ex: capteurs IoT) et enregistre les trames
-  localement.'
+description: S'abonne à un topic MQTT (ex. capteurs IoT) et enregistre les trames interceptées dans un fichier texte local.
+when_to_use: À utiliser pour collecter des échantillons de données télémétriques, domotiques ou industrielles (IoT).
+use_cases:
+  - Collecte de relevés de températures de capteurs.
+  - Écoute d'un réseau domotique intelligent.
+pros:
+  - Très léger et adapté à la majorité des protocoles IoT.
+  - Permet de définir une durée d'écoute précise.
+cons:
+  - Synchronisation temporelle basique.
+  - Le réseau doit être stable pendant toute la durée d'écoute.
 category: 1. Extract
 tags:
 - extract
@@ -59,13 +68,22 @@ code_template: |
   task_type = "unknown"
   meta = {"source": "mqtt", "path": DEST_PATH}
 illustration_mermaid: |
-    flowchart TD
-    A([FILE_PATH]) --> B[Load EXTRACT_MQTT]
-    B --> df([df])
-    
-    style A fill:#3b82f6,color:#fff
-    style B fill:#10b981,color:#fff
-    style df fill:#f59e0b,color:#fff
+    flowchart LR
+        A[/"📄 MQTT Topic"/] --> B{"Extract MQTT()"}
+        C[/"🎯 TARGET_COL"/] --> D{"Check TARGET_COL"}
+        B --> E(["📊 df (Dump File)"])
+        E --> D
+        D --> F(["🎯 target_name"])
+        D --> G(["⚙️ task_type"])
+        D --> H(["ℹ️ meta (...)"])
+        style A fill:#fbbf24,stroke:#d97706,stroke-width:2px,color:#000
+        style C fill:#fbbf24,stroke:#d97706,stroke-width:2px,color:#000
+        style B fill:#3b82f6,stroke:#2563eb,stroke-width:2px,color:#fff
+        style D fill:#3b82f6,stroke:#2563eb,stroke-width:2px,color:#fff
+        style E fill:#10b981,stroke:#059669,stroke-width:2px,color:#fff
+        style F fill:#8b5cf6,stroke:#7c3aed,stroke-width:2px,color:#fff
+        style G fill:#8b5cf6,stroke:#7c3aed,stroke-width:2px,color:#fff
+        style H fill:#8b5cf6,stroke:#7c3aed,stroke-width:2px,color:#fff
 
 
 

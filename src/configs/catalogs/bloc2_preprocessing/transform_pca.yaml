@@ -1,14 +1,56 @@
 id: "transform_pca"
 name: "Transform: PCA (Analyse Composantes Principales)"
-description: "Réduction de dimensionnalité."
+description: "L'Analyse en Composantes Principales (PCA) est une technique de réduction de dimensionnalité non supervisée. Elle transforme un espace de variables potentiellement corrélées en un nouvel espace de variables orthogonales (et donc décorrélées) appelées composantes principales. Ces composantes sont ordonnées de manière à capturer séquentiellement la variance maximale du jeu de données. La PCA est couramment utilisée pour la compression d'information, la réduction du bruit, et la lutte contre le fléau de la dimensionnalité tout en conservant la majeure partie de la variance."
+math_theory: |
+  Soit $\textcolor{#3b82f6}{X} \in \mathbb{R}^{n \times p}$ une matrice de données préalablement centrée (moyenne nulle). La PCA repose sur la décomposition spectrale de la matrice de covariance :
+  $$ \textcolor{#10b981}{C} = \frac{1}{n-1} \textcolor{#3b82f6}{X}^T \textcolor{#3b82f6}{X} $$
+  En résolvant l'équation aux valeurs propres $\textcolor{#10b981}{C} v = \textcolor{#fbbf24}{\lambda} v$, on extrait les vecteurs propres $\textcolor{#8b5cf6}{V}$ (composantes principales) et leurs valeurs propres associées $\textcolor{#fbbf24}{\lambda}$ (variance expliquée).
+
+  Les données projetées dans le nouvel espace s'obtiennent par $\textcolor{#ef4444}{Z} = \textcolor{#3b82f6}{X} \textcolor{#8b5cf6}{V_k}$, où $\textcolor{#8b5cf6}{V_k}$ regroupe les $k$ premiers vecteurs propres. Le ratio de variance expliquée par les $k$ composantes est :
+  $$ \text{Var. expliquée} = \frac{\sum_{i=1}^{k} \textcolor{#fbbf24}{\lambda_i}}{\sum_{i=1}^{p} \textcolor{#fbbf24}{\lambda_i}} $$
+math_illustration_svg: |
+  <svg viewBox="0 0 500 200" xmlns="http://www.w3.org/2000/svg">
+    <rect width="500" height="200" fill="#1e293b" rx="8"/>
+    <rect x="30" y="75" width="60" height="50" fill="#3b82f6" rx="4"/>
+    <text x="60" y="105" fill="white" font-family="sans-serif" font-size="16" text-anchor="middle">X</text>
+    <text x="60" y="145" fill="#94a3b8" font-family="sans-serif" font-size="12" text-anchor="middle">n × p</text>
+    <path d="M 100 100 L 140 100" stroke="#94a3b8" stroke-width="2" marker-end="url(#arrow-pca)"/>
+    <rect x="150" y="75" width="60" height="50" fill="#10b981" rx="4"/>
+    <text x="180" y="105" fill="white" font-family="sans-serif" font-size="16" text-anchor="middle">C</text>
+    <text x="180" y="145" fill="#94a3b8" font-family="sans-serif" font-size="12" text-anchor="middle">p × p</text>
+    <path d="M 220 100 L 260 100" stroke="#94a3b8" stroke-width="2" marker-end="url(#arrow-pca)"/>
+    <rect x="270" y="45" width="60" height="40" fill="#8b5cf6" rx="4"/>
+    <text x="300" y="70" fill="white" font-family="sans-serif" font-size="16" text-anchor="middle">V</text>
+    <text x="300" y="35" fill="#94a3b8" font-family="sans-serif" font-size="12" text-anchor="middle">Vecteurs</text>
+    <rect x="270" y="115" width="60" height="40" fill="#fbbf24" rx="4"/>
+    <text x="300" y="140" fill="white" font-family="sans-serif" font-size="16" text-anchor="middle">λ</text>
+    <text x="300" y="170" fill="#94a3b8" font-family="sans-serif" font-size="12" text-anchor="middle">Valeurs</text>
+    <path d="M 340 65 Q 360 65 370 85 T 390 100" fill="none" stroke="#94a3b8" stroke-width="2" marker-end="url(#arrow-pca)"/>
+    <path d="M 60 65 Q 60 20 220 20 T 390 90" fill="none" stroke="#3b82f6" stroke-width="2" stroke-dasharray="4,4" marker-end="url(#arrow-pca)"/>
+    <text x="220" y="15" fill="#3b82f6" font-family="sans-serif" font-size="12" text-anchor="middle">X * V_k</text>
+    <rect x="400" y="75" width="60" height="50" fill="#ef4444" rx="4"/>
+    <text x="430" y="105" fill="white" font-family="sans-serif" font-size="16" text-anchor="middle">Z</text>
+    <text x="430" y="145" fill="#94a3b8" font-family="sans-serif" font-size="12" text-anchor="middle">n × k</text>
+    <defs>
+      <marker id="arrow-pca" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+        <path d="M 0 0 L 10 5 L 0 10 z" fill="#94a3b8"/>
+      </marker>
+    </defs>
+  </svg>
 category: "4.1 Preprocessing"
 tags: ["transform", "feature-engineering", "tabular", "sklearn", "pipeline"]
 applies_to: ["Tabulaire"]
-when_to_use: "Dataset très large et corrélé."
+when_to_use: "À privilégier face à un grand nombre de variables hautement corrélées (multicolinéarité), pour accélérer l'entraînement d'algorithmes complexes, ou pour visualiser la structure de données massives en 2D ou 3D."
+use_cases:
+  - "Réduction de dimensionnalité de vecteurs de features très larges (ex: descripteurs d'images, expressions géniques)."
+  - "Décorrélation de facteurs macro-économiques avant un modèle de régression."
 pros:
-  - "Compresse l'information."
+  - "Atténue significativement les problèmes liés au fléau de la dimensionnalité."
+  - "Supprime la multicolinéarité intrinsèque entre les caractéristiques d'entrée."
+  - "Améliore l'efficacité computationnelle (réduction de la mémoire et accélération de l'entraînement)."
 cons:
-  - "Perte interprétabilité."
+  - "Détruit l'interprétabilité des variables : les nouvelles composantes n'ont généralement aucune signification métier tangible."
+  - "Sensible à la mise à l'échelle : nécessite impérativement une standardisation (StandardScaler) préalable des données."
 hyperparameters:
   n_components: "Nombre composantes (ou % variance)."
 code_template: |
@@ -52,17 +94,17 @@ code_template: |
   if 'task_type' not in locals(): task_type = "classification"
   if 'meta' not in locals(): meta = {}
 illustration_mermaid: |
-  graph TD
-    A[Raw Data] --> B{Are there numeric columns?}
-    B -- Yes --> C[Parse N_COMPONENTS]
-    C --> D[Initialize PCA]
-    D --> E[Create ColumnTransformer]
-    E --> F[Add to Pipeline Steps]
-    B -- No --> G[Skip PCA]
-    F --> H[Update Data Contract Variables]
-    G --> H
-    style A fill:#eff6ff,stroke:#3b82f6,stroke-width:2px
-    style H fill:#10b981,stroke:#059669,stroke-width:2px
+  flowchart LR
+    A[/"📄 N_COMPONENTS"/] --> B{"⚙️ PCA Transform"}
+    C(["📊 df Input"]) --> B
+    B --> D(["📊 df Reduced"])
+    B --> E(["ℹ️ pipeline_steps"])
+
+    style A fill:#fbbf24,stroke:#d97706,stroke-width:2px,color:#000
+    style B fill:#3b82f6,stroke:#2563eb,stroke-width:2px,color:#fff
+    style C fill:#10b981,stroke:#059669,stroke-width:2px,color:#fff
+    style D fill:#10b981,stroke:#059669,stroke-width:2px,color:#fff
+    style E fill:#8b5cf6,stroke:#7c3aed,stroke-width:2px,color:#fff
 
 _metadata:
   bloc: 2

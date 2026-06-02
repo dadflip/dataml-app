@@ -1,14 +1,22 @@
 id: "model_hierarchical_clustering"
 name: "Model: Agglomerative Hierarchical Clustering"
-description: "Clustering hiérarchique ascendant. Construit un arbre (dendrogramme) de clusters."
+description: "Algorithme de clustering non supervisé (ascendant hiérarchique) qui construit progressivement un arbre (dendrogramme) en fusionnant itérativement les points ou clusters les plus proches."
 category: "Clustering (Non-Supervisé)"
 tags: ["model", "clustering", "tabular", "sklearn", "hierarchical"]
 applies_to: ["Tabulaire"]
-when_to_use: "Pour visualiser la hiérarchie des groupes (Dendrogramme) sur des datasets petits à moyens."
+when_to_use: "Idéal pour identifier des sous-groupes naturels avec une structure hiérarchique explicite, particulièrement lorsque le nombre de clusters n'est pas connu à l'avance et que l'interprétabilité visuelle est clé."
+use_cases:
+  - "Segmentation de clients basée sur des comportements d'achat."
+  - "Classification phylogénétique ou taxonomique en biologie."
+  - "Analyse de regroupement de gènes avec expressions similaires."
 pros:
-  - "Très interprétable."
+  - "Ne nécessite pas de fixer le nombre de clusters a priori (grâce à l'analyse du dendrogramme)."
+  - "Très interprétable grâce à la visualisation de l'arbre."
+  - "Peut capturer des formes de clusters complexes selon le critère de liaison (linkage)."
 cons:
-  - "Très lent en O(N^3), inadapté au Big Data."
+  - "Complexité temporelle en O(N³), totalement inadapté aux grands ensembles de données."
+  - "Sensible au bruit et aux valeurs aberrantes."
+  - "Une fois qu'une fusion est effectuée, elle ne peut pas être annulée (pas d'optimisation globale)."
 hyperparameters:
   n_clusters: "Nombre de clusters finaux (ex: 3)."
   linkage: "Critère de liaison ('ward', 'complete', 'average', 'single')."
@@ -46,23 +54,44 @@ code_template: |
       task_type = "clustering"
       meta = {}
 illustration_mermaid: |
-  graph TD
-    subgraph Data
-      Points[N Data Points]
-    end
-    subgraph Agglomerative Process
-      Points --> Dist[Compute Distance Matrix]
-      Dist --> Linkage[Merge Closest Points - Linkage]
-      Linkage --> Tree[Build Dendrogram]
-      Tree --> Cut[Cut Tree at N_CLUSTERS]
-    end
-    subgraph Output
-      Cut --> Labels[Cluster Labels]
-    end
-    style Dist fill:#3b82f6,stroke:#2563eb,stroke-width:2px,color:#fff
-    style Linkage fill:#8b5cf6,stroke:#7c3aed,stroke-width:2px,color:#fff
-    style Tree fill:#10b981,stroke:#059669,stroke-width:2px,color:#fff
+  flowchart LR
+    Points[/"N Data Points"/] --> Dist{"Compute Distance Matrix"}
+    Dist --> Linkage{"Merge Closest Points - Linkage"}
+    Linkage --> Tree(["Build Dendrogram"])
+    Tree --> Cut{"Cut Tree at N_CLUSTERS"}
+    Cut --> Labels(["Cluster Labels"])
 
+    style Points fill:#fbbf24,stroke:#d97706,stroke-width:2px,color:#000
+    style Dist fill:#3b82f6,stroke:#2563eb,stroke-width:2px,color:#fff
+    style Linkage fill:#3b82f6,stroke:#2563eb,stroke-width:2px,color:#fff
+    style Tree fill:#10b981,stroke:#059669,stroke-width:2px,color:#fff
+    style Cut fill:#3b82f6,stroke:#2563eb,stroke-width:2px,color:#fff
+    style Labels fill:#10b981,stroke:#059669,stroke-width:2px,color:#fff
+
+math_theory: |
+  Exemple avec le critère de liaison de Ward, qui fusionne les clusters $\textcolor{#3b82f6}{A}$ et $\textcolor{#10b981}{B}$ minimisant l'augmentation de la variance totale intra-cluster :
+  $$ \Delta(\textcolor{#3b82f6}{A}, \textcolor{#10b981}{B}) = \frac{|\textcolor{#3b82f6}{A}| |\textcolor{#10b981}{B}|}{|\textcolor{#3b82f6}{A}| + |\textcolor{#10b981}{B}|} || \textcolor{#fbbf24}{\mu_A} - \textcolor{#fbbf24}{\mu_B} ||^2 $$
+  
+  Où :
+  - $|\textcolor{#3b82f6}{A}|$ et $|\textcolor{#10b981}{B}|$ sont le nombre de points dans les clusters respectifs.
+  - $\textcolor{#fbbf24}{\mu_A}$ et $\textcolor{#fbbf24}{\mu_B}$ sont les centroïdes des clusters $\textcolor{#3b82f6}{A}$ et $\textcolor{#10b981}{B}$.
+math_illustration_svg: |
+  <svg viewBox="0 0 500 250" xmlns="http://www.w3.org/2000/svg">
+    <rect width="500" height="250" fill="#f8fafc" rx="10"/>
+    <circle cx="150" cy="180" r="40" fill="#3b82f6" fill-opacity="0.2"/>
+    <circle cx="150" cy="180" r="5" fill="#fbbf24"/>
+    <text x="145" y="170" font-family="Arial" font-size="12" font-weight="bold" fill="#fbbf24">μA</text>
+    <text x="115" y="215" font-family="Arial" font-size="16" font-weight="bold" fill="#3b82f6">Cluster A</text>
+    <circle cx="350" cy="180" r="30" fill="#10b981" fill-opacity="0.2"/>
+    <circle cx="350" cy="180" r="5" fill="#fbbf24"/>
+    <text x="355" y="170" font-family="Arial" font-size="12" font-weight="bold" fill="#fbbf24">μB</text>
+    <text x="330" y="215" font-family="Arial" font-size="16" font-weight="bold" fill="#10b981">Cluster B</text>
+    <line x1="150" y1="180" x2="350" y2="180" stroke="#1f2937" stroke-width="2" stroke-dasharray="5"/>
+    <text x="250" y="170" font-family="Arial" font-size="14" font-weight="bold" text-anchor="middle" fill="#1f2937">Δ(A, B)</text>
+    <path d="M 150 140 L 150 80 L 350 80 L 350 150" fill="none" stroke="#6b7280" stroke-width="3"/>
+    <circle cx="250" cy="80" r="6" fill="#8b5cf6"/>
+    <text x="250" y="65" font-family="Arial" font-size="14" font-weight="bold" text-anchor="middle" fill="#8b5cf6">Merge</text>
+  </svg>
 _metadata:
   bloc: 3
   section: "5_clustering_automl_and_nn"

@@ -1,14 +1,63 @@
 id: "transform_robust_scaler"
 name: "Transform: Robust Scaler"
-description: "Met à l'échelle via l'interquartile."
+description: "Met a l'echelle les variables numeriques en utilisant la mediane et l'ecart interquartile (IQR) au lieu de la moyenne et l'ecart-type. Cette methode est beaucoup plus resistante aux valeurs aberrantes (outliers) que le StandardScaler, car la mediane et l'IQR ne sont pas sensibles aux valeurs extremes."
+math_theory: |
+  Pour chaque variable $\textcolor{#3b82f6}{x_j}$, la transformation est definie par :
+  $$ x'_{ij} = \frac{x_{ij} - \textcolor{#10b981}{Q_2(x_j)}}{\textcolor{#fbbf24}{Q_3(x_j)} - \textcolor{#fbbf24}{Q_1(x_j)}} = \frac{x_{ij} - \textcolor{#10b981}{\text{mediane}(x_j)}}{\textcolor{#fbbf24}{\text{IQR}(x_j)}} $$
+  ou $\textcolor{#fbbf24}{Q_1}$, $\textcolor{#10b981}{Q_2}$, $\textcolor{#fbbf24}{Q_3}$ sont respectivement le premier quartile (25e percentile), la mediane (50e percentile) et le troisieme quartile (75e percentile).
+  L'\textcolor{#fbbf24}{IQR} (Interquartile Range) = $\textcolor{#fbbf24}{Q_3} - \textcolor{#fbbf24}{Q_1}$ mesure la dispersion des 50% centraux des donnees, ignorant completement les queues de distribution (\textcolor{#ef4444}{outliers}).
+  Apres transformation, la mediane vaut 0 et l'IQR vaut 1, mais les valeurs ne sont pas bornees dans un intervalle fixe.
+math_illustration_svg: |
+  <svg viewBox="0 0 400 200" xmlns="http://www.w3.org/2000/svg">
+    <!-- Background -->
+    <rect width="400" height="200" fill="#1e293b" rx="8" />
+    
+    <!-- Distribution Curve -->
+    <g transform="translate(50, 140)">
+      <path d="M 0 0 C 50 0, 80 -100, 150 -100 C 220 -100, 250 0, 300 0" fill="#334155" fill-opacity="0.5" stroke="none" />
+      <path d="M 0 0 C 50 0, 80 -100, 150 -100 C 220 -100, 250 0, 300 0" fill="none" stroke="#475569" stroke-width="2" />
+      <line x1="0" y1="0" x2="300" y2="0" stroke="#475569" stroke-width="2" />
+      
+      <!-- Outliers -->
+      <circle cx="280" cy="-10" r="3" fill="#ef4444" />
+      <circle cx="295" cy="-5" r="3" fill="#ef4444" />
+      <circle cx="10" cy="-5" r="3" fill="#ef4444" />
+      
+      <!-- Quartiles and Median -->
+      <line x1="110" y1="0" x2="110" y2="-60" stroke="#fbbf24" stroke-width="2" stroke-dasharray="4,2" />
+      <text x="110" y="15" fill="#fbbf24" font-family="sans-serif" font-size="12" text-anchor="middle">Q1</text>
+      
+      <line x1="150" y1="0" x2="150" y2="-100" stroke="#10b981" stroke-width="2" />
+      <text x="150" y="15" fill="#10b981" font-family="sans-serif" font-size="12" font-weight="bold" text-anchor="middle">Median</text>
+      
+      <line x1="190" y1="0" x2="190" y2="-60" stroke="#fbbf24" stroke-width="2" stroke-dasharray="4,2" />
+      <text x="190" y="15" fill="#fbbf24" font-family="sans-serif" font-size="12" text-anchor="middle">Q3</text>
+      
+      <!-- IQR Box -->
+      <rect x="110" y="-40" width="80" height="20" fill="#fbbf24" fill-opacity="0.2" stroke="#fbbf24" stroke-width="1" />
+      <path d="M 110 -20 L 110 -15 L 190 -15 L 190 -20" fill="none" stroke="#fbbf24" stroke-width="1.5" />
+      <text x="150" y="-5" fill="#fbbf24" font-family="sans-serif" font-size="12" font-weight="bold" text-anchor="middle">IQR</text>
+      
+      <!-- Outlier labels -->
+      <text x="285" y="-20" fill="#ef4444" font-family="sans-serif" font-size="10" font-weight="bold" text-anchor="middle">Outliers</text>
+    </g>
+  </svg>
 category: "4.1 Preprocessing"
 tags: ["transform", "scaling", "tabular", "sklearn", "pipeline"]
 applies_to: ["Tabulaire"]
-when_to_use: "Quand il y a beaucoup d'outliers."
+when_to_use: "Privilegier cette methode lorsque vos donnees contiennent de nombreuses valeurs aberrantes (outliers) qui fausseraient la mise a l'echelle par StandardScaler ou MinMaxScaler."
+use_cases:
+  - "Normalisation de donnees financieres avec des transactions extremes (fraude, montants exceptionnels)."
+  - "Preprocessing de donnees de capteurs avec des pics de bruit sporadiques."
+  - "Mise a l'echelle de donnees medicales ou les valeurs atypiques sont frequentes (ex: taux sanguins)."
 pros:
-  - "Robuste."
+  - "Tres robuste face aux valeurs aberrantes grace a l'utilisation de la mediane et de l'IQR."
+  - "Ne modifie pas la forme de la distribution des donnees."
+  - "Compatible avec le pipeline sklearn pour un deploiement reproductible."
 cons:
-  - "Ne borne pas strictement."
+  - "Ne borne pas les valeurs dans un intervalle strict comme MinMaxScaler."
+  - "Peut etre moins adapte si les donnees suivent une distribution gaussienne sans outliers (StandardScaler serait preferable)."
+  - "La notion de robustesse diminue si plus de 50% des donnees sont aberrantes."
 hyperparameters: {}
 code_template: |
   import pandas as pd
@@ -45,16 +94,19 @@ code_template: |
   if 'task_type' not in locals(): task_type = "classification"
   if 'meta' not in locals(): meta = {}
 illustration_mermaid: |
-  graph TD
-    A[Raw Data] --> B{Are there numeric columns?}
-    B -- Yes --> C[Initialize RobustScaler]
-    C --> D[Create ColumnTransformer]
-    D --> E[Add to Pipeline Steps]
-    B -- No --> F[Skip RobustScaler]
-    E --> G[Update Data Contract Variables]
-    F --> G
-    style A fill:#eff6ff,stroke:#3b82f6,stroke-width:2px
-    style G fill:#10b981,stroke:#059669,stroke-width:2px
+  flowchart LR
+    A(["📊 df"]) --> B{"⚙️ Extraire Cols Num."}
+    B -- "Oui" --> C{"⚙️ RobustScaler (mediane, IQR)"}
+    B -- "Non" --> D{"⚙️ Skip"}
+    C --> E(["📊 df (mise a l'echelle robuste)"])
+    D --> E
+    E --> F(["ℹ️ pipeline_steps"])
+    style A fill:#10b981,stroke:#059669,stroke-width:2px,color:#fff
+    style B fill:#3b82f6,stroke:#2563eb,stroke-width:2px,color:#fff
+    style C fill:#3b82f6,stroke:#2563eb,stroke-width:2px,color:#fff
+    style D fill:#3b82f6,stroke:#2563eb,stroke-width:2px,color:#fff
+    style E fill:#10b981,stroke:#059669,stroke-width:2px,color:#fff
+    style F fill:#8b5cf6,stroke:#7c3aed,stroke-width:2px,color:#fff
 
 _metadata:
   bloc: 2

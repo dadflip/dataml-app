@@ -1,14 +1,25 @@
 id: "model_variational_autoencoder"
 name: "Model: Variational Autoencoder (VAE)"
-description: "Réseau génératif probabiliste. Encode l'espace latent sous forme de distribution gaussienne."
+description: |
+  Autoencodeur Variationnel (VAE). Architecture de réseau de neurones profond (Deep Learning) non supervisée, utilisée pour apprendre une représentation continue et structurée (espace latent) des données. Contrairement à un autoencodeur classique, l'espace latent d'un VAE suit une distribution de probabilité (souvent gaussienne), ce qui permet de générer de nouvelles données cohérentes.
 category: "Génératif & Non-Supervisé"
 tags: ["model", "generative", "unsupervised", "pytorch", "vae", "deep-learning"]
 applies_to: ["Tabulaire", "Images"]
-when_to_use: "Pour générer de nouvelles données réalistes ou faire des interpolations dans l'espace latent."
+when_to_use: |
+  À privilégier lorsque vous souhaitez non seulement réduire la dimension de vos données, mais surtout construire un modèle génératif capable de créer de nouvelles données synthétiques réalistes ou d'interpoler fluidement entre deux points de données existants.
+use_cases:
+  - "Génération de nouvelles données synthétiques (ex: création de visages, génération de molécules)."
+  - "Interpolation lisse et structurée dans l'espace latent pour simuler la transition entre différents états."
+  - "Réduction de dimensionnalité probabiliste pour extraire des caractéristiques robustes au bruit."
+  - "Détection d'anomalies non supervisée basée sur l'erreur de reconstruction."
 pros:
-  - "Espace latent continu et exploitable."
+  - "Apprend un espace latent continu et bien structuré, empêchant la formation de 'trous' dans la représentation."
+  - "Fournit un cadre probabiliste rigoureux (divergence de Kullback-Leibler) pour modéliser l'incertitude."
+  - "Globalement plus facile et plus stable à entraîner que les architectures purement antagonistes (GANs)."
 cons:
-  - "Génère souvent des données un peu floues comparé aux GANs."
+  - "A tendance à générer des résultats légèrement 'flous' (surtout pour les images) à cause de la perte Mean Squared Error (MSE)."
+  - "L'équilibrage de la fonction de perte (reconstruction vs divergence KL) requiert souvent un ajustement minutieux (β-VAE)."
+  - "L'astuce mathématique (reparameterization trick) complexifie l'implémentation par rapport à un autoencodeur basique."
 hyperparameters:
   latent_dim: "Taille de l'espace latent (ex: 2)."
   epochs: "Nombre d'époques (ex: 20)."
@@ -91,21 +102,85 @@ code_template: |
           full_pipeline = model
       training_history = {"status": "success", "loss": float(loss)}
       task_type = "generative"
+math_theory: |
+  Dans un VAE, l'encodeur ne produit pas un point déterministe, mais les paramètres (moyenne $\textcolor{#3b82f6}{\mu}$ et variance $\textcolor{#fbbf24}{\sigma^2}$) d'une distribution latente.
+  Pour permettre la rétropropagation, on utilise l'astuce de reparamétrisation en échantillonnant un bruit $\textcolor{#8b5cf6}{\epsilon \sim \mathcal{N}(0, I)}$ :
+  
+  $$ \textcolor{#10b981}{z} = \textcolor{#3b82f6}{\mu} + \textcolor{#fbbf24}{\sigma} \odot \textcolor{#8b5cf6}{\epsilon} $$
+  
+  Le décodeur génère ensuite la reconstruction $\textcolor{#ef4444}{\hat{x}}$ à partir de $\textcolor{#10b981}{z}$. La fonction de coût combine l'erreur de reconstruction et la divergence de Kullback-Leibler (KL) qui régularise l'espace latent pour le rapprocher d'une distribution normale centrée réduite :
+  
+  $$ \mathcal{L} = || \textcolor{#10b981}{x} - \textcolor{#ef4444}{\hat{x}} ||^2 + D_{KL} \left( \mathcal{N}(\textcolor{#3b82f6}{\mu}, \textcolor{#fbbf24}{\sigma^2}) || \mathcal{N}(0, I) \right) $$
+math_illustration_svg: |
+  <svg viewBox="0 0 700 350" xmlns="http://www.w3.org/2000/svg">
+    <!-- Input -->
+    <rect x="50" y="140" width="40" height="60" rx="5" fill="#10b981" />
+    <text x="70" y="225" fill="#10b981" font-family="sans-serif" font-size="18" text-anchor="middle">x</text>
+    
+    <!-- Encoder -->
+    <polygon points="120,130 180,150 180,190 120,210" fill="gray" />
+    <text x="150" y="175" fill="white" font-family="sans-serif" font-size="14" text-anchor="middle">Enc</text>
+    
+    <!-- Mu and Sigma -->
+    <rect x="220" y="100" width="60" height="40" rx="5" fill="#3b82f6" />
+    <text x="250" y="125" fill="white" font-family="sans-serif" font-size="18" text-anchor="middle">μ</text>
+    
+    <rect x="220" y="200" width="60" height="40" rx="5" fill="#fbbf24" />
+    <text x="250" y="225" fill="white" font-family="sans-serif" font-size="18" text-anchor="middle">σ²</text>
+    
+    <path d="M 180 160 L 220 120" stroke="black" stroke-width="2" />
+    <path d="M 180 180 L 220 220" stroke="black" stroke-width="2" />
+    
+    <!-- Reparameterization -->
+    <circle cx="350" cy="170" r="25" fill="#10b981" />
+    <text x="350" y="175" fill="white" font-family="sans-serif" font-size="18" font-weight="bold" text-anchor="middle">z</text>
+    
+    <path d="M 280 120 L 330 155" stroke="black" stroke-width="2" marker-end="url(#arrow)" />
+    <path d="M 280 220 L 330 185" stroke="black" stroke-width="2" marker-end="url(#arrow)" />
+    
+    <!-- Epsilon -->
+    <circle cx="350" cy="80" r="20" fill="#8b5cf6" />
+    <text x="350" y="86" fill="white" font-family="sans-serif" font-size="16" text-anchor="middle">ε</text>
+    <path d="M 350 100 L 350 145" stroke="black" stroke-width="2" stroke-dasharray="4,4" marker-end="url(#arrow)" />
+    
+    <!-- Decoder -->
+    <polygon points="430,150 490,130 490,210 430,190" fill="gray" />
+    <text x="460" y="175" fill="white" font-family="sans-serif" font-size="14" text-anchor="middle">Dec</text>
+    <path d="M 375 170 L 430 170" stroke="black" stroke-width="2" marker-end="url(#arrow)" />
+    
+    <!-- Output -->
+    <rect x="520" y="140" width="40" height="60" rx="5" fill="#ef4444" />
+    <text x="540" y="225" fill="#ef4444" font-family="sans-serif" font-size="18" text-anchor="middle">x^</text>
+    <path d="M 490 170 L 520 170" stroke="black" stroke-width="2" marker-end="url(#arrow)" />
+    
+    <!-- KL Divergence Box -->
+    <rect x="200" y="40" width="100" height="30" rx="5" fill="none" stroke="black" stroke-width="2" stroke-dasharray="2,2"/>
+    <text x="250" y="60" fill="black" font-family="sans-serif" font-size="14" text-anchor="middle">KL Loss</text>
+    <path d="M 250 100 L 250 70" stroke="black" stroke-width="1" />
+    
+    <!-- Recon Loss -->
+    <path d="M 70 250 L 70 290 L 540 290 L 540 250" stroke="black" stroke-width="2" fill="none" />
+    <text x="305" y="280" fill="black" font-family="sans-serif" font-size="16" text-anchor="middle">Reconstruction Loss</text>
+    
+    <defs>
+      <marker id="arrow" markerWidth="10" markerHeight="10" refX="9" refY="3" orient="auto" markerUnits="strokeWidth">
+        <path d="M0,0 L0,6 L9,3 z" fill="black" />
+      </marker>
+    </defs>
+  </svg>
 illustration_mermaid: |
-    graph TD
-      In([Input Data]) --> Enc1(Encoder: Dense Layers)
-      Enc1 --> Mu([Latent Mean])
-      Enc1 --> LogVar([Latent Log-Var])
-      Mu --> Reparam(Reparameterization Trick)
-      LogVar --> Reparam
-      Reparam --> Dec1(Decoder: Dense Layers)
-      Dec1 --> Out([Reconstructed Data])
-      
-      style In fill:#f8fafc,stroke:#94a3b8,stroke-width:2px
-      style Enc1 fill:#38bdf8,stroke:#0284c7,stroke-width:2px,color:#fff
-      style Reparam fill:#8b5cf6,stroke:#7c3aed,stroke-width:2px,color:#fff
-      style Dec1 fill:#10b981,stroke:#059669,stroke-width:2px,color:#fff
-      style Out fill:#f8fafc,stroke:#94a3b8,stroke-width:2px
+  flowchart LR
+    In[/"Données d'Entrée (Input Data)"/]:::input --> Enc{"Encodeur (Couches Denses)"}:::model
+    Enc --> Mu(["Moyenne Latente (Mu)"]):::tensor
+    Enc --> LogVar(["Log-Var Latente"]):::tensor
+    Mu --> Reparam{"Astuce Reparamétrisation"}:::model
+    LogVar --> Reparam
+    Reparam --> Dec{"Décodeur (Couches Denses)"}:::model
+    Dec --> Out(["Données Reconstruites"]):::tensor
+
+    classDef input fill:#fbbf24,stroke:#d97706,stroke-width:2px,color:#000
+    classDef model fill:#3b82f6,stroke:#2563eb,stroke-width:2px,color:#fff
+    classDef tensor fill:#10b981,stroke:#059669,stroke-width:2px,color:#fff
 
 _metadata:
   bloc: 3

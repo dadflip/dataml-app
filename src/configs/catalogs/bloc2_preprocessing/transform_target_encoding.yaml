@@ -1,16 +1,58 @@
 id: "transform_target_encoding"
 name: "Transform: Target Encoding"
-description: "Encode les catégories par la moyenne de la cible."
+description: "Encode les variables categoriques en remplacant chaque categorie par la moyenne de la variable cible pour cette categorie. Particulierement adapte aux variables a haute cardinalite (villes, codes postaux, identifiants) ou le One-Hot Encoding genererait un nombre excessif de colonnes."
+math_theory: |
+  Pour une variable categorique \textcolor{#3b82f6}{c} et une variable cible \textcolor{#10b981}{y}, l'encodage cible avec lissage (smoothing) est :
+  $$ \text{TE}(\textcolor{#3b82f6}{c_k}) = \frac{\textcolor{#8b5cf6}{n_k} \cdot \textcolor{#10b981}{\bar{y}_{c_k}} + \textcolor{#fbbf24}{m} \cdot \textcolor{#10b981}{\bar{y}}}{\textcolor{#8b5cf6}{n_k} + \textcolor{#fbbf24}{m}} $$
+  ou $\textcolor{#10b981}{\bar{y}_{c_k}} = \frac{1}{\textcolor{#8b5cf6}{n_k}} \sum_{i: c_i = c_k} \textcolor{#10b981}{y_i}$ est la moyenne de la cible pour la categorie \textcolor{#3b82f6}{c_k}, \textcolor{#8b5cf6}{n_k} le nombre d'observations dans cette categorie, \textcolor{#10b981}{\bar{y}} la moyenne globale de la cible, et \textcolor{#fbbf24}{m} le parametre de lissage (smoothing).
+  Le lissage agit comme une regularisation bayesienne : pour les categories rares (\textcolor{#8b5cf6}{n_k} petit), l'encodage se rapproche de la moyenne globale \textcolor{#10b981}{\bar{y}}, evitant ainsi le surapprentissage.
+math_illustration_svg: |
+  <svg viewBox="0 0 400 200" xmlns="http://www.w3.org/2000/svg">
+    <rect width="100%" height="100%" fill="transparent" />
+    <!-- Global mean bar -->
+    <line x1="50" y1="100" x2="330" y2="100" stroke="#64748b" stroke-width="2" stroke-dasharray="4,4" />
+    <text x="340" y="104" fill="#10b981" font-family="monospace" font-size="12">ȳ (Global)</text>
+    <!-- Category A (Large N) -->
+    <circle cx="120" cy="40" r="20" fill="#3b82f6" opacity="0.3" />
+    <circle cx="120" cy="40" r="4" fill="#3b82f6" />
+    <text x="90" y="15" fill="#3b82f6" font-family="monospace" font-size="12">c_1 (High N)</text>
+    <!-- Small pull -->
+    <line x1="120" y1="40" x2="120" y2="45" stroke="#fbbf24" stroke-width="2" marker-end="url(#arrow_te)" />
+    <circle cx="120" cy="48" r="4" fill="#10b981" />
+    <text x="130" y="52" fill="#10b981" font-family="monospace" font-size="12">TE(c_1)</text>
+    <!-- Category B (Small N) -->
+    <circle cx="260" cy="170" r="8" fill="#3b82f6" opacity="0.3" />
+    <circle cx="260" cy="170" r="4" fill="#3b82f6" />
+    <text x="230" y="195" fill="#3b82f6" font-family="monospace" font-size="12">c_2 (Low N)</text>
+    <!-- Large pull to global mean -->
+    <line x1="260" y1="170" x2="260" y2="110" stroke="#fbbf24" stroke-width="2" marker-end="url(#arrow_te)" />
+    <circle cx="260" cy="105" r="4" fill="#10b981" />
+    <text x="270" y="105" fill="#10b981" font-family="monospace" font-size="12">TE(c_2)</text>
+    <text x="265" y="145" fill="#fbbf24" font-family="monospace" font-size="10">Smoothing</text>
+    <defs>
+      <marker id="arrow_te" viewBox="0 0 10 10" refX="5" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+        <path d="M 0 0 L 10 5 L 0 10 z" fill="#fbbf24" />
+      </marker>
+    </defs>
+  </svg>
 category: "4.1 Preprocessing"
 tags: ["transform", "encoding", "tabular", "category_encoders", "pipeline"]
 applies_to: ["Tabulaire"]
-when_to_use: "Pour des catégories à haute cardinalité."
+when_to_use: "A privilegier pour les variables categoriques a haute cardinalite (centaines ou milliers de categories uniques) ou le One-Hot Encoding exploserait la dimensionnalite."
+use_cases:
+  - "Encodage de codes postaux ou de noms de villes dans un modele de prediction immobiliere."
+  - "Transformation d'identifiants utilisateurs en features numeriques dans un systeme de recommandation."
+  - "Encodage de references produits pour un modele de prediction de ventes."
 pros:
-  - "Performant."
+  - "Tres performant pour les variables a haute cardinalite (pas d'explosion dimensionnelle)."
+  - "Capture directement la relation entre la categorie et la variable cible."
+  - "Le lissage (smoothing) protege contre le surapprentissage des categories rares."
 cons:
-  - "Nécessite le package category_encoders."
+  - "Necessite le package category_encoders (pas inclus dans sklearn de base)."
+  - "Risque de fuite de donnees (data leakage) si applique sans validation croisee."
+  - "Perd l'information ordinale ou hierarchique des categories."
 hyperparameters:
-  smoothing: "Paramètre de lissage."
+  smoothing: "Parametre de lissage."
 code_template: |
   import pandas as pd
   try:
@@ -34,10 +76,6 @@ code_template: |
       if len(cat_cols) > 0:
           te = ce.TargetEncoder(cols=cat_cols, smoothing=SMOOTHING)
           
-          # TargetEncoder s'applique avec df et y. On ne peut l'encapsuler dans un ColumnTransformer 
-          # classique s'il a besoin de cols= spécifiques (ou on lui passe tout le DF).
-          # Heureusement, category_encoders fonctionne comme un transformer sklearn sur le DF entier.
-          
           step_name = 'target_encoding'
           pipeline_steps[step_name] = (step_name, te)
 
@@ -50,15 +88,23 @@ code_template: |
   if 'task_type' not in locals(): task_type = "classification"
   if 'meta' not in locals(): meta = {}
 illustration_mermaid: |
-  graph TD
-    A[Raw Data] --> B{Are there categorical columns & category_encoders installed?}
-    B -- Yes --> C[Initialize TargetEncoder]
-    C --> D[Add to Pipeline Steps]
-    B -- No --> E[Skip Target Encoding]
-    D --> F[Update Data Contract Variables]
-    E --> F
-    style A fill:#eff6ff,stroke:#3b82f6,stroke-width:2px
-    style F fill:#10b981,stroke:#059669,stroke-width:2px
+  flowchart LR
+    A(["📊 df"]) --> B[/"🎯 target_name"/]
+    B --> C[/"📄 SMOOTHING"/]
+    C --> D{"⚙️ Extraire Cols Cat."}
+    D -- "Oui" --> E{"⚙️ TargetEncoder (moyenne cible lissee)"}
+    D -- "Non" --> F{"⚙️ Skip"}
+    E --> G(["📊 df (categories encodees)"])
+    F --> G
+    G --> H(["ℹ️ pipeline_steps"])
+    style A fill:#10b981,stroke:#059669,stroke-width:2px,color:#fff
+    style B fill:#fbbf24,stroke:#d97706,stroke-width:2px,color:#000
+    style C fill:#fbbf24,stroke:#d97706,stroke-width:2px,color:#000
+    style D fill:#3b82f6,stroke:#2563eb,stroke-width:2px,color:#fff
+    style E fill:#3b82f6,stroke:#2563eb,stroke-width:2px,color:#fff
+    style F fill:#3b82f6,stroke:#2563eb,stroke-width:2px,color:#fff
+    style G fill:#10b981,stroke:#059669,stroke-width:2px,color:#fff
+    style H fill:#8b5cf6,stroke:#7c3aed,stroke-width:2px,color:#fff
 
 _metadata:
   bloc: 2

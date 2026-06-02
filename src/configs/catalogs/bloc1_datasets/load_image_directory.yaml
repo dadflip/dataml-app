@@ -1,6 +1,18 @@
 id: load_image_directory
 name: 'Load: Image Directory (Paths)'
-description: Scanne un dossier d'images organisé en sous-dossiers (classes) et construit un DataFrame avec les chemins et les cibles.
+description: "Scanne un dossier d'images organisé en sous-dossiers (classes) et construit un DataFrame avec les chemins et les cibles."
+when_to_use: "Lorsque votre dataset d'images est structuré en arborescence de dossiers, où chaque sous-dossier représente une classe ou une catégorie spécifique."
+use_cases:
+  - "Préparation de données pour la classification d'images (ex: chats vs chiens)."
+  - "Génération de l'index d'entraînement avant de le passer à un générateur de batchs (Data Loader)."
+  - "Inventaire massif de fichiers médias sur un système de fichiers local."
+pros:
+  - "Rapide et léger : ne charge que les chemins des fichiers en mémoire, pas les images elles-mêmes."
+  - "Crée automatiquement les labels à partir du nom des sous-dossiers."
+  - "Facilite l'intégration ultérieure avec TensorFlow/Keras ou PyTorch via des datasets personnalisés."
+cons:
+  - "Ne vérifie pas la validité des fichiers images durant le scan, seulement leur extension."
+  - "Inadapté si toutes les images sont mélangées dans un seul dossier sans sous-répertoires."
 category: 2. Load
 tags:
 - load
@@ -53,17 +65,22 @@ code_template: |
       print(f"[ERREUR LOAD] Échec de l'analyse du dossier : {str(e)}")
       raise e
 illustration_mermaid: |
-  flowchart TD
-      A([DIR_PATH]) --> B{Directory exists?}
-      B -- Yes --> C[glob.glob]
-      C --> D[pd.DataFrame]
-      D --> df([df])
-      B -- No --> E[Empty DataFrame]
-      E --> df
-      
-      style A fill:#3b82f6,color:#fff
-      style C fill:#10b981,color:#fff
-      style df fill:#f59e0b,color:#fff
+  flowchart LR
+      A[/"📁 DIRECTORY_PATH"/] --> B{"glob.glob()"}
+      C[/"🎯 Auto (Subdirs)"/] --> D{"Set target_class"}
+      B --> E(["📊 df (DataFrame)"])
+      E --> D
+      D --> F(["🎯 target_name"])
+      D --> G(["⚙️ task_type"])
+      D --> H(["ℹ️ meta (image_directory)"])
+      style A fill:#fbbf24,stroke:#d97706,stroke-width:2px,color:#000
+      style C fill:#fbbf24,stroke:#d97706,stroke-width:2px,color:#000
+      style B fill:#3b82f6,stroke:#2563eb,stroke-width:2px,color:#fff
+      style D fill:#3b82f6,stroke:#2563eb,stroke-width:2px,color:#fff
+      style E fill:#10b981,stroke:#059669,stroke-width:2px,color:#fff
+      style F fill:#8b5cf6,stroke:#7c3aed,stroke-width:2px,color:#fff
+      style G fill:#8b5cf6,stroke:#7c3aed,stroke-width:2px,color:#fff
+      style H fill:#8b5cf6,stroke:#7c3aed,stroke-width:2px,color:#fff
 
 _metadata:
   bloc: 1

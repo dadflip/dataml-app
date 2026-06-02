@@ -1,6 +1,16 @@
 id: extract_kafka
 name: 'Extract: Apache Kafka'
-description: Consomme les messages d'un topic Kafka et les dump.
+description: Consomme les messages d'un topic Kafka et les dump au format JSON. Idéal pour interagir avec des flux de données en continu.
+when_to_use: À utiliser lorsque vos données d'entrée proviennent d'un cluster Kafka et que vous avez besoin d'extraire des événements.
+use_cases:
+  - Capture de logs serveurs.
+  - Analyse d'un flux de données temps réel.
+pros:
+  - Intégration native avec l'écosystème Big Data (streaming).
+  - Contrôle sur le nombre maximum de messages à extraire.
+cons:
+  - Dépend de la disponibilité du broker Kafka.
+  - Les données peuvent nécessiter un parsing complexe.
 category: 1. Extract
 tags:
 - extract
@@ -52,13 +62,22 @@ code_template: |
   task_type = "unknown"
   meta = {"source": "kafka", "path": DEST_PATH}
 illustration_mermaid: |
-    flowchart TD
-    A([FILE_PATH]) --> B[Load EXTRACT_KAFKA]
-    B --> df([df])
-    
-    style A fill:#3b82f6,color:#fff
-    style B fill:#10b981,color:#fff
-    style df fill:#f59e0b,color:#fff
+    flowchart LR
+        A[/"📄 Kafka Topic"/] --> B{"Extract Kafka()"}
+        C[/"🎯 TARGET_COL"/] --> D{"Check TARGET_COL"}
+        B --> E(["📊 df (File)"])
+        E --> D
+        D --> F(["🎯 target_name"])
+        D --> G(["⚙️ task_type"])
+        D --> H(["ℹ️ meta (...)" ])
+        style A fill:#fbbf24,stroke:#d97706,stroke-width:2px,color:#000
+        style C fill:#fbbf24,stroke:#d97706,stroke-width:2px,color:#000
+        style B fill:#3b82f6,stroke:#2563eb,stroke-width:2px,color:#fff
+        style D fill:#3b82f6,stroke:#2563eb,stroke-width:2px,color:#fff
+        style E fill:#10b981,stroke:#059669,stroke-width:2px,color:#fff
+        style F fill:#8b5cf6,stroke:#7c3aed,stroke-width:2px,color:#fff
+        style G fill:#8b5cf6,stroke:#7c3aed,stroke-width:2px,color:#fff
+        style H fill:#8b5cf6,stroke:#7c3aed,stroke-width:2px,color:#fff
 
 
 _metadata:

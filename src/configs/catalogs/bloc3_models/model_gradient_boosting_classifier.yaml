@@ -1,15 +1,24 @@
 id: "model_gradient_boosting_classifier"
 name: "Model: Gradient Boosting Classifier"
-description: "Construit une série d'arbres faibles de manière séquentielle, chaque arbre corrigeant les erreurs du précédent."
+description: |
+  Modèle d'ensemble puissant construisant séquentiellement une série d'arbres de décision, où chaque nouvel arbre s'efforce de corriger les erreurs (résidus) de l'ensemble précédent.
 category: "Modèles Basés sur les Arbres"
 tags: ["model", "classification", "tabular", "sklearn", "ensemble", "boosting"]
 applies_to: ["Tabulaire"]
-when_to_use: "Excellentes performances par défaut sur des jeux de données de taille moyenne."
+when_to_use: |
+  Excellent choix par défaut pour la majorité des problèmes de classification sur des données tabulaires de taille moyenne à grande. Particulièrement performant sur des données hétérogènes.
+use_cases:
+  - "Prédiction d'attrition (churn) des clients."
+  - "Évaluation du risque de crédit ou détection de fraude."
+  - "Classification de problèmes métiers complexes avec de multiples variables de nature différente."
 pros:
-  - "Très haute précision."
-  - "Gère bien les features hétérogènes."
+  - "Précision prédictive très élevée, souvent parmi les meilleurs algorithmes tabulaires."
+  - "Gère nativement les interactions complexes entre les caractéristiques."
+  - "Fournit des importances de variables (Feature Importances) pour l'interprétabilité."
 cons:
-  - "Lent à entraîner (séquentiel)."
+  - "Entraînement séquentiel lent, difficile à paralléliser contrairement aux Random Forests."
+  - "Plus sensible au surapprentissage (overfitting) si les hyperparamètres sont mal réglés."
+  - "Consommation mémoire plus importante lors de l'entraînement."
 hyperparameters:
   n_estimators: "Nombre de boosting stages (ex: 100)."
   learning_rate: "Taux d'apprentissage (réduit la contribution de chaque arbre)."
@@ -60,22 +69,126 @@ code_template: |
       training_history = {"status": "success", "fitted_on": len(X_train)}
 
 illustration_mermaid: |
-  graph TD
-    subgraph Gradient Boosting Classifier
-      In([Input Features]) --> T1[Tree 1: Fit Base Model]
-      T1 --> E1[Compute Residuals]
-      E1 --> T2[Tree 2: Fit on Residuals]
-      T2 --> E2[Compute Residuals]
-      E2 --> TN[Tree N: Fit on Residuals]
-      TN --> Sum[Sum up all trees]
-      Sum --> Sigmoid[Sigmoid / Softmax]
-      Sigmoid --> Out([Class Prediction])
-    end
-    style In fill:#f8fafc,stroke:#94a3b8,stroke-width:1px
+  flowchart LR
+    In(["Features (X)"]) --> T1{"Arbre 1\n(Modèle de Base)"}
+    T1 --> E1{"Calcul des\nRésidus"}
+    E1 --> T2{"Arbre 2\n(Apprend sur Résidus)"}
+    T2 --> E2{"Calcul des\nRésidus"}
+    E2 --> TN{"Arbre N\n(Apprend sur Résidus)"}
+    TN --> Sum{"Somme\nPondérée"}
+    Sum --> Sigmoid{"Sigmoïde / Softmax"}
+    Sigmoid --> Out(["Classe Prédite"])
+    
+    style In fill:#10b981,stroke:#059669,stroke-width:2px,color:#fff
     style Out fill:#10b981,stroke:#059669,stroke-width:2px,color:#fff
-    style T1 fill:#8b5cf6,stroke:#7c3aed,stroke-width:2px,color:#fff
-    style T2 fill:#8b5cf6,stroke:#7c3aed,stroke-width:2px,color:#fff
-    style TN fill:#8b5cf6,stroke:#7c3aed,stroke-width:2px,color:#fff
+    style T1 fill:#3b82f6,stroke:#2563eb,stroke-width:2px,color:#fff
+    style E1 fill:#3b82f6,stroke:#2563eb,stroke-width:2px,color:#fff
+    style T2 fill:#3b82f6,stroke:#2563eb,stroke-width:2px,color:#fff
+    style E2 fill:#3b82f6,stroke:#2563eb,stroke-width:2px,color:#fff
+    style TN fill:#3b82f6,stroke:#2563eb,stroke-width:2px,color:#fff
+    style Sum fill:#3b82f6,stroke:#2563eb,stroke-width:2px,color:#fff
+    style Sigmoid fill:#3b82f6,stroke:#2563eb,stroke-width:2px,color:#fff
+
+math_theory: |
+  Gradient Boosting minimizes a loss function $L(y, F(x))$ sequentially. For classification, the loss is typically Log-Loss. At each step $m$, a new tree $\textcolor{#fbbf24}{h_m}(\textcolor{#ef4444}{x})$ is fitted to the negative gradients (pseudo-residuals) of the loss with respect to the previous predictions.
+  
+  The final model is an additive expansion:
+  $$ \textcolor{#3b82f6}{F_M}(\textcolor{#ef4444}{x}) = F_0(\textcolor{#ef4444}{x}) + \sum_{m=1}^{\textcolor{#8b5cf6}{M}} \textcolor{#10b981}{\nu} \cdot \textcolor{#fbbf24}{h_m}(\textcolor{#ef4444}{x}) $$
+  
+  Where:
+  - $\textcolor{#3b82f6}{F_M}(\textcolor{#ef4444}{x})$ is the final log-odds prediction.
+  - $\textcolor{#8b5cf6}{M}$ is the number of trees (`n_estimators`).
+  - $\textcolor{#10b981}{\nu}$ is the learning rate (`learning_rate`), scaling the contribution of each tree.
+  - $\textcolor{#fbbf24}{h_m}(\textcolor{#ef4444}{x})$ is the weak learner (decision tree) at step $m$.
+  - $\textcolor{#ef4444}{x}$ represents the input features.
+  
+  The final probability is obtained via the logistic function:
+  $$ P(y=1|\textcolor{#ef4444}{x}) = \frac{1}{1 + e^{-\textcolor{#3b82f6}{F_M}(\textcolor{#ef4444}{x})}} $$
+
+math_illustration_svg: |
+  <svg viewBox="0 0 800 400" xmlns="http://www.w3.org/2000/svg">
+    <!-- Background -->
+    <rect width="100%" height="100%" fill="#1e1e1e" rx="10" />
+    
+    <!-- Input Features x -->
+    <rect x="50" y="160" width="80" height="80" fill="#ef4444" rx="8" opacity="0.8" />
+    <text x="90" y="205" fill="white" font-family="sans-serif" font-size="24" text-anchor="middle" font-weight="bold">x</text>
+    <text x="90" y="260" fill="#ef4444" font-family="sans-serif" font-size="14" text-anchor="middle">Input</text>
+    
+    <!-- F_0 -->
+    <rect x="200" y="60" width="100" height="50" fill="#333" stroke="#888" stroke-width="2" rx="5" />
+    <text x="250" y="90" fill="white" font-family="sans-serif" font-size="16" text-anchor="middle">F₀(x)</text>
+    
+    <!-- Tree 1 -->
+    <rect x="200" y="140" width="100" height="50" fill="#fbbf24" rx="5" opacity="0.9" />
+    <text x="250" y="170" fill="#000" font-family="sans-serif" font-size="16" text-anchor="middle" font-weight="bold">h₁(x)</text>
+    
+    <!-- Tree m -->
+    <rect x="200" y="240" width="100" height="50" fill="#fbbf24" rx="5" opacity="0.9" />
+    <text x="250" y="270" fill="#000" font-family="sans-serif" font-size="16" text-anchor="middle" font-weight="bold">h_m(x)</text>
+    <text x="250" y="220" fill="white" font-family="sans-serif" font-size="20" text-anchor="middle">⋮</text>
+    
+    <!-- Tree M -->
+    <rect x="200" y="320" width="100" height="50" fill="#fbbf24" rx="5" opacity="0.9" />
+    <text x="250" y="350" fill="#000" font-family="sans-serif" font-size="16" text-anchor="middle" font-weight="bold">h_M(x)</text>
+    <text x="250" y="310" fill="white" font-family="sans-serif" font-size="20" text-anchor="middle">⋮</text>
+    
+    <!-- Arrows from x -->
+    <path d="M 130 200 L 180 85" stroke="#ef4444" stroke-width="2" marker-end="url(#arrow)" fill="none"/>
+    <path d="M 130 200 L 190 165" stroke="#ef4444" stroke-width="2" marker-end="url(#arrow)" fill="none"/>
+    <path d="M 130 200 L 190 265" stroke="#ef4444" stroke-width="2" marker-end="url(#arrow)" fill="none"/>
+    <path d="M 130 200 L 190 345" stroke="#ef4444" stroke-width="2" marker-end="url(#arrow)" fill="none"/>
+    
+    <!-- Multipliers -->
+    <circle cx="360" cy="165" r="15" fill="#10b981" />
+    <text x="360" y="170" fill="white" font-family="sans-serif" font-size="16" text-anchor="middle">ν</text>
+    <circle cx="360" cy="265" r="15" fill="#10b981" />
+    <text x="360" y="270" fill="white" font-family="sans-serif" font-size="16" text-anchor="middle">ν</text>
+    <circle cx="360" cy="345" r="15" fill="#10b981" />
+    <text x="360" y="350" fill="white" font-family="sans-serif" font-size="16" text-anchor="middle">ν</text>
+    
+    <!-- Arrows to Multipliers -->
+    <path d="M 300 165 L 335 165" stroke="white" stroke-width="2" marker-end="url(#arrow)" fill="none"/>
+    <path d="M 300 265 L 335 265" stroke="white" stroke-width="2" marker-end="url(#arrow)" fill="none"/>
+    <path d="M 300 345 L 335 345" stroke="white" stroke-width="2" marker-end="url(#arrow)" fill="none"/>
+    
+    <!-- Summation -->
+    <circle cx="480" cy="200" r="25" fill="#333" stroke="white" stroke-width="2" />
+    <text x="480" y="210" fill="white" font-family="sans-serif" font-size="30" text-anchor="middle">+</text>
+    
+    <!-- Arrows to Summation -->
+    <path d="M 300 85 L 470 175" stroke="white" stroke-width="2" marker-end="url(#arrow)" fill="none"/>
+    <path d="M 375 165 L 455 190" stroke="white" stroke-width="2" marker-end="url(#arrow)" fill="none"/>
+    <path d="M 375 265 L 455 210" stroke="white" stroke-width="2" marker-end="url(#arrow)" fill="none"/>
+    <path d="M 375 345 L 470 225" stroke="white" stroke-width="2" marker-end="url(#arrow)" fill="none"/>
+    
+    <!-- Total M indicator -->
+    <path d="M 210 380 L 460 380" stroke="#8b5cf6" stroke-width="2" marker-end="url(#arrow-purple)" fill="none" stroke-dasharray="5,5"/>
+    <text x="335" y="375" fill="#8b5cf6" font-family="sans-serif" font-size="14" text-anchor="middle">M Iterations</text>
+    
+    <!-- Output F_M -->
+    <rect x="550" y="175" width="80" height="50" fill="#3b82f6" rx="5" />
+    <text x="590" y="205" fill="white" font-family="sans-serif" font-size="16" text-anchor="middle">F_M(x)</text>
+    <path d="M 505 200 L 540 200" stroke="white" stroke-width="2" marker-end="url(#arrow)" fill="none"/>
+    
+    <!-- Sigmoid / Logistic -->
+    <rect x="680" y="175" width="80" height="50" fill="#1e1e1e" stroke="#3b82f6" stroke-width="2" rx="5" />
+    <text x="720" y="205" fill="#3b82f6" font-family="sans-serif" font-size="16" text-anchor="middle">Sigmoid</text>
+    <path d="M 630 200 L 670 200" stroke="white" stroke-width="2" marker-end="url(#arrow)" fill="none"/>
+    
+    <!-- Final Prob -->
+    <text x="720" y="250" fill="white" font-family="sans-serif" font-size="16" text-anchor="middle">P(y=1|x)</text>
+    
+    <!-- Defs -->
+    <defs>
+      <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto">
+        <path d="M 0 0 L 10 5 L 0 10 z" fill="white" />
+      </marker>
+      <marker id="arrow-purple" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto">
+        <path d="M 0 0 L 10 5 L 0 10 z" fill="#8b5cf6" />
+      </marker>
+    </defs>
+  </svg>
 
 _metadata:
   bloc: 3

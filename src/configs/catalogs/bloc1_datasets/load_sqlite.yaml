@@ -1,6 +1,18 @@
 id: "load_sqlite"
 name: "Load: Base SQLite (.db)"
-description: "Exécute une requête SQL directement sur un fichier de base SQLite local."
+description: "Exécute une requête SQL directement sur un fichier de base SQLite local pour importer les données."
+when_to_use: "Lorsque les données source sont stockées dans une base de données relationnelle SQLite, souvent utilisée pour des applications mobiles, des outils embarqués ou des bases de données locales légères."
+use_cases:
+  - "Extraction de données à partir du stockage local d'une application."
+  - "Analyse de logs ou de métriques sauvegardés sous format SQLite."
+  - "Requêtage de sous-ensembles de données via des commandes SQL avant le chargement en mémoire."
+pros:
+  - "Permet de filtrer et d'agréger les données avec SQL avant de les charger, économisant de la mémoire."
+  - "Base de données contenue dans un seul fichier facile à partager."
+  - "Ne nécessite pas l'installation d'un serveur de base de données complexe."
+cons:
+  - "Moins performant que des bases de données relationnelles lourdes (PostgreSQL, MySQL) pour des accès concurrents."
+  - "Peut être lent pour de très grands volumes de données."
 category: "2. Load"
 tags: ["load", "sqlite", "sql", "db"]
 code_template: |
@@ -24,18 +36,21 @@ output_variables:
   - meta
 illustration_mermaid: |
     flowchart LR
-        DB[("SQLite DB\n(.db)")] -->|FILE_PATH| Load(["Load\nSQLite"])
-        Load --> df(["df (None)"])
-        Load --> target_name(["target_name (None)"])
-        Load --> task_type(["task_type ('unknown')"])
-        Load --> meta(["meta (dict)"])
-
-        style DB fill:#3b82f6,stroke:#2563eb,stroke-width:2px,color:#fff
-        style Load fill:#eff6ff,stroke:#3b82f6,stroke-width:2px
-        style df fill:#f3f4f6,stroke:#9ca3af,stroke-width:1px
-        style target_name fill:#f3f4f6,stroke:#9ca3af,stroke-width:1px
-        style task_type fill:#f3f4f6,stroke:#9ca3af,stroke-width:1px
-        style meta fill:#f3f4f6,stroke:#9ca3af,stroke-width:1px
+        A[/"📄 FILE_PATH (.db)"/] --> B{"sqlite3.connect()"}
+        C[/"🎯 TARGET_COL (None)"/] --> D{"Set target_name"}
+        B --> E(["📊 df (DataFrame)"])
+        E --> D
+        D --> F(["🎯 target_name"])
+        D --> G(["⚙️ task_type"])
+        D --> H(["ℹ️ meta (source, path)"])
+        style A fill:#fbbf24,stroke:#d97706,stroke-width:2px,color:#000
+        style C fill:#fbbf24,stroke:#d97706,stroke-width:2px,color:#000
+        style B fill:#3b82f6,stroke:#2563eb,stroke-width:2px,color:#fff
+        style D fill:#3b82f6,stroke:#2563eb,stroke-width:2px,color:#fff
+        style E fill:#10b981,stroke:#059669,stroke-width:2px,color:#fff
+        style F fill:#8b5cf6,stroke:#7c3aed,stroke-width:2px,color:#fff
+        style G fill:#8b5cf6,stroke:#7c3aed,stroke-width:2px,color:#fff
+        style H fill:#8b5cf6,stroke:#7c3aed,stroke-width:2px,color:#fff
 
 _metadata:
   bloc: 1

@@ -1,16 +1,24 @@
 id: "model_logistic_regression"
 name: "Model: Logistic Regression"
-description: "Modèle linéaire basique pour la classification. Calcule la probabilité d'appartenance à une classe."
+description: |
+  Modèle de classification linéaire de référence. Il utilise la fonction logistique (sigmoïde) pour estimer la probabilité d'appartenance à une classe en se basant sur une combinaison linéaire des variables explicatives.
 category: "Modèles Linéaires"
 tags: ["model", "classification", "tabular", "sklearn", "linear"]
 applies_to: ["Tabulaire"]
-when_to_use: "Comme modèle de référence (baseline) pour la classification binaire ou multiclasse."
+when_to_use: |
+  À utiliser systématiquement comme première approche (baseline) pour les problèmes de classification binaire ou multiclasse, notamment lorsque l'interprétabilité des coefficients est prioritaire ou que les données sont linéairement séparables.
+use_cases:
+  - "Scoring médical (ex: prédiction de la probabilité de développer une maladie en fonction de facteurs de risque)."
+  - "Détection de spam basique avec des caractéristiques textuelles simples."
+  - "Prédiction d'attrition client (churn) avec besoin d'expliquer l'impact de chaque variable métier."
 pros:
-  - "Facilement interprétable (poids des variables)."
-  - "Très rapide à entraîner."
-  - "Sort des probabilités bien calibrées."
+  - "Très rapide à entraîner et nécessite peu de ressources de calcul."
+  - "Hautement interprétable : chaque poids donne l'importance et le sens d'une variable."
+  - "Produit d'excellentes estimations de probabilités bien calibrées nativement."
 cons:
-  - "Incapable de modéliser des relations non-linéaires complexes."
+  - "Incapable de modéliser par défaut des interactions complexes entre variables ou des relations non linéaires."
+  - "Performances souvent inférieures aux algorithmes basés sur les arbres (RF, XGBoost) sur des données complexes."
+  - "Sensible aux valeurs aberrantes (outliers) et à la multicollinéarité."
 hyperparameters:
   penalty: "Type de régularisation ('l2', 'l1', 'elasticnet', 'none')."
   C: "Inverse de la force de régularisation (ex: 1.0). Plus C est petit, plus la régularisation est forte."
@@ -68,23 +76,73 @@ code_template: |
               
       training_history = {"status": "success", "fitted_on": len(X_train)}
 illustration_mermaid: |
-  graph TD
-    A[Input Features X] --> B(Preprocessing Pipeline)
-    B --> C[Logistic Regression Model]
+  flowchart LR
+    X[/ "Input Features X" /] --> Linear{"Linear Combination: z = W*X + b"}
+    Linear --> Sigmoid{"Sigmoid/Softmax: P(y) = 1/(1+e^-z)"}
+    Sigmoid --> Threshold{"Thresholding (> 0.5)"}
+    Threshold --> Pred(["y_pred: Class Label"])
+    Sigmoid -.-> Proba(["y_proba: Probabilities"])
     
-    subgraph Model Internals
-      C --> D[Linear Combination: z = W*X + b]
-      D --> E["Sigmoid / Softmax Function: P(y=1|X) = 1 / (1 + e^-z)"]
-      E --> F[Decision Boundary Thresholding]
-    end
+    style X fill:#fbbf24,stroke:#d97706,stroke-width:2px,color:#000
+    style Linear fill:#3b82f6,stroke:#2563eb,stroke-width:2px,color:#fff
+    style Sigmoid fill:#3b82f6,stroke:#2563eb,stroke-width:2px,color:#fff
+    style Threshold fill:#3b82f6,stroke:#2563eb,stroke-width:2px,color:#fff
+    style Pred fill:#10b981,stroke:#059669,stroke-width:2px,color:#fff
+    style Proba fill:#10b981,stroke:#059669,stroke-width:2px,color:#fff
+
+math_theory: |
+  Logistic Regression models the probability that an observation belongs to the positive class by passing a linear combination of features through a sigmoid (logistic) function. The predicted probability $\textcolor{#3b82f6}{\hat{p}}$ is given by:
+  
+  $$ \textcolor{#3b82f6}{\hat{p}} = \sigma(\textcolor{#10b981}{X} \textcolor{#ef4444}{w}) = \frac{1}{1 + e^{-\textcolor{#10b981}{X} \textcolor{#ef4444}{w}}} $$
+  
+  The model parameters $\textcolor{#ef4444}{w}$ are learned by minimizing the Log-Loss (Binary Cross-Entropy) between the predicted probabilities and the true binary labels $\textcolor{#fbbf24}{y} \in \{0, 1\}$:
+  
+  $$ \min_{w} \left( - \frac{1}{N} \sum_{i=1}^{N} \left[ \textcolor{#fbbf24}{y}^{(i)} \log(\textcolor{#3b82f6}{\hat{p}}^{(i)}) + (1 - \textcolor{#fbbf24}{y}^{(i)}) \log(1 - \textcolor{#3b82f6}{\hat{p}}^{(i)}) \right] + \frac{1}{\textcolor{#8b5cf6}{C}} ||\textcolor{#ef4444}{w}||_2^2 \right) $$
+  
+  Where $\textcolor{#8b5cf6}{C}$ is the inverse of the regularization strength.
+
+math_illustration_svg: |
+  <svg viewBox="0 0 500 250" xmlns="http://www.w3.org/2000/svg">
+    <rect width="500" height="250" fill="#ffffff" />
     
-    F --> G([y_pred: Class Label])
-    E -.-> H([y_proba: Class Probabilities])
+    <!-- Axes -->
+    <line x1="50" y1="200" x2="250" y2="200" stroke="#94a3b8" stroke-width="2" />
+    <line x1="50" y1="200" x2="50" y2="40" stroke="#94a3b8" stroke-width="2" />
+    <text x="150" y="225" font-family="monospace" font-size="12" fill="#10b981" font-weight="bold" text-anchor="middle">Linear Score (Xw)</text>
     
-    style C fill:#8b5cf6,stroke:#7c3aed,stroke-width:2px,color:#fff
-    style E fill:#ec4899,stroke:#db2777,stroke-width:2px,color:#fff
-    style G fill:#3b82f6,stroke:#2563eb,stroke-width:2px,color:#fff
-    style H fill:#10b981,stroke:#059669,stroke-width:2px,color:#fff
+    <text x="30" y="120" font-family="monospace" font-size="12" fill="#3b82f6" font-weight="bold" text-anchor="middle" transform="rotate(-90 30 120)">Probability p</text>
+    
+    <!-- Ticks -->
+    <line x1="45" y1="200" x2="55" y2="200" stroke="#94a3b8" stroke-width="2" />
+    <text x="35" y="204" font-family="sans-serif" font-size="10" fill="#475569" text-anchor="end">0.0</text>
+    <line x1="45" y1="120" x2="55" y2="120" stroke="#94a3b8" stroke-width="2" />
+    <text x="35" y="124" font-family="sans-serif" font-size="10" fill="#475569" text-anchor="end">0.5</text>
+    <line x1="45" y1="40" x2="55" y2="40" stroke="#94a3b8" stroke-width="2" />
+    <text x="35" y="44" font-family="sans-serif" font-size="10" fill="#475569" text-anchor="end">1.0</text>
+    
+    <line x1="50" y1="120" x2="250" y2="120" stroke="#cbd5e1" stroke-width="1" stroke-dasharray="4" />
+
+    <!-- Sigmoid Curve -->
+    <path d="M 50 195 C 100 195, 120 45, 250 45" fill="none" stroke="#ef4444" stroke-width="3" />
+
+    <!-- True Labels Points -->
+    <circle cx="70" cy="200" r="4" fill="#fbbf24" />
+    <circle cx="90" cy="200" r="4" fill="#fbbf24" />
+    <circle cx="110" cy="200" r="4" fill="#fbbf24" />
+    
+    <circle cx="130" cy="40" r="4" fill="#fbbf24" />
+    <circle cx="180" cy="40" r="4" fill="#fbbf24" />
+    <circle cx="210" cy="40" r="4" fill="#fbbf24" />
+
+    <!-- Explanation Box -->
+    <rect x="290" y="80" width="190" height="90" rx="8" fill="#f8fafc" stroke="#e2e8f0" stroke-width="2" />
+    <text x="385" y="105" font-family="sans-serif" font-size="12" font-weight="bold" fill="#475569" text-anchor="middle">Sigmoid Mapping</text>
+    
+    <text x="300" y="130" font-family="monospace" font-size="11" fill="#3b82f6" font-weight="bold">p = 1 / (1 + exp(-Xw))</text>
+    
+    <circle cx="305" cy="150" r="4" fill="#fbbf24" />
+    <text x="320" y="154" font-family="sans-serif" font-size="11" fill="#475569">True Class Labels y</text>
+  </svg>
 
 _metadata:
   bloc: 3

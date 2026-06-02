@@ -1,6 +1,15 @@
 id: eda_seasonality_decompose
 name: 'EDA: Décomposition Saisonnière'
-description: Décomposition Trend/Season/Resid d'une time series.
+description: "Décomposition d'une série temporelle en tendance (trend), saisonnalité (season) et résidus (resid) via statsmodels."
+when_to_use: "À utiliser lorsque vous travaillez avec des données temporelles (Time Series) et que vous souhaitez identifier des motifs saisonniers ou une tendance de fond."
+use_cases:
+  - "Analyse des ventes de produits au fil de l'année (pics saisonniers)."
+  - "Détection de tendance de fond sur des relevés temporels."
+pros:
+  - "Visualisation claire des différentes composantes."
+  - "Implémentation standard via statsmodels."
+cons:
+  - "Nécessite des données ordonnées temporellement et la définition d'une période."
 category: 3. Exploratory Data Analysis
 tags:
 - eda
@@ -33,14 +42,26 @@ code_template: |
       print("[EDA] Colonnes temporelles manquantes.")
 illustration_mermaid: |
     graph TD
-      DF([DataFrame]) --> Check{Check TIME_COL}
-      Check -- Valid --> Format[To DateTime & Sort]
-      Format --> Decomp{{seasonal_decompose}}
-      Decomp -- "period=PERIOD" --> Plot[Plot Decomposition]
-      Check -- Missing --> Err[Print Error]
-      style Decomp fill:#d946ef,stroke:#c026d3,stroke-width:2px,color:#fff
-      style Format fill:#3b82f6,stroke:#2563eb,stroke-width:2px,color:#fff
-      style Plot fill:#10b981,stroke:#059669,stroke-width:2px,color:#fff
+      In1[/df/] --> P1{Check variables}
+      In2[/TIME_COL/] --> P1
+      In3[/target_name/] --> P1
+      In4[/PERIOD/] --> P3
+      P1 -- Valide --> P2{pd.to_datetime & sort}
+      P2 --> P3{seasonal_decompose}
+      P3 --> P4{plot}
+      P4 --> Out1([Fig: Décomposition])
+      P1 -- Invalide --> Out2([Print Erreur])
+      
+      style In1 fill:#fbbf24,stroke:#d97706,stroke-width:2px,color:#000
+      style In2 fill:#fbbf24,stroke:#d97706,stroke-width:2px,color:#000
+      style In3 fill:#fbbf24,stroke:#d97706,stroke-width:2px,color:#000
+      style In4 fill:#fbbf24,stroke:#d97706,stroke-width:2px,color:#000
+      style P1 fill:#3b82f6,stroke:#2563eb,stroke-width:2px,color:#fff
+      style P2 fill:#3b82f6,stroke:#2563eb,stroke-width:2px,color:#fff
+      style P3 fill:#3b82f6,stroke:#2563eb,stroke-width:2px,color:#fff
+      style P4 fill:#3b82f6,stroke:#2563eb,stroke-width:2px,color:#fff
+      style Out1 fill:#10b981,stroke:#059669,stroke-width:2px,color:#fff
+      style Out2 fill:#8b5cf6,stroke:#7c3aed,stroke-width:2px,color:#fff
 _metadata:
   bloc: 1
   section: 3_eda

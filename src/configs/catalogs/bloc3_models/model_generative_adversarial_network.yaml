@@ -1,14 +1,22 @@
 id: "model_generative_adversarial_network"
 name: "Model: GAN (Generative Adversarial Network)"
-description: "Architecture générative faisant s'affronter un Générateur et un Discriminateur."
+description: |
+  Architecture de Deep Learning générative où deux réseaux de neurones, un Générateur et un Discriminateur, s'affrontent lors de l'entraînement dans un jeu à somme nulle.
 category: "Génératif & Non-Supervisé"
 tags: ["model", "generative", "unsupervised", "pytorch", "gan", "deep-learning"]
 applies_to: ["Tabulaire", "Images"]
-when_to_use: "Pour générer de fausses données de haute qualité."
+when_to_use: |
+  Idéal lorsque vous souhaitez générer de nouvelles données réalistes (images, données tabulaires, etc.) en imitant la distribution des données d'entraînement.
+use_cases:
+  - "Génération d'images réalistes ou de visages."
+  - "Création de données synthétiques pour augmenter des ensembles de données déséquilibrés."
+  - "Transfert de style, super-résolution d'image, ou traduction d'image à image."
 pros:
-  - "Données générées nettes."
+  - "Produit des données générées de très haute qualité et souvent plus nettes que d'autres approches."
+  - "Ne nécessite pas de modéliser explicitement la fonction de densité de probabilité."
 cons:
-  - "Extrêmement instable à l'entraînement (Mode Collapse)."
+  - "Extrêmement instable à entraîner, très sensible au choix des hyperparamètres."
+  - "Sujet au problème d'effondrement de mode (Mode Collapse)."
 hyperparameters:
   latent_dim: "Taille du vecteur de bruit (ex: 32)."
   epochs: "Nombre d'époques (ex: 50)."
@@ -101,24 +109,82 @@ code_template: |
           full_pipeline = model
       training_history = {"status": "success", "loss_g": float(loss_g), "loss_d": float(loss_d)}
 
+math_theory: |
+  Un GAN oppose deux modèles : un Générateur $\textcolor{#3b82f6}{G}$ et un Discriminateur $\textcolor{#ef4444}{D}$.
+  Le Générateur prend un vecteur de bruit aléatoire $\textcolor{#8b5cf6}{z}$ issu d'une distribution a priori et tente de produire des données synthétiques $\textcolor{#fbbf24}{G(z)}$.
+  
+  Le Discriminateur reçoit à la fois des données réelles $\textcolor{#10b981}{x}$ et des données fausses $\textcolor{#fbbf24}{G(z)}$, et estime la probabilité qu'un échantillon soit réel.
+  
+  Leur entraînement est formulé comme un jeu minimax avec la fonction de valeur $V(G, D)$ :
+  
+  $$ \min_{G} \max_{D} V(D, G) = \mathbb{E}_{\textcolor{#10b981}{x} \sim p_{data}}[\log \textcolor{#ef4444}{D}(\textcolor{#10b981}{x})] + \mathbb{E}_{\textcolor{#8b5cf6}{z} \sim p_{z}}[\log(1 - \textcolor{#ef4444}{D}(\textcolor{#fbbf24}{G}(\textcolor{#8b5cf6}{z})))] $$
+  
+  $\textcolor{#ef4444}{D}$ maximise cette fonction pour mieux distinguer le vrai du faux, tandis que $\textcolor{#3b82f6}{G}$ la minimise pour "tromper" $\textcolor{#ef4444}{D}$ en générant des exemples indifférenciables des vrais.
+math_illustration_svg: |
+  <svg viewBox="0 0 700 350" xmlns="http://www.w3.org/2000/svg">
+    <!-- Noise z -->
+    <rect x="50" y="100" width="40" height="40" rx="5" fill="#8b5cf6" />
+    <text x="70" y="125" fill="white" font-family="sans-serif" font-size="18" font-weight="bold" text-anchor="middle">z</text>
+    
+    <!-- Generator G -->
+    <polygon points="130,80 190,100 190,140 130,160" fill="#3b82f6" />
+    <text x="160" y="125" fill="white" font-family="sans-serif" font-size="18" font-weight="bold" text-anchor="middle">G</text>
+    
+    <path d="M 90 120 L 130 120" stroke="black" stroke-width="2" marker-end="url(#arrow)" />
+    
+    <!-- Fake Data G(z) -->
+    <rect x="230" y="100" width="60" height="40" rx="5" fill="#fbbf24" />
+    <text x="260" y="125" fill="white" font-family="sans-serif" font-size="16" font-weight="bold" text-anchor="middle">G(z)</text>
+    
+    <path d="M 190 120 L 230 120" stroke="black" stroke-width="2" marker-end="url(#arrow)" />
+    
+    <!-- Real Data x -->
+    <rect x="230" y="220" width="60" height="40" rx="5" fill="#10b981" />
+    <text x="260" y="245" fill="white" font-family="sans-serif" font-size="18" font-weight="bold" text-anchor="middle">x</text>
+    <text x="260" y="280" fill="#10b981" font-family="sans-serif" font-size="14" font-weight="bold" text-anchor="middle">Real Data</text>
+    
+    <!-- Discriminator D -->
+    <polygon points="350,140 410,160 410,200 350,220" fill="#ef4444" />
+    <text x="380" y="185" fill="white" font-family="sans-serif" font-size="18" font-weight="bold" text-anchor="middle">D</text>
+    
+    <path d="M 290 120 L 350 160" stroke="black" stroke-width="2" marker-end="url(#arrow)" />
+    <path d="M 290 240 L 350 200" stroke="black" stroke-width="2" marker-end="url(#arrow)" />
+    
+    <!-- Output -->
+    <rect x="460" y="160" width="100" height="40" rx="5" fill="white" stroke="black" stroke-width="2" />
+    <text x="510" y="185" fill="black" font-family="sans-serif" font-size="16" text-anchor="middle">Real/Fake ?</text>
+    
+    <path d="M 410 180 L 460 180" stroke="black" stroke-width="2" marker-end="url(#arrow)" />
+    
+    <!-- Loss Feedback -->
+    <path d="M 510 160 L 510 50 L 160 50 L 160 80" stroke="#ef4444" stroke-width="2" stroke-dasharray="5,5" fill="none" marker-end="url(#arrow)" />
+    <text x="330" y="40" fill="#ef4444" font-family="sans-serif" font-size="14" font-weight="bold" text-anchor="middle">Adversarial Feedback to G</text>
+    
+    <defs>
+      <marker id="arrow" markerWidth="10" markerHeight="10" refX="9" refY="3" orient="auto" markerUnits="strokeWidth">
+        <path d="M0,0 L0,6 L9,3 z" fill="black" />
+      </marker>
+    </defs>
+  </svg>
 illustration_mermaid: |
-  graph TD
-    subgraph Generative Adversarial Network
-      Z([Random Noise z]) --> Gen[Generator G]
-      Gen --> Fake([Fake Data x_tilde])
-      Real([Real Data x]) --> Disc
-      Fake --> Disc[Discriminator D]
-      Disc --> RealScore(Real Score)
-      Disc --> FakeScore(Fake Score)
-      RealScore -.-> LossD[Discriminator Loss]
-      FakeScore -.-> LossD
-      FakeScore -.-> LossG[Generator Loss]
-    end
-    style Z fill:#e2e8f0,stroke:#64748b,stroke-width:1px
-    style Real fill:#f8fafc,stroke:#94a3b8,stroke-width:1px
-    style Fake fill:#fca5a5,stroke:#ef4444,stroke-width:1px
-    style Gen fill:#8b5cf6,stroke:#7c3aed,stroke-width:2px,color:#fff
-    style Disc fill:#f59e0b,stroke:#d97706,stroke-width:2px,color:#fff
+  flowchart LR
+    Z[/"Bruit Latent (z)"/] --> Gen{"Générateur\n(G)"}
+    Gen --> Fake(["Données Générées\n(Fake)"])
+    Real(["Données Réelles\n(Real)"]) --> Disc
+    Fake --> Disc{"Discriminateur\n(D)"}
+    Disc --> Score(["Scores\n(Real/Fake)"])
+    Score -.-> LossD{"Perte Discriminateur"}
+    Score -.-> LossG{"Perte Générateur"}
+    LossG -.-> Gen
+    
+    style Z fill:#fbbf24,stroke:#d97706,stroke-width:2px,color:#000
+    style Real fill:#10b981,stroke:#059669,stroke-width:2px,color:#fff
+    style Fake fill:#10b981,stroke:#059669,stroke-width:2px,color:#fff
+    style Score fill:#10b981,stroke:#059669,stroke-width:2px,color:#fff
+    style Gen fill:#3b82f6,stroke:#2563eb,stroke-width:2px,color:#fff
+    style Disc fill:#3b82f6,stroke:#2563eb,stroke-width:2px,color:#fff
+    style LossD fill:#ef4444,stroke:#dc2626,stroke-width:2px,color:#fff
+    style LossG fill:#ef4444,stroke:#dc2626,stroke-width:2px,color:#fff
 
 _metadata:
   bloc: 3

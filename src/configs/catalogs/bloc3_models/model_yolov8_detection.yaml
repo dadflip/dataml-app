@@ -1,15 +1,22 @@
 id: "model_yolov8_detection"
 name: "Model: YOLOv8 Object Detection (Ultralytics)"
-description: "You Only Look Once v8. Modèle de détection d'objets (Bounding Boxes) de pointe (rapide et précis)."
+description: |
+  You Only Look Once (YOLO) version 8 par Ultralytics. Un modèle de détection d'objets (Object Detection) de pointe effectuant la localisation (Bounding Boxes) et la classification en un seul passage réseau.
 category: "Vision par Ordinateur (Pré-entraînés)"
 tags: ["model", "vision", "object-detection", "yolo", "ultralytics", "zero-shot"]
 applies_to: ["Images", "Vidéo"]
-when_to_use: "Pour détecter, compter ou localiser des objets dans une image ou une frame vidéo."
+when_to_use: |
+  Pour détecter, compter, ou localiser avec précision des objets dans une image statique ou traiter un flux vidéo image par image.
+use_cases:
+  - "Détection et suivi de véhicules ou de piétons pour la conduite autonome."
+  - "Comptage d'articles sur une chaîne de production industrielle."
+  - "Analyse du trafic urbain à partir de caméras de vidéosurveillance."
 pros:
-  - "Très rapide (temps réel)."
-  - "Détecte 80 classes d'objets courants (COCO) par défaut."
+  - "Extrêmement rapide, parfaitement adapté à une exécution en temps réel (Real-time Detection)."
+  - "Pré-entraîné sur le dataset COCO, détectant 80 classes d'objets usuels dès la sortie de la boîte."
 cons:
-  - "Nécessite Ultralytics."
+  - "Dépendance à la librairie externe Ultralytics."
+  - "Les performances peuvent chuter sur des objets minuscules ou densément superposés (occlusion)."
 hyperparameters:
   conf_threshold: "Seuil de confiance minimum pour garder la boîte (ex: 0.25)."
 code_template: |
@@ -59,21 +66,82 @@ code_template: |
       training_history = {"status": "success", "type": "yolo_detection_zeroshot"}
       task_type = "object_detection"
 illustration_mermaid: |
-    graph TD
-      In([Input Image]) --> Backbone(CSPDarknet Backbone)
-      Backbone --> Neck(PANet Neck: Feature Pyramid)
-      Neck --> Head(YOLOv8 Decoupled Head)
-      Head --> Box(Bounding Box Regression)
-      Head --> Cls(Class Probabilities)
-      Box --> NMS(Non-Maximum Suppression)
-      Cls --> NMS
-      NMS --> Out([JSON Object Detections])
-      
-      style In fill:#f8fafc,stroke:#94a3b8,stroke-width:2px
-      style Backbone fill:#38bdf8,stroke:#0284c7,stroke-width:2px,color:#fff
-      style Neck fill:#38bdf8,stroke:#0284c7,stroke-width:2px,color:#fff
-      style Head fill:#8b5cf6,stroke:#7c3aed,stroke-width:2px,color:#fff
-      style Out fill:#10b981,stroke:#059669,stroke-width:2px,color:#fff
+  flowchart LR
+    In[/"Paramètres :<br/>CONF_THRESHOLD"/] --> |Filtrage| NMS{"Non-Maximum<br/>Suppression (NMS)"}
+    Image(["Image d'Entrée"]) --> Back{"Backbone<br/>(CSPDarknet)"}
+    Back --> Neck{"Neck<br/>(PANet / Pyramide)"}
+    Neck --> Head{"Head Découplée<br/>(YOLOv8)"}
+    Head --> Box{"Régression<br/>(Boîtes Englobantes)"}
+    Head --> Cls{"Probabilités<br/>(Classes)"}
+    Box --> NMS
+    Cls --> NMS
+    NMS --> Out(["Détections (JSON)"])
+    
+    style In fill:#fbbf24,stroke:#d97706,stroke-width:2px,color:#000
+    style Image fill:#10b981,stroke:#059669,stroke-width:2px,color:#fff
+    style Back fill:#3b82f6,stroke:#2563eb,stroke-width:2px,color:#fff
+    style Neck fill:#3b82f6,stroke:#2563eb,stroke-width:2px,color:#fff
+    style Head fill:#3b82f6,stroke:#2563eb,stroke-width:2px,color:#fff
+    style Box fill:#3b82f6,stroke:#2563eb,stroke-width:2px,color:#fff
+    style Cls fill:#3b82f6,stroke:#2563eb,stroke-width:2px,color:#fff
+    style NMS fill:#3b82f6,stroke:#2563eb,stroke-width:2px,color:#fff
+    style Out fill:#10b981,stroke:#059669,stroke-width:2px,color:#fff
+
+math_theory: |
+  YOLO (You Only Look Once) frames object detection as a single regression problem. YOLOv8 uses an anchor-free detection head, directly predicting bounding box coordinates and class probabilities per spatial location.
+  
+  For each grid cell, the network predicts class probabilities $\textcolor{#3b82f6}{\mathbf{p}} = (p_1, \dots, p_C)$ and bounding box offsets $\textcolor{#10b981}{\mathbf{b}} = (t_x, t_y, t_w, t_h)$ relative to the cell center $(c_x, c_y)$.
+  
+  The bounding box coordinates $(\textcolor{#fbbf24}{x}, \textcolor{#fbbf24}{y}, \textcolor{#fbbf24}{w}, \textcolor{#fbbf24}{h})$ are decoded as:
+  $$ \textcolor{#fbbf24}{x} = (2 \cdot \sigma(\textcolor{#10b981}{t_x}) - 0.5) + c_x $$
+  $$ \textcolor{#fbbf24}{y} = (2 \cdot \sigma(\textcolor{#10b981}{t_y}) - 0.5) + c_y $$
+  $$ \textcolor{#fbbf24}{w} = \textcolor{#10b981}{t_w}^2 \cdot s_w $$
+  $$ \textcolor{#fbbf24}{h} = \textcolor{#10b981}{t_h}^2 \cdot s_h $$
+  where $\sigma$ is the sigmoid function, and $s_w, s_h$ are stride factors.
+  
+  To remove redundant overlapping boxes, Non-Maximum Suppression (NMS) is applied. A box is discarded if its Intersection over Union (IoU) with a higher-confidence box exceeds a threshold:
+  $$ \textcolor{#ef4444}{\text{IoU}} = \frac{\text{Area}(\text{Box}_A \cap \text{Box}_B)}{\text{Area}(\text{Box}_A \cup \text{Box}_B)} > \text{NMS\_Threshold} $$
+
+math_illustration_svg: |
+  <svg viewBox="0 0 800 400" xmlns="http://www.w3.org/2000/svg">
+    <defs>
+      <marker id="arrow" viewBox="0 0 10 10" refX="10" refY="5" markerWidth="6" markerHeight="6" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="#666" /></marker>
+    </defs>
+    <!-- Backbone -->
+    <rect x="50" y="150" width="100" height="100" rx="8" fill="#e5e7eb" stroke="#6b7280" stroke-width="3" />
+    <text x="100" y="195" font-family="sans-serif" font-size="16" font-weight="bold" fill="#374151" text-anchor="middle">Image</text>
+    <text x="100" y="215" font-family="sans-serif" font-size="14" fill="#374151" text-anchor="middle">(H x W)</text>
+
+    <rect x="200" y="100" width="80" height="200" rx="8" fill="#e5e7eb" stroke="#6b7280" stroke-width="3" />
+    <text x="240" y="195" font-family="sans-serif" font-size="16" font-weight="bold" fill="#374151" text-anchor="middle">CSPDarknet</text>
+    <text x="240" y="215" font-family="sans-serif" font-size="14" fill="#374151" text-anchor="middle">Backbone</text>
+
+    <!-- Head -->
+    <rect x="350" y="70" width="120" height="100" rx="8" fill="#d1fae5" stroke="#10b981" stroke-width="3" />
+    <text x="410" y="115" font-family="sans-serif" font-size="16" font-weight="bold" fill="#059669" text-anchor="middle">Box Head</text>
+    <text x="410" y="135" font-family="sans-serif" font-size="14" fill="#059669" text-anchor="middle">Offsets b</text>
+
+    <rect x="350" y="230" width="120" height="100" rx="8" fill="#dbeafe" stroke="#3b82f6" stroke-width="3" />
+    <text x="410" y="275" font-family="sans-serif" font-size="16" font-weight="bold" fill="#1d4ed8" text-anchor="middle">Class Head</text>
+    <text x="410" y="295" font-family="sans-serif" font-size="14" fill="#1d4ed8" text-anchor="middle">Probs p</text>
+
+    <!-- Decoding & NMS -->
+    <rect x="520" y="130" width="100" height="140" rx="8" fill="#fef3c7" stroke="#fbbf24" stroke-width="3" />
+    <text x="570" y="195" font-family="sans-serif" font-size="16" font-weight="bold" fill="#d97706" text-anchor="middle">Decode &amp;</text>
+    <text x="570" y="215" font-family="sans-serif" font-size="16" font-weight="bold" fill="#d97706" text-anchor="middle">Scale</text>
+
+    <rect x="670" y="150" width="90" height="100" rx="8" fill="#fee2e2" stroke="#ef4444" stroke-width="3" />
+    <text x="715" y="195" font-family="sans-serif" font-size="16" font-weight="bold" fill="#b91c1c" text-anchor="middle">NMS</text>
+    <text x="715" y="215" font-family="sans-serif" font-size="14" fill="#b91c1c" text-anchor="middle">(Filter IoU)</text>
+
+    <!-- Arrows -->
+    <path d="M160,200 L190,200" stroke="#666" stroke-width="2" fill="none" marker-end="url(#arrow)"/>
+    <path d="M290,150 L340,120" stroke="#666" stroke-width="2" fill="none" marker-end="url(#arrow)"/>
+    <path d="M290,250 L340,280" stroke="#666" stroke-width="2" fill="none" marker-end="url(#arrow)"/>
+    <path d="M480,120 L520,160" stroke="#666" stroke-width="2" fill="none" marker-end="url(#arrow)"/>
+    <path d="M480,280 L520,240" stroke="#666" stroke-width="2" fill="none" marker-end="url(#arrow)"/>
+    <path d="M630,200 L660,200" stroke="#666" stroke-width="2" fill="none" marker-end="url(#arrow)"/>
+  </svg>
 
 _metadata:
   bloc: 3

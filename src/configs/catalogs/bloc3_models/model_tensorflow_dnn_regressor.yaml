@@ -1,17 +1,97 @@
 id: "model_tensorflow_dnn_regressor"
 name: "Model: TensorFlow/Keras DNN (Regression)"
-description: "Réseau de neurones profond (TensorFlow/Keras) pour la régression."
+description: |
+  Réseau de neurones profond (Deep Neural Network) pour les tâches de régression, implémenté avec l'API Keras de TensorFlow. Il génère une prédiction continue au travers de couches denses (Multi-Layer Perceptron).
 category: "Réseaux de Neurones"
 tags: ["model", "regression", "tabular", "tensorflow", "keras", "dnn", "deep-learning"]
 applies_to: ["Tabulaire"]
-when_to_use: "Pour des tâches de régression tabulaire massives."
+when_to_use: |
+  Pour des tâches de régression tabulaire massives (des centaines de milliers de lignes ou plus), nécessitant un modèle hautement scalable capable d'apprendre des relations non linéaires complexes.
+use_cases:
+  - "Prévision de la demande ou modélisation de séries temporelles avec de nombreuses covariables."
+  - "Évaluation immobilière ou tarification d'assurance sur de très vastes jeux de données."
+  - "Modélisation de processus physiques ou industriels (création de jumeaux numériques)."
 pros:
-  - "Très scalable sur de gros volumes."
+  - "Très scalable : gestion aisée des gros volumes de données via l'entraînement par batch."
+  - "Intégration directe avec l'écosystème de production TensorFlow (Serving, TFX)."
+  - "Modulable : la fonction de perte (MSE, MAE, Huber) s'adapte facilement aux valeurs aberrantes."
 cons:
-  - "Sensible au scaling des features."
+  - "Extrêmement sensible à l'échelle (scaling) des variables d'entrée (nécessite une normalisation stricte)."
+  - "Performances souvent inférieures aux arbres boostés (XGBoost) sur les petits/moyens datasets."
+  - "Effet 'boîte noire' limitant l'interprétabilité globale et locale du modèle."
 hyperparameters:
-  hidden_layers: "Tailles de couches (ex: '256, 128')."
-  epochs: "Nombre d'époques (ex: 20)."
+  hidden_layers: "Tailles de couches séparées par des virgules (ex: '256, 128')."
+  epochs: "Nombre d'époques d'entraînement (ex: 20)."
+math_theory: |
+  Le réseau de neurones profond calcule la prédiction continue $\textcolor{#10b981}{\hat{y}}$ en propageant l'entrée $\textcolor{#fbbf24}{x}$ à travers plusieurs couches :
+  $$ \textcolor{#10b981}{\hat{y}} = \textcolor{#8b5cf6}{W^{(L)}} \textcolor{#3b82f6}{\sigma}(\dots \textcolor{#3b82f6}{\sigma}(\textcolor{#8b5cf6}{W^{(1)}} \textcolor{#fbbf24}{x} + \textcolor{#8b5cf6}{b^{(1)}}) \dots ) + \textcolor{#8b5cf6}{b^{(L)}} $$
+  L'entraînement s'effectue en minimisant une fonction de perte $\textcolor{#ef4444}{\mathcal{L}}$ comme la MSE :
+  $$ \textcolor{#ef4444}{\mathcal{L}} = \frac{1}{N} \sum_{i=1}^{N} (\textcolor{#fbbf24}{y_i} - \textcolor{#10b981}{\hat{y}_i})^2 $$
+math_illustration_svg: |
+  <svg viewBox="0 0 800 400" xmlns="http://www.w3.org/2000/svg">
+    <rect width="800" height="400" fill="#1e1e1e" rx="10" />
+    <text x="400" y="30" fill="#ffffff" font-family="Arial" font-size="20" font-weight="bold" text-anchor="middle">TensorFlow DNN Regressor Architecture</text>
+    
+    <!-- Input -->
+    <rect x="50" y="150" width="80" height="100" fill="#fbbf24" fill-opacity="0.2" stroke="#fbbf24" stroke-width="2" rx="8" />
+    <text x="90" y="205" fill="#fbbf24" font-family="Arial" font-size="24" font-weight="bold" text-anchor="middle">x</text>
+
+    <!-- Dense Layer 1 -->
+    <rect x="180" y="80" width="100" height="240" fill="#3b82f6" fill-opacity="0.2" stroke="#3b82f6" stroke-width="2" rx="8" />
+    <text x="230" y="110" fill="#3b82f6" font-family="Arial" font-size="16" font-weight="bold" text-anchor="middle">Dense L1</text>
+    <rect x="195" y="130" width="70" height="40" fill="#8b5cf6" fill-opacity="0.2" stroke="#8b5cf6" stroke-width="1" rx="4" />
+    <text x="230" y="155" fill="#8b5cf6" font-family="Arial" font-size="14" text-anchor="middle">W^(1), b</text>
+    <rect x="195" y="180" width="70" height="40" fill="#3b82f6" fill-opacity="0.5" stroke="#3b82f6" stroke-width="1" rx="4" />
+    <text x="230" y="205" fill="#ffffff" font-family="Arial" font-size="14" text-anchor="middle">σ</text>
+    <rect x="195" y="230" width="70" height="40" fill="#3b82f6" fill-opacity="0.8" stroke="#3b82f6" stroke-width="1" rx="4" />
+    <text x="230" y="255" fill="#ffffff" font-family="Arial" font-size="12" text-anchor="middle">BatchNorm</text>
+
+    <!-- Dense Layer 2 -->
+    <rect x="330" y="100" width="100" height="200" fill="#3b82f6" fill-opacity="0.2" stroke="#3b82f6" stroke-width="2" rx="8" />
+    <text x="380" y="130" fill="#3b82f6" font-family="Arial" font-size="16" font-weight="bold" text-anchor="middle">Dense L2</text>
+    <rect x="345" y="150" width="70" height="40" fill="#8b5cf6" fill-opacity="0.2" stroke="#8b5cf6" stroke-width="1" rx="4" />
+    <text x="380" y="175" fill="#8b5cf6" font-family="Arial" font-size="14" text-anchor="middle">W^(2), b</text>
+    <rect x="345" y="200" width="70" height="40" fill="#3b82f6" fill-opacity="0.5" stroke="#3b82f6" stroke-width="1" rx="4" />
+    <text x="380" y="225" fill="#ffffff" font-family="Arial" font-size="14" text-anchor="middle">σ</text>
+    <rect x="345" y="250" width="70" height="30" fill="#ef4444" fill-opacity="0.3" stroke="#ef4444" stroke-width="1" rx="4" />
+    <text x="380" y="270" fill="#ffffff" font-family="Arial" font-size="12" text-anchor="middle">Dropout</text>
+
+    <!-- Output Layer -->
+    <rect x="480" y="130" width="100" height="140" fill="#3b82f6" fill-opacity="0.2" stroke="#3b82f6" stroke-width="2" rx="8" />
+    <text x="530" y="160" fill="#3b82f6" font-family="Arial" font-size="16" font-weight="bold" text-anchor="middle">Output</text>
+    <rect x="495" y="180" width="70" height="40" fill="#8b5cf6" fill-opacity="0.2" stroke="#8b5cf6" stroke-width="1" rx="4" />
+    <text x="530" y="205" fill="#8b5cf6" font-family="Arial" font-size="14" font-weight="bold" text-anchor="middle">W^(L)</text>
+
+    <!-- Connections -->
+    <path d="M 130 200 L 180 200" fill="none" stroke="#fbbf24" stroke-width="3" marker-end="url(#tfdnn-reg-arrow-yellow)" />
+    <path d="M 280 200 L 330 200" fill="none" stroke="#3b82f6" stroke-width="3" marker-end="url(#tfdnn-reg-arrow-blue)" />
+    <path d="M 430 200 L 480 200" fill="none" stroke="#3b82f6" stroke-width="3" marker-end="url(#tfdnn-reg-arrow-blue)" />
+    <path d="M 580 200 L 640 200" fill="none" stroke="#10b981" stroke-width="3" marker-end="url(#tfdnn-reg-arrow-green)" />
+
+    <!-- Output Continuous -->
+    <circle cx="670" cy="200" r="30" fill="#10b981" fill-opacity="0.2" stroke="#10b981" stroke-width="3" />
+    <text x="670" y="206" fill="#10b981" font-family="Arial" font-size="20" font-weight="bold" text-anchor="middle">ŷ</text>
+
+    <!-- Loss -->
+    <rect x="580" y="280" width="160" height="60" fill="#ef4444" fill-opacity="0.2" stroke="#ef4444" stroke-width="2" rx="10" />
+    <text x="660" y="305" fill="#ef4444" font-family="Arial" font-size="16" font-weight="bold" text-anchor="middle">MSE Loss L</text>
+    <path d="M 670 230 L 670 280" fill="none" stroke="#ef4444" stroke-width="2" marker-end="url(#tfdnn-reg-arrow-red)" />
+
+    <defs>
+      <marker id="tfdnn-reg-arrow-yellow" viewBox="0 0 10 10" refX="10" refY="5" markerWidth="6" markerHeight="6" orient="auto">
+        <path d="M 0 0 L 10 5 L 0 10 z" fill="#fbbf24" />
+      </marker>
+      <marker id="tfdnn-reg-arrow-blue" viewBox="0 0 10 10" refX="10" refY="5" markerWidth="6" markerHeight="6" orient="auto">
+        <path d="M 0 0 L 10 5 L 0 10 z" fill="#3b82f6" />
+      </marker>
+      <marker id="tfdnn-reg-arrow-green" viewBox="0 0 10 10" refX="10" refY="5" markerWidth="6" markerHeight="6" orient="auto">
+        <path d="M 0 0 L 10 5 L 0 10 z" fill="#10b981" />
+      </marker>
+      <marker id="tfdnn-reg-arrow-red" viewBox="0 0 10 10" refX="10" refY="5" markerWidth="6" markerHeight="6" orient="auto">
+        <path d="M 0 0 L 10 5 L 0 10 z" fill="#ef4444" />
+      </marker>
+    </defs>
+  </svg>
 code_template: |
   import pandas as pd
   import numpy as np
@@ -79,19 +159,20 @@ code_template: |
           "val_loss": float(history.history.get('val_loss', [0.0])[-1])
       }
 illustration_mermaid: |
-    graph TD
-      In([Input Features]) --> Dense1(Dense Layer: ReLU)
-      Dense1 --> BN1(Batch Normalization)
-      BN1 --> DO1(Dropout 20%)
-      DO1 --> Dense2(Dense Layer: ReLU)
-      Dense2 --> BN2(Batch Normalization)
-      BN2 --> DO2(Dropout 20%)
-      DO2 --> Out([Output Layer: Linear])
-      Out --> Pred([Predictions])
-      
-      style In fill:#f8fafc,stroke:#94a3b8,stroke-width:2px
-      style Out fill:#8b5cf6,stroke:#7c3aed,stroke-width:2px,color:#fff
-      style Pred fill:#10b981,stroke:#059669,stroke-width:2px,color:#fff
+  flowchart LR
+    Data(["Données Tabulaires d'Entrée"])
+    Params[/"Hyperparamètres (layers, epochs)"/]
+    Model{"TensorFlow / Keras DNN (Regressor)"}
+    Pred(["Prédictions Continues"])
+    
+    Data --> Model
+    Params --> Model
+    Model --> Pred
+
+    style Data fill:#10b981,stroke:#059669,stroke-width:2px,color:#fff
+    style Params fill:#fbbf24,stroke:#d97706,stroke-width:2px,color:#000
+    style Model fill:#3b82f6,stroke:#2563eb,stroke-width:2px,color:#fff
+    style Pred fill:#10b981,stroke:#059669,stroke-width:2px,color:#fff
 
 _metadata:
   bloc: 3

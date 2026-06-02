@@ -1,15 +1,20 @@
 id: "model_easyocr"
 name: "Model: EasyOCR (Optical Character Recognition)"
-description: "Reconnaissance de texte dans des images via Deep Learning. Supporte +80 langues."
+description: "Modèle de reconnaissance optique de caractères (OCR) basé sur le Deep Learning. Combine CRAFT pour la détection spatiale et un CRNN pour la transcription, supportant plus de 80 langues."
 category: "Vision par Ordinateur (OCR)"
 tags: ["model", "vision", "ocr", "easyocr", "deep-learning"]
 applies_to: ["Images"]
-when_to_use: "Pour extraire le texte d'images naturelles (photos de panneaux, cartes d'identité, documents scannés)."
+when_to_use: "Idéal pour l'extraction de texte dans des environnements visuellement complexes, communément appelé 'texte in-the-wild' (éclairage variable, polices variées, inclinaisons)."
+use_cases:
+  - "Lecture automatisée de plaques d'immatriculation ou signalisation."
+  - "Extraction d'informations textuelles sur des pièces d'identité ou des passeports."
+  - "Numérisation et extraction sémantique de factures et tickets de caisse."
 pros:
-  - "Très robuste sur du texte en conditions réelles (contrairement à Tesseract)."
-  - "Gère plusieurs langues en même temps."
+  - "Extrêmement robuste face au bruit visuel, aux arrière-plans complexes et aux textes non alignés, surpassant souvent les OCR traditionnels."
+  - "Support natif du multilinguisme au sein d'une même étape d'inférence."
 cons:
-  - "Assez lourd, GPU recommandé."
+  - "Empreinte mémoire et coût de calcul élevés, nécessitant quasi-obligatoirement une accélération matérielle (GPU) pour de gros volumes."
+  - "Sensible à la résolution native de l'image (les images trop compressées ou floues échouent fréquemment)."
 hyperparameters:
   lang_list: "Liste des langues séparées par des virgules (ex: 'fr, en')."
 code_template: |
@@ -64,17 +69,74 @@ code_template: |
           full_pipeline = model
 
 illustration_mermaid: |
-  graph TD
-    subgraph EasyOCR Pipeline
-      In([Image File / Array]) --> Reader[EasyOCR Reader]
-      Reader --> Detect[CRAFT Text Detection]
-      Detect --> BBox[Bounding Boxes]
-      BBox --> Recog[CRNN Text Recognition]
-      Recog --> Out([Extracted Text])
-    end
-    style In fill:#f8fafc,stroke:#94a3b8,stroke-width:1px
+  flowchart LR
+    In(["Image (File / Array)"]) --> Detect{"CRAFT Detection"}
+    Detect --> BBox(["Bounding Boxes"])
+    BBox --> Recog{"CRNN Recognition"}
+    Recog --> Out(["Extracted Text"])
+
+    style In fill:#10b981,stroke:#059669,stroke-width:2px,color:#fff
+    style Detect fill:#3b82f6,stroke:#2563eb,stroke-width:2px,color:#fff
+    style BBox fill:#10b981,stroke:#059669,stroke-width:2px,color:#fff
+    style Recog fill:#3b82f6,stroke:#2563eb,stroke-width:2px,color:#fff
     style Out fill:#10b981,stroke:#059669,stroke-width:2px,color:#fff
-    style Reader fill:#8b5cf6,stroke:#7c3aed,stroke-width:2px,color:#fff
+
+math_theory: |
+  EasyOCR leverages a two-stage deep learning approach: text detection followed by text recognition.
+  
+  1. **Detection (CRAFT)**: Character Region Awareness for Text Detection predicts character region scores $\textcolor{#3b82f6}{S_r(p)}$ and character affinity scores $\textcolor{#fbbf24}{S_a(p)}$ for each pixel $p$. 
+  The text bounding boxes $\textcolor{#10b981}{\mathbf{B}}$ are derived by thresholding these probability maps, allowing for non-linear and curved text detection.
+  
+  2. **Recognition (CRNN)**: A Convolutional Recurrent Neural Network takes the cropped text regions $\textcolor{#10b981}{\mathbf{X}_{crop}}$ as input. 
+  A CNN backbone extracts feature sequences, which are then passed through a Bidirectional LSTM to model temporal/sequential context:
+  $$ \textcolor{#8b5cf6}{\mathbf{h}_t} = \text{BiLSTM}(\text{CNN}(\textcolor{#10b981}{\mathbf{X}_{crop}}))_t $$
+  
+  Finally, Connectionist Temporal Classification (CTC) loss maps the unsegmented recurrent sequence $\textcolor{#8b5cf6}{\mathbf{h}_t}$ to the target character sequence $\textcolor{#ef4444}{\mathbf{y}}$ by maximizing the sum of probabilities over all valid alignment paths $\pi$:
+  $$ P(\textcolor{#ef4444}{\mathbf{y}} | \mathbf{X}) = \sum_{\pi \in \mathcal{A}(\textcolor{#ef4444}{\mathbf{y}})} \prod_{t=1}^T y_{\pi_t}^t $$
+
+math_illustration_svg: |
+  <svg viewBox="0 0 800 400" xmlns="http://www.w3.org/2000/svg">
+    <defs>
+      <marker id="arrow" viewBox="0 0 10 10" refX="10" refY="5" markerWidth="6" markerHeight="6" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="#666" /></marker>
+    </defs>
+    
+    <!-- Image -->
+    <rect x="30" y="150" width="80" height="80" fill="#f3f4f6" stroke="#4b5563" stroke-width="3" />
+    <text x="70" y="195" font-family="sans-serif" font-size="14" font-weight="bold" fill="#374151" text-anchor="middle">Raw Image</text>
+
+    <!-- CRAFT -->
+    <rect x="150" y="130" width="120" height="120" rx="8" fill="#dbeafe" stroke="#3b82f6" stroke-width="3" />
+    <text x="210" y="180" font-family="sans-serif" font-size="16" font-weight="bold" fill="#1d4ed8" text-anchor="middle">CRAFT Detection</text>
+    <text x="210" y="200" font-family="sans-serif" font-size="12" fill="#1d4ed8" text-anchor="middle">Scores &amp; Affinity</text>
+
+    <!-- Boxes -->
+    <rect x="320" y="150" width="80" height="80" fill="#d1fae5" stroke="#10b981" stroke-width="3" />
+    <text x="360" y="195" font-family="sans-serif" font-size="14" font-weight="bold" fill="#059669" text-anchor="middle">BBoxes &amp;</text>
+    <text x="360" y="215" font-family="sans-serif" font-size="14" font-weight="bold" fill="#059669" text-anchor="middle">Crops</text>
+
+    <!-- CRNN -->
+    <rect x="450" y="100" width="180" height="180" rx="8" fill="#ede9fe" stroke="#8b5cf6" stroke-width="3" />
+    <text x="540" y="130" font-family="sans-serif" font-size="16" font-weight="bold" fill="#6d28d9" text-anchor="middle">CRNN</text>
+
+    <rect x="470" y="150" width="60" height="100" rx="4" fill="#fef3c7" stroke="#fbbf24" stroke-width="2" />
+    <text x="500" y="205" font-family="sans-serif" font-size="14" font-weight="bold" fill="#d97706" text-anchor="middle">CNN</text>
+    
+    <rect x="550" y="150" width="60" height="100" rx="4" fill="#fce7f3" stroke="#db2777" stroke-width="2" />
+    <text x="580" y="205" font-family="sans-serif" font-size="14" font-weight="bold" fill="#be185d" text-anchor="middle">BiLSTM</text>
+
+    <!-- Out -->
+    <rect x="680" y="150" width="80" height="80" fill="#fee2e2" stroke="#ef4444" stroke-width="3" />
+    <text x="720" y="190" font-family="sans-serif" font-size="16" font-weight="bold" fill="#b91c1c" text-anchor="middle">CTC &amp;</text>
+    <text x="720" y="210" font-family="sans-serif" font-size="16" font-weight="bold" fill="#b91c1c" text-anchor="middle">Text</text>
+
+    <!-- Arrows -->
+    <path d="M110,190 L150,190" stroke="#666" stroke-width="2" fill="none" marker-end="url(#arrow)"/>
+    <path d="M270,190 L320,190" stroke="#666" stroke-width="2" fill="none" marker-end="url(#arrow)"/>
+    <path d="M400,190 L450,190" stroke="#666" stroke-width="2" fill="none" marker-end="url(#arrow)"/>
+    
+    <path d="M530,200 L550,200" stroke="#666" stroke-width="2" fill="none" marker-end="url(#arrow)"/>
+    <path d="M630,190 L680,190" stroke="#666" stroke-width="2" fill="none" marker-end="url(#arrow)"/>
+  </svg>
 
 _metadata:
   bloc: 3

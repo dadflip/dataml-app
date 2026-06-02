@@ -1,14 +1,21 @@
 id: "model_knn_regressor"
 name: "Model: K-Nearest Neighbors Regressor"
-description: "Régression par la moyenne des valeurs de la cible des K voisins les plus proches."
+description: "Algorithme de régression non paramétrique et fondé sur la mémorisation (lazy learning). Il estime la valeur continue d'une nouvelle observation en calculant la moyenne (ou la médiane) des valeurs cibles de ses K plus proches voisins."
 category: "Modèles Basés sur la Distance / Marges"
-tags: ["model", "regression", "tabular", "sklearn", "distance"]
+tags: ["model", "regression", "tabular", "sklearn", "distance", "knn", "lazy-learning"]
 applies_to: ["Tabulaire"]
-when_to_use: "Modèle non-paramétrique de base, utile pour capturer des patterns très locaux."
+when_to_use: "Idéal pour établir une baseline rapide (modèle repère) en régression ou pour capturer des comportements locaux très non-linéaires sur des jeux de données comportant peu d'observations."
+use_cases:
+  - "Évaluation immobilière : Estimation du prix d'un bien en fonction des biens similaires vendus aux alentours."
+  - "Imputation de données manquantes : Remplacement de valeurs continues absentes (KNN Imputer)."
+  - "Modélisation spatiale : Interpolation de mesures environnementales (température, pollution) entre des capteurs."
 pros:
-  - "Très simple, entraînement quasi-immédiat."
+  - "Architecture extrêmement simple à appréhender et très intuitive (aucun apprentissage mathématique profond)."
+  - "Entraînement quasi-immédiat (stockage direct en mémoire)."
 cons:
-  - "Inférence lente, très sensible aux variables non scalées."
+  - "Inférence (prédiction) très lente lors du passage à l'échelle (gros datasets)."
+  - "Performances fortement dégradées par la malédiction de la dimensionnalité (espaces de grande dimension)."
+  - "Les variables doivent impérativement être ramenées à une même échelle de mesure (standardisation/normalisation)."
 hyperparameters:
   n_neighbors: "Nombre de voisins K (ex: 5)."
 code_template: |
@@ -43,26 +50,92 @@ code_template: |
       task_type = "regression"
       meta = {}
 illustration_mermaid: |
-  graph TD
-    subgraph Space
-      Train[Training Points stored in memory]
-      New[New Query Point]
-    end
-    subgraph Distance Computation
-      New --> Dist[Compute distance to all Training Points]
-      Dist --> Sort[Sort by Distance]
-    end
-    subgraph Aggregation
-      Sort --> TopK[Select Top K Nearest Neighbors]
-      TopK --> Average[Average Target Value of Neighbors]
-    end
-    subgraph Output
-      Average --> Pred[Continuous Prediction]
-    end
-    style Dist fill:#3b82f6,stroke:#2563eb,stroke-width:2px,color:#fff
-    style TopK fill:#8b5cf6,stroke:#7c3aed,stroke-width:2px,color:#fff
-    style Average fill:#10b981,stroke:#059669,stroke-width:2px,color:#fff
+  flowchart LR
+    Train(["Points d'Entraînement"])
+    New(["Nouveau Point (Requête)"])
+    Dist{"Calcul des Distances"}
+    TopK{"Sélection des K Plus Proches"}
+    Avg{"Moyenne des Cibles"}
+    Pred(["Valeur Continue Prédite"])
 
-_metadata:
-  bloc: 3
-  section: "2_regression_tabulaire"
+    Train --> Dist
+    New --> Dist
+    Dist --> TopK
+    TopK --> Avg
+    Avg --> Pred
+
+    style Train fill:#10b981,stroke:#059669,stroke-width:2px,color:#fff
+    style New fill:#10b981,stroke:#059669,stroke-width:2px,color:#fff
+    style Pred fill:#10b981,stroke:#059669,stroke-width:2px,color:#fff
+    style Dist fill:#3b82f6,stroke:#2563eb,stroke-width:2px,color:#fff
+    style TopK fill:#3b82f6,stroke:#2563eb,stroke-width:2px,color:#fff
+    style Avg fill:#3b82f6,stroke:#2563eb,stroke-width:2px,color:#fff
+math_theory: |
+  Pour une nouvelle observation $\textcolor{#fbbf24}{x}$, l'algorithme identifie l'ensemble $\mathcal{N}_K(\textcolor{#fbbf24}{x})$ contenant ses $\textcolor{#10b981}{K}$ voisins les plus proches dans le jeu d'entraînement.
+  
+  La distance (ex: euclidienne) entre la cible $\textcolor{#fbbf24}{x}$ et un point d'entraînement $\textcolor{#3b82f6}{x_i}$ est :
+  $$d(\textcolor{#fbbf24}{x}, \textcolor{#3b82f6}{x_i}) = \sqrt{\sum_{j=1}^m (\textcolor{#fbbf24}{x}^{(j)} - \textcolor{#3b82f6}{x_i}^{(j)})^2}$$
+  
+  La prédiction finale $\hat{y}$ est simplement la moyenne des valeurs cibles de ses voisins :
+  $$\hat{y} = \frac{1}{\textcolor{#10b981}{K}} \sum_{i \in \mathcal{N}_K(\textcolor{#fbbf24}{x})} \textcolor{#8b5cf6}{y_i}$$
+  
+  - $\textcolor{#fbbf24}{x}$ : Observation pour laquelle prédire la valeur.
+  - $\textcolor{#3b82f6}{x_i}$ : Points du jeu d'entraînement.
+  - $\textcolor{#10b981}{K}$ : Nombre de voisins considérés.
+  - $\textcolor{#8b5cf6}{y_i}$ : Valeur cible continue du voisin $i$.
+math_illustration_svg: |
+  <svg viewBox="0 0 500 250" xmlns="http://www.w3.org/2000/svg">
+    <rect width="500" height="250" fill="#f8fafc" rx="10" />
+    
+    <!-- Axes limit-->
+    <rect x="50" y="30" width="400" height="190" fill="#ffffff" stroke="#cbd5e1" stroke-width="2" rx="5" />
+    
+    <!-- Neighborhood Circle K=3 -->
+    <circle cx="250" cy="125" r="60" fill="#fbbf24" opacity="0.1" stroke="#d97706" stroke-width="2" stroke-dasharray="4" />
+    <text x="250" y="55" font-family="Arial" font-size="14" fill="#d97706" font-weight="bold" text-anchor="middle">Voisinage K=3</text>
+    
+    <!-- Distance lines -->
+    <!-- to points -->
+    <line x1="250" y1="125" x2="220" y2="90" stroke="#94a3b8" stroke-width="2" stroke-dasharray="2" />
+    <line x1="250" y1="125" x2="280" y2="100" stroke="#94a3b8" stroke-width="2" stroke-dasharray="2" />
+    <line x1="250" y1="125" x2="230" y2="160" stroke="#94a3b8" stroke-width="2" stroke-dasharray="2" />
+    
+    <!-- Points (y values) -->
+    <!-- Inside K=3 -->
+    <circle cx="220" cy="90" r="5" fill="#8b5cf6" />
+    <text x="220" y="80" font-family="Arial" font-size="12" fill="#8b5cf6" font-weight="bold" text-anchor="middle">y=10</text>
+    
+    <circle cx="280" cy="100" r="5" fill="#8b5cf6" />
+    <text x="280" y="90" font-family="Arial" font-size="12" fill="#8b5cf6" font-weight="bold" text-anchor="middle">y=12</text>
+    
+    <circle cx="230" cy="160" r="5" fill="#8b5cf6" />
+    <text x="230" y="178" font-family="Arial" font-size="12" fill="#8b5cf6" font-weight="bold" text-anchor="middle">y=14</text>
+    
+    <!-- Outside points -->
+    <circle cx="150" cy="60" r="4" fill="#cbd5e1" />
+    <text x="150" y="50" font-family="Arial" font-size="10" fill="#94a3b8" text-anchor="middle">y=2</text>
+    
+    <circle cx="120" cy="160" r="4" fill="#cbd5e1" />
+    <text x="120" y="150" font-family="Arial" font-size="10" fill="#94a3b8" text-anchor="middle">y=5</text>
+    
+    <circle cx="360" cy="150" r="4" fill="#cbd5e1" />
+    <text x="360" y="140" font-family="Arial" font-size="10" fill="#94a3b8" text-anchor="middle">y=25</text>
+    
+    <!-- Query Point x -->
+    <circle cx="250" cy="125" r="8" fill="#fbbf24" stroke="#d97706" stroke-width="2" />
+    <text x="265" y="130" font-family="Arial" font-size="16" fill="#d97706" font-weight="bold">x</text>
+    
+    <!-- Calculation text -->
+    <text x="70" y="200" font-family="Arial" font-size="12" fill="#8b5cf6" font-weight="bold">Moyenne: (10 + 12 + 14) / 3</text>
+    
+    <!-- Prediction Output -->
+    <path d="M 320 125 L 380 125" stroke="#10b981" stroke-width="3" marker-end="url(#arrow-pred)" />
+    <rect x="400" y="110" width="60" height="30" rx="5" fill="#10b981" opacity="0.2" stroke="#059669" stroke-width="2" />
+    <text x="430" y="130" font-family="Arial" font-size="14" fill="#059669" font-weight="bold" text-anchor="middle">ŷ = 12</text>
+
+    <defs>
+      <marker id="arrow-pred" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+        <path d="M 0 0 L 10 5 L 0 10 z" fill="#10b981" />
+      </marker>
+    </defs>
+  </svg>

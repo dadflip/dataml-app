@@ -1,6 +1,19 @@
 id: load_avro
 name: 'Load: Fichier Avro'
-description: Charge un fichier de sérialisation de données Apache Avro.
+description: "Charge des données tabulaires stockées au format Apache Avro, un système de sérialisation de données orienté ligne très populaire dans les architectures Big Data (comme Hadoop ou Kafka). Ce bloc utilise la bibliothèque pandavro pour lire le fichier binaire compressé et son schéma intégré, puis le convertir de manière fluide et rapide en un DataFrame Pandas. Il préserve scrupuleusement les types de données complexes et offre d'excellentes performances d'ingestion."
+when_to_use: "Idéal lorsque vous travaillez avec des pipelines de données distribués, des systèmes de streaming, ou des exports de bases de données Big Data où les données sont sérialisées en Avro pour optimiser le stockage et garantir la consistance des schémas."
+use_cases:
+  - "Ingestion de flux de données (logs, événements temporels) provenant d'Apache Kafka."
+  - "Traitement analytique de données exportées depuis un data lake ou Hadoop."
+  - "Migration de données structurées avec une forte garantie sur le typage (schéma intégré)."
+pros:
+  - "Excellente conservation des types de données grâce au schéma fortement typé embarqué dans le fichier."
+  - "Fichier compact et binaire, offrant un gain d'espace de stockage significatif par rapport à du CSV ou du JSON."
+  - "Vitesse de lecture et de sérialisation/désérialisation très élevée."
+cons:
+  - "Nécessite la bibliothèque externe pandavro (et fastavro en sous-dépendance)."
+  - "Format binaire non lisible par l'œil humain (impossible de l'ouvrir dans un éditeur de texte standard)."
+  - "Moins d'outils d'exploration visuelle rapide comparé au CSV."
 category: 2. Load
 tags:
 - load
@@ -44,34 +57,22 @@ code_template: |
   meta = {"format": "avro", "shape": df.shape}
 
 illustration_mermaid: |
-  flowchart TD
-      subgraph Config [Parameters]
-          FILE([FILE_PATH])
-          TAR([TARGET_COL])
-      end
-
-      subgraph Operations [Avro Load]
-          Check([os.path.exists])
-          Pdx([pandavro.read_avro])
-      end
-
-      subgraph Outputs [Contract Variables]
-          df((df))
-          target((target_name))
-          task((task_type = 'unknown'))
-          meta((meta: dict))
-      end
-
-      FILE --> Check
-      Check --> Pdx
-      Pdx --> df
-      TAR -.-> target
-      df -.-> meta
-
-      style Config fill:#f8fafc,stroke:#cbd5e1,stroke-width:2px
-      style Check fill:#64748b,stroke:#475569,stroke-width:2px,color:#fff
-      style Pdx fill:#3b82f6,stroke:#1d4ed8,stroke-width:2px,color:#fff
-      style Outputs fill:#f1f5f9,stroke:#94a3b8,stroke-width:2px
+  flowchart LR
+      A[/"📄 FILE_PATH"/] --> B{"pandavro.read_avro()"}
+      C[/"🎯 TARGET_COL"/] --> D{"Check TARGET_COL"}
+      B --> E(["📊 df (DataFrame)"])
+      E --> D
+      D --> F(["🎯 target_name"])
+      D --> G(["⚙️ task_type = 'unknown'"])
+      D --> H(["ℹ️ meta (format, shape)"])
+      style A fill:#fbbf24,stroke:#d97706,stroke-width:2px,color:#000
+      style C fill:#fbbf24,stroke:#d97706,stroke-width:2px,color:#000
+      style B fill:#3b82f6,stroke:#2563eb,stroke-width:2px,color:#fff
+      style D fill:#3b82f6,stroke:#2563eb,stroke-width:2px,color:#fff
+      style E fill:#10b981,stroke:#059669,stroke-width:2px,color:#fff
+      style F fill:#8b5cf6,stroke:#7c3aed,stroke-width:2px,color:#fff
+      style G fill:#8b5cf6,stroke:#7c3aed,stroke-width:2px,color:#fff
+      style H fill:#8b5cf6,stroke:#7c3aed,stroke-width:2px,color:#fff
 
 _metadata:
   bloc: 1

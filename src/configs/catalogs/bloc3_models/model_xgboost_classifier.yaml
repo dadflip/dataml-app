@@ -1,15 +1,22 @@
 id: "model_xgboost_classifier"
 name: "Model: XGBoost Classifier"
-description: "Extreme Gradient Boosting. Implémentation ultra-optimisée du Gradient Boosting (nécessite le package xgboost)."
+description: |
+  eXtreme Gradient Boosting. Implémentation ultra-optimisée de l'algorithme Gradient Boosted Trees, concevant un ensemble d'arbres de décision séquentiels où chaque arbre tente de corriger les erreurs résiduelles du précédent.
 category: "Modèles Basés sur les Arbres"
 tags: ["model", "classification", "tabular", "xgboost", "ensemble", "boosting"]
 applies_to: ["Tabulaire"]
-when_to_use: "LE modèle par défaut pour remporter des compétitions Kaggle sur des données tabulaires."
+when_to_use: |
+  Le modèle de référence par défaut et le plus compétitif pour traiter des problèmes de classification sur des données tabulaires (hétérogènes) structurées.
+use_cases:
+  - "Prédiction du taux de désabonnement (Churn) d'utilisateurs."
+  - "Détection de fraude sur des transactions financières."
+  - "Diagnostic médical à partir de données cliniques tabulaires."
 pros:
-  - "Performances prédictives exceptionnelles."
-  - "Très rapide et gère implicitement les NaNs."
+  - "Performances prédictives exceptionnelles, domine fréquemment les compétitions Kaggle."
+  - "Très rapide à l'entraînement, prend en charge l'exécution sur GPU, et gère implicitement les valeurs manquantes (NaNs)."
 cons:
-  - "Requiert une installation tierce (pip install xgboost)."
+  - "Requiert une installation tierce (package xgboost) en dehors de scikit-learn."
+  - "Modèle boîte noire, moins facilement interprétable qu'un arbre de décision simple ou une régression logistique."
 hyperparameters:
   n_estimators: "Nombre d'arbres (ex: 100)."
   learning_rate: "Taux d'apprentissage (ex: 0.1)."
@@ -67,21 +74,106 @@ code_template: |
       training_history = {"status": "success", "fitted_on": len(X_train)}
       task_type = "classification"
 illustration_mermaid: |
-    graph TD
-      In([Input Features]) --> Tree1(Decision Tree 1)
-      Tree1 --> Res1(Compute Residuals)
-      Res1 --> Tree2(Decision Tree 2)
-      Tree2 --> Res2(Compute Residuals)
-      Res2 --> TreeN(Decision Tree N)
-      TreeN --> Sum(Sum Weighted Predictions)
-      Sum --> Out([Class Predictions])
-      
-      style In fill:#f8fafc,stroke:#94a3b8,stroke-width:2px
-      style Tree1 fill:#38bdf8,stroke:#0284c7,stroke-width:2px,color:#fff
-      style Tree2 fill:#38bdf8,stroke:#0284c7,stroke-width:2px,color:#fff
-      style TreeN fill:#38bdf8,stroke:#0284c7,stroke-width:2px,color:#fff
-      style Sum fill:#8b5cf6,stroke:#7c3aed,stroke-width:2px,color:#fff
-      style Out fill:#10b981,stroke:#059669,stroke-width:2px,color:#fff
+  flowchart LR
+    In[/"Hyperparamètres :<br/>N_ESTIMATORS, LR"/] --> |Configuration| Boost{"Boosting Séquentiel"}
+    Features(["Features Tabulaires"]) --> Tree1{"Arbre de Décision 1"}
+    Tree1 --> Res1{"Calcul des Résidus"}
+    Res1 --> Tree2{"Arbre de Décision 2"}
+    Tree2 --> ResN{"..."}
+    ResN --> TreeN{"Arbre de Décision N"}
+    TreeN --> Boost
+    Boost --> Sum{"Somme Pondérée<br/>& Softmax"}
+    Sum --> Out(["Probabilités & Classes"])
+    
+    style In fill:#fbbf24,stroke:#d97706,stroke-width:2px,color:#000
+    style Features fill:#10b981,stroke:#059669,stroke-width:2px,color:#fff
+    style Tree1 fill:#3b82f6,stroke:#2563eb,stroke-width:2px,color:#fff
+    style Res1 fill:#3b82f6,stroke:#2563eb,stroke-width:2px,color:#fff
+    style Tree2 fill:#3b82f6,stroke:#2563eb,stroke-width:2px,color:#fff
+    style ResN fill:#3b82f6,stroke:#2563eb,stroke-width:2px,color:#fff
+    style TreeN fill:#3b82f6,stroke:#2563eb,stroke-width:2px,color:#fff
+    style Boost fill:#3b82f6,stroke:#2563eb,stroke-width:2px,color:#fff
+    style Sum fill:#3b82f6,stroke:#2563eb,stroke-width:2px,color:#fff
+    style Out fill:#10b981,stroke:#059669,stroke-width:2px,color:#fff
+math_theory: |
+  XGBoost construit un ensemble additif d'arbres de régression pour minimiser une fonction de perte.
+  
+  La prédiction pour une instance $\textcolor{#fbbf24}{x_i}$ est la somme des prédictions de $\textcolor{#10b981}{K}$ arbres :
+  $$\hat{y}_i = \sum_{\textcolor{#3b82f6}{k}=1}^{\textcolor{#10b981}{K}} \textcolor{#ef4444}{f_{\textcolor{#3b82f6}{k}}}(\textcolor{#fbbf24}{x_i})$$
+  
+  À l'étape $\textcolor{#3b82f6}{t}$, l'algorithme optimise une approximation de Taylor au second ordre de l'objectif $\mathcal{L}$ :
+  $$\mathcal{L}^{(\textcolor{#3b82f6}{t})} \approx \sum_{i=1}^n \left[ \textcolor{#8b5cf6}{g_i} \textcolor{#ef4444}{f_{\textcolor{#3b82f6}{t}}}(\textcolor{#fbbf24}{x_i}) + \frac{1}{2} \textcolor{#8b5cf6}{h_i} \textcolor{#ef4444}{f_{\textcolor{#3b82f6}{t}}}(\textcolor{#fbbf24}{x_i})^2 \right] + \Omega(\textcolor{#ef4444}{f_{\textcolor{#3b82f6}{t}}})$$
+  
+  - $\textcolor{#ef4444}{f_{\textcolor{#3b82f6}{t}}}$ : Le nouvel arbre ajouté à l'étape $\textcolor{#3b82f6}{t}$.
+  - $\textcolor{#8b5cf6}{g_i}, \textcolor{#8b5cf6}{h_i}$ : Gradients de 1er et 2nd ordre de la perte par rapport à la prédiction précédente.
+  - $\Omega(\textcolor{#ef4444}{f})$ : Terme de régularisation pénalisant la complexité de l'arbre.
+math_illustration_svg: |
+  <svg viewBox="0 0 800 400" xmlns="http://www.w3.org/2000/svg">
+    <!-- Fond -->
+    <rect width="800" height="400" fill="#f8fafc" rx="15" />
+    
+    <!-- Title -->
+    <text x="400" y="40" font-family="Arial" font-size="20" font-weight="bold" fill="#1e293b" text-anchor="middle">Architecture XGBoost</text>
+    
+    <!-- Input x_i -->
+    <rect x="50" y="170" width="80" height="60" rx="10" fill="#fbbf24" opacity="0.2" stroke="#d97706" stroke-width="2" />
+    <text x="90" y="200" font-family="Arial" font-size="18" fill="#d97706" text-anchor="middle" font-weight="bold">x_i</text>
+    <text x="90" y="215" font-family="Arial" font-size="12" fill="#d97706" text-anchor="middle">Input</text>
+    
+    <!-- Paths from input to trees -->
+    <path d="M 130 200 L 200 100" fill="none" stroke="#cbd5e1" stroke-width="2" marker-end="url(#arrow)" />
+    <path d="M 130 200 L 200 200" fill="none" stroke="#cbd5e1" stroke-width="2" marker-end="url(#arrow)" />
+    <path d="M 130 200 L 200 300" fill="none" stroke="#cbd5e1" stroke-width="2" marker-end="url(#arrow)" />
+    
+    <!-- Tree 1 -->
+    <rect x="200" y="60" width="120" height="80" rx="8" fill="#ef4444" opacity="0.1" stroke="#ef4444" stroke-width="2" stroke-dasharray="4" />
+    <text x="260" y="95" font-family="Arial" font-size="16" fill="#ef4444" text-anchor="middle" font-weight="bold">f_1(x_i)</text>
+    <text x="260" y="115" font-family="Arial" font-size="12" fill="#ef4444" text-anchor="middle">Tree k=1</text>
+    
+    <!-- Tree 2 -->
+    <rect x="200" y="160" width="120" height="80" rx="8" fill="#ef4444" opacity="0.1" stroke="#ef4444" stroke-width="2" stroke-dasharray="4" />
+    <text x="260" y="195" font-family="Arial" font-size="16" fill="#ef4444" text-anchor="middle" font-weight="bold">f_2(x_i)</text>
+    <text x="260" y="215" font-family="Arial" font-size="12" fill="#ef4444" text-anchor="middle">Tree k=2</text>
+    
+    <!-- Tree K -->
+    <text x="260" y="270" font-family="Arial" font-size="20" fill="#94a3b8" text-anchor="middle">...</text>
+    <rect x="200" y="290" width="120" height="80" rx="8" fill="#ef4444" opacity="0.1" stroke="#ef4444" stroke-width="2" stroke-dasharray="4" />
+    <text x="260" y="325" font-family="Arial" font-size="16" fill="#ef4444" text-anchor="middle" font-weight="bold">f_K(x_i)</text>
+    <text x="260" y="345" font-family="Arial" font-size="12" fill="#ef4444" text-anchor="middle">Tree k=K</text>
+    
+    <!-- Connections to Sum -->
+    <path d="M 320 100 L 450 180" fill="none" stroke="#3b82f6" stroke-width="2" />
+    <path d="M 320 200 L 450 200" fill="none" stroke="#3b82f6" stroke-width="2" />
+    <path d="M 320 330 L 450 220" fill="none" stroke="#3b82f6" stroke-width="2" />
+    
+    <!-- Summation Node -->
+    <circle cx="480" cy="200" r="30" fill="#3b82f6" opacity="0.2" stroke="#3b82f6" stroke-width="3" />
+    <text x="480" y="210" font-family="Arial" font-size="28" fill="#3b82f6" text-anchor="middle" font-weight="bold">Σ</text>
+    <text x="480" y="250" font-family="Arial" font-size="12" fill="#3b82f6" text-anchor="middle">Additive</text>
+    
+    <!-- Gradients & Residuals (feedback loop simulation) -->
+    <path d="M 480 150 Q 400 30 260 60" fill="none" stroke="#8b5cf6" stroke-width="2" stroke-dasharray="5" marker-end="url(#arrow)" />
+    <text x="370" y="65" font-family="Arial" font-size="12" fill="#8b5cf6" text-anchor="middle">g_i, h_i (Gradients)</text>
+    
+    <!-- Output -->
+    <path d="M 510 200 L 600 200" fill="none" stroke="#10b981" stroke-width="3" marker-end="url(#arrow)" />
+    <rect x="600" y="160" width="100" height="80" rx="10" fill="#10b981" opacity="0.2" stroke="#059669" stroke-width="2" />
+    <text x="650" y="195" font-family="Arial" font-size="18" fill="#059669" text-anchor="middle" font-weight="bold">y_hat_i</text>
+    <text x="650" y="215" font-family="Arial" font-size="12" fill="#059669" text-anchor="middle">Log-Odds</text>
+    
+    <!-- Sigmoid output for Classification -->
+    <path d="M 700 200 L 740 200" fill="none" stroke="#10b981" stroke-width="2" marker-end="url(#arrow)" />
+    <circle cx="760" cy="200" r="20" fill="#10b981" opacity="0.1" stroke="#059669" stroke-width="2" />
+    <text x="760" y="205" font-family="Arial" font-size="14" fill="#059669" text-anchor="middle">σ()</text>
+    <text x="760" y="240" font-family="Arial" font-size="12" fill="#059669" text-anchor="middle">Prob</text>
+    
+    <!-- Markers -->
+    <defs>
+      <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+        <path d="M 0 0 L 10 5 L 0 10 z" fill="#94a3b8" />
+      </marker>
+    </defs>
+  </svg>
 
 _metadata:
   bloc: 3

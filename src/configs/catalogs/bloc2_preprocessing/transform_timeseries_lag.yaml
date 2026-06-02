@@ -1,14 +1,80 @@
 id: "transform_timeseries_lag"
 name: "Transform: Time Series Lag"
-description: "Génère des décalages temporels (Lags)."
+description: "La création de variables décalées (lag features) est une technique fondamentale d'ingénierie des caractéristiques pour les séries temporelles. Elle consiste à décaler les valeurs passées d'une série pour les aligner avec les observations actuelles. Cela permet à des algorithmes d'apprentissage supervisé classiques, qui supposent l'indépendance des observations, de capter la structure temporelle, l'autocorrélation et la dynamique historique des données."
+math_theory: |
+  Soit une série temporelle univariée $X = \{\textcolor{#3b82f6}{x_t}\}_{t=1}^T$. L'opérateur de décalage temporel (lag operator) d'ordre $\textcolor{#fbbf24}{k}$, noté $L^{\textcolor{#fbbf24}{k}}$, transforme la série de sorte que $L^{\textcolor{#fbbf24}{k}} \textcolor{#3b82f6}{x_t} = x_{t-\textcolor{#fbbf24}{k}}$. Pour créer un ensemble de caractéristiques (features) prédictives au temps $t$, on construit un vecteur d'observations passées $\textcolor{#10b981}{F_t} = [x_{t-1}, x_{t-2}, \dots, x_{t-\textcolor{#fbbf24}{K}}]$ pour un nombre maximum de lags $\textcolor{#fbbf24}{K}$. Le modèle cherchera alors à approximer une fonction $f$ telle que $\textcolor{#3b82f6}{x_t} \approx f(\textcolor{#10b981}{x_{t-1}, \dots, x_{t-K}})$. Les $\textcolor{#fbbf24}{K}$ premières lignes de la matrice résultante contiendront des valeurs manquantes (\textcolor{#ef4444}{NaN}) dues à l'absence d'historique.
+math_illustration_svg: |
+  <svg viewBox="0 0 400 200" xmlns="http://www.w3.org/2000/svg">
+    <text x="30" y="30" fill="#94a3b8" font-family="sans-serif" font-size="12">t</text>
+    <text x="85" y="30" fill="#94a3b8" font-family="sans-serif" font-size="12" text-anchor="middle">1</text>
+    <text x="135" y="30" fill="#94a3b8" font-family="sans-serif" font-size="12" text-anchor="middle">2</text>
+    <text x="185" y="30" fill="#94a3b8" font-family="sans-serif" font-size="12" text-anchor="middle">3</text>
+    <text x="235" y="30" fill="#94a3b8" font-family="sans-serif" font-size="12" text-anchor="middle">4</text>
+    <text x="285" y="30" fill="#94a3b8" font-family="sans-serif" font-size="12" text-anchor="middle">5</text>
+    
+    <line x1="110" y1="40" x2="110" y2="160" stroke="#64748b" stroke-dasharray="2,2"/>
+    <line x1="160" y1="40" x2="160" y2="160" stroke="#64748b" stroke-dasharray="2,2"/>
+    
+    <text x="10" y="65" fill="#3b82f6" font-family="sans-serif" font-size="12" font-weight="bold">x_t</text>
+    <rect x="65" y="50" width="40" height="25" fill="#3b82f6" rx="4" />
+    <text x="85" y="67" fill="#fff" font-family="sans-serif" font-size="12" text-anchor="middle">v1</text>
+    <rect x="115" y="50" width="40" height="25" fill="#3b82f6" rx="4" />
+    <text x="135" y="67" fill="#fff" font-family="sans-serif" font-size="12" text-anchor="middle">v2</text>
+    <rect x="165" y="50" width="40" height="25" fill="#3b82f6" rx="4" />
+    <text x="185" y="67" fill="#fff" font-family="sans-serif" font-size="12" text-anchor="middle">v3</text>
+    <rect x="215" y="50" width="40" height="25" fill="#3b82f6" rx="4" />
+    <text x="235" y="67" fill="#fff" font-family="sans-serif" font-size="12" text-anchor="middle">v4</text>
+    <rect x="265" y="50" width="40" height="25" fill="#3b82f6" rx="4" />
+    <text x="285" y="67" fill="#fff" font-family="sans-serif" font-size="12" text-anchor="middle">v5</text>
+    
+    <text x="10" y="105" fill="#10b981" font-family="sans-serif" font-size="12">Lag 1</text>
+    <rect x="65" y="90" width="40" height="25" fill="#ef4444" fill-opacity="0.3" stroke="#ef4444" rx="4" />
+    <text x="85" y="107" fill="#ef4444" font-family="sans-serif" font-size="10" text-anchor="middle">NaN</text>
+    <rect x="115" y="90" width="40" height="25" fill="#10b981" rx="4" />
+    <text x="135" y="107" fill="#fff" font-family="sans-serif" font-size="12" text-anchor="middle">v1</text>
+    <rect x="165" y="90" width="40" height="25" fill="#10b981" rx="4" />
+    <text x="185" y="107" fill="#fff" font-family="sans-serif" font-size="12" text-anchor="middle">v2</text>
+    <rect x="215" y="90" width="40" height="25" fill="#10b981" rx="4" />
+    <text x="235" y="107" fill="#fff" font-family="sans-serif" font-size="12" text-anchor="middle">v3</text>
+    <rect x="265" y="90" width="40" height="25" fill="#10b981" rx="4" />
+    <text x="285" y="107" fill="#fff" font-family="sans-serif" font-size="12" text-anchor="middle">v4</text>
+    
+    <path d="M 85 75 C 95 85, 115 85, 135 90" stroke="#fbbf24" stroke-width="2" fill="none" marker-end="url(#arrowlag)" />
+  
+    <text x="10" y="145" fill="#10b981" font-family="sans-serif" font-size="12">Lag 2</text>
+    <rect x="65" y="130" width="40" height="25" fill="#ef4444" fill-opacity="0.3" stroke="#ef4444" rx="4" />
+    <text x="85" y="147" fill="#ef4444" font-family="sans-serif" font-size="10" text-anchor="middle">NaN</text>
+    <rect x="115" y="130" width="40" height="25" fill="#ef4444" fill-opacity="0.3" stroke="#ef4444" rx="4" />
+    <text x="135" y="147" fill="#ef4444" font-family="sans-serif" font-size="10" text-anchor="middle">NaN</text>
+    <rect x="165" y="130" width="40" height="25" fill="#10b981" rx="4" />
+    <text x="185" y="147" fill="#fff" font-family="sans-serif" font-size="12" text-anchor="middle">v1</text>
+    <rect x="215" y="130" width="40" height="25" fill="#10b981" rx="4" />
+    <text x="235" y="147" fill="#fff" font-family="sans-serif" font-size="12" text-anchor="middle">v2</text>
+    <rect x="265" y="130" width="40" height="25" fill="#10b981" rx="4" />
+    <text x="285" y="147" fill="#fff" font-family="sans-serif" font-size="12" text-anchor="middle">v3</text>
+  
+    <defs>
+      <marker id="arrowlag" markerWidth="5" markerHeight="5" refX="5" refY="2.5" orient="auto">
+        <polygon points="0 0, 5 2.5, 0 5" fill="#fbbf24" />
+      </marker>
+    </defs>
+  </svg>
 category: "4.1 Preprocessing"
 tags: ["transform", "timeseries", "feature-engineering", "pandas", "pipeline"]
 applies_to: ["Séries Temporelles"]
-when_to_use: "Pour Machine Learning tabulaire."
+when_to_use: "À appliquer obligatoirement lorsque vous utilisez des algorithmes de Machine Learning tabulaires (Random Forest, XGBoost, LightGBM) pour des prédictions sur des données séquentielles chronologiques."
+use_cases:
+  - "Prévision de la demande ou des ventes (Forecasting) à partir de l'historique récent."
+  - "Détection d'anomalies dans des flux de données de capteurs IoT."
+  - "Modélisation financière pour la prédiction de cours ou de volatilité."
 pros:
-  - "Exploite le passé."
+  - "Transforme efficacement un problème de série temporelle en un problème d'apprentissage supervisé classique."
+  - "Explicite fortement les composantes d'autocorrélation linéaire ou non-linéaire du signal pour le modèle."
+  - "Méthode très rapide à implémenter et facilement interprétable (l'importance du lag correspond à l'impact du passé)."
 cons:
-  - "Génère des NaNs."
+  - "Entraîne inévitablement la création de valeurs manquantes (NaNs) en début de série temporelle."
+  - "Démultiplie le nombre de colonnes (dimensionnalité accrue), augmentant le risque de surapprentissage si $K$ est trop grand."
+  - "Inadéquat pour traiter des dynamiques à très long terme par rapport aux architectures récurrentes (RNN) ou de type Transformer."
 hyperparameters:
   lag_col: "Colonne"
 code_template: |
@@ -57,16 +123,16 @@ code_template: |
   if 'task_type' not in locals(): task_type = "classification"
   if 'meta' not in locals(): meta = {}
 illustration_mermaid: |
-  graph TD
-    A[Raw Data] --> B{Does LAG_COL exist?}
-    B -- Yes --> C[Initialize FunctionTransformer for Lags]
-    C --> D[Create ColumnTransformer]
-    D --> E[Add to Pipeline Steps]
-    B -- No --> F[Skip Lag Generation]
-    E --> G[Update Data Contract Variables]
-    F --> G
-    style A fill:#eff6ff,stroke:#3b82f6,stroke-width:2px
-    style G fill:#10b981,stroke:#059669,stroke-width:2px
+  flowchart LR
+    A[/ "📄 Params (n_lags)" /] --> C
+    B(["📊 df (Série temp)"]) --> C{"⚙️ Generate Lags"}
+    C --> D(["📊 df (Features décalées)"])
+    C --> E(["ℹ️ pipeline_steps"])
+    style A fill:#fbbf24,stroke:#d97706,stroke-width:2px,color:#000
+    style C fill:#3b82f6,stroke:#2563eb,stroke-width:2px,color:#fff
+    style B fill:#10b981,stroke:#059669,stroke-width:2px,color:#fff
+    style D fill:#10b981,stroke:#059669,stroke-width:2px,color:#fff
+    style E fill:#8b5cf6,stroke:#7c3aed,stroke-width:2px,color:#fff
 
 _metadata:
   bloc: 2

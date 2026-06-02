@@ -1,14 +1,41 @@
 id: "transform_drop_outliers"
 name: "Transform: Z-Score Outliers"
-description: "Supprime les lignes aberrantes. Suivi dans le pipeline."
+description: "Filtre et supprime les observations (lignes) contenant des valeurs extrêmes ou aberrantes sur les variables numériques, en utilisant la méthode du Z-score par rapport à un seuil défini."
+math_theory: |
+  Pour chaque observation $\textcolor{#3b82f6}{x_i}$ d'une variable numérique de moyenne $\textcolor{#fbbf24}{\mu}$ et d'écart-type $\textcolor{#8b5cf6}{\sigma}$, on calcule le Z-score : $$ \textcolor{#10b981}{Z_i} = \frac{\textcolor{#3b82f6}{x_i} - \textcolor{#fbbf24}{\mu}}{\textcolor{#8b5cf6}{\sigma}} $$ L'observation est considérée comme une anomalie et retirée si $|\textcolor{#10b981}{Z_i}| > Z_{thresh}$.
+math_illustration_svg: |
+  <svg viewBox="0 0 400 200" xmlns="http://www.w3.org/2000/svg">
+    <rect width="400" height="200" fill="#1e293b" rx="10" />
+    <g transform="translate(50, 160)">
+      <line x1="0" y1="0" x2="300" y2="0" stroke="#94a3b8" stroke-width="2" />
+      <path d="M20,0 C60,0 100,-120 150,-120 C200,-120 240,0 280,0" fill="none" stroke="#8b5cf6" stroke-width="3" />
+      <line x1="150" y1="0" x2="150" y2="-120" stroke="#fbbf24" stroke-width="2" stroke-dasharray="5,5" />
+      <text x="150" y="20" fill="#fbbf24" font-family="sans-serif" font-size="14" text-anchor="middle" font-weight="bold">μ</text>
+      <line x1="50" y1="0" x2="50" y2="-40" stroke="#ef4444" stroke-width="1" stroke-dasharray="3,3" />
+      <line x1="250" y1="0" x2="250" y2="-40" stroke="#ef4444" stroke-width="1" stroke-dasharray="3,3" />
+      <text x="50" y="20" fill="#ef4444" font-family="sans-serif" font-size="12" text-anchor="middle">-Z_thresh</text>
+      <text x="250" y="20" fill="#ef4444" font-family="sans-serif" font-size="12" text-anchor="middle">+Z_thresh</text>
+      <circle cx="120" cy="-60" r="4" fill="#3b82f6" />
+      <text x="110" y="-70" fill="#3b82f6" font-family="sans-serif" font-size="12">x_i (Keep)</text>
+      <circle cx="280" cy="-5" r="4" fill="#ef4444" />
+      <line x1="272" y1="-13" x2="288" y2="3" stroke="#ef4444" stroke-width="2" />
+      <line x1="288" y1="-13" x2="272" y2="3" stroke="#ef4444" stroke-width="2" />
+      <text x="280" y="-20" fill="#ef4444" font-family="sans-serif" font-size="12" text-anchor="middle">Outlier</text>
+    </g>
+  </svg>
 category: "4.1 Preprocessing"
 tags: ["transform", "cleaning", "outliers", "tabular", "pipeline"]
 applies_to: ["Tabulaire"]
-when_to_use: "Pour éliminer les valeurs aberrantes."
+when_to_use: "Pour nettoyer le jeu de données d'entraînement des valeurs extrêmes dues à des erreurs de capteurs ou de saisie, qui pourraient déstabiliser des modèles sensibles (comme la régression linéaire)."
+use_cases:
+  - "Nettoyage préliminaire avant l'utilisation de modèles linéaires ou de k-Means."
+  - "Filtrage de séries temporelles financières ou de capteurs IoT comportant des pics non physiques."
 pros:
-  - "Nettoie les erreurs de mesure."
+  - "Améliore grandement la robustesse des modèles basés sur la distance (ex: SVM, KNN) ou sur la variance."
+  - "Technique standardisée, rapide et bien comprise statistiquement."
 cons:
-  - "Le drop dans un pipeline est risqué pour l'inférence. À utiliser avec précaution."
+  - "Extrêmement risqué au sein d'un pipeline complet si appliqué lors de l'inférence, car la suppression de lignes désynchronise les prédictions."
+  - "Le Z-score suppose que la distribution sous-jacente est proche d'une loi normale."
 hyperparameters:
   z_thresh: "Seuil du Z-Score (souvent 3.0)."
 code_template: |
@@ -44,18 +71,16 @@ code_template: |
       print(f"[TRANSFORM] Lignes supprimées: {df_shape_before[0] - df.shape[0]}")
 
 illustration_mermaid: |
-  graph TD
-    A[Input DataFrame] --> B[Extract Numeric Columns]
-    B --> C{Are there numeric columns?}
-    C -- Yes --> D[Calculate Z-Scores using scipy.stats]
-    C -- No --> E[Return Original DataFrame]
-    D --> F[Create mask: Z < Threshold]
-    F --> G[Filter DataFrame rows]
-    G --> H[Update pipeline_steps & df]
-    E --> H
-    H --> I[Filtered DataFrame]
-    style A fill:#eff6ff,stroke:#94a3b8,stroke-width:2px
-    style I fill:#10b981,stroke:#059669,stroke-width:2px,color:#fff
+  flowchart LR
+    A[/ "📄 Z_THRESH" /] --> B{"⚙️ Calculate Z-Scores"}
+    B --> C{"⚙️ Filter rows (|Z| < thresh)"}
+    C --> D(["📊 df (Without outliers)"])
+    D --> E(["ℹ️ pipeline_steps"])
+    style A fill:#fbbf24,stroke:#d97706,stroke-width:2px,color:#000
+    style B fill:#3b82f6,stroke:#2563eb,stroke-width:2px,color:#fff
+    style C fill:#3b82f6,stroke:#2563eb,stroke-width:2px,color:#fff
+    style D fill:#10b981,stroke:#059669,stroke-width:2px,color:#fff
+    style E fill:#8b5cf6,stroke:#7c3aed,stroke-width:2px,color:#fff
 
 _metadata:
   bloc: 2

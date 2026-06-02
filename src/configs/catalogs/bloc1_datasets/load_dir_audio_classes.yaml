@@ -1,7 +1,19 @@
 id: load_dir_audio_classes
 name: 'Load: Dossier d''Audios par Classes'
-description: Parcourt un dossier contenant des fichiers audios répartis en sous-dossiers
-  (classes).
+description: 'Ce bloc de code permet de parcourir de manière automatisée et structurée un répertoire racine contenant des fichiers audios (.wav, .mp3, .flac, .ogg). Il est spécialement conçu pour les jeux de données audio organisés de façon hiérarchique, où chaque sous-dossier représente une classe ou une étiquette spécifique. Le script liste les répertoires, extrait les noms des classes correspondantes, scanne les fichiers audios valides et génère un DataFrame Pandas consolidant le chemin absolu de chaque fichier et sa classe associée, préparant ainsi directement les données pour des tâches d''apprentissage supervisé en traitement du signal.'
+when_to_use: 'À utiliser lorsque vous disposez d''un ensemble de données audio brut organisé en dossiers par classe (par exemple, un dossier "chat" avec des miaulements, un dossier "chien" avec des aboiements) et que vous souhaitez charger ces chemins et labels dynamiquement sans créer de fichier d''annotation manuel.'
+use_cases:
+- 'Classification de sons environnementaux (ex: bruits de la rue, sons de la nature).'
+- 'Reconnaissance de commandes vocales ou de mots-clés.'
+- 'Détection d''anomalies sonores industrielles (machines défectueuses vs normales).'
+- 'Classification de genres musicaux.'
+pros:
+- 'Extrêmement simple à mettre en place : la structure des dossiers fait office de labels.'
+- 'Support natif des formats audios les plus courants (.wav, .mp3, .flac, .ogg).'
+- 'Génère un format tabulaire (DataFrame) standardisé et directement exploitable par les modèles.'
+cons:
+- 'Ne charge pas le signal audio lui-même en mémoire (nécessite une étape de feature extraction ultérieure).'
+- 'Rigide : une image ou un son ne peut appartenir qu''à une seule classe (pas de multi-label direct via les dossiers).'
 category: 2. Load
 tags:
 - load
@@ -52,39 +64,22 @@ code_template: |
   meta = {"format": "directory_audio_classes", "classes_found": len(classes), "audio_files_found": len(df)}
 
 illustration_mermaid: |
-  flowchart TD
-      subgraph Config [Parameters]
-          DIR([ROOT_DIRECTORY])
-      end
-
-      subgraph Operations [Audio Dir Scan]
-          ListDir([os.listdir])
-          ClassDir([Find Class Folders])
-          Glob([Glob valid audio])
-          Append([Append to list])
-          ToDF([pd.DataFrame])
-      end
-
-      subgraph Outputs [Contract Variables]
-          df((df))
-          target((target_name = 'class_name'))
-          task((task_type = 'audio_classification'))
-          meta((meta: dict))
-      end
-
-      DIR --> ListDir
-      ListDir --> ClassDir
-      ClassDir --> Glob
-      Glob --> Append
-      Append --> ToDF
-      ToDF --> df
-      df -.-> meta
-
-      style Config fill:#f8fafc,stroke:#cbd5e1,stroke-width:2px
-      style ListDir fill:#64748b,stroke:#475569,stroke-width:2px,color:#fff
-      style Glob fill:#3b82f6,stroke:#1d4ed8,stroke-width:2px,color:#fff
-      style ToDF fill:#10b981,stroke:#047857,stroke-width:2px,color:#fff
-      style Outputs fill:#f1f5f9,stroke:#94a3b8,stroke-width:2px
+  flowchart LR
+      A[/"📂 ROOT_DIRECTORY"/] --> B{"glob & pd.DataFrame()"}
+      C[/"🎯 Target: class_name"/] --> D{"Set Contract Variables"}
+      B --> E(["📊 df (Audio Paths)"])
+      E --> D
+      D --> F(["🎯 target_name = 'class_name'"])
+      D --> G(["⚙️ task_type = 'audio_classification'"])
+      D --> H(["ℹ️ meta (format, counts)"])
+      style A fill:#fbbf24,stroke:#d97706,stroke-width:2px,color:#000
+      style C fill:#fbbf24,stroke:#d97706,stroke-width:2px,color:#000
+      style B fill:#3b82f6,stroke:#2563eb,stroke-width:2px,color:#fff
+      style D fill:#3b82f6,stroke:#2563eb,stroke-width:2px,color:#fff
+      style E fill:#10b981,stroke:#059669,stroke-width:2px,color:#fff
+      style F fill:#8b5cf6,stroke:#7c3aed,stroke-width:2px,color:#fff
+      style G fill:#8b5cf6,stroke:#7c3aed,stroke-width:2px,color:#fff
+      style H fill:#8b5cf6,stroke:#7c3aed,stroke-width:2px,color:#fff
 _metadata:
   bloc: 1
   section: 2_load

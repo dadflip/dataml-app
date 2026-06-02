@@ -1,6 +1,16 @@
 id: extract_redis
 name: 'Extract: Redis Key/Values'
-description: Scanne une DB Redis en mémoire et exporte les clés/valeurs.
+description: 'Scanne une base de données Redis en mémoire en utilisant un pattern de clés et exporte les paires clé/valeur au format JSON.'
+when_to_use: 'Pratique pour faire un dump de données de cache, d''états de session ou de variables rapides stockées en mémoire.'
+use_cases:
+  - 'Extraction de logs ou de métriques en temps réel stockés temporairement.'
+  - 'Sauvegarde de la base de cache pour analyse de l''utilisation.'
+pros:
+  - 'Lecture très rapide grâce au stockage en mémoire de Redis.'
+  - 'Utilisation de scan_iter pour éviter de bloquer le serveur.'
+cons:
+  - 'Les données sont par nature volatiles ou non structurées.'
+  - 'Peut générer un fichier JSON volumineux si beaucoup de clés correspondent.'
 category: 1. Extract
 tags:
 - extract
@@ -50,46 +60,22 @@ code_template: |
   task_type = "unknown"
   meta = {"source": "redis", "path": DEST_PATH}
 illustration_mermaid: |
-    flowchart TD
-    A([FILE_PATH]) --> B[Load EXTRACT_REDIS]
-    B --> df([df])
-    
-    style A fill:#3b82f6,color:#fff
-    style B fill:#10b981,color:#fff
-    style df fill:#f59e0b,color:#fff
-
-
-        subgraph Operations [Redis Scan & Extract]
-            RedisClient[(redis.Redis)]
-            Scan([r.scan_iter])
-            Dict[[data: dict]]
-            Save([json.dump])
-            OutFile[(JSON File)]
-        end
-
-        subgraph Outputs [Contract Variables]
-            df((df = None))
-            target((target_name = None))
-            task((task_type = 'unknown'))
-            meta((meta: dict))
-        end
-
-        HOST --> RedisClient
-        RedisClient --> Scan
-        PATTERN --> Scan
-        Scan -->|r.get| Dict
-        Dict --> Save
-        DEST --> OutFile
-        Save --> OutFile
-        OutFile -.-> meta
-
-        style Config fill:#f8fafc,stroke:#cbd5e1,stroke-width:2px
-        style RedisClient fill:#dc2626,stroke:#991b1b,stroke-width:2px,color:#fff
-        style Scan fill:#f59e0b,stroke:#b45309,stroke-width:2px,color:#fff
-        style Dict fill:#8b5cf6,stroke:#6d28d9,stroke-width:2px,color:#fff
-        style Save fill:#3b82f6,stroke:#1d4ed8,stroke-width:2px,color:#fff
-        style OutFile fill:#10b981,stroke:#047857,stroke-width:2px,color:#fff
-        style Outputs fill:#f1f5f9,stroke:#94a3b8,stroke-width:2px
+    flowchart LR
+        A[/"📄 Redis Host"/] --> B{"Scan & Export()"}
+        C[/"🎯 TARGET_COL"/] --> D{"Check TARGET_COL"}
+        B --> E(["📊 df (Fichier JSON)"])
+        E --> D
+        D --> F(["🎯 target_name"])
+        D --> G(["⚙️ task_type"])
+        D --> H(["ℹ️ meta (source: redis)"])
+        style A fill:#fbbf24,stroke:#d97706,stroke-width:2px,color:#000
+        style C fill:#fbbf24,stroke:#d97706,stroke-width:2px,color:#000
+        style B fill:#3b82f6,stroke:#2563eb,stroke-width:2px,color:#fff
+        style D fill:#3b82f6,stroke:#2563eb,stroke-width:2px,color:#fff
+        style E fill:#10b981,stroke:#059669,stroke-width:2px,color:#fff
+        style F fill:#8b5cf6,stroke:#7c3aed,stroke-width:2px,color:#fff
+        style G fill:#8b5cf6,stroke:#7c3aed,stroke-width:2px,color:#fff
+        style H fill:#8b5cf6,stroke:#7c3aed,stroke-width:2px,color:#fff
 
 _metadata:
   bloc: 1

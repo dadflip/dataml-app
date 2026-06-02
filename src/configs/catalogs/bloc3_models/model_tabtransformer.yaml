@@ -1,18 +1,69 @@
 id: "model_tabtransformer"
 name: "Model: TabTransformer (Tabulaire)"
-description: "Transformer adapté aux données tabulaires. Les colonnes catégorielles sont traitées par de l'attention multi-têtes."
+description: |
+  Architecture de type Transformer spécifiquement adaptée aux données tabulaires, développée par Amazon (AWS). Elle applique un mécanisme d'attention multi-têtes (Self-Attention) pour apprendre des représentations contextuelles robustes des variables catégorielles.
 category: "Attention & Transformers"
 tags: ["model", "classification", "tabular", "pytorch", "transformer", "deep-learning"]
 applies_to: ["Tabulaire"]
-when_to_use: "Quand vous voulez appliquer l'attention aux données tabulaires (alternative aux GBDTs)."
+when_to_use: |
+  Jeux de données tabulaires contenant une très forte proportion de variables catégorielles avec beaucoup de modalités. Constitue une bonne alternative au gradient boosting, particulièrement si vous disposez de très gros volumes de données ou souhaitez pré-entraîner un modèle.
+use_cases:
+  - "Prédiction de clics publicitaires (CTR) sur des données à forte cardinalité (ID utilisateur, contexte)."
+  - "Systèmes de recommandation d'articles ou de produits e-commerce basés sur des profils."
+  - "Évaluation de risques impliquant des variables catégorielles complexes inter-dépendantes."
 pros:
-  - "Capture les interactions entre colonnes catégorielles."
+  - "Capture efficacement les interactions d'ordre supérieur entre les variables catégorielles via l'attention multi-têtes."
+  - "Produit des embeddings de haute qualité réutilisables pour d'autres tâches en aval (transfer learning)."
+  - "Potentiellement plus robuste face au bruit et aux données manquantes sur les variables catégorielles."
 cons:
-  - "Souvent surpassé par XGBoost/LightGBM sur les petits datasets."
+  - "Souvent surpassé par les modèles d'arbres (XGBoost, LightGBM) sur les petits et moyens jeux de données."
+  - "Le traitement des variables continues n'exploite généralement pas l'attention (elles sont souvent juste concaténées à la fin)."
+  - "Exige beaucoup de ressources computationnelles et de données pour justifier sa complexité par rapport aux baselines."
 hyperparameters:
   d_model: "Dimension d'embedding par colonne (ex: 32)."
   nhead: "Nombre de têtes d'attention (ex: 4)."
-  epochs: "Nombre d'époques (ex: 10)."
+  epochs: "Nombre d'époques d'entraînement (ex: 10)."
+math_theory: |
+  Le TabTransformer embarque chaque modalité catégorielle $\textcolor{#ef4444}{x_i}$ en un vecteur $\textcolor{#3b82f6}{e_i}$. Ces embeddings passent par un Transformer Encoder :
+  $$ \textcolor{#10b981}{E_{out}} = \text{Transformer}(\textcolor{#3b82f6}{E_{in}}) $$
+  Le mécanisme d'attention (Scaled Dot-Product) est défini par :
+  $$ \text{Attention}(\textcolor{#fbbf24}{Q}, \textcolor{#fbbf24}{K}, \textcolor{#fbbf24}{V}) = \text{softmax}\left(\frac{\textcolor{#fbbf24}{Q}\textcolor{#fbbf24}{K}^T}{\sqrt{\textcolor{#8b5cf6}{d_k}}}\right)\textcolor{#fbbf24}{V} $$
+  Les variables continues sont concaténées avec $\textcolor{#10b981}{E_{out}}$ puis passées dans un Multi-Layer Perceptron (MLP) final.
+math_illustration_svg: |
+  <svg viewBox="0 0 800 400" xmlns="http://www.w3.org/2000/svg">
+    <rect width="800" height="400" fill="#f8fafc" rx="10"/>
+    <rect x="50" y="80" width="80" height="40" rx="4" fill="#ef4444" opacity="0.1" stroke="#ef4444" stroke-width="2"/>
+    <text x="90" y="105" font-family="sans-serif" font-size="16" font-weight="bold" fill="#ef4444" text-anchor="middle">Cat x_i</text>
+    <path d="M 130 100 L 180 100" stroke="#94a3b8" stroke-width="2" fill="none" marker-end="url(#arrow)"/>
+    <rect x="180" y="80" width="100" height="40" rx="4" fill="#3b82f6" opacity="0.1" stroke="#3b82f6" stroke-width="2"/>
+    <text x="230" y="105" font-family="sans-serif" font-size="16" font-weight="bold" fill="#3b82f6" text-anchor="middle">Emb e_i</text>
+    <path d="M 280 100 L 330 100" stroke="#94a3b8" stroke-width="2" fill="none" marker-end="url(#arrow)"/>
+    <rect x="330" y="40" width="220" height="200" rx="8" fill="#ffffff" stroke="#cbd5e1" stroke-width="2"/>
+    <text x="440" y="70" font-family="sans-serif" font-size="16" font-weight="bold" fill="#334155" text-anchor="middle">Transformer Encoder</text>
+    <rect x="350" y="90" width="50" height="40" rx="4" fill="#fbbf24" opacity="0.2" stroke="#fbbf24" stroke-width="1"/>
+    <text x="375" y="115" font-family="sans-serif" font-size="14" fill="#d97706" text-anchor="middle">Q</text>
+    <rect x="415" y="90" width="50" height="40" rx="4" fill="#fbbf24" opacity="0.2" stroke="#fbbf24" stroke-width="1"/>
+    <text x="440" y="115" font-family="sans-serif" font-size="14" fill="#d97706" text-anchor="middle">K</text>
+    <rect x="480" y="90" width="50" height="40" rx="4" fill="#fbbf24" opacity="0.2" stroke="#fbbf24" stroke-width="1"/>
+    <text x="505" y="115" font-family="sans-serif" font-size="14" fill="#d97706" text-anchor="middle">V</text>
+    <text x="440" y="160" font-family="sans-serif" font-size="14" fill="#8b5cf6" text-anchor="middle">Scale: 1/sqrt(d_k)</text>
+    <rect x="370" y="180" width="140" height="40" rx="4" fill="#10b981" opacity="0.1" stroke="#10b981" stroke-width="2"/>
+    <text x="440" y="205" font-family="sans-serif" font-size="16" font-weight="bold" fill="#10b981" text-anchor="middle">E_out</text>
+    <rect x="50" y="280" width="120" height="40" rx="4" fill="#ef4444" opacity="0.1" stroke="#ef4444" stroke-width="2"/>
+    <text x="110" y="305" font-family="sans-serif" font-size="16" font-weight="bold" fill="#ef4444" text-anchor="middle">Cont x_j</text>
+    <path d="M 550 200 L 600 200" stroke="#10b981" stroke-width="2" fill="none" marker-end="url(#arrow)"/>
+    <path d="M 170 300 L 600 300" stroke="#ef4444" stroke-width="2" fill="none" marker-end="url(#arrow)"/>
+    <rect x="600" y="180" width="60" height="140" rx="8" fill="#f1f5f9" stroke="#94a3b8" stroke-width="2"/>
+    <text x="630" y="255" font-family="sans-serif" font-size="14" font-weight="bold" fill="#334155" text-anchor="middle" transform="rotate(-90 630,255)">Concat</text>
+    <path d="M 660 250 L 700 250" stroke="#94a3b8" stroke-width="2" fill="none" marker-end="url(#arrow)"/>
+    <rect x="700" y="220" width="60" height="60" rx="8" fill="#3b82f6" opacity="0.1" stroke="#3b82f6" stroke-width="2"/>
+    <text x="730" y="255" font-family="sans-serif" font-size="16" font-weight="bold" fill="#3b82f6" text-anchor="middle">MLP</text>
+    <defs>
+      <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto">
+        <path d="M 0 0 L 10 5 L 0 10 z" fill="#94a3b8"/>
+      </marker>
+    </defs>
+  </svg>
 code_template: |
   import pandas as pd
   import numpy as np
@@ -97,10 +148,20 @@ code_template: |
       training_history = {"status": "success", "loss": float(loss)}
       task_type = "classification"
 illustration_mermaid: |
-    graph LR
-      In([Raw Data]) -->|Process| Out([Clean Data])
-      style In fill:#eff6ff,stroke:#94a3b8,stroke-width:2px,stroke-dasharray: 5 5
-      style Out fill:#10b981,stroke:#059669,stroke-width:2px,color:#fff
+  flowchart LR
+    Data(["Données Tabulaires"])
+    Params[/"Hyperparamètres (d_model, nhead)"/]
+    Model{"TabTransformer (Attention)"}
+    Pred(["Prédictions (Classes)"])
+    
+    Data --> Model
+    Params --> Model
+    Model --> Pred
+
+    style Data fill:#10b981,stroke:#059669,stroke-width:2px,color:#fff
+    style Params fill:#fbbf24,stroke:#d97706,stroke-width:2px,color:#000
+    style Model fill:#3b82f6,stroke:#2563eb,stroke-width:2px,color:#fff
+    style Pred fill:#10b981,stroke:#059669,stroke-width:2px,color:#fff
 
 _metadata:
   bloc: 3

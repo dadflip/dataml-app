@@ -1,7 +1,15 @@
 id: eda_dataframe_summary
 name: 'EDA: Résumé DataFrame'
-description: Affiche les infos générales, statistiques descriptives et un aperçu du
-  jeu de données.
+description: Affiche les infos générales, statistiques descriptives et un aperçu du jeu de données. Indispensable pour la première prise en main.
+when_to_use: "Dès le chargement initial d'un DataFrame Pandas, pour comprendre sa structure, ses types de données et ses valeurs statistiques de base."
+use_cases:
+  - "Contrôle rapide du nombre de lignes, de colonnes, et du type de chaque colonne."
+  - "Identification rapide des valeurs manquantes et des ordres de grandeur statistiques."
+pros:
+  - "Regroupe les méthodes essentielles (info, describe, head) en une seule étape."
+  - "Fournit une vue d'ensemble instantanée sans code complexe."
+cons:
+  - "Le 'describe' avec include='all' peut être lourd si le DataFrame possède des centaines de colonnes."
 category: 3. Exploratory Data Analysis
 tags:
 - eda
@@ -25,16 +33,22 @@ code_template: |
   display(df.head(HEAD_N))
 illustration_mermaid: |
     graph TD
-      A([DataFrame df]) --> B{{Print df.info}}
-      A --> C{{Display df.describe}}
-      A --> D{{Display df.head}}
-      B --> E([General Info])
-      C --> F([Descriptive Statistics])
-      D --> G([First HEAD_N rows])
-      style A fill:#4F46E5,color:#fff
-      style B fill:#10B981,color:#fff
-      style C fill:#10B981,color:#fff
-      style D fill:#10B981,color:#fff
+      A[/DataFrame df/] --> B{Print df.info}
+      A --> C{Display df.describe}
+      A --> D{Display df.head}
+      A2[/HEAD_N/] --> D
+      B --> E([General Info df])
+      C --> F([Descriptive Statistics df])
+      D --> G([First HEAD_N rows df])
+      
+      classDef input fill:#fbbf24,stroke:#d97706,stroke-width:2px,color:#000;
+      classDef process fill:#3b82f6,stroke:#2563eb,stroke-width:2px,color:#fff;
+      classDef outputPrimary fill:#10b981,stroke:#059669,stroke-width:2px,color:#fff;
+      classDef outputSecondary fill:#8b5cf6,stroke:#7c3aed,stroke-width:2px,color:#fff;
+      
+      class A,A2 input;
+      class B,C,D process;
+      class E,F,G outputPrimary;
 
 _metadata:
   bloc: 1

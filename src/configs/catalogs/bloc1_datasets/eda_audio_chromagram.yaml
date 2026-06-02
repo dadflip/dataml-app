@@ -1,6 +1,16 @@
 id: eda_audio_chromagram
 name: 'EDA: Visualisation Temporelle Audio'
-description: Trace la puissance du signal audio (Energy).
+description: "Trace la puissance du signal audio (énergie temporelle) à l'aide d'une fenêtre glissante."
+when_to_use: "Pour visualiser les variations d'intensité d'un signal audio au fil du temps."
+use_cases:
+  - "Détection de silences ou d'attaques."
+  - "Analyse de la dynamique d'un enregistrement."
+pros:
+  - "Calcul rapide et simple."
+  - "Visualisation claire des pics d'énergie."
+cons:
+  - "Perte des informations fréquentielles."
+  - "Sensible au bruit ambiant."
 category: 3. Exploratory Data Analysis
 tags:
 - eda
@@ -26,20 +36,26 @@ code_template: |
       print("[EDA] Tensor 'waveform' introuvable.")
 illustration_mermaid: |
     graph TD
-      A([Tensor 'waveform']) --> B{Exists in locals?}
-      B -- Yes --> C([Extract Channel 0])
-      C --> D[/Convert to numpy array/]
-      D --> E[Square signal]
-      E --> F[Convolve with sliding window<br>size=100]
+      A[/Tensor 'waveform'/] --> B{Exists in locals?}
+      B -- Yes --> C{Extract Channel 0}
+      C --> D{Convert to numpy array}
+      D --> E{Square signal}
+      E --> F{Convolve with sliding window}
       F --> G([Energy Array])
-      G --> H{{Plot Energy vs Frames}}
+      G --> H{Plot Energy vs Frames}
       H --> I([Display Plot])
-      B -- No --> J[/Print Error Message/]
-      style A fill:#4F46E5,color:#fff
-      style B fill:#F59E0B,color:#fff
-      style E fill:#06B6D4,color:#fff
-      style F fill:#06B6D4,color:#fff
-      style H fill:#10B981,color:#fff
+      B -- No --> J([Print Error Message])
+
+      style A fill:#fbbf24,stroke:#d97706,stroke-width:2px,color:#000
+      style B fill:#3b82f6,stroke:#2563eb,stroke-width:2px,color:#fff
+      style C fill:#3b82f6,stroke:#2563eb,stroke-width:2px,color:#fff
+      style D fill:#3b82f6,stroke:#2563eb,stroke-width:2px,color:#fff
+      style E fill:#3b82f6,stroke:#2563eb,stroke-width:2px,color:#fff
+      style F fill:#3b82f6,stroke:#2563eb,stroke-width:2px,color:#fff
+      style G fill:#10b981,stroke:#059669,stroke-width:2px,color:#fff
+      style H fill:#3b82f6,stroke:#2563eb,stroke-width:2px,color:#fff
+      style I fill:#10b981,stroke:#059669,stroke-width:2px,color:#fff
+      style J fill:#8b5cf6,stroke:#7c3aed,stroke-width:2px,color:#fff
 
 _metadata:
   bloc: 1

@@ -1,17 +1,59 @@
 id: "model_fasttext_classifier"
 name: "Model: FastText Classifier (Facebook)"
-description: "Classification de texte ultra-rapide par Facebook Research. Gère l'OOV (Out Of Vocabulary) grâce aux n-grammes de caractères."
+description: |
+  Modèle de classification de texte ultra-rapide développé par Facebook Research. Gère efficacement l'OOV (Out Of Vocabulary) grâce à l'utilisation de n-grammes de caractères.
 category: "Modèles NLP (Entraînés)"
 tags: ["model", "nlp", "classification", "fasttext"]
 applies_to: ["Texte"]
-when_to_use: "Besoin de performances de type Word2Vec mais 100x plus rapide à entraîner (très utile sur CPU)."
+when_to_use: |
+  Privilégiez ce modèle lorsque vous avez besoin de performances de type Word2Vec, mais avec un entraînement nettement plus rapide (particulièrement adapté pour un entraînement sur CPU) et la capacité de gérer des mots hors vocabulaire.
+use_cases:
+  - "Classification de sentiments sur de grands corpus de textes courts."
+  - "Détection de spam ou de langage abusif."
+  - "Catégorisation de documents thématiques."
 pros:
-  - "Vitesse de l'éclair, gère les mots inconnus."
+  - "Rapidité d'entraînement et d'inférence exceptionnelle."
+  - "Gestion robuste des mots inconnus (OOV) grâce aux n-grammes de caractères."
+  - "Très peu gourmand en ressources, fonctionne très bien sur CPU."
 cons:
-  - "Nécessite le package fasttext (installation C++ parfois capricieuse)."
+  - "Nécessite l'installation du package C++ FastText, parfois difficile sur certains environnements."
+  - "Moins performant que les modèles de type Transformer (BERT) sur des tâches nécessitant un contexte complexe."
+  - "Représentations statiques des mots, sans prise en compte du contexte global de la phrase."
 hyperparameters:
   epoch: "Nombre d'époques (ex: 25)."
   lr: "Taux d'apprentissage (ex: 0.1)."
+math_theory: |
+  FastText modélise un document comme la somme des représentations de ses mots et de ses n-grammes de caractères.
+  Soit $\textcolor{#10b981}{X} = \{x_1, \dots, x_{\textcolor{#fbbf24}{N}}\}$ l'ensemble des n-grammes (mots et sous-mots) d'un texte.
+  La représentation du document $\textcolor{#3b82f6}{h}$ est la moyenne de leurs embeddings $\textcolor{#8b5cf6}{v}_{x_n}$ :
+  $$ \textcolor{#3b82f6}{h} = \frac{1}{\textcolor{#fbbf24}{N}} \sum_{n=1}^{\textcolor{#fbbf24}{N}} \textcolor{#8b5cf6}{v}_{x_n} $$
+  Cette représentation est ensuite multipliée par une matrice de poids $\textcolor{#ef4444}{W}$ et passée dans une fonction Softmax (ou Softmax hiérarchique pour accélérer le calcul) afin de prédire la classe $y$ :
+  $$ P(y | \textcolor{#10b981}{X}) = \text{Softmax}(\textcolor{#ef4444}{W} \cdot \textcolor{#3b82f6}{h}) $$
+math_illustration_svg: |
+  <svg viewBox="0 0 800 400" xmlns="http://www.w3.org/2000/svg">
+    <rect x="0" y="0" width="800" height="400" fill="#1e293b" rx="10"/>
+    <text x="400" y="40" fill="#ffffff" font-family="sans-serif" font-size="22" font-weight="bold" text-anchor="middle">FastText Architecture</text>
+    <rect x="50" y="100" width="150" height="200" fill="#10b981" fill-opacity="0.2" stroke="#10b981" stroke-width="2" rx="5"/>
+    <text x="125" y="150" fill="#10b981" font-family="sans-serif" font-size="16" font-weight="bold" text-anchor="middle">N-grams (X)</text>
+    <text x="125" y="190" fill="#10b981" font-family="sans-serif" font-size="14" text-anchor="middle">x_1, x_2, ...</text>
+    <text x="125" y="240" fill="#fbbf24" font-family="sans-serif" font-size="14" font-weight="bold" text-anchor="middle">N elements</text>
+    <path d="M210 200 L270 200" stroke="#ffffff" stroke-width="2" marker-end="url(#arrow)" />
+    <rect x="280" y="100" width="120" height="200" fill="#8b5cf6" fill-opacity="0.2" stroke="#8b5cf6" stroke-width="2" rx="5"/>
+    <text x="340" y="205" fill="#8b5cf6" font-family="sans-serif" font-size="16" font-weight="bold" text-anchor="middle">Embeddings v</text>
+    <path d="M410 200 L470 200" stroke="#ffffff" stroke-width="2" marker-end="url(#arrow)" />
+    <rect x="480" y="150" width="100" height="100" fill="#3b82f6" fill-opacity="0.2" stroke="#3b82f6" stroke-width="2" rx="5"/>
+    <text x="530" y="195" fill="#3b82f6" font-family="sans-serif" font-size="16" font-weight="bold" text-anchor="middle">Average</text>
+    <text x="530" y="225" fill="#3b82f6" font-family="sans-serif" font-size="16" font-weight="bold" text-anchor="middle">Pooling h</text>
+    <path d="M590 200 L650 200" stroke="#ffffff" stroke-width="2" marker-end="url(#arrow)" />
+    <rect x="660" y="150" width="100" height="100" fill="#ef4444" fill-opacity="0.2" stroke="#ef4444" stroke-width="2" rx="5"/>
+    <text x="710" y="195" fill="#ef4444" font-family="sans-serif" font-size="16" font-weight="bold" text-anchor="middle">Weights W</text>
+    <text x="710" y="225" fill="#ef4444" font-family="sans-serif" font-size="16" font-weight="bold" text-anchor="middle">+ Softmax</text>
+    <defs>
+      <marker id="arrow" markerWidth="10" markerHeight="10" refX="9" refY="3" orient="auto">
+        <path d="M0,0 L0,6 L9,3 z" fill="#ffffff" />
+      </marker>
+    </defs>
+  </svg>
 code_template: |
   import pandas as pd
   import numpy as np
@@ -86,18 +128,21 @@ code_template: |
           os.remove(train_file)
 
 illustration_mermaid: |
-  graph TD
-    subgraph FastText Classifier Pipeline
-      In([Text Document]) --> Ngrams[Char n-grams extraction]
-      Ngrams --> Emb[Word / n-gram Embeddings]
-      Emb --> Avg[Average Embeddings]
-      Avg --> Linear[Linear Classifier]
-      Linear --> Softmax[Hierarchical Softmax]
-      Softmax --> Out([Predicted Class])
-    end
-    style In fill:#f8fafc,stroke:#94a3b8,stroke-width:1px
+  flowchart LR
+    In(["Texte brut"]) --> Ngrams{"Extraction\nn-grammes"}
+    Ngrams --> Emb{"Plongements\n(Embeddings)"}
+    Emb --> Avg{"Moyennage\n(Average)"}
+    Avg --> Linear{"Classificateur\nLinéaire"}
+    Linear --> Softmax{"Softmax\nHiérarchique"}
+    Softmax --> Out(["Classe Prédite"])
+    
+    style In fill:#10b981,stroke:#059669,stroke-width:2px,color:#fff
     style Out fill:#10b981,stroke:#059669,stroke-width:2px,color:#fff
-    style Linear fill:#8b5cf6,stroke:#7c3aed,stroke-width:2px,color:#fff
+    style Ngrams fill:#3b82f6,stroke:#2563eb,stroke-width:2px,color:#fff
+    style Emb fill:#3b82f6,stroke:#2563eb,stroke-width:2px,color:#fff
+    style Avg fill:#3b82f6,stroke:#2563eb,stroke-width:2px,color:#fff
+    style Linear fill:#3b82f6,stroke:#2563eb,stroke-width:2px,color:#fff
+    style Softmax fill:#3b82f6,stroke:#2563eb,stroke-width:2px,color:#fff
 
 _metadata:
   bloc: 3

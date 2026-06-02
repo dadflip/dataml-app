@@ -1,14 +1,62 @@
 id: "transform_text_cleaning"
 name: "Transform: Clean Text"
-description: "Nettoie le texte. Intégré au pipeline."
+description: "Nettoie et normalise les colonnes de texte brut en appliquant une serie de transformations : conversion en minuscules, suppression de la ponctuation et des caracteres speciaux, et suppression des espaces superflus. C'est une etape prerequise indispensable avant toute vectorisation textuelle (TF-IDF, CountVectorizer, embeddings)."
+math_theory: |
+  Le nettoyage de texte est un processus de normalisation qui reduit l'espace des tokens :
+  - **Lowercasing** : Reduit l'alphabet de $\textcolor{#3b82f6}{|\Sigma_{maj}|} + \textcolor{#10b981}{|\Sigma_{min}|}$ a $\textcolor{#10b981}{|\Sigma_{min}|}$ symboles, fusionnant "Chat" et "chat" en un seul token.
+  - **Suppression ponctuation** : Applique une expression reguliere $\text{re.sub}(\textcolor{#fbbf24}{r'[^a-zA-Z0-9\backslash s]'}, '', \textcolor{#ef4444}{s})$ pour ne garder que les caracteres alphanumeriques.
+  - **Tokenisation** : Decoupe le texte en une sequence de tokens $\textcolor{#8b5cf6}{t} = [t_1, t_2, ..., t_n]$.
+  Ces etapes reduisent le vocabulaire $V$ et ameliorent la qualite des representations vectorielles en aval.
+math_illustration_svg: |
+  <svg viewBox="0 0 400 200" xmlns="http://www.w3.org/2000/svg">
+    <rect width="100%" height="100%" fill="transparent" />
+    <!-- Input text -->
+    <rect x="20" y="30" width="360" height="40" rx="5" fill="#1e293b" stroke="#ef4444" stroke-width="2" />
+    <text x="200" y="55" fill="#ef4444" font-family="monospace" font-size="14" text-anchor="middle">"Hello World! 123... How's it going?"</text>
+    <!-- Arrow down -->
+    <path d="M 200 70 L 200 90" stroke="#64748b" stroke-width="2" marker-end="url(#arrow_text)" />
+    <text x="210" y="85" fill="#64748b" font-family="monospace" font-size="10">Lowercasing &amp; Regex</text>
+    <!-- Cleaned text -->
+    <rect x="20" y="95" width="360" height="40" rx="5" fill="#1e293b" stroke="#3b82f6" stroke-width="2" />
+    <text x="200" y="120" fill="#3b82f6" font-family="monospace" font-size="14" text-anchor="middle">"hello world 123 hows it going"</text>
+    <!-- Arrow down to tokens -->
+    <path d="M 200 135 L 200 155" stroke="#64748b" stroke-width="2" marker-end="url(#arrow_text)" />
+    <text x="210" y="150" fill="#64748b" font-family="monospace" font-size="10">Tokens</text>
+    <!-- Tokens -->
+    <rect x="30" y="160" width="60" height="25" rx="3" fill="#1e293b" stroke="#10b981" stroke-width="1" />
+    <text x="60" y="177" fill="#10b981" font-family="monospace" font-size="12" text-anchor="middle">hello</text>
+    <rect x="100" y="160" width="60" height="25" rx="3" fill="#1e293b" stroke="#10b981" stroke-width="1" />
+    <text x="130" y="177" fill="#10b981" font-family="monospace" font-size="12" text-anchor="middle">world</text>
+    <rect x="170" y="160" width="40" height="25" rx="3" fill="#1e293b" stroke="#10b981" stroke-width="1" />
+    <text x="190" y="177" fill="#10b981" font-family="monospace" font-size="12" text-anchor="middle">123</text>
+    <rect x="220" y="160" width="50" height="25" rx="3" fill="#1e293b" stroke="#10b981" stroke-width="1" />
+    <text x="245" y="177" fill="#10b981" font-family="monospace" font-size="12" text-anchor="middle">hows</text>
+    <rect x="280" y="160" width="30" height="25" rx="3" fill="#1e293b" stroke="#10b981" stroke-width="1" />
+    <text x="295" y="177" fill="#10b981" font-family="monospace" font-size="12" text-anchor="middle">it</text>
+    <rect x="320" y="160" width="60" height="25" rx="3" fill="#1e293b" stroke="#10b981" stroke-width="1" />
+    <text x="350" y="177" fill="#10b981" font-family="monospace" font-size="12" text-anchor="middle">going</text>
+    <defs>
+      <marker id="arrow_text" viewBox="0 0 10 10" refX="5" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+        <path d="M 0 0 L 10 5 L 0 10 z" fill="#64748b" />
+      </marker>
+    </defs>
+  </svg>
 category: "4.1 Preprocessing"
 tags: ["transform", "nlp", "text", "pandas", "pipeline"]
 applies_to: ["Texte"]
-when_to_use: "Avant vectorisation."
+when_to_use: "A appliquer systematiquement avant toute etape de vectorisation textuelle (TF-IDF, CountVectorizer, Word2Vec) pour harmoniser le texte et reduire le bruit."
+use_cases:
+  - "Nettoyage de commentaires clients avant analyse de sentiment."
+  - "Normalisation de descriptions produits avant classification thematique."
+  - "Preparation de corpus de tweets (suppression des mentions, hashtags, URLs) avant NLP."
 pros:
-  - "Harmonise la casse."
+  - "Harmonise la casse et supprime le bruit textuel (ponctuation, caracteres speciaux)."
+  - "Reduit la taille du vocabulaire et ameliore la qualite de la vectorisation."
+  - "Integre au pipeline sklearn via FunctionTransformer pour un deploiement reproductible."
 cons:
-  - "Peut supprimer info utile."
+  - "Peut supprimer des informations utiles (ex: majuscules pour les noms propres, ponctuation pour la segmentation)."
+  - "La regex par defaut est basique et peut ne pas convenir a toutes les langues (accents, ideogrammes)."
+  - "Ne gere pas la lemmatisation ou le stemming (etapes supplementaires necessaires)."
 hyperparameters:
   text_col: "Colonne de texte"
 code_template: |
@@ -26,7 +74,6 @@ code_template: |
       if 'pipeline_steps' not in locals(): pipeline_steps = {}
       
       def clean_text_func(X):
-          # X can be a DataFrame or Series
           if isinstance(X, pd.DataFrame):
               X = X.copy()
               for col in X.columns:
@@ -57,16 +104,21 @@ code_template: |
   if 'task_type' not in locals(): task_type = "classification"
   if 'meta' not in locals(): meta = {}
 illustration_mermaid: |
-  graph TD
-    A[Raw Data] --> B{Does TEXT_COL exist?}
-    B -- Yes --> C[Initialize FunctionTransformer for Text Cleaning]
-    C --> D[Create ColumnTransformer]
-    D --> E[Add to Pipeline Steps]
-    B -- No --> F[Skip Text Cleaning]
-    E --> G[Update Data Contract Variables]
-    F --> G
-    style A fill:#eff6ff,stroke:#3b82f6,stroke-width:2px
-    style G fill:#10b981,stroke:#059669,stroke-width:2px
+  flowchart LR
+    A(["📊 df"]) --> B[/"📄 TEXT_COL"/]
+    B --> C{"⚙️ Colonne existe ?"}
+    C -- "Oui" --> D{"⚙️ lowercase + regex clean"}
+    C -- "Non" --> E{"⚙️ Skip"}
+    D --> F(["📊 df (texte nettoye)"])
+    E --> F
+    F --> G(["ℹ️ pipeline_steps"])
+    style A fill:#10b981,stroke:#059669,stroke-width:2px,color:#fff
+    style B fill:#fbbf24,stroke:#d97706,stroke-width:2px,color:#000
+    style C fill:#3b82f6,stroke:#2563eb,stroke-width:2px,color:#fff
+    style D fill:#3b82f6,stroke:#2563eb,stroke-width:2px,color:#fff
+    style E fill:#3b82f6,stroke:#2563eb,stroke-width:2px,color:#fff
+    style F fill:#10b981,stroke:#059669,stroke-width:2px,color:#fff
+    style G fill:#8b5cf6,stroke:#7c3aed,stroke-width:2px,color:#fff
 
 _metadata:
   bloc: 2

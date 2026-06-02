@@ -1,6 +1,19 @@
 id: eda_violinplots
 name: 'EDA: Violin Plots vs Target'
-description: Affiche la distribution détaillée des variables numériques par classe.
+description: Affiche la distribution détaillée de plusieurs variables numériques découpées selon les classes de la variable cible via des graphiques en violon.
+when_to_use: À utiliser pour analyser la relation entre des variables continues (features) et une variable cible catégorielle, afin d'identifier les variables les plus discriminantes.
+use_cases:
+  - Comparer la distribution des âges, revenus, et scores d'activité selon qu'un client a souscrit ou non à une offre (cible binaire).
+  - Évaluer comment des caractéristiques physiques de fleurs (longueur des pétales) varient selon l'espèce (cible multiclasses).
+  - Identifier la présence d'outliers et les densités conditionnelles asymétriques.
+pros:
+  - Plus informatif que les boîtes à moustaches (boxplots) car il montre l'estimation de la densité (KDE) et potentiellement la multimodalité.
+  - Permet de comparer plusieurs variables numériques simultanément sur une même grille de sous-graphiques.
+  - Idéal pour la sélection de features en machine learning de classification.
+cons:
+  - Difficile à lire si la cible catégorielle a un grand nombre de classes (chevauchement visuel).
+  - Les estimations de densité peuvent dépasser les valeurs réelles min/max (artefact KDE).
+  - Peut être lent à calculer sur de très grands jeux de données sans échantillonnage.
 category: 3. Exploratory Data Analysis
 tags:
 - eda
@@ -32,17 +45,30 @@ code_template: |
       print("[EDA] Cible introuvable.")
 illustration_mermaid: |
     graph TD
-      DF([DataFrame]) --> Check{Check target_name}
-      Check -- Valid --> NumCols[Select Numeric Columns]
-      NumCols --> Filter{Remove target & Limit to 8}
-      Filter --> Loop[For each column]
-      Loop --> Subplot[plt.subplot]
-      Subplot --> Violin[sns.violinplot]
-      Violin --> Show[plt.show]
-      Check -- Missing --> Err[Print Error]
+      DF[/ df /] --> Params[/ target_name /]
+      Params --> Check{ check_target }
+      Check -- Valid --> NumCols{ select_dtypes_number }
+      NumCols --> Filter{ remove_target_limit_8 }
+      Filter --> Loop{ for_col_in_cols }
+      Loop --> Subplot{ plt.subplot }
+      Subplot --> Ax([ ax ])
+      Ax --> Violin{ sns.violinplot }
+      Violin --> Show{ plt.show }
+      Violin --> Fig([ fig ])
+      Check -- Missing --> Err([ Error ])
+      
+      style DF fill:#fbbf24,stroke:#d97706,stroke-width:2px,color:#000
+      style Params fill:#fbbf24,stroke:#d97706,stroke-width:2px,color:#000
+      style Check fill:#3b82f6,stroke:#2563eb,stroke-width:2px,color:#fff
       style NumCols fill:#3b82f6,stroke:#2563eb,stroke-width:2px,color:#fff
-      style Violin fill:#8b5cf6,stroke:#7c3aed,stroke-width:2px,color:#fff
-      style Loop fill:#f59e0b,stroke:#d97706,stroke-width:2px,color:#fff
+      style Filter fill:#3b82f6,stroke:#2563eb,stroke-width:2px,color:#fff
+      style Loop fill:#3b82f6,stroke:#2563eb,stroke-width:2px,color:#fff
+      style Subplot fill:#3b82f6,stroke:#2563eb,stroke-width:2px,color:#fff
+      style Ax fill:#8b5cf6,stroke:#7c3aed,stroke-width:2px,color:#fff
+      style Violin fill:#3b82f6,stroke:#2563eb,stroke-width:2px,color:#fff
+      style Show fill:#3b82f6,stroke:#2563eb,stroke-width:2px,color:#fff
+      style Fig fill:#10b981,stroke:#059669,stroke-width:2px,color:#fff
+      style Err fill:#8b5cf6,stroke:#7c3aed,stroke-width:2px,color:#fff
 _metadata:
   bloc: 1
   section: 3_eda

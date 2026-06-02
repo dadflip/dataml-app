@@ -1,6 +1,16 @@
 id: eda_piechart
 name: 'EDA: Diagramme Circulaire'
 description: Affiche les proportions en camembert pour une variable catégorielle.
+when_to_use: "Pour visualiser rapidement la distribution des classes d'une variable catégorielle, comme la cible dans une tâche de classification."
+use_cases:
+  - "Vérification de l'équilibre des classes."
+  - "Mise en évidence visuelle des catégories dominantes."
+pros:
+  - "Facile à comprendre par des audiences non techniques."
+  - "Permet de voir immédiatement un déséquilibre de classe."
+cons:
+  - "Difficile à lire s'il y a trop de catégories (généralement inadapté au-delà de 5-10)."
+  - "Moins précis qu'un diagramme en barres pour comparer des proportions proches."
 category: 3. Exploratory Data Analysis
 tags:
 - eda
@@ -23,16 +33,25 @@ code_template: |
       print("[EDA] Cible introuvable.")
 illustration_mermaid: |
     flowchart TD
-        Input([DataFrame & target_name]) --> CheckTarget{Target Valid?}
-        CheckTarget -- Yes --> Count[df.value_counts]
-        Count --> CheckClasses{Classes <= 10?}
-        CheckClasses -- Yes --> Pie{{Plot Pie Chart}}
-        CheckClasses -- No --> Err2[/Print 'Too many categories'/]
-        CheckTarget -- No --> Err1[/Print 'Target not found'/]
-    
-        style Input fill:#3b82f6,stroke:#2563eb,color:#fff
-        style Count fill:#10b981,stroke:#059669,color:#fff
-        style Pie fill:#ec4899,stroke:#db2777,color:#fff
+        InDF[/df/]
+        InTarget[/target_name/]
+        ProcCount{value_counts}
+        ProcPie{plt.pie}
+        OutFig([fig])
+        OutAxes([ax])
+
+        InDF --> ProcCount
+        InTarget --> ProcCount
+        ProcCount --> ProcPie
+        ProcPie --> OutFig
+        ProcPie --> OutAxes
+
+        style InDF fill:#fbbf24,stroke:#d97706,stroke-width:2px,color:#000
+        style InTarget fill:#fbbf24,stroke:#d97706,stroke-width:2px,color:#000
+        style ProcCount fill:#3b82f6,stroke:#2563eb,stroke-width:2px,color:#fff
+        style ProcPie fill:#3b82f6,stroke:#2563eb,stroke-width:2px,color:#fff
+        style OutFig fill:#10b981,stroke:#059669,stroke-width:2px,color:#fff
+        style OutAxes fill:#8b5cf6,stroke:#7c3aed,stroke-width:2px,color:#fff
 
 _metadata:
   bloc: 1

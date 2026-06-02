@@ -188,10 +188,13 @@ export function NotebookBuilder({ cells, setCells, catalogs }: Props) {
       }),
     );
 
-  const updateCode = (uid: string, code: string) =>
-    setCells(
-      cells.map((c) => (c.uid === uid ? { ...c, code, params: extractParams(code), overrides: {} } : c)),
-    );
+  const updateCode = useCallback((uid: string, code: string) => {
+    setCells(cells.map((c) => (c.uid === uid ? { ...c, code, params: extractParams(code) } : c)));
+  }, [cells, setCells]);
+
+  const updateMermaidCode = useCallback((uid: string, code: string) => {
+    setCells(cells.map((c) => (c.uid === uid ? { ...c, mermaidCode: code } : c)));
+  }, [cells, setCells]);
 
   const runCell = async (cell: NotebookCell) => {
     if (!kernelId) return;
@@ -364,7 +367,7 @@ export function NotebookBuilder({ cells, setCells, catalogs }: Props) {
               variant="outline"
               size="sm"
               disabled={!cells.length}
-              onClick={() => downloadText("report.html", buildHtmlReport(cells, outputs), "text/html")}
+              onClick={() => downloadText("report.html", buildHtmlReport(cells, outputs, blockIndex), "text/html")}
               title="Générer un Rapport HTML"
             >
               <Download className="h-3.5 w-3.5" />
@@ -374,7 +377,7 @@ export function NotebookBuilder({ cells, setCells, catalogs }: Props) {
               variant="outline"
               size="sm"
               disabled={!cells.length}
-              onClick={() => downloadText("report.doc", buildHtmlReport(cells, outputs), "application/msword")}
+              onClick={() => downloadText("report.doc", buildHtmlReport(cells, outputs, blockIndex), "application/msword")}
               title="Générer un Rapport DOCX (Word)"
             >
               <Download className="h-3.5 w-3.5" />
@@ -459,6 +462,7 @@ export function NotebookBuilder({ cells, setCells, catalogs }: Props) {
                       onOverride={(n, v) => updateOverride(cell.uid, n, v)}
                       onResetOverride={(n) => resetOverride(cell.uid, n)}
                       onCode={(code) => updateCode(cell.uid, code)}
+                      onMermaidCode={(code) => updateMermaidCode(cell.uid, code)}
                       canRun={kernelId !== null}
                       isRunning={running === cell.uid}
                       output={outputs[cell.uid]}
@@ -558,6 +562,7 @@ function SortableCell({
   onOverride: (name: string, value: string) => void;
   onResetOverride: (name: string) => void;
   onCode: (code: string) => void;
+  onMermaidCode: (code: string) => void;
   canRun: boolean;
   isRunning: boolean;
   output?: ExecResult;
@@ -574,7 +579,9 @@ function SortableCell({
   };
 
   const [editing, setEditing] = useState(false);
+  const [editingMermaid, setEditingMermaid] = useState(false);
   const finalCode = applyParamOverrides(cell.code, cell.overrides);
+  const finalMermaidCode = cell.mermaidCode ?? blockMeta?.illustration_mermaid;
 
   const statusBadge = output && (
     <span
@@ -687,8 +694,42 @@ function SortableCell({
         <div className="space-y-4 border-t border-border px-4 py-4">
 
           {/* Mermaid Illustration Banner */}
-          {blockMeta?.illustration_mermaid && (
-            <MermaidRenderer chart={blockMeta.illustration_mermaid} />
+          {finalMermaidCode && (
+            <div className="space-y-2">
+              <div className="flex items-center justify-between">
+                <h4 className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
+                  Schéma
+                </h4>
+                <button
+                  onClick={() => setEditingMermaid((v) => !v)}
+                  className="inline-flex items-center gap-1 rounded-full border border-border bg-card px-2.5 py-1 font-mono text-[10px] text-muted-foreground hover:text-foreground"
+                >
+                  {editingMermaid ? "Aperçu" : "Éditer"}
+                </button>
+              </div>
+              {editingMermaid ? (
+                <div className="rounded-xl border border-border bg-[oklch(0.1_0.004_260)] overflow-hidden h-[15rem] sm:h-[20rem]">
+                  <Editor
+                    height="100%"
+                    language="markdown"
+                    theme="vs-dark"
+                    value={finalMermaidCode}
+                    onChange={(val) => onMermaidCode(val || "")}
+                    options={{
+                      minimap: { enabled: false },
+                      fontSize: 12,
+                      fontFamily: "var(--font-mono)",
+                      scrollBeyondLastLine: false,
+                      wordWrap: "on",
+                      padding: { top: 12, bottom: 12 },
+                      lineNumbers: "on",
+                    }}
+                  />
+                </div>
+              ) : (
+                <MermaidRenderer chart={finalMermaidCode} />
+              )}
+            </div>
           )}
 
           {/* Block info (description, use cases, hyperparams, …) */}
@@ -762,7 +803,7 @@ function SortableCell({
               </button>
             </div>
             {editing ? (
-              <div className="rounded-xl border border-border bg-[oklch(0.1_0.004_260)] p-2 overflow-hidden h-[30rem] sm:h-[40rem]">
+              <div className="rounded-xl border border-border bg-[oklch(0.1_0.004_260)] overflow-hidden h-[30rem] sm:h-[40rem]">
                 <Editor
                   height="100%"
                   language={cell.type === "markdown" ? "markdown" : "python"}

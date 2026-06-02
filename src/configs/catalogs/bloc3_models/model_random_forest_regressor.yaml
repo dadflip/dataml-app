@@ -1,15 +1,24 @@
 id: "model_random_forest_regressor"
 name: "Model: Random Forest Regressor"
-description: "Forêt Aléatoire pour la régression. Moyenne les prédictions d'un grand nombre d'arbres de décision."
+description: |
+  Modèle d'ensemble pour la régression continue s'appuyant sur l'algorithme des forêts aléatoires (Random Forest). Il construit une multitude d'arbres de régression lors de l'entraînement et retourne la moyenne de leurs prédictions.
 category: "Modèles Basés sur les Arbres"
 tags: ["model", "regression", "tabular", "sklearn", "ensemble"]
 applies_to: ["Tabulaire"]
-when_to_use: "Excellent modèle de base par défaut pour n'importe quel problème de régression tabulaire."
+when_to_use: |
+  Constitue une excellente ligne de base (baseline) par défaut pour pratiquement n'importe quel problème de régression tabulaire, particulièrement lorsque la relation entre les variables est non-linéaire et que le jeu de données contient du bruit.
+use_cases:
+  - "Prédiction de prix de l'immobilier ou de véhicules d'occasion avec de multiples caractéristiques."
+  - "Estimation des ventes futures (séries temporelles transformées en données tabulaires)."
+  - "Prédiction de rendement agricole basée sur un mix de variables catégorielles et continues."
 pros:
-  - "Généralise très bien sans trop de réglages."
-  - "Fournit les importances des variables."
+  - "Capacité de généralisation exceptionnelle avec très peu de réglages nécessaires."
+  - "Fournit naturellement une mesure de l'importance des variables (feature importances)."
+  - "Extrêmement robuste face aux valeurs aberrantes (outliers) et aux variables non pertinentes."
 cons:
-  - "Ne peut pas extrapoler en dehors des valeurs vues à l'entraînement."
+  - "Incapacité fondamentale à extrapoler en dehors des plages de valeurs cibles observées à l'entraînement."
+  - "Peut consommer beaucoup d'espace mémoire et devenir lent à l'inférence pour de très grandes forêts."
+  - "La prédiction n'est pas continue ni lisse, ce qui peut poser problème pour certaines applications."
 hyperparameters:
   n_estimators: "Nombre d'arbres dans la forêt (ex: 100)."
   max_depth: "Profondeur maximale."
@@ -67,30 +76,108 @@ code_template: |
 
   training_history = []
 illustration_mermaid: |
-  graph TD
-    subgraph Data Flow
-      Input([Raw Features]) --> Preprocessor[[Data Preprocessing]]
-      Preprocessor --> Bootstrap[Bootstrap Sampling]
-    end
-    subgraph Random Forest Ensemble
-      Bootstrap --> Tree1[Regression Tree 1]
-      Bootstrap --> Tree2[Regression Tree 2]
-      Bootstrap --> TreeN[Regression Tree N]
-      Tree1 --> Split1{Random Feature Split}
-      Tree2 --> Split2{Random Feature Split}
-      TreeN --> SplitN{Random Feature Split}
-    end
-    subgraph Output
-      Split1 --> Pred1(Leaf Node Output)
-      Split2 --> Pred2(Leaf Node Output)
-      SplitN --> PredN(Leaf Node Output)
-      Pred1 --> Mean((Average))
-      Pred2 --> Mean
-      PredN --> Mean
-      Mean --> Pred([Final Prediction])
-    end
-    style Input fill:#f8fafc,stroke:#94a3b8,stroke-width:1px
-    style Pred fill:#f8fafc,stroke:#94a3b8,stroke-width:1px
+  flowchart LR
+    In[/ "Features" /]
+    style In fill:#fbbf24,stroke:#d97706,stroke-width:2px,color:#000
+    Pre{"Prétraitement"}
+    style Pre fill:#3b82f6,stroke:#2563eb,stroke-width:2px,color:#fff
+    Boot(["Échantillons Bootstrap"])
+    style Boot fill:#10b981,stroke:#059669,stroke-width:2px,color:#fff
+    Trees{"Arbres de Régression"}
+    style Trees fill:#3b82f6,stroke:#2563eb,stroke-width:2px,color:#fff
+    Mean{"Moyenne"}
+    style Mean fill:#3b82f6,stroke:#2563eb,stroke-width:2px,color:#fff
+    Pred(["Prédiction Continue"])
+    style Pred fill:#10b981,stroke:#059669,stroke-width:2px,color:#fff
+
+    In --> Pre --> Boot --> Trees --> Mean --> Pred
+
+math_theory: |
+  Random Forest Regressor operates by training $\textcolor{#8b5cf6}{B}$ independent regression trees on random subsets of the data (bootstrap samples) and random subsets of features at each split.
+  
+  Unlike classification where a majority vote is taken, the final prediction in regression is computed as the unweighted mean of the continuous predictions from all individual trees $\textcolor{#fbbf24}{h_b}$.
+  
+  $$ \textcolor{#3b82f6}{\hat{y}} = \frac{1}{\textcolor{#8b5cf6}{B}} \sum_{b=1}^{\textcolor{#8b5cf6}{B}} \textcolor{#fbbf24}{h_b}(\textcolor{#ef4444}{x}) $$
+  
+  Where:
+  - $\textcolor{#3b82f6}{\hat{y}}$ is the final continuous prediction.
+  - $\textcolor{#8b5cf6}{B}$ is the total number of trees (`n_estimators`).
+  - $\textcolor{#fbbf24}{h_b}(\textcolor{#ef4444}{x})$ is the individual prediction of the $b$-th regression tree for input $\textcolor{#ef4444}{x}$.
+  
+  This averaging process strongly mitigates the high variance (overfitting) typically associated with fully grown, unpruned decision trees, yielding a much more robust predictive model.
+
+math_illustration_svg: |
+  <svg viewBox="0 0 800 400" xmlns="http://www.w3.org/2000/svg">
+    <!-- Background -->
+    <rect width="100%" height="100%" fill="#1e1e1e" rx="10" />
+    
+    <!-- Input Features x -->
+    <rect x="40" y="160" width="80" height="80" fill="#ef4444" rx="8" opacity="0.8" />
+    <text x="80" y="205" fill="white" font-family="sans-serif" font-size="24" text-anchor="middle" font-weight="bold">x</text>
+    <text x="80" y="260" fill="#ef4444" font-family="sans-serif" font-size="14" text-anchor="middle">Input Data</text>
+    
+    <!-- Bootstrap Samples -->
+    <rect x="180" y="60" width="80" height="50" fill="#10b981" rx="5" />
+    <text x="220" y="90" fill="white" font-family="sans-serif" font-size="14" text-anchor="middle">Sample 1</text>
+    
+    <rect x="180" y="160" width="80" height="50" fill="#10b981" rx="5" />
+    <text x="220" y="190" fill="white" font-family="sans-serif" font-size="14" text-anchor="middle">Sample b</text>
+    
+    <text x="220" y="250" fill="white" font-family="sans-serif" font-size="20" text-anchor="middle">⋮</text>
+    
+    <rect x="180" y="280" width="80" height="50" fill="#10b981" rx="5" />
+    <text x="220" y="310" fill="white" font-family="sans-serif" font-size="14" text-anchor="middle">Sample B</text>
+    
+    <!-- Arrows to Bootstraps -->
+    <path d="M 120 200 L 170 85" stroke="#ef4444" stroke-width="2" marker-end="url(#arrow)" fill="none"/>
+    <path d="M 120 200 L 170 185" stroke="#ef4444" stroke-width="2" marker-end="url(#arrow)" fill="none"/>
+    <path d="M 120 200 L 170 305" stroke="#ef4444" stroke-width="2" marker-end="url(#arrow)" fill="none"/>
+    
+    <!-- Trees -->
+    <rect x="320" y="50" width="100" height="70" fill="#fbbf24" rx="5" />
+    <text x="370" y="90" fill="#000" font-family="sans-serif" font-size="16" text-anchor="middle" font-weight="bold">Tree 1</text>
+    <path d="M 370 100 L 350 115 M 370 100 L 390 115" stroke="#1e1e1e" stroke-width="2" fill="none"/>
+    
+    <rect x="320" y="150" width="100" height="70" fill="#fbbf24" rx="5" />
+    <text x="370" y="190" fill="#000" font-family="sans-serif" font-size="16" text-anchor="middle" font-weight="bold">Tree b</text>
+    <path d="M 370 200 L 350 215 M 370 200 L 390 215" stroke="#1e1e1e" stroke-width="2" fill="none"/>
+    
+    <text x="370" y="255" fill="white" font-family="sans-serif" font-size="20" text-anchor="middle">⋮</text>
+    
+    <rect x="320" y="270" width="100" height="70" fill="#fbbf24" rx="5" />
+    <text x="370" y="310" fill="#000" font-family="sans-serif" font-size="16" text-anchor="middle" font-weight="bold">Tree B</text>
+    <path d="M 370 320 L 350 335 M 370 320 L 390 335" stroke="#1e1e1e" stroke-width="2" fill="none"/>
+    
+    <!-- Arrows to Trees -->
+    <path d="M 260 85 L 310 85" stroke="#10b981" stroke-width="2" marker-end="url(#arrow)" fill="none"/>
+    <path d="M 260 185 L 310 185" stroke="#10b981" stroke-width="2" marker-end="url(#arrow)" fill="none"/>
+    <path d="M 260 305 L 310 305" stroke="#10b981" stroke-width="2" marker-end="url(#arrow)" fill="none"/>
+    
+    <!-- Ensemble / Aggregation -->
+    <rect x="520" y="140" width="100" height="120" fill="#8b5cf6" rx="8" />
+    <text x="570" y="180" fill="white" font-family="sans-serif" font-size="16" text-anchor="middle" font-weight="bold">Mean</text>
+    <text x="570" y="200" fill="white" font-family="sans-serif" font-size="16" text-anchor="middle" font-weight="bold">Averaging</text>
+    <text x="570" y="225" fill="white" font-family="sans-serif" font-size="14" text-anchor="middle">(1/B ∑)</text>
+    
+    <!-- Arrows to Aggregation -->
+    <path d="M 420 85 L 510 160" stroke="#fbbf24" stroke-width="2" marker-end="url(#arrow)" fill="none"/>
+    <path d="M 420 185 L 510 190" stroke="#fbbf24" stroke-width="2" marker-end="url(#arrow)" fill="none"/>
+    <path d="M 420 305 L 510 230" stroke="#fbbf24" stroke-width="2" marker-end="url(#arrow)" fill="none"/>
+    
+    <!-- Final Output -->
+    <rect x="680" y="175" width="80" height="50" fill="#3b82f6" rx="5" />
+    <text x="720" y="205" fill="white" font-family="sans-serif" font-size="18" text-anchor="middle">ŷ</text>
+    <text x="720" y="245" fill="#3b82f6" font-family="sans-serif" font-size="14" text-anchor="middle">Continuous</text>
+    
+    <path d="M 620 200 L 670 200" stroke="white" stroke-width="2" marker-end="url(#arrow)" fill="none"/>
+    
+    <!-- Defs -->
+    <defs>
+      <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto">
+        <path d="M 0 0 L 10 5 L 0 10 z" fill="white" />
+      </marker>
+    </defs>
+  </svg>
 
 _metadata:
   bloc: 3

@@ -1,15 +1,68 @@
 id: "transform_train_test_split"
 name: "Transform: Train / Test Split & Compile"
-description: "Sépare le dataset et compile toutes les étapes de preprocessing précédentes dans un seul objet `preprocessor` exportable."
+description: "Cette étape terminale assure la division rigoureuse des données en sous-ensembles d'entraînement et de test. Elle scelle également le pipeline de transformation de scikit-learn (ou imblearn) en compilant l'ensemble des opérations précédentes. Cette démarche garantit qu'aucune fuite de données (data leakage) ne se produise, en veillant à ce que le modèle soit évalué sur un jeu de test complètement invisible lors de l'apprentissage."
+math_theory: |
+  Soit un jeu de données $\textcolor{#3b82f6}{\mathcal{D}} = \{(x_i, y_i)\}_{i=1}^N$. La fonction de split génère aléatoirement, ou via stratification, deux sous-ensembles disjoints : un ensemble d'entraînement $\textcolor{#10b981}{\mathcal{D}_{\text{train}}}$ de taille $N_{\text{train}}$ et un ensemble de test $\textcolor{#fbbf24}{\mathcal{D}_{\text{test}}}$ de taille $\textcolor{#8b5cf6}{N_{\text{test}}}$ tels que $\textcolor{#10b981}{\mathcal{D}_{\text{train}}} \cup \textcolor{#fbbf24}{\mathcal{D}_{\text{test}}} = \textcolor{#3b82f6}{\mathcal{D}}$ et $\textcolor{#10b981}{\mathcal{D}_{\text{train}}} \cap \textcolor{#fbbf24}{\mathcal{D}_{\text{test}}} = \emptyset$. Le rapport est régi par le paramètre de taille de test $\textcolor{#8b5cf6}{\alpha}$ tel que $\textcolor{#8b5cf6}{N_{\text{test}}} \approx \textcolor{#8b5cf6}{\alpha} N$. Dans le cas d'une stratification sur la variable cible catégorielle $y$, la distribution de probabilité conditionnelle satisfait $\mathbb{P}(\textcolor{#ef4444}{y = c} | \textcolor{#10b981}{\mathcal{D}_{\text{train}}}) \approx \mathbb{P}(\textcolor{#ef4444}{y = c} | \textcolor{#fbbf24}{\mathcal{D}_{\text{test}}}) \approx \mathbb{P}(\textcolor{#ef4444}{y = c} | \textcolor{#3b82f6}{\mathcal{D}})$ pour chaque classe $c$.
+math_illustration_svg: |
+  <svg viewBox="0 0 400 200" xmlns="http://www.w3.org/2000/svg">
+    <text x="50" y="30" fill="#3b82f6" font-family="sans-serif" font-size="14" font-weight="bold">D (Dataset)</text>
+    <rect x="50" y="40" width="300" height="30" fill="none" stroke="#3b82f6" stroke-width="2" rx="4" />
+    
+    <circle cx="65" cy="55" r="8" fill="#ef4444" />
+    <circle cx="95" cy="55" r="8" fill="#ef4444" />
+    <circle cx="125" cy="55" r="8" fill="#ef4444" />
+    <circle cx="155" cy="55" r="8" fill="#ef4444" />
+    <circle cx="185" cy="55" r="8" fill="#ef4444" />
+    
+    <circle cx="215" cy="55" r="8" fill="#94a3b8" />
+    <circle cx="245" cy="55" r="8" fill="#94a3b8" />
+    <circle cx="275" cy="55" r="8" fill="#94a3b8" />
+    <circle cx="305" cy="55" r="8" fill="#94a3b8" />
+    <circle cx="335" cy="55" r="8" fill="#94a3b8" />
+    
+    <path d="M 170 80 L 120 110" stroke="#94a3b8" stroke-width="2" marker-end="url(#arrow)" />
+    <path d="M 230 80 L 280 110" stroke="#94a3b8" stroke-width="2" marker-end="url(#arrow)" />
+    <text x="200" y="95" fill="#8b5cf6" font-family="sans-serif" font-size="12" text-anchor="middle">split (α = 0.2)</text>
+  
+    <text x="50" y="130" fill="#10b981" font-family="sans-serif" font-size="14" font-weight="bold">D_train (80%)</text>
+    <rect x="50" y="140" width="200" height="30" fill="none" stroke="#10b981" stroke-width="2" rx="4" />
+    
+    <circle cx="65" cy="155" r="8" fill="#ef4444" />
+    <circle cx="85" cy="155" r="8" fill="#ef4444" />
+    <circle cx="105" cy="155" r="8" fill="#ef4444" />
+    <circle cx="125" cy="155" r="8" fill="#ef4444" />
+    <circle cx="165" cy="155" r="8" fill="#94a3b8" />
+    <circle cx="185" cy="155" r="8" fill="#94a3b8" />
+    <circle cx="205" cy="155" r="8" fill="#94a3b8" />
+    <circle cx="225" cy="155" r="8" fill="#94a3b8" />
+  
+    <text x="280" y="130" fill="#fbbf24" font-family="sans-serif" font-size="14" font-weight="bold">D_test (20%)</text>
+    <rect x="280" y="140" width="70" height="30" fill="none" stroke="#fbbf24" stroke-width="2" rx="4" />
+    
+    <circle cx="300" cy="155" r="8" fill="#ef4444" />
+    <circle cx="330" cy="155" r="8" fill="#94a3b8" />
+  
+    <defs>
+      <marker id="arrow" markerWidth="5" markerHeight="5" refX="5" refY="2.5" orient="auto">
+        <polygon points="0 0, 5 2.5, 0 5" fill="#94a3b8" />
+      </marker>
+    </defs>
+  </svg>
 category: "4.2 Split & Compile"
 tags: ["transform", "split", "tabular", "sklearn", "pipeline"]
 applies_to: ["Tabulaire"]
-when_to_use: "OBLIGATOIRE à la fin du preprocessing pour respecter le contrat (Sort X_train, X_test, etc et preprocessor)."
+when_to_use: "OBLIGATOIRE. Doit toujours être inséré comme l'ultime étape du preprocessing afin de générer les variables formelles requises par les modèles (`X_train`, `X_test`, `y_train`, `y_test`) ainsi que l'objet `preprocessor` global."
+use_cases:
+  - "Évaluation de la généralisation du modèle sur des données invisibles."
+  - "Création de pipelines de transformation exportables pour la production."
+  - "Maintien des équilibres de classe (stratification) lors des expériences de modélisation."
 pros:
-  - "Compile le Pipeline imblearn."
-  - "Génère les splits stratifiés."
+  - "Centralise et orchestre l'ensemble des transformations via un objet Pipeline sklearn ou imblearn unifié."
+  - "Élimine le risque de fuite de données (data leakage) durant l'ingénierie des caractéristiques."
+  - "La stratification préserve de manière optimale la distribution des classes minoritaires."
 cons:
-  - "Doit impérativement être la dernière étape du Bloc 2."
+  - "Restreint la flexibilité, car elle exige d'être impérativement positionnée en fin de chaîne du Bloc 2."
+  - "Peut réduire considérablement la quantité de données d'apprentissage sur de très petits jeux de données."
 hyperparameters:
   test_size: "Proportion du dataset de test (ex: 0.2)."
   random_state: "Graine aléatoire pour la reproductibilité."
@@ -75,18 +128,16 @@ code_template: |
   else:
       print("[ERREUR] df ou target_name manquant.")
 illustration_mermaid: |
-  graph TD
-    A[pipeline_steps dict] --> B{Are there steps?}
-    B -- Yes --> C[Compile Pipeline]
-    B -- No --> D[preprocessor = None]
-    C --> E[Check target in df]
-    D --> E
-    E -- Yes --> F[Define X and y]
-    F --> G[Train/Test Split]
-    G --> H[Update Data Contract Variables]
-    E -- No --> I[Error]
-    style A fill:#eff6ff,stroke:#3b82f6,stroke-width:2px
-    style H fill:#10b981,stroke:#059669,stroke-width:2px
+  flowchart LR
+    A[/ "📄 Params (test_size)" /] --> C
+    B(["📊 df (Données complètes)"]) --> C{"⚙️ Split and Compile"}
+    C --> D(["📊 X_train, X_test, y_train, y_test"])
+    C --> E(["ℹ️ preprocessor"])
+    style A fill:#fbbf24,stroke:#d97706,stroke-width:2px,color:#000
+    style C fill:#3b82f6,stroke:#2563eb,stroke-width:2px,color:#fff
+    style B fill:#10b981,stroke:#059669,stroke-width:2px,color:#fff
+    style D fill:#10b981,stroke:#059669,stroke-width:2px,color:#fff
+    style E fill:#8b5cf6,stroke:#7c3aed,stroke-width:2px,color:#fff
 
 _metadata:
   bloc: 2

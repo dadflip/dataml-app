@@ -1,17 +1,77 @@
 id: "model_decision_tree_regressor"
 name: "Model: Decision Tree Regressor"
-description: "Arbre de décision pour la régression. Prédit en segmentant l'espace et en moyennant les valeurs dans chaque feuille."
+description: "Modèle d'arbre de décision pour la régression. Segmente l'espace des descripteurs via des règles logiques et prédit en moyennant les valeurs cibles au sein de chaque feuille."
 category: "Modèles Basés sur les Arbres"
 tags: ["model", "regression", "tabular", "sklearn", "tree"]
 applies_to: ["Tabulaire"]
-when_to_use: "Besoin d'un modèle non-linéaire extrêmement simple et interprétable."
+when_to_use: "Idéal lorsqu'on a besoin d'un modèle non-linéaire simple et parfaitement interprétable, ou pour capturer des interactions complexes entre variables sans prétraitement complexe."
+use_cases:
+  - "Estimation des prix de l'immobilier basée sur des règles facilement auditables."
+  - "Prédiction de la demande ou des ventes avec justification des facteurs clés."
+  - "Modélisation de processus physiques avec des seuils d'activation stricts."
 pros:
-  - "Capture les effets non-linéaires très facilement."
+  - "Excellente interprétabilité grâce à une structure arborescente visuelle."
+  - "Capture naturellement les effets non-linéaires et les interactions entre variables sans nécessiter de normalisation."
 cons:
-  - "Très sujet au sur-apprentissage. Prédit en 'escalier' (non continu)."
+  - "Forte tendance au sur-apprentissage si l'arbre n'est pas élagué."
+  - "Génère des prédictions en 'escalier' (constantes par morceaux), incapables d'extrapoler de manière fluide au-delà des bornes d'entraînement."
 hyperparameters:
   max_depth: "Profondeur maximale de l'arbre."
   min_samples_split: "Nombre minimum d'exemples requis pour diviser un nœud."
+math_theory: |
+  Pour la régression, l'arbre de décision (CART) cherche à minimiser la variance (ou l'Erreur Quadratique Moyenne - MSE) au sein de chaque nœud $\textcolor{#fbbf24}{D}$.
+  
+  Le $\textcolor{#3b82f6}{MSE}$ d'un nœud est :
+  $$ \textcolor{#3b82f6}{MSE}(\textcolor{#fbbf24}{D}) = \frac{1}{|\textcolor{#fbbf24}{D}|} \sum_{i \in \textcolor{#fbbf24}{D}} (y_i - \textcolor{#ef4444}{\bar{y}})^2 $$
+  où $\textcolor{#ef4444}{\bar{y}} = \frac{1}{|\textcolor{#fbbf24}{D}|} \sum_{i \in \textcolor{#fbbf24}{D}} y_i$ est la moyenne des cibles dans le nœud.
+  
+  Le modèle choisit la variable $\textcolor{#8b5cf6}{A}$ et le seuil de coupure qui maximisent la Réduction de Variance :
+  $$ \textcolor{#10b981}{VarReduction} = \textcolor{#3b82f6}{MSE}(\textcolor{#fbbf24}{D}) - \left( \frac{|\textcolor{#fbbf24}{D}_{left}|}{|\textcolor{#fbbf24}{D}|} \textcolor{#3b82f6}{MSE}(\textcolor{#fbbf24}{D}_{left}) + \frac{|\textcolor{#fbbf24}{D}_{right}|}{|\textcolor{#fbbf24}{D}|} \textcolor{#3b82f6}{MSE}(\textcolor{#fbbf24}{D}_{right}) \right) $$
+  
+  La prédiction finale $\hat{y}$ pour une nouvelle observation est la valeur $\textcolor{#ef4444}{\bar{y}}$ de la feuille dans laquelle elle tombe.
+math_illustration_svg: |
+  <svg viewBox="0 0 500 250" xmlns="http://www.w3.org/2000/svg">
+    <rect width="500" height="250" fill="#1e1e2f" rx="10"/>
+    
+    <!-- 2D Space representation -->
+    <rect x="30" y="40" width="150" height="150" fill="#2d2d44" stroke="#ffffff" stroke-width="1"/>
+    <!-- Splits -->
+    <line x1="105" y1="40" x2="105" y2="190" stroke="#3b82f6" stroke-width="2"/>
+    <line x1="30" y1="115" x2="105" y2="115" stroke="#10b981" stroke-width="2"/>
+    
+    <text x="65" y="80" fill="#ef4444" font-family="sans-serif" font-size="14" text-anchor="middle">ŷ = 10</text>
+    <text x="65" y="155" fill="#ef4444" font-family="sans-serif" font-size="14" text-anchor="middle">ŷ = 5</text>
+    <text x="145" y="115" fill="#ef4444" font-family="sans-serif" font-size="14" text-anchor="middle">ŷ = 20</text>
+    
+    <text x="105" y="30" fill="#ffffff" font-family="sans-serif" font-size="12" text-anchor="middle">Espace de Variables</text>
+    
+    <!-- Tree matching the splits -->
+    <text x="350" y="30" fill="#ffffff" font-family="sans-serif" font-size="12" text-anchor="middle">Structure de l'Arbre</text>
+    
+    <rect x="300" y="40" width="100" height="40" fill="#2d2d44" rx="8" stroke="#3b82f6" stroke-width="2"/>
+    <text x="350" y="65" fill="#ffffff" font-family="sans-serif" font-size="12" text-anchor="middle">X₁ &le; 0.5</text>
+    
+    <line x1="350" y1="80" x2="280" y2="110" stroke="#ffffff" stroke-width="2"/>
+    <line x1="350" y1="80" x2="420" y2="110" stroke="#ffffff" stroke-width="2"/>
+    
+    <rect x="230" y="110" width="100" height="40" fill="#2d2d44" rx="8" stroke="#10b981" stroke-width="2"/>
+    <text x="280" y="135" fill="#ffffff" font-family="sans-serif" font-size="12" text-anchor="middle">X₂ &le; 0.5</text>
+    
+    <!-- Leaf right -->
+    <rect x="380" y="110" width="80" height="40" fill="#2d2d44" rx="8" stroke="#ef4444" stroke-width="2"/>
+    <text x="420" y="135" fill="#ef4444" font-family="sans-serif" font-weight="bold" font-size="14" text-anchor="middle">ŷ = 20</text>
+    
+    <!-- Leaves from left child -->
+    <line x1="280" y1="150" x2="240" y2="180" stroke="#ffffff" stroke-width="2"/>
+    <line x1="280" y1="150" x2="320" y2="180" stroke="#ffffff" stroke-width="2"/>
+    
+    <rect x="200" y="180" width="80" height="40" fill="#2d2d44" rx="8" stroke="#ef4444" stroke-width="2"/>
+    <text x="240" y="205" fill="#ef4444" font-family="sans-serif" font-weight="bold" font-size="14" text-anchor="middle">ŷ = 10</text>
+    
+    <rect x="290" y="180" width="80" height="40" fill="#2d2d44" rx="8" stroke="#ef4444" stroke-width="2"/>
+    <text x="330" y="205" fill="#ef4444" font-family="sans-serif" font-weight="bold" font-size="14" text-anchor="middle">ŷ = 5</text>
+
+  </svg>
 code_template: |
   import pandas as pd
   import numpy as np
@@ -52,12 +112,17 @@ code_template: |
       training_history = {"status": "success", "fitted_on": len(X_train), "depth": model.get_depth()}
       task_type = "regression"
 illustration_mermaid: |
-    graph LR
-      Data([Features]) --> Model((Machine Learning))
-      Model --> Pred([Predictions])
-      style Model fill:#8b5cf6,stroke:#7c3aed,stroke-width:2px,color:#fff
-      style Data fill:#f8fafc,stroke:#94a3b8,stroke-width:1px
-      style Pred fill:#f8fafc,stroke:#94a3b8,stroke-width:1px
+  flowchart LR
+    Data(["Features (Tabular)"]) --> Model{"Decision Tree Regressor\nmax_depth, min_samples"}
+    Model --> Rules{"If/Else Rules"}
+    Rules --> Leaves{"Average per Leaf"}
+    Leaves --> Pred(["Predictions (y_pred)"])
+
+    style Data fill:#10b981,stroke:#059669,stroke-width:2px,color:#fff
+    style Model fill:#3b82f6,stroke:#2563eb,stroke-width:2px,color:#fff
+    style Rules fill:#3b82f6,stroke:#2563eb,stroke-width:2px,color:#fff
+    style Leaves fill:#3b82f6,stroke:#2563eb,stroke-width:2px,color:#fff
+    style Pred fill:#10b981,stroke:#059669,stroke-width:2px,color:#fff
 
 _metadata:
   bloc: 3

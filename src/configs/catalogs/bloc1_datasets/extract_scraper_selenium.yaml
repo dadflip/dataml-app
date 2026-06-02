@@ -1,7 +1,16 @@
 id: extract_scraper_selenium
 name: 'Extract: Web Scraping (Selenium)'
-description: Pilote un navigateur Chrome headless pour extraire une page web dynamique
-  (JavaScript).
+description: Pilote un navigateur Chrome headless pour extraire une page web dynamique (JavaScript).
+when_to_use: Lorsque l'extraction nécessite de naviguer, cliquer ou attendre le chargement de scripts complexes.
+use_cases:
+  - Automatisation de scénarios de navigation avancés avant l'extraction.
+  - Scraping de données sur des portails nécessitant une simulation utilisateur.
+pros:
+  - Outil standard de l'industrie très bien documenté.
+  - Peut simuler de manière réaliste un comportement humain.
+cons:
+  - Exécution souvent lente et lourde (nécessite un driver navigateur).
+  - Configuration et maintenance parfois laborieuses.
 category: 1. Extract
 tags:
 - extract
@@ -61,50 +70,22 @@ code_template: |
   meta = {"source": "scraping_selenium", "path": DEST_PATH}
 
 illustration_mermaid: |
-  flowchart TD
-      subgraph Config [Parameters]
-          URL([TARGET_URL])
-          WAIT([WAIT_SEC])
-          DEST([DEST_PATH])
-      end
-
-      subgraph Operations [Selenium Scraping]
-          Options([Chrome Options])
-          Driver([webdriver.Chrome])
-          Get([driver.get])
-          Sleep([time.sleep])
-          Source([driver.page_source])
-          Write([Write HTML])
-          OutFile[(Local HTML File)]
-      end
-
-      subgraph Outputs [Contract Variables]
-          df((df = pd.DataFrame))
-          target((target_name = ''))
-          task((task_type = 'unknown'))
-          meta((meta: dict))
-      end
-
-      Options --> Driver
-      URL --> Get
-      Driver --> Get
-      Get --> Sleep
-      WAIT --> Sleep
-      Sleep --> Source
-      Source --> Write
-      DEST --> OutFile
-      Write --> OutFile
-      OutFile -.-> meta
-
-      style Config fill:#f8fafc,stroke:#cbd5e1,stroke-width:2px
-      style Options fill:#64748b,stroke:#475569,stroke-width:2px,color:#fff
-      style Driver fill:#3b82f6,stroke:#1d4ed8,stroke-width:2px,color:#fff
-      style Get fill:#f59e0b,stroke:#b45309,stroke-width:2px,color:#fff
-      style Sleep fill:#10b981,stroke:#047857,stroke-width:2px,color:#fff
-      style Source fill:#8b5cf6,stroke:#6d28d9,stroke-width:2px,color:#fff
-      style Write fill:#ec4899,stroke:#be185d,stroke-width:2px,color:#fff
-      style OutFile fill:#14b8a6,stroke:#0f766e,stroke-width:2px,color:#fff
-      style Outputs fill:#f1f5f9,stroke:#94a3b8,stroke-width:2px
+  flowchart LR
+      A[/"📄 TARGET_URL (JS)"/] --> B{"webdriver.Chrome()"}
+      C[/"🎯 TARGET_COL"/] --> D{"Check TARGET_COL"}
+      B --> E(["📊 df (HTML Path)"])
+      E --> D
+      D --> F(["🎯 target_name"])
+      D --> G(["⚙️ task_type"])
+      D --> H(["ℹ️ meta (selenium)"])
+      style A fill:#fbbf24,stroke:#d97706,stroke-width:2px,color:#000
+      style C fill:#fbbf24,stroke:#d97706,stroke-width:2px,color:#000
+      style B fill:#3b82f6,stroke:#2563eb,stroke-width:2px,color:#fff
+      style D fill:#3b82f6,stroke:#2563eb,stroke-width:2px,color:#fff
+      style E fill:#10b981,stroke:#059669,stroke-width:2px,color:#fff
+      style F fill:#8b5cf6,stroke:#7c3aed,stroke-width:2px,color:#fff
+      style G fill:#8b5cf6,stroke:#7c3aed,stroke-width:2px,color:#fff
+      style H fill:#8b5cf6,stroke:#7c3aed,stroke-width:2px,color:#fff
 
 _metadata:
   bloc: 1

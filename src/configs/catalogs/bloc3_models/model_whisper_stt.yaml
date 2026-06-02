@@ -1,15 +1,22 @@
 id: "model_whisper_stt"
 name: "Model: OpenAI Whisper (Speech-to-Text)"
-description: "Reconnaissance vocale universelle et robuste (Speech-to-Text) par OpenAI."
+description: |
+  Modèle de reconnaissance vocale automatique (Speech-to-Text) universel et robuste développé par OpenAI. Effectue des transcriptions multilingues de haute qualité.
 category: "Multimédia & Audio"
 tags: ["model", "audio", "speech-to-text", "transformers", "huggingface", "whisper", "zero-shot"]
 applies_to: ["Audio"]
-when_to_use: "Pour transcrire un fichier audio (.mp3, .wav) en texte pur dans n'importe quelle langue."
+when_to_use: |
+  Pour transcrire fidèlement un fichier audio (ex. .mp3, .wav) en texte pur, peu importe la langue, l'accent ou le niveau de bruit de fond modéré.
+use_cases:
+  - "Sous-titrage automatique de vidéos ou de podcasts."
+  - "Transcription d'entretiens, de réunions ou de mémos vocaux."
+  - "Indexation de bases de données audio pour la recherche textuelle."
 pros:
-  - "SOTA absolu en transcription."
-  - "Gère les accents et le bruit de fond."
+  - "État de l'art (SOTA) absolu en matière de transcription vocale multilingue."
+  - "Gère remarquablement bien les accents, les jargons et les bruits de fond."
 cons:
-  - "Lent sur CPU."
+  - "Lent lors de l'exécution sur processeur (CPU), nécessite idéalement un GPU."
+  - "Les modèles de grande taille consomment beaucoup de mémoire."
 hyperparameters:
   model_size: "Taille du modèle ('tiny', 'base', 'small')."
 code_template: |
@@ -53,19 +60,87 @@ code_template: |
       y_pred = np.array(y_pred)
       full_pipeline = model
       training_history = {"status": "success", "processed": len(y_pred)}
+math_theory: |
+  Whisper processes audio using a classic Transformer encoder-decoder sequence-to-sequence architecture.
+  
+  1. **Audio Encoding**: The raw audio is converted to a Log-Mel Spectrogram $\textcolor{#10b981}{X_{mel}}$. The Transformer Encoder processes this into continuous hidden representations $\textcolor{#3b82f6}{H_{enc}}$:
+  $$ \textcolor{#3b82f6}{H_{enc}} = \text{Encoder}(\textcolor{#10b981}{X_{mel}}) $$
+  
+  2. **Autoregressive Decoding**: The Transformer Decoder predicts the probability of the next text token $\textcolor{#fbbf24}{y_i}$ conditioned on the encoder output and previous tokens $\textcolor{#fbbf24}{y_{<i}}$:
+  $$ P(\textcolor{#fbbf24}{y_i} \mid \textcolor{#fbbf24}{y_{<i}}, \textcolor{#10b981}{X_{mel}}) = \text{Softmax}(\text{Decoder}(\textcolor{#fbbf24}{y_{<i}}, \textcolor{#3b82f6}{H_{enc}})) $$
+  
+  3. **Multitask Format**: Whisper frames all tasks (STT, translation, VAD) as text sequence prediction, controlled by special prefix tokens (e.g., `<|transcribe|>` vs `<|translate|>`). The model is trained using standard sequence cross-entropy loss:
+  $$ \mathcal{L} = - \sum_{i} \log P(\textcolor{#fbbf24}{y_i} \mid \textcolor{#fbbf24}{y_{<i}}, \textcolor{#10b981}{X_{mel}}; \textcolor{#8b5cf6}{\Theta}) $$
+math_illustration_svg: |
+  <svg viewBox="0 0 800 400" xmlns="http://www.w3.org/2000/svg">
+    <!-- Log Mel Spectrogram -->
+    <rect x="40" y="160" width="80" height="80" fill="#d1fae5" stroke="#10b981" stroke-width="3" rx="4"/>
+    <line x1="40" y1="180" x2="120" y2="180" stroke="#6ee7b7" stroke-width="2"/>
+    <line x1="40" y1="200" x2="120" y2="200" stroke="#6ee7b7" stroke-width="2"/>
+    <line x1="40" y1="220" x2="120" y2="220" stroke="#6ee7b7" stroke-width="2"/>
+    <text x="80" y="265" font-family="sans-serif" font-size="14" font-weight="bold" fill="#10b981" text-anchor="middle">Log-Mel X_mel</text>
+    
+    <path d="M130 200 L160 200" stroke="#94a3b8" stroke-width="2" marker-end="url(#arrow)"/>
+    
+    <!-- Transformer Encoder -->
+    <rect x="170" y="130" width="120" height="140" fill="#eff6ff" stroke="#3b82f6" stroke-width="3" rx="8"/>
+    <text x="230" y="195" font-family="sans-serif" font-size="16" font-weight="bold" fill="#3b82f6" text-anchor="middle">Transformer</text>
+    <text x="230" y="215" font-family="sans-serif" font-size="14" fill="#3b82f6" text-anchor="middle">Encoder</text>
+
+    <!-- H_enc Arrow -->
+    <path d="M295 200 L380 200" stroke="#3b82f6" stroke-width="3" marker-end="url(#arrow_blue)"/>
+    <text x="340" y="190" font-family="sans-serif" font-size="14" font-weight="bold" fill="#3b82f6" text-anchor="middle">H_enc</text>
+    
+    <!-- Transformer Decoder -->
+    <rect x="390" y="130" width="120" height="140" fill="#fef3c7" stroke="#fbbf24" stroke-width="3" rx="8"/>
+    <text x="450" y="185" font-family="sans-serif" font-size="16" font-weight="bold" fill="#fbbf24" text-anchor="middle">Transformer</text>
+    <text x="450" y="205" font-family="sans-serif" font-size="14" fill="#fbbf24" text-anchor="middle">Decoder</text>
+    <text x="450" y="225" font-family="sans-serif" font-size="12" fill="#fbbf24" text-anchor="middle">(Autoregressive)</text>
+
+    <!-- Previous Tokens Loop -->
+    <path d="M490 275 L490 320 L410 320 L410 275" fill="none" stroke="#fbbf24" stroke-width="2" marker-end="url(#arrow_yellow)"/>
+    <text x="450" y="340" font-family="sans-serif" font-size="12" font-weight="bold" fill="#fbbf24" text-anchor="middle">Tokens y_{&lt;i}</text>
+
+    <!-- Output Tokens -->
+    <path d="M515 200 L560 200" stroke="#fbbf24" stroke-width="3" marker-end="url(#arrow_yellow)"/>
+    <rect x="570" y="180" width="40" height="40" fill="#fef3c7" stroke="#fbbf24" stroke-width="2" rx="4"/>
+    <text x="590" y="205" font-family="sans-serif" font-size="14" font-weight="bold" fill="#fbbf24" text-anchor="middle">y_i</text>
+    
+    <!-- Output Text -->
+    <text x="680" y="205" font-family="sans-serif" font-size="16" font-weight="bold" fill="#8b5cf6" text-anchor="middle">"Hello world"</text>
+    <path d="M615 200 L640 200" stroke="#94a3b8" stroke-width="2" marker-end="url(#arrow)"/>
+    
+    <!-- Special Tokens -->
+    <rect x="360" y="40" width="180" height="40" fill="#f3e8ff" stroke="#8b5cf6" stroke-width="2" rx="4"/>
+    <text x="450" y="65" font-family="sans-serif" font-size="14" font-weight="bold" fill="#8b5cf6" text-anchor="middle">&lt;|transcribe|&gt; &lt;|en|&gt;</text>
+    <path d="M450 85 L450 125" stroke="#8b5cf6" stroke-width="2" marker-end="url(#arrow_purple)"/>
+    <text x="500" y="110" font-family="sans-serif" font-size="12" fill="#8b5cf6">Prefix Tasks</text>
+
+    <defs>
+      <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto"><path d="M0 0 L10 5 L0 10 z" fill="#94a3b8"/></marker>
+      <marker id="arrow_blue" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto"><path d="M0 0 L10 5 L0 10 z" fill="#3b82f6"/></marker>
+      <marker id="arrow_yellow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto"><path d="M0 0 L10 5 L0 10 z" fill="#fbbf24"/></marker>
+      <marker id="arrow_purple" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto"><path d="M0 0 L10 5 L0 10 z" fill="#8b5cf6"/></marker>
+    </defs>
+  </svg>
 illustration_mermaid: |
-    graph TD
-      In([Audio File]) --> Mel(Log-Mel Spectrogram)
-      Mel --> Enc(Transformer Encoder)
-      Enc --> Dec(Transformer Decoder with Cross-Attention)
-      Dec --> Token(Text Token Generation)
-      Token --> Out([Transcribed Text])
-      
-      style In fill:#f8fafc,stroke:#94a3b8,stroke-width:2px
-      style Mel fill:#38bdf8,stroke:#0284c7,stroke-width:2px,color:#fff
-      style Enc fill:#8b5cf6,stroke:#7c3aed,stroke-width:2px,color:#fff
-      style Dec fill:#8b5cf6,stroke:#7c3aed,stroke-width:2px,color:#fff
-      style Out fill:#10b981,stroke:#059669,stroke-width:2px,color:#fff
+  flowchart LR
+    In[/"Paramètres :<br/>MODEL_SIZE"/] --> |Init| Pipeline{"Pipeline STT<br/>(Whisper)"}
+    Audio(["Fichier Audio Brute"]) --> Mel{"Spectrogramme Log-Mel"}
+    Mel --> Enc{"Encodeur Transformer"}
+    Enc --> Dec{"Décodeur (Cross-Attention)"}
+    Dec --> Token{"Génération de Tokens"}
+    Token --> Pipeline
+    Pipeline --> Out(["Texte Transcrit"])
+    
+    style In fill:#fbbf24,stroke:#d97706,stroke-width:2px,color:#000
+    style Audio fill:#10b981,stroke:#059669,stroke-width:2px,color:#fff
+    style Mel fill:#3b82f6,stroke:#2563eb,stroke-width:2px,color:#fff
+    style Enc fill:#3b82f6,stroke:#2563eb,stroke-width:2px,color:#fff
+    style Dec fill:#3b82f6,stroke:#2563eb,stroke-width:2px,color:#fff
+    style Token fill:#3b82f6,stroke:#2563eb,stroke-width:2px,color:#fff
+    style Pipeline fill:#3b82f6,stroke:#2563eb,stroke-width:2px,color:#fff
+    style Out fill:#10b981,stroke:#059669,stroke-width:2px,color:#fff
 
 _metadata:
   bloc: 3

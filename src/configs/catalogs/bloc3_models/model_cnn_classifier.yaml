@@ -1,17 +1,70 @@
 id: "model_cnn_classifier"
 name: "Model: Basic CNN Classifier (PyTorch)"
-description: "Réseau de Neurones Convolutif (CNN) basique construit de zéro (from scratch) pour la classification d'images."
+description: "Réseau de Neurones Convolutif (CNN) fondamental implémenté via PyTorch, conçu pour extraire hiérarchiquement des caractéristiques visuelles et effectuer la classification d'images."
 category: "Vision par Ordinateur (Modèles Entraînés)"
 tags: ["model", "vision", "classification", "pytorch", "cnn", "deep-learning"]
 applies_to: ["Images"]
-when_to_use: "Pour des tâches simples sur de petites images (ex: MNIST, CIFAR) sans s'encombrer d'un modèle lourd."
+when_to_use: "Privilégier ce modèle pour des tâches de classification sur des jeux de données d'images de petite à moyenne taille (ex: MNIST, CIFAR) ou lorsque des contraintes de ressources interdisent l'utilisation d'architectures lourdes."
+use_cases:
+  - "Reconnaissance de caractères manuscrits ou de chiffres (OCR basique)."
+  - "Classification d'images en niveaux de gris de faible résolution."
+  - "Prototypage rapide d'applications de vision par ordinateur."
 pros:
-  - "Très léger, rapide à entraîner sur CPU."
+  - "Architecture légère offrant des temps d'inférence et d'entraînement très courts, même sur CPU."
+  - "Facilité d'interprétation des premières couches convolutives et flexibilité structurelle."
 cons:
-  - "Performances très limitées sur des images réelles ou complexes."
+  - "Capacité d'abstraction insuffisante pour des images réelles à haute résolution ou des scènes complexes."
+  - "Risque élevé de sous-apprentissage sur des jeux de données visuelles hétérogènes."
 hyperparameters:
   epochs: "Nombre d'époques (ex: 5)."
   learning_rate: "Taux d'apprentissage (ex: 0.001)."
+math_theory: |
+  La convolution 2D extrait des caractéristiques spatiales (bords, textures) en faisant glisser un noyau sur une image.
+  Pour une image d'entrée $\textcolor{#3b82f6}{I}$ et un noyau (filtre) $\textcolor{#10b981}{K}$ de taille $m \times n$, la carte de caractéristiques résultante $\textcolor{#fbbf24}{S}$ aux coordonnées $(i, j)$ est :
+  $$\textcolor{#fbbf24}{S_{i, j}} = \sigma \left( \sum_{u=0}^{m-1} \sum_{v=0}^{n-1} \textcolor{#3b82f6}{I_{i+u, j+v}} \cdot \textcolor{#10b981}{K_{u, v}} + \textcolor{#8b5cf6}{b} \right)$$
+  où $\textcolor{#8b5cf6}{b}$ est un biais et $\sigma$ l'activation (souvent ReLU : $\max(0, x)$).
+  Le Max Pooling réduit ensuite la résolution spatiale en sélectionnant la valeur maximale dans une fenêtre $p \times p$, permettant une invariance aux petites translations.
+math_illustration_svg: |
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 400">
+    <defs>
+      <marker id="arrow2D2" markerWidth="10" markerHeight="10" refX="9" refY="3" orient="auto" markerUnits="strokeWidth">
+        <path d="M0,0 L0,6 L9,3 z" fill="#8b5cf6" />
+      </marker>
+    </defs>
+  
+    <!-- Input Image Grid -->
+    <text x="50" y="50" font-family="sans-serif" font-size="18" fill="#3b82f6">Image (I)</text>
+    <g transform="translate(50, 70)">
+      <rect x="0" y="0" width="150" height="150" fill="none" stroke="#3b82f6" stroke-width="2"/>
+      <path d="M 50 0 L 50 150 M 100 0 L 100 150 M 0 50 L 150 50 M 0 100 L 150 100" stroke="#3b82f6" stroke-width="1"/>
+      <!-- Highlighted patch -->
+      <rect x="0" y="0" width="100" height="100" fill="#3b82f6" fill-opacity="0.3" stroke="#10b981" stroke-width="3" stroke-dasharray="4"/>
+    </g>
+  
+    <!-- Filter -->
+    <text x="250" y="120" font-family="sans-serif" font-size="24" fill="#10b981">X</text>
+    <text x="290" y="50" font-family="sans-serif" font-size="18" fill="#10b981">Kernel (K)</text>
+    <g transform="translate(290, 95)">
+      <rect x="0" y="0" width="100" height="100" fill="none" stroke="#10b981" stroke-width="2"/>
+      <path d="M 50 0 L 50 100 M 0 50 L 100 50" stroke="#10b981" stroke-width="1"/>
+      <text x="25" y="30" fill="#10b981" font-family="sans-serif" font-size="14" text-anchor="middle">w_11</text>
+      <text x="75" y="30" fill="#10b981" font-family="sans-serif" font-size="14" text-anchor="middle">w_12</text>
+      <text x="25" y="80" fill="#10b981" font-family="sans-serif" font-size="14" text-anchor="middle">w_21</text>
+      <text x="75" y="80" fill="#10b981" font-family="sans-serif" font-size="14" text-anchor="middle">w_22</text>
+    </g>
+  
+    <!-- Output Feature Map -->
+    <path d="M 420 145 L 480 145" stroke="#8b5cf6" stroke-width="3" marker-end="url(#arrow2D2)"/>
+    
+    <text x="520" y="50" font-family="sans-serif" font-size="18" fill="#fbbf24">Feature Map (S)</text>
+    <g transform="translate(520, 95)">
+      <rect x="0" y="0" width="100" height="100" fill="none" stroke="#fbbf24" stroke-width="2"/>
+      <path d="M 50 0 L 50 100 M 0 50 L 100 50" stroke="#fbbf24" stroke-width="1"/>
+      <!-- Highlighted output pixel -->
+      <rect x="0" y="0" width="50" height="50" fill="#fbbf24" fill-opacity="0.8"/>
+      <text x="25" y="30" fill="#000" font-family="sans-serif" font-size="14" text-anchor="middle">S_00</text>
+    </g>
+  </svg>
 code_template: |
   import pandas as pd
   import numpy as np
@@ -137,35 +190,19 @@ code_template: |
       training_history = {"status": "success", "fitted_on": len(X_train), "final_loss": loss_val}
 
 illustration_mermaid: |
-    graph TD
-      subgraph Input Data
-        Data([Image Tensor\n(N, C, H, W)])
-      end
-      
-      subgraph CNN Layers
-        Data --> C1[Conv2D\n16 filters, 3x3]
-        C1 --> R1[ReLU + MaxPool2D]
-        R1 --> C2[Conv2D\n32 filters, 3x3]
-        C2 --> R2[ReLU + MaxPool2D]
-      end
-      
-      subgraph Classification
-        R2 --> Flat[Flatten]
-        Flat --> FC[LazyLinear Layer\nNum Classes]
-      end
-      
-      subgraph Output
-        FC --> SM[Softmax]
-        SM --> Pred([Predictions])
-      end
-      
-      style C1 fill:#8b5cf6,stroke:#7c3aed,stroke-width:2px,color:#fff
-      style C2 fill:#8b5cf6,stroke:#7c3aed,stroke-width:2px,color:#fff
-      style R1 fill:#c4b5fd,stroke:#8b5cf6,stroke-width:1px,color:#000
-      style R2 fill:#c4b5fd,stroke:#8b5cf6,stroke-width:1px,color:#000
-      style FC fill:#a78bfa,stroke:#7c3aed,stroke-width:1px,color:#fff
-      style Data fill:#f8fafc,stroke:#94a3b8,stroke-width:1px
-      style Pred fill:#f8fafc,stroke:#94a3b8,stroke-width:1px
+  flowchart LR
+    Data(["Image Tensor\n(N, C, H, W)"]) --> C1{"Conv2D + MaxPool\n16 filters"}
+    C1 --> C2{"Conv2D + MaxPool\n32 filters"}
+    C2 --> Flat{"Flatten"}
+    Flat --> FC{"Linear Layer"}
+    FC --> Pred(["Predictions"])
+    
+    style Data fill:#10b981,stroke:#059669,stroke-width:2px,color:#fff
+    style C1 fill:#3b82f6,stroke:#2563eb,stroke-width:2px,color:#fff
+    style C2 fill:#3b82f6,stroke:#2563eb,stroke-width:2px,color:#fff
+    style Flat fill:#3b82f6,stroke:#2563eb,stroke-width:2px,color:#fff
+    style FC fill:#3b82f6,stroke:#2563eb,stroke-width:2px,color:#fff
+    style Pred fill:#10b981,stroke:#059669,stroke-width:2px,color:#fff
 
 _metadata:
   bloc: 3

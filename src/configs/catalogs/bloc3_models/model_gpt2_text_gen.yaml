@@ -1,14 +1,24 @@
 id: "model_gpt2_text_gen"
 name: "Model: GPT-2 Text Generation"
-description: "Générateur de texte basé sur l'architecture GPT-2 de OpenAI via HuggingFace."
+description: |
+  Modèle de langage génératif basé sur l'architecture Transformer (GPT-2) d'OpenAI, utilisé via la bibliothèque HuggingFace Transformers.
 category: "Modèles NLP (Pré-entraînés)"
 tags: ["model", "nlp", "text-generation", "transformers", "huggingface", "gpt2", "generative"]
 applies_to: ["Texte"]
-when_to_use: "Pour prolonger une phrase ou un prompt donné (ex: génération de fausses descriptions ou data augmentation)."
+when_to_use: |
+  Idéal pour la génération de texte libre à partir d'une amorce (prompt), la complétion automatique de phrases, ou l'augmentation de données textuelles.
+use_cases:
+  - "Création de contenu automatique ou aide à la rédaction."
+  - "Augmentation de données en générant des exemples synthétiques d'entraînement."
+  - "Génération de descriptions, de scénarios ou de dialogues créatifs."
 pros:
-  - "Très fun et créatif."
+  - "Génère du texte très fluide, créatif et avec une bonne grammaire."
+  - "Facile à utiliser avec l'API pipeline de HuggingFace."
+  - "Pré-entraîné sur un immense corpus de texte."
 cons:
-  - "Souvent incohérent sur de longs textes comparé à GPT-4. Ne fait que de l'auto-complétion, pas de chat."
+  - "A tendance à perdre le fil conducteur (incohérence) sur de longs textes."
+  - "Ne permet pas de faire du chat interactif ou de suivre des instructions complexes."
+  - "Peut générer des informations factuellement fausses (hallucinations)."
 hyperparameters:
   max_length: "Nombre total de tokens désirés (ex: 50)."
 code_template: |
@@ -62,20 +72,82 @@ code_template: |
           training_history = {"status": "success", "type": "zero_shot_generative"}
 
 illustration_mermaid: |
-  graph TD
-    subgraph GPT-2 Text Generation
-      In([Input Text Prompt]) --> Tokenizer[BPE Tokenizer]
-      Tokenizer --> Tokens[Input Tokens]
-      Tokens --> Blocks[Transformer Decoder Blocks x12]
-      Blocks --> Logits[Vocabulary Logits]
-      Logits --> Search[Greedy/Beam Search]
-      Search --> GenTokens[Generated Tokens]
-      GenTokens --> Decode[Detokenizer]
-      Decode --> Out([Generated Text])
-    end
-    style In fill:#f8fafc,stroke:#94a3b8,stroke-width:1px
+  flowchart LR
+    In(["Texte d'Entrée (Prompt)"]) --> Tok{"Tokenizer\n(BPE)"}
+    Tok --> Emb{"Embeddings\n(+ Position)"}
+    Emb --> Blocks{"Blocs Transformer\nDécodeurs (x12)"}
+    Blocks --> Logits{"Logits\ndu Vocabulaire"}
+    Logits --> Search{"Recherche\n(Greedy/Sampling)"}
+    Search --> Decode{"Detokenizer"}
+    Decode --> Out(["Texte Généré"])
+    
+    style In fill:#10b981,stroke:#059669,stroke-width:2px,color:#fff
     style Out fill:#10b981,stroke:#059669,stroke-width:2px,color:#fff
-    style Blocks fill:#8b5cf6,stroke:#7c3aed,stroke-width:2px,color:#fff
+    style Tok fill:#3b82f6,stroke:#2563eb,stroke-width:2px,color:#fff
+    style Emb fill:#3b82f6,stroke:#2563eb,stroke-width:2px,color:#fff
+    style Blocks fill:#3b82f6,stroke:#2563eb,stroke-width:2px,color:#fff
+    style Logits fill:#3b82f6,stroke:#2563eb,stroke-width:2px,color:#fff
+    style Search fill:#3b82f6,stroke:#2563eb,stroke-width:2px,color:#fff
+    style Decode fill:#3b82f6,stroke:#2563eb,stroke-width:2px,color:#fff
+
+math_theory: |
+  GPT-2 uses an autoregressive Decoder-only Transformer architecture. Text generation is framed as the factorization of the joint probability over a sequence of tokens $\textcolor{#10b981}{X}$.
+  
+  The model computes the conditional probability of the next token $\textcolor{#10b981}{x_t}$ given the sequence of all preceding tokens $\textcolor{#3b82f6}{x_{<t}}$:
+  
+  $$ P(\textcolor{#10b981}{X}) = \prod_{t=1}^{T} P(\textcolor{#10b981}{x_t} \mid \textcolor{#3b82f6}{x_1, \dots, x_{t-1}}) $$
+  
+  At each generation step $t$:
+  1. $\textcolor{#3b82f6}{x_{<t}}$ is passed through stacked masked self-attention layers to produce a hidden representation $\textcolor{#fbbf24}{h_t}$.
+  2. The probability distribution for the next token is computed: $P(\textcolor{#10b981}{x_t}) = \text{Softmax}(\textcolor{#ef4444}{W_{\text{vocab}}} \cdot \textcolor{#fbbf24}{h_t})$.
+  
+  Tokens are sampled from this distribution and appended to the context for the next step.
+
+math_illustration_svg: |
+  <svg viewBox="0 0 600 300" xmlns="http://www.w3.org/2000/svg">
+    <defs>
+      <marker id="arrow" viewBox="0 0 10 10" refX="10" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+        <path d="M 0 0 L 10 5 L 0 10 z" fill="#9ca3af" />
+      </marker>
+      <marker id="arrow-green" viewBox="0 0 10 10" refX="10" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+        <path d="M 0 0 L 10 5 L 0 10 z" fill="#10b981" />
+      </marker>
+    </defs>
+    
+    <!-- Input Context -->
+    <rect x="20" y="80" width="100" height="60" rx="5" fill="#eff6ff" stroke="#3b82f6" stroke-width="2"/>
+    <text x="70" y="110" text-anchor="middle" font-family="sans-serif" font-size="14" font-weight="bold" fill="#3b82f6">Context (x_&lt;t)</text>
+    
+    <line x1="120" y1="110" x2="180" y2="110" stroke="#9ca3af" stroke-width="2" marker-end="url(#arrow)"/>
+    
+    <!-- GPT-2 Transformer -->
+    <rect x="180" y="50" width="140" height="120" rx="10" fill="#f3f4f6" stroke="#4b5563" stroke-width="2"/>
+    <text x="250" y="100" text-anchor="middle" font-family="sans-serif" font-size="16" font-weight="bold" fill="#374151">GPT-2 Decoder</text>
+    <text x="250" y="120" text-anchor="middle" font-family="sans-serif" font-size="12" fill="#4b5563">(Masked Attention)</text>
+    
+    <line x1="320" y1="110" x2="380" y2="110" stroke="#9ca3af" stroke-width="2" marker-end="url(#arrow)"/>
+    
+    <!-- h_t -->
+    <rect x="380" y="90" width="40" height="40" rx="20" fill="#fffbeb" stroke="#fbbf24" stroke-width="2"/>
+    <text x="400" y="115" text-anchor="middle" font-family="sans-serif" font-size="14" font-weight="bold" fill="#fbbf24">h_t</text>
+    
+    <line x1="420" y1="110" x2="480" y2="110" stroke="#9ca3af" stroke-width="2" marker-end="url(#arrow)"/>
+    
+    <!-- Linear Head & Output -->
+    <rect x="480" y="70" width="100" height="80" rx="5" fill="#fef2f2" stroke="#ef4444" stroke-width="2"/>
+    <text x="530" y="100" text-anchor="middle" font-family="sans-serif" font-size="12" font-weight="bold" fill="#ef4444">Linear (W)</text>
+    <text x="530" y="130" text-anchor="middle" font-family="sans-serif" font-size="12" font-weight="bold" fill="#ef4444">+ Softmax</text>
+    
+    <!-- Next Token -->
+    <line x1="530" y1="150" x2="530" y2="190" stroke="#9ca3af" stroke-width="2" marker-end="url(#arrow)"/>
+    
+    <rect x="500" y="190" width="60" height="40" rx="5" fill="#f0fdf4" stroke="#10b981" stroke-width="2"/>
+    <text x="530" y="215" text-anchor="middle" font-family="sans-serif" font-size="14" font-weight="bold" fill="#10b981">x_t</text>
+    
+    <!-- Autoregressive feedback -->
+    <path d="M 500 210 L 70 210 L 70 140" fill="none" stroke="#10b981" stroke-width="2" stroke-dasharray="5,5" marker-end="url(#arrow-green)"/>
+    <text x="285" y="200" text-anchor="middle" font-family="sans-serif" font-size="12" font-weight="bold" fill="#10b981">Appended to Context</text>
+  </svg>
 
 _metadata:
   bloc: 3

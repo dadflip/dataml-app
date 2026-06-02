@@ -1,16 +1,82 @@
 id: "model_efficientnet_b0"
 name: "Model: EfficientNet-B0 (Fine-Tuning)"
-description: "Réseau de neurones Google ultra-optimisé offrant un ratio précision/taille exceptionnel."
+description: |
+  Réseau de neurones convolutif développé par Google. Il repose sur la méthode du "Compound Scaling" qui équilibre la profondeur, la largeur et la résolution de l'image. Cela permet de proposer un ratio exceptionnel entre précision des prédictions et taille du modèle, garantissant des performances à l'état de l'art tout en maintenant l'efficacité computationnelle.
 category: "Vision par Ordinateur (Modèles Entraînés)"
 tags: ["model", "vision", "classification", "pytorch", "efficientnet", "deep-learning"]
 applies_to: ["Images"]
-when_to_use: "Pour obtenir la meilleure précision possible sans exploser la taille du modèle."
+when_to_use: |
+  Privilégiez ce modèle lorsque vous recherchez le meilleur compromis possible entre la précision de la classification et l'empreinte mémoire, notamment pour les applications où les ressources matérielles (GPU ou processeurs embarqués) sont limitées.
+use_cases:
+  - "Classification d'images sur des dispositifs mobiles ou IoT."
+  - "Analyse visuelle où un haut débit d'inférence est critique."
+  - "Fine-tuning rapide sur des jeux de données d'images spécifiques (médicales, industrielles)."
 pros:
-  - "State-of-the-art efficiency."
+  - "Efficacité computationnelle (Compound Scaling) et légèreté (idéal pour l'embarqué)."
+  - "Précision souvent supérieure aux modèles de la famille ResNet de taille comparable."
+  - "Architecture pré-entraînée permettant un transfert d'apprentissage rapide (Transfer Learning)."
 cons:
-  - "Couches complexes, parfois plus long à fine-tuner que ResNet sur petit GPU."
+  - "L'architecture plus complexe peut occasionnellement ralentir le fine-tuning sur des GPUs d'entrée de gamme par rapport à un ResNet standard."
+  - "Sensibilité aux hyperparamètres de scaling, rendant les ajustements d'architecture délicats."
 hyperparameters:
   epochs: "Nombre d'époques de fine-tuning (ex: 3)."
+math_theory: |
+  EfficientNet utilise le \textit{Compound Scaling} pour augmenter uniformément les trois dimensions du réseau (largeur, profondeur, résolution).
+  Au lieu de modifier arbitrairement une seule dimension, la mise à l'échelle est contrôlée par un coefficient global $\textcolor{#8b5cf6}{\phi}$.
+  Les facteurs de mise à l'échelle pour la profondeur $\textcolor{#10b981}{d}$, la largeur $\textcolor{#3b82f6}{w}$ et la résolution $\textcolor{#fbbf24}{r}$ sont déterminés par :
+  $$\textcolor{#10b981}{d} = \alpha^{\textcolor{#8b5cf6}{\phi}} \quad \textcolor{#3b82f6}{w} = \beta^{\textcolor{#8b5cf6}{\phi}} \quad \textcolor{#fbbf24}{r} = \gamma^{\textcolor{#8b5cf6}{\phi}}$$
+  Sous la contrainte que $\alpha \cdot \beta^2 \cdot \gamma^2 \approx 2$, ce qui garantit que l'augmentation du nombre de FLOPS est d'environ $2^{\textcolor{#8b5cf6}{\phi}}$.
+  EfficientNet-B0 est l'architecture de base ($\textcolor{#8b5cf6}{\phi}=0$), trouvée via une recherche d'architecture neuronale (NAS) optimisant l'exactitude et les FLOPS.
+math_illustration_svg: |
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 400">
+    <defs>
+      <marker id="arrowEff" markerWidth="10" markerHeight="10" refX="9" refY="3" orient="auto" markerUnits="strokeWidth">
+        <path d="M0,0 L0,6 L9,3 z" fill="#8b5cf6" />
+      </marker>
+    </defs>
+  
+    <!-- Baseline Model -->
+    <g transform="translate(100, 200)">
+      <text x="0" y="-80" font-family="sans-serif" font-size="18" font-weight="bold" fill="#64748b" text-anchor="middle">Baseline (B0)</text>
+      <rect x="-20" y="-40" width="40" height="80" fill="#cbd5e1" />
+      <path d="M 30 0 L 150 0" stroke="#8b5cf6" stroke-width="3" stroke-dasharray="5,5" marker-end="url(#arrowEff)"/>
+    </g>
+  
+    <!-- Width Scaling -->
+    <g transform="translate(300, 80)">
+      <text x="0" y="-80" font-family="sans-serif" font-size="16" fill="#3b82f6" text-anchor="middle">Width Scaling (w)</text>
+      <rect x="-40" y="-40" width="80" height="80" fill="#3b82f6" fill-opacity="0.8" />
+    </g>
+  
+    <!-- Depth Scaling -->
+    <g transform="translate(300, 200)">
+      <text x="0" y="-80" font-family="sans-serif" font-size="16" fill="#10b981" text-anchor="middle">Depth Scaling (d)</text>
+      <rect x="-20" y="-60" width="40" height="120" fill="#10b981" fill-opacity="0.8" />
+    </g>
+  
+    <!-- Resolution Scaling -->
+    <g transform="translate(300, 320)">
+      <text x="0" y="-60" font-family="sans-serif" font-size="16" fill="#fbbf24" text-anchor="middle">Resolution (r)</text>
+      <!-- Larger image resolution representation -->
+      <rect x="-30" y="-30" width="60" height="60" fill="#fbbf24" fill-opacity="0.8" />
+      <line x1="-30" y1="0" x2="30" y2="0" stroke="#fff" stroke-width="1"/>
+      <line x1="0" y1="-30" x2="0" y2="30" stroke="#fff" stroke-width="1"/>
+    </g>
+  
+    <!-- Compound Scaling -->
+    <path d="M 400 200 L 550 200" stroke="#8b5cf6" stroke-width="4" marker-end="url(#arrowEff)"/>
+    <text x="475" y="180" font-family="sans-serif" font-size="18" fill="#8b5cf6" font-weight="bold" text-anchor="middle">Compound Scale (φ)</text>
+  
+    <g transform="translate(650, 200)">
+      <text x="0" y="-120" font-family="sans-serif" font-size="18" font-weight="bold" fill="#8b5cf6" text-anchor="middle">EfficientNet-B(φ)</text>
+      <!-- Combined larger model -->
+      <rect x="-50" y="-80" width="100" height="160" fill="#8b5cf6" fill-opacity="0.9" />
+      <line x1="-50" y1="-26" x2="50" y2="-26" stroke="#fff" stroke-width="1"/>
+      <line x1="-50" y1="26" x2="50" y2="26" stroke="#fff" stroke-width="1"/>
+      <line x1="-16" y1="-80" x2="-16" y2="80" stroke="#fff" stroke-width="1"/>
+      <line x1="16" y1="-80" x2="16" y2="80" stroke="#fff" stroke-width="1"/>
+    </g>
+  </svg>
 code_template: |
   import pandas as pd
   import numpy as np
@@ -95,23 +161,15 @@ code_template: |
       training_history = {"status": "success", "loss": final_loss, "device": str(device)}
 
 illustration_mermaid: |
-  graph TD
-    subgraph EfficientNet-B0 Architecture
-      In([Image Input]) --> Conv[Conv3x3]
-      Conv --> MBConv1[MBConv1]
-      MBConv1 --> MBConv6_1[MBConv6 x2]
-      MBConv6_1 --> MBConv6_2[MBConv6 x2]
-      MBConv6_2 --> MBConv6_3[MBConv6 x3]
-      MBConv6_3 --> MBConv6_4[MBConv6 x3]
-      MBConv6_4 --> MBConv6_5[MBConv6 x4]
-      MBConv6_5 --> MBConv6_6[MBConv6 x1]
-      MBConv6_6 --> Pool[GlobalAvgPool]
-      Pool --> FC[Linear Fully Connected]
-      FC --> Out([Class Predictions])
-    end
-    style In fill:#f8fafc,stroke:#94a3b8,stroke-width:1px
+  flowchart LR
+    In[/ "Images (Tensors)" /] --> Model{"EfficientNet-B0\n(Fine-Tuning)"}
+    Config(["Epochs = 3"]) -.-> Model
+    Model --> Out(["Class Predictions\n& Probabilities"])
+    
+    style In fill:#fbbf24,stroke:#d97706,stroke-width:2px,color:#000
+    style Config fill:#8b5cf6,stroke:#7c3aed,stroke-width:2px,color:#fff
+    style Model fill:#3b82f6,stroke:#2563eb,stroke-width:2px,color:#fff
     style Out fill:#10b981,stroke:#059669,stroke-width:2px,color:#fff
-    style MBConv6_3 fill:#8b5cf6,stroke:#7c3aed,stroke-width:2px,color:#fff
 
 _metadata:
   bloc: 3

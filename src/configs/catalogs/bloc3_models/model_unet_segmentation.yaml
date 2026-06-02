@@ -1,14 +1,25 @@
 id: "model_unet_segmentation"
 name: "Model: U-Net Semantic Segmentation"
-description: "Réseau U-Net classique pour la segmentation d'images (pixel par pixel)."
+description: |
+  Architecture de réseau de neurones convolutifs (CNN) en forme de "U" développée initialement pour la segmentation sémantique d'images biomédicales. Le U-Net capture à la fois le contexte global (via un chemin de contraction/downsampling) et permet une localisation précise (via un chemin d'expansion/upsampling symétrique avec des skip-connections).
 category: "Vision par Ordinateur (Modèles Entraînés)"
 tags: ["model", "vision", "segmentation", "pytorch", "unet", "deep-learning"]
 applies_to: ["Images"]
-when_to_use: "Pour isoler un objet du fond (ex: imagerie médicale, conduite autonome)."
+when_to_use: |
+  À utiliser pour toute tâche nécessitant une classification pixel par pixel, c'est-à-dire lorsqu'il faut isoler et délimiter précisément la forme d'un objet (ou de plusieurs classes) par rapport au fond de l'image.
+use_cases:
+  - "Segmentation d'images médicales (ex: détection de tumeurs sur des IRM, segmentation de cellules en microscopie)."
+  - "Traitement d'images satellitaires (ex: identification de bâtiments, de routes ou de zones forestières)."
+  - "Vision par ordinateur pour véhicules autonomes (ex: segmentation de la route, des piétons, des panneaux)."
+  - "Inspection visuelle industrielle (ex: détection et délimitation de défauts complexes sur des pièces manufacturées)."
 pros:
-  - "L'architecture reine pour la segmentation biomédicale."
+  - "Architecture extrêmement performante, même entraînée avec un nombre relativement restreint d'images annotées."
+  - "Les 'skip-connections' préservent les détails spatiaux fins qui sont souvent perdus dans les CNN profonds classiques."
+  - "Modèle très flexible, largement adaptable et déclinable (ex: V-Net pour la 3D, U-Net++)."
 cons:
-  - "Nécessite des masques annotés pixel par pixel pour l'entraînement."
+  - "Nécessite la création de masques de segmentation annotés pixel par pixel (ground truth), ce qui est très coûteux et chronophage."
+  - "Gourmand en mémoire VRAM lors de l'entraînement à cause du stockage des matrices (feature maps) pour les skip-connections."
+  - "Peut devenir lent à l'inférence sur des images de très haute résolution."
 hyperparameters: {}
 code_template: |
   import pandas as pd
@@ -25,23 +36,80 @@ code_template: |
       
       full_pipeline = "UNet Placeholder"
 illustration_mermaid: |
-    graph TD
-      In([Input Image]) --> Down1(Downsample: Conv + Pool)
-      Down1 --> Down2(Downsample: Conv + Pool)
-      Down2 --> Bottleneck(Bottleneck: Conv)
-      Bottleneck --> Up1(Upsample: UpConv)
-      Down2 -.->|Skip Connection| Up1
-      Up1 --> Up2(Upsample: UpConv)
-      Down1 -.->|Skip Connection| Up2
-      Up2 --> Out([Segmentation Mask 1xHxW])
-      
-      style In fill:#f8fafc,stroke:#94a3b8,stroke-width:2px
-      style Down1 fill:#38bdf8,stroke:#0284c7,stroke-width:2px,color:#fff
-      style Down2 fill:#38bdf8,stroke:#0284c7,stroke-width:2px,color:#fff
-      style Bottleneck fill:#8b5cf6,stroke:#7c3aed,stroke-width:2px,color:#fff
-      style Up1 fill:#10b981,stroke:#059669,stroke-width:2px,color:#fff
-      style Up2 fill:#10b981,stroke:#059669,stroke-width:2px,color:#fff
-      style Out fill:#f8fafc,stroke:#94a3b8,stroke-width:2px
+  flowchart LR
+    In[/"Image d'Entrée (Input)"/]:::input --> Down1{"Downsample 1: Conv+Pool"}:::model
+    Down1 --> Down2{"Downsample 2: Conv+Pool"}:::model
+    Down2 --> Bottle{"Bottleneck"}:::model
+    Bottle --> Up1{"Upsample 1: UpConv"}:::model
+    Down2 -. "Skip Connection" .-> Up1
+    Up1 --> Up2{"Upsample 2: UpConv"}:::model
+    Down1 -. "Skip Connection" .-> Up2
+    Up2 --> Out(["Masque de Segmentation"]):::tensor
+
+    classDef input fill:#fbbf24,stroke:#d97706,stroke-width:2px,color:#000
+    classDef model fill:#3b82f6,stroke:#2563eb,stroke-width:2px,color:#fff
+    classDef tensor fill:#10b981,stroke:#059669,stroke-width:2px,color:#fff
+
+math_theory: |
+  U-Net achieves precise semantic segmentation through a fully convolutional encoder-decoder architecture with **skip connections**.
+  
+  The encoder (contracting path) extracts semantic representations using convolutions and pooling. For an input feature map $\textcolor{#ef4444}{\mathbf{X}_{\ell}}$, the next layer is:
+  $$ \textcolor{#fbbf24}{\mathbf{E}_{\ell+1}} = \text{MaxPool}(\text{ReLU}(\textcolor{#3b82f6}{\mathbf{W}_{conv}} * \textcolor{#ef4444}{\mathbf{X}_{\ell}})) $$
+  
+  The decoder (expansive path) reconstructs spatial resolution via transposed convolutions (UpConv). Crucially, to recover fine-grained spatial details lost during pooling, U-Net concatenates the corresponding high-resolution encoder features $\textcolor{#10b981}{\mathbf{E}_{\ell}}$ before further convolutions:
+  $$ \textcolor{#8b5cf6}{\mathbf{D}_{\ell-1}} = \text{ReLU}(\textcolor{#3b82f6}{\mathbf{W}'_{conv}} * [ \text{UpConv}(\textcolor{#8b5cf6}{\mathbf{D}_{\ell}}) ; \textcolor{#10b981}{\mathbf{E}_{\ell}} ]) $$
+  
+  The final layer uses a $1 \times 1$ convolution and a Softmax (or Sigmoid) function to predict a dense segmentation mask $\textcolor{#10b981}{\hat{\mathbf{Y}}}$, mapping each pixel to a class probability:
+  $$ \textcolor{#10b981}{\hat{\mathbf{Y}}_{i,j,c}} = \frac{\exp(z_{i,j,c})}{\sum_{k=1}^C \exp(z_{i,j,k})} $$
+
+math_illustration_svg: |
+  <svg viewBox="0 0 800 400" xmlns="http://www.w3.org/2000/svg">
+    <defs>
+      <marker id="arrow" viewBox="0 0 10 10" refX="10" refY="5" markerWidth="6" markerHeight="6" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="#666" /></marker>
+    </defs>
+    
+    <!-- Input -->
+    <rect x="30" y="100" width="20" height="150" fill="#fee2e2" stroke="#ef4444" stroke-width="2" />
+    <text x="40" y="90" font-family="sans-serif" font-size="14" font-weight="bold" fill="#ef4444" text-anchor="middle">Input X</text>
+
+    <!-- Encoder -->
+    <rect x="100" y="130" width="30" height="120" fill="#fef3c7" stroke="#fbbf24" stroke-width="2" />
+    <text x="115" y="115" font-family="sans-serif" font-size="14" fill="#d97706" text-anchor="middle">E_1</text>
+
+    <rect x="180" y="160" width="40" height="90" fill="#fef3c7" stroke="#fbbf24" stroke-width="2" />
+    <text x="200" y="145" font-family="sans-serif" font-size="14" fill="#d97706" text-anchor="middle">E_2</text>
+
+    <!-- Bottleneck -->
+    <rect x="260" y="190" width="50" height="60" fill="#dbeafe" stroke="#3b82f6" stroke-width="2" />
+    <text x="285" y="175" font-family="sans-serif" font-size="14" font-weight="bold" fill="#1d4ed8" text-anchor="middle">Bottleneck</text>
+
+    <!-- Decoder -->
+    <rect x="380" y="160" width="40" height="90" fill="#ede9fe" stroke="#8b5cf6" stroke-width="2" />
+    <text x="400" y="145" font-family="sans-serif" font-size="14" fill="#6d28d9" text-anchor="middle">D_2</text>
+
+    <rect x="470" y="130" width="30" height="120" fill="#ede9fe" stroke="#8b5cf6" stroke-width="2" />
+    <text x="485" y="115" font-family="sans-serif" font-size="14" fill="#6d28d9" text-anchor="middle">D_1</text>
+
+    <!-- Output Mask -->
+    <rect x="560" y="100" width="20" height="150" fill="#d1fae5" stroke="#10b981" stroke-width="2" />
+    <text x="570" y="90" font-family="sans-serif" font-size="14" font-weight="bold" fill="#059669" text-anchor="middle">Mask Y_hat</text>
+
+    <!-- Paths Down -->
+    <path d="M50,175 L100,175" stroke="#666" stroke-width="2" fill="none" marker-end="url(#arrow)"/>
+    <path d="M130,190 L180,190" stroke="#666" stroke-width="2" fill="none" marker-end="url(#arrow)"/>
+    <path d="M220,220 L260,220" stroke="#666" stroke-width="2" fill="none" marker-end="url(#arrow)"/>
+
+    <!-- Paths Up -->
+    <path d="M310,220 L380,220" stroke="#666" stroke-width="2" fill="none" marker-end="url(#arrow)"/>
+    <path d="M420,190 L470,190" stroke="#666" stroke-width="2" fill="none" marker-end="url(#arrow)"/>
+    <path d="M500,175 L560,175" stroke="#666" stroke-width="2" fill="none" marker-end="url(#arrow)"/>
+
+    <!-- Skip Connections -->
+    <path d="M115,130 L115,50 L485,50 L485,130" stroke="#10b981" stroke-width="3" stroke-dasharray="5,5" fill="none" marker-end="url(#arrow)"/>
+    <path d="M200,160 L200,80 L400,80 L400,160" stroke="#10b981" stroke-width="3" stroke-dasharray="5,5" fill="none" marker-end="url(#arrow)"/>
+
+    <text x="300" y="40" font-family="sans-serif" font-size="14" font-weight="bold" fill="#059669" text-anchor="middle">Skip Connections (Concatenation)</text>
+  </svg>
 
 _metadata:
   bloc: 3

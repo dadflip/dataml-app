@@ -1,19 +1,63 @@
 id: "model_pytorch_tabular_classifier"
 name: "Model: PyTorch Deep Neural Network (Classification)"
-description: "Réseau de neurones artificiels (DNN) profond 100% customisé écrit en PyTorch."
+description: |
+  Réseau de neurones artificiels (DNN) profond 100% sur mesure implémenté via PyTorch pour traiter des données tabulaires complexes. Il offre une grande souplesse pour adapter l'architecture neuronale aux spécificités des problèmes de classification multidimensionnelle.
 category: "Réseaux de Neurones"
 tags: ["model", "classification", "tabular", "pytorch", "dnn", "deep-learning"]
 applies_to: ["Tabulaire"]
-when_to_use: "Pour des données tabulaires complexes lorsque le MLPRegressor (Sklearn) ne suffit plus et que vous avez besoin de flexibilité (GPU, architectures custom)."
+when_to_use: |
+  À privilégier pour des données tabulaires volumineuses et complexes où un MLPRegressor de scikit-learn se révèle insuffisant, particulièrement lorsque vous avez besoin d'une forte capacité d'adaptation architecturale et d'une accélération matérielle (GPU/MPS).
+use_cases:
+  - "Détection de fraude sophistiquée nécessitant de capturer de subtiles interactions non-linéaires."
+  - "Catégorisation complexe de vastes bases de données clients."
+  - "Diagnostic médical automatisé reposant sur un grand volume de variables cliniques."
 pros:
-  - "Contrôle total sur l'architecture et la boucle d'entraînement."
-  - "Exploite le GPU (CUDA/MPS)."
+  - "Flexibilité architecturale totale et contrôle granulaire sur la boucle d'entraînement."
+  - "Tire pleinement parti de l'accélération matérielle via GPU (CUDA, MPS)."
+  - "Meilleure intégration dans un écosystème de deep learning complexe."
 cons:
-  - "Beaucoup de code, difficile de trouver les bons hyperparamètres."
+  - "Nécessite d'écrire et de maintenir plus de code boilerplate."
+  - "Sensibilité accrue aux hyperparamètres requérant un ajustement minutieux (learning rate, architecture)."
+  - "Prétraitement strict requis (mise à l'échelle indispensable)."
 hyperparameters:
   hidden_layers: "Liste des tailles de couches cachées séparées par virgules (ex: '128, 64, 32')."
   epochs: "Nombre d'époques (ex: 20)."
   learning_rate: "Taux d'apprentissage (ex: 0.001)."
+math_theory: |
+  Un réseau de neurones profond (DNN) applique une séquence de transformations affines suivies de fonctions d'activation non-linéaires. Pour une couche $l$ :
+  $$ \textcolor{#3b82f6}{h^{\textcolor{#3b82f6}{(l)}}} = \sigma(\textcolor{#8b5cf6}{W^{\textcolor{#8b5cf6}{(l)}}} \textcolor{#fbbf24}{h^{\textcolor{#fbbf24}{(l-1)}}} + \textcolor{#8b5cf6}{b^{\textcolor{#8b5cf6}{(l)}}}) $$
+  où $\textcolor{#fbbf24}{h^{\textcolor{#fbbf24}{(0)}}} = \textcolor{#ef4444}{x}$ est l'entrée tabulaire.
+  La sortie passe par une fonction Softmax pour obtenir les probabilités des classes :
+  $$ \textcolor{#10b981}{\hat{y}_c} = \frac{\exp(\textcolor{#3b82f6}{h_c^{\textcolor{#3b82f6}{(L)}}})}{\sum_{j} \exp(\textcolor{#3b82f6}{h_j^{\textcolor{#3b82f6}{(L)}}})} $$
+  La perte est optimisée via l'entropie croisée (Cross-Entropy).
+math_illustration_svg: |
+  <svg viewBox="0 0 800 400" xmlns="http://www.w3.org/2000/svg">
+    <rect width="800" height="400" fill="#f8fafc" rx="10"/>
+    <rect x="50" y="100" width="80" height="200" rx="8" fill="#ef4444" opacity="0.1" stroke="#ef4444" stroke-width="2"/>
+    <text x="90" y="205" font-family="sans-serif" font-size="18" font-weight="bold" fill="#ef4444" text-anchor="middle">Input x</text>
+    <path d="M 130 150 L 230 150" stroke="#8b5cf6" stroke-width="2" fill="none" opacity="0.5"/>
+    <path d="M 130 250 L 230 250" stroke="#8b5cf6" stroke-width="2" fill="none" opacity="0.5"/>
+    <path d="M 130 150 L 230 250" stroke="#8b5cf6" stroke-width="2" fill="none" opacity="0.5"/>
+    <path d="M 130 250 L 230 150" stroke="#8b5cf6" stroke-width="2" fill="none" opacity="0.5"/>
+    <rect x="230" y="60" width="80" height="280" rx="8" fill="#fbbf24" opacity="0.1" stroke="#fbbf24" stroke-width="2"/>
+    <text x="270" y="205" font-family="sans-serif" font-size="18" font-weight="bold" fill="#d97706" text-anchor="middle">h^(1)</text>
+    <path d="M 310 150 L 410 150" stroke="#8b5cf6" stroke-width="2" fill="none" opacity="0.5"/>
+    <path d="M 310 250 L 410 250" stroke="#8b5cf6" stroke-width="2" fill="none" opacity="0.5"/>
+    <path d="M 310 150 L 410 250" stroke="#8b5cf6" stroke-width="2" fill="none" opacity="0.5"/>
+    <path d="M 310 250 L 410 150" stroke="#8b5cf6" stroke-width="2" fill="none" opacity="0.5"/>
+    <rect x="410" y="80" width="80" height="240" rx="8" fill="#3b82f6" opacity="0.1" stroke="#3b82f6" stroke-width="2"/>
+    <text x="450" y="205" font-family="sans-serif" font-size="18" font-weight="bold" fill="#3b82f6" text-anchor="middle">h^(L)</text>
+    <path d="M 490 200 L 590 200" stroke="#8b5cf6" stroke-width="2" fill="none" marker-end="url(#arrow)"/>
+    <text x="540" y="190" font-family="sans-serif" font-size="14" font-weight="bold" fill="#8b5cf6" text-anchor="middle">W^(out)</text>
+    <rect x="590" y="140" width="120" height="120" rx="8" fill="#10b981" opacity="0.1" stroke="#10b981" stroke-width="2"/>
+    <text x="650" y="190" font-family="sans-serif" font-size="16" font-weight="bold" fill="#10b981" text-anchor="middle">Softmax</text>
+    <text x="650" y="220" font-family="sans-serif" font-size="18" font-weight="bold" fill="#10b981" text-anchor="middle">y_hat</text>
+    <defs>
+      <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto">
+        <path d="M 0 0 L 10 5 L 0 10 z" fill="#94a3b8"/>
+      </marker>
+    </defs>
+  </svg>
 code_template: |
   import pandas as pd
   import numpy as np
@@ -166,37 +210,24 @@ code_template: |
               ('model', wrapped_model)
           ])
 illustration_mermaid: |
-  graph TD
-    subgraph Data Pipeline
-      Input([Raw Features]) --> Preprocessor[[Data Preprocessing]]
-      Preprocessor --> Tensors[(PyTorch Tensors)]
-      Tensors --> Dataloader[[DataLoader Batching]]
-    end
-    subgraph Neural Network Architecture
-      Dataloader --> L1[Linear Layer]
-      L1 --> R1(ReLU)
-      R1 --> B1(BatchNorm + Dropout)
-      B1 --> L2[Linear Layer]
-      L2 --> R2(ReLU)
-      R2 --> B2(BatchNorm + Dropout)
-      B2 --> L3[Linear Layer]
-      L3 --> R3(ReLU)
-      R3 --> B3(BatchNorm + Dropout)
-      B3 --> L_out[Linear Output Layer]
-    end
-    subgraph Loss & Opt
-      L_out --> Loss{CrossEntropyLoss}
-      Target[(Labels)] --> Loss
-      Loss --> Opt[[Adam Optimizer]]
-      Opt --> |Updates weights| L1
-    end
-    subgraph Evaluation
-      L_out --> Softmax(Softmax)
-      Softmax --> Probs([Probabilities])
-      Probs --> Preds([Class Predictions])
-    end
-    style Input fill:#f8fafc,stroke:#94a3b8,stroke-width:1px
-    style Preds fill:#f8fafc,stroke:#94a3b8,stroke-width:1px
+  flowchart LR
+    In[/ "Données brutes" /]
+    style In fill:#fbbf24,stroke:#d97706,stroke-width:2px,color:#000
+    Pre{"Prétraitement"}
+    style Pre fill:#3b82f6,stroke:#2563eb,stroke-width:2px,color:#fff
+    Tens(["Tenseurs PyTorch"])
+    style Tens fill:#10b981,stroke:#059669,stroke-width:2px,color:#fff
+    Net{"Réseau de Neurones\n(Linear, ReLU, BatchNorm)"}
+    style Net fill:#3b82f6,stroke:#2563eb,stroke-width:2px,color:#fff
+    Soft{"Softmax & Loss"}
+    style Soft fill:#3b82f6,stroke:#2563eb,stroke-width:2px,color:#fff
+    Pred(["Prédictions & Probabilités"])
+    style Pred fill:#10b981,stroke:#059669,stroke-width:2px,color:#fff
+    Opt(["Optimiseur Adam"])
+    style Opt fill:#8b5cf6,stroke:#7c3aed,stroke-width:2px,color:#fff
+
+    In --> Pre --> Tens --> Net --> Soft --> Pred
+    Soft -.->|"Update weights"| Opt -.-> Net
 
 _metadata:
   bloc: 3

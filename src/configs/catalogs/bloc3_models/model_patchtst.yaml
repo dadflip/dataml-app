@@ -1,14 +1,24 @@
 id: "model_patchtst"
 name: "Model: PatchTST (Transformers Time Series)"
-description: "Time Series Transformer basé sur des 'patchs'. Modèle SOTA de HuggingFace pour le forecasting long terme."
+description: |
+  PatchTST (Patch Time Series Transformer) est une architecture d'apprentissage profond de pointe pour la prévision de séries temporelles, disponible via HuggingFace. Elle divise les séquences temporelles en "patchs" (segments courts), ce qui permet aux Transformers de traiter très efficacement de longues dépendances temporelles tout en préservant le contexte sémantique local.
 category: "Modèles Séries Temporelles"
 tags: ["model", "time-series", "forecasting", "transformers", "huggingface", "deep-learning"]
 applies_to: ["Séries Temporelles"]
-when_to_use: "Séries temporelles complexes, longues, avec de multiples signaux."
+when_to_use: |
+  Privilégier PatchTST pour des tâches de prévisions à long terme sur des séries temporelles multivariées complexes, volumineuses et hautement saisonnières. Idéal lorsque vous disposez d'un GPU et d'un grand historique de données.
+use_cases:
+  - "Prévision de la demande énergétique (électricité, gaz) sur de longs horizons temporels avec de multiples variables exogènes (météo, jours fériés)."
+  - "Anticipation des marchés financiers à haute fréquence en exploitant simultanément plusieurs signaux corrélés."
+  - "Prédiction de la charge du trafic réseau ou des serveurs cloud pour de l'allocation dynamique de ressources."
 pros:
-  - "Surpasse souvent les LSTM et Prophet sur des fenêtres de temps très longues."
+  - "Performances à l'état de l'art (SOTA) surpassant souvent les LSTMs et modèles statistiques (ARIMA, Prophet) sur le long terme."
+  - "L'approche par patchs réduit drastiquement la complexité quadratique de l'attention des Transformers."
+  - "Excellente indépendance des canaux (channel independence) permettant une modélisation multivariée robuste."
 cons:
-  - "Demande beaucoup de réglages de tenseurs en PyTorch pour l'entraînement."
+  - "Requiert une expertise technique poussée pour configurer les DataLoaders et formater les tenseurs PyTorch."
+  - "Très coûteux en ressources de calcul (nécessite typiquement un GPU pour l'entraînement)."
+  - "Peut sur-apprendre (overfitting) ou s'avérer inefficace sur de petites séries temporelles limitées."
 hyperparameters: {}
 code_template: |
   import pandas as pd
@@ -24,11 +34,94 @@ code_template: |
       y_proba = None
       feature_importances = None
       model = "PatchTST Placeholder (Naive Forecast)"
+math_theory: |
+  PatchTST traite les séries temporelles multivariées de manière indépendante pour chaque canal.
+  Une série temporelle $\textcolor{#10b981}{x^{(i)}}$ de longueur $L$ est segmentée en patches (fenêtres de chevauchement) $\textcolor{#fbbf24}{P^{(i)}}$ de taille $P_{len}$.
+  
+  $$ \textcolor{#fbbf24}{P^{(i)}} = \text{Patching}(\textcolor{#10b981}{x^{(i)}}) \in \mathbb{R}^{N \times P_{len}} $$
+  
+  Chaque patch est ensuite projeté dans un espace latent $\textcolor{#3b82f6}{H^{(i)}}$ via une transformation linéaire $\textcolor{#8b5cf6}{W}$, et enrichi par un encodage positionnel.
+  
+  $$ \textcolor{#3b82f6}{H^{(i)}} = \textcolor{#fbbf24}{P^{(i)}} \textcolor{#8b5cf6}{W} + E_{pos} $$
+  
+  L'encodeur Transformer traite alors cette séquence de patches $\textcolor{#3b82f6}{H^{(i)}}$ pour modéliser les dépendances temporelles avec un coût attentionnel drastiquement réduit $\mathcal{O}(N^2)$ au lieu de $\mathcal{O}(L^2)$, générant des prédictions $\textcolor{#ef4444}{\hat{y}}$.
+math_illustration_svg: |
+  <svg viewBox="0 0 800 300" xmlns="http://www.w3.org/2000/svg">
+    <!-- Time Series Input -->
+    <path d="M 50 150 Q 80 100 110 160 T 170 120 T 230 180" fill="none" stroke="#10b981" stroke-width="4" />
+    <text x="140" y="210" fill="#10b981" font-family="sans-serif" font-size="18" font-weight="bold" text-anchor="middle">Input Time Series x</text>
+    
+    <!-- Patching -->
+    <rect x="280" y="100" width="40" height="80" rx="5" fill="#fbbf24" opacity="0.8" />
+    <rect x="300" y="110" width="40" height="80" rx="5" fill="#fbbf24" opacity="0.8" />
+    <rect x="320" y="120" width="40" height="80" rx="5" fill="#fbbf24" opacity="0.8" />
+    <text x="320" y="230" fill="#fbbf24" font-family="sans-serif" font-size="18" font-weight="bold" text-anchor="middle">Patches P</text>
+    
+    <!-- Linear Projection -->
+    <path d="M 380 150 L 430 150" stroke="black" stroke-width="2" marker-end="url(#arrow)" />
+    <text x="405" y="140" fill="#8b5cf6" font-family="sans-serif" font-size="16" font-weight="bold" text-anchor="middle">W</text>
+    
+    <!-- Transformer & Embeddings -->
+    <rect x="450" y="100" width="120" height="100" rx="10" fill="#3b82f6" />
+    <text x="510" y="155" fill="white" font-family="sans-serif" font-size="18" font-weight="bold" text-anchor="middle">Transformer</text>
+    <text x="510" y="230" fill="#3b82f6" font-family="sans-serif" font-size="18" font-weight="bold" text-anchor="middle">Latent H</text>
+    
+    <!-- Prediction -->
+    <path d="M 570 150 L 620 150" stroke="black" stroke-width="2" marker-end="url(#arrow)" />
+    <circle cx="680" cy="150" r="30" fill="#ef4444" />
+    <text x="680" y="156" fill="white" font-family="sans-serif" font-size="18" font-weight="bold" text-anchor="middle">y^</text>
+    
+    <defs>
+      <marker id="arrow" markerWidth="10" markerHeight="10" refX="9" refY="3" orient="auto" markerUnits="strokeWidth">
+        <path d="M0,0 L0,6 L9,3 z" fill="black" />
+      </marker>
+    </defs>
+  </svg>
 illustration_mermaid: |
-    graph LR
-      In([Raw Data]) -->|Process| Out([Clean Data])
-      style In fill:#eff6ff,stroke:#94a3b8,stroke-width:2px,stroke-dasharray: 5 5
-      style Out fill:#10b981,stroke:#059669,stroke-width:2px,color:#fff
+  flowchart LR
+    %% Inputs/Params
+    DataTrain[/ "Séries Temporelles (Multivariées)" /]
+    Params[/ "Hyperparamètres (Patch length, Stride)" /]
+    
+    %% Processes/Models
+    Patching{"Patching & Projection"}
+    Embed{"Position Embedding"}
+    Transformer{"Encodeur Transformer (Attention)"}
+    Flatten{"Aplatissement & Tête Linéaire"}
+    Predict{"Inférence (Prévision)"}
+    
+    %% Tensors/DataFrames
+    PatchTensor(["Tenseur de Patchs (Tokens)"])
+    EmbedTensor(["Représentation Latente"])
+    Model(["Modèle PatchTST Entraîné"])
+    Pred(["Prévisions Long Terme (Horizon)"])
+    
+    %% Connections
+    DataTrain --> Patching
+    Params --> Patching
+    Patching --> PatchTensor
+    PatchTensor --> Embed
+    Embed --> EmbedTensor
+    EmbedTensor --> Transformer
+    Transformer --> Flatten
+    Flatten --> Model
+    Model --> Predict
+    Predict --> Pred
+    
+    %% Styling
+    style DataTrain fill:#fbbf24,stroke:#d97706,stroke-width:2px,color:#000
+    style Params fill:#fbbf24,stroke:#d97706,stroke-width:2px,color:#000
+    
+    style Patching fill:#3b82f6,stroke:#2563eb,stroke-width:2px,color:#fff
+    style Embed fill:#3b82f6,stroke:#2563eb,stroke-width:2px,color:#fff
+    style Transformer fill:#3b82f6,stroke:#2563eb,stroke-width:2px,color:#fff
+    style Flatten fill:#3b82f6,stroke:#2563eb,stroke-width:2px,color:#fff
+    style Predict fill:#3b82f6,stroke:#2563eb,stroke-width:2px,color:#fff
+    
+    style PatchTensor fill:#10b981,stroke:#059669,stroke-width:2px,color:#fff
+    style EmbedTensor fill:#10b981,stroke:#059669,stroke-width:2px,color:#fff
+    style Model fill:#10b981,stroke:#059669,stroke-width:2px,color:#fff
+    style Pred fill:#10b981,stroke:#059669,stroke-width:2px,color:#fff
 
 _metadata:
   bloc: 3

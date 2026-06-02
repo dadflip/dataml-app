@@ -1,6 +1,18 @@
 id: "load_parquet"
 name: "Load: Fichier Parquet"
 description: "Charge un fichier binaire orienté colonnes (très performant pour le Big Data)."
+when_to_use: "Utilisez ce composant lorsque vous travaillez avec des volumes importants de données structurées nécessitant des temps de lecture et d'écriture rapides, ou lorsque vous devez optimiser le stockage."
+use_cases:
+  - "Chargement de grands datasets tabulaires."
+  - "Pipelines Big Data où l'espace disque et le temps de lecture sont critiques."
+  - "Traitement de données temporelles ou financières en colonnes."
+pros:
+  - "Très performant pour les opérations analytiques (lectures par colonnes)."
+  - "Taux de compression élevé grâce à sa structure binaire en colonnes."
+  - "Conserve les types de données natifs des colonnes, contrairement aux fichiers CSV."
+cons:
+  - "Les fichiers ne sont pas lisibles par l'homme (contrairement au CSV)."
+  - "Moins adapté pour les écritures transactionnelles fréquentes (plutôt conçu pour du write-once, read-many)."
 category: "2. Load"
 tags: ["load", "parquet", "bigdata", "pandas"]
 code_template: |
@@ -23,16 +35,21 @@ output_variables:
   - meta
 illustration_mermaid: |
     flowchart LR
-      A[fa:fa-table FILE_PATH<br/>data.parquet] -->|pandas read_parquet| B(fa:fa-cogs Load Parquet)
-      B --> C[(df<br/>Data Table)]
-      B --> D{{meta<br/>path}}
-      B --> E([target_name, task_type])
-      
-      style A fill:#3b82f6,stroke:#2563eb,stroke-width:2px,color:#fff
-      style B fill:#10b981,stroke:#059669,stroke-width:2px,color:#fff
-      style C fill:#eff6ff,stroke:#3b82f6,stroke-width:2px
-      style D fill:#fef3c7,stroke:#d97706,stroke-width:2px
-      style E fill:#f3f4f6,stroke:#6b7280,stroke-width:2px
+        A[/"📄 FILE_PATH (data.parquet)"/] --> B{"pandas.read_parquet()"}
+        C[/"🎯 TARGET_COL"/] --> D{"Check TARGET_COL"}
+        B --> E(["📊 df (Data Table)"])
+        E --> D
+        D --> F(["🎯 target_name"])
+        D --> G(["⚙️ task_type"])
+        D --> H(["ℹ️ meta (path)"])
+        style A fill:#fbbf24,stroke:#d97706,stroke-width:2px,color:#000
+        style C fill:#fbbf24,stroke:#d97706,stroke-width:2px,color:#000
+        style B fill:#3b82f6,stroke:#2563eb,stroke-width:2px,color:#fff
+        style D fill:#3b82f6,stroke:#2563eb,stroke-width:2px,color:#fff
+        style E fill:#10b981,stroke:#059669,stroke-width:2px,color:#fff
+        style F fill:#8b5cf6,stroke:#7c3aed,stroke-width:2px,color:#fff
+        style G fill:#8b5cf6,stroke:#7c3aed,stroke-width:2px,color:#fff
+        style H fill:#8b5cf6,stroke:#7c3aed,stroke-width:2px,color:#fff
 
 _metadata:
   bloc: 1

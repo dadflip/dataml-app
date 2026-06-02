@@ -1,18 +1,44 @@
 id: "model_svr"
 name: "Model: Support Vector Regressor (SVR)"
-description: "Régression à vecteurs de support. Utilise l'astuce du noyau pour des relations non-linéaires."
+description: |
+  Régression à vecteurs de support. Utilise l'astuce du noyau (Kernel Trick) pour modéliser des relations non linéaires complexes. L'objectif est de trouver une fonction qui dévie au maximum d'une valeur $\epsilon$ (epsilon) des cibles réelles pour l'ensemble d'entraînement.
 category: "Modèles Basés sur la Distance / Marges"
 tags: ["model", "regression", "tabular", "sklearn", "svm"]
 applies_to: ["Tabulaire"]
-when_to_use: "Petits datasets non-linéaires où l'erreur est mesurée avec une tolérance (epsilon)."
+when_to_use: |
+  Jeux de données de petite à moyenne taille (généralement < 10 000 échantillons) présentant des relations non linéaires complexes. Très utile lorsque l'on souhaite contrôler la tolérance à l'erreur via le paramètre epsilon.
+use_cases:
+  - "Prévision de séries temporelles avec des composantes non linéaires (ex: prévision de charge électrique)."
+  - "Modélisation de propriétés physico-chimiques en sciences des matériaux ou chimie."
+  - "Prévision de la demande ou des prix sur des marchés de niche avec des données de taille modérée."
 pros:
-  - "Très puissant en dimension modérée."
+  - "Très performant dans les espaces de dimension modérée à grande."
+  - "Robuste face aux valeurs aberrantes grâce à la marge de tolérance $\epsilon$ (tube epsilon-insensible)."
+  - "Grande flexibilité de modélisation offerte par les différents noyaux disponibles."
 cons:
-  - "Lent sur plus de 10 000 échantillons."
+  - "Temps d'entraînement prohibitif sur les grands ensembles de données (> 10 000 échantillons)."
+  - "Exige un prétraitement rigoureux des données, notamment une standardisation stricte."
+  - "Sensibilité élevée aux choix des hyperparamètres (C, $\epsilon$ et paramètres du noyau)."
 hyperparameters:
   kernel: "Noyau ('rbf', 'poly', 'linear', 'sigmoid')."
   C: "Pénalité."
   epsilon: "Marge de tolérance d'erreur (ex: 0.1)."
+math_theory: |
+  Le SVR cherche une fonction d'approximation qui tolère une erreur de prédiction jusqu'à un certain seuil (le tube $\textcolor{#10b981}{\epsilon}$), et pénalise les erreurs au-delà via des variables d'écart $\textcolor{#ef4444}{\xi_i}, \textcolor{#ef4444}{\xi_i^*}$.
+  
+  L'objectif primal est :
+  $$\min_{\textcolor{#3b82f6}{w}, b, \textcolor{#ef4444}{\xi}, \textcolor{#ef4444}{\xi^*}} \frac{1}{2} \|\textcolor{#3b82f6}{w}\|^2 + \textcolor{#fbbf24}{C} \sum_{i=1}^{n} (\textcolor{#ef4444}{\xi_i} + \textcolor{#ef4444}{\xi_i^*})$$
+  
+  Sous les contraintes (pour chaque point $\textcolor{#fbbf24}{x_i}$) :
+  $$\textcolor{#8b5cf6}{y_i} - (\textcolor{#3b82f6}{w}^T \phi(\textcolor{#fbbf24}{x_i}) + b) \leq \textcolor{#10b981}{\epsilon} + \textcolor{#ef4444}{\xi_i}$$
+  $$(\textcolor{#3b82f6}{w}^T \phi(\textcolor{#fbbf24}{x_i}) + b) - \textcolor{#8b5cf6}{y_i} \leq \textcolor{#10b981}{\epsilon} + \textcolor{#ef4444}{\xi_i^*}$$
+  $$\textcolor{#ef4444}{\xi_i}, \textcolor{#ef4444}{\xi_i^*} \geq 0$$
+  
+  - $\textcolor{#3b82f6}{w}$ : Vecteur de poids (détermine la régularité de la fonction).
+  - $\textcolor{#10b981}{\epsilon}$ : Marge du tube de tolérance où l'erreur n'est pas pénalisée.
+  - $\textcolor{#ef4444}{\xi_i}, \textcolor{#ef4444}{\xi_i^*}$ : Variables d'écart (slack) mesurant l'erreur au-dessus et en dessous du tube.
+  - $\textcolor{#fbbf24}{C}$ : Paramètre de régularisation pénalisant les erreurs extérieures.
+  - $\textcolor{#8b5cf6}{y_i}$ : Cible continue.
 code_template: |
   import pandas as pd
   import numpy as np
@@ -21,13 +47,67 @@ code_template: |
   # [PARAM: KERNEL | string]
   KERNEL = "rbf"
 illustration_mermaid: |
-    graph LR
-      Data([Features]) --> Model((Machine Learning))
-      Model --> Pred([Predictions])
-      style Model fill:#8b5cf6,stroke:#7c3aed,stroke-width:2px,color:#fff
-      style Data fill:#f8fafc,stroke:#94a3b8,stroke-width:1px
-      style Pred fill:#f8fafc,stroke:#94a3b8,stroke-width:1px
+  flowchart LR
+    Data(["Données Tabulaires d'Entrée"])
+    Params[/"Hyperparamètres (C, epsilon, kernel)"/]
+    Model{"Support Vector Regressor (SVR)"}
+    Pred(["Prédictions Continues"])
+    
+    Data --> Model
+    Params --> Model
+    Model --> Pred
 
+    style Data fill:#10b981,stroke:#059669,stroke-width:2px,color:#fff
+    style Params fill:#fbbf24,stroke:#d97706,stroke-width:2px,color:#000
+    style Model fill:#3b82f6,stroke:#2563eb,stroke-width:2px,color:#fff
+    style Pred fill:#10b981,stroke:#059669,stroke-width:2px,color:#fff
+math_illustration_svg: |
+  <svg viewBox="0 0 500 250" xmlns="http://www.w3.org/2000/svg">
+    <rect width="500" height="250" fill="#f8fafc" rx="10" />
+    
+    <!-- Axes limit-->
+    <rect x="50" y="30" width="400" height="190" fill="#ffffff" stroke="#cbd5e1" stroke-width="2" rx="5" />
+    
+    <!-- Epsilon Tube Area -->
+    <polygon points="60,180 360,40 440,80 140,220" fill="#10b981" opacity="0.1" />
+    
+    <!-- Regression Function f(x) = w^T x + b -->
+    <line x1="100" y1="200" x2="400" y2="60" stroke="#3b82f6" stroke-width="3" />
+    <text x="410" y="65" font-family="Arial" font-size="12" fill="#3b82f6" font-weight="bold">f(x)</text>
+    
+    <!-- Epsilon Boundaries f(x) + e and f(x) - e -->
+    <line x1="60" y1="180" x2="360" y2="40" stroke="#10b981" stroke-width="2" stroke-dasharray="5" />
+    <line x1="140" y1="220" x2="440" y2="80" stroke="#10b981" stroke-width="2" stroke-dasharray="5" />
+    <text x="370" y="45" font-family="Arial" font-size="12" fill="#10b981">+ ε</text>
+    <text x="450" y="85" font-family="Arial" font-size="12" fill="#10b981">- ε</text>
+    <text x="210" y="210" font-family="Arial" font-size="12" fill="#10b981" font-style="italic">Tube Epsilon-Insensible</text>
+    
+    <!-- Points inside tube (Error = 0) -->
+    <circle cx="150" cy="150" r="5" fill="#94a3b8" />
+    <circle cx="200" cy="140" r="5" fill="#94a3b8" />
+    <circle cx="250" cy="130" r="5" fill="#94a3b8" />
+    <circle cx="300" cy="110" r="5" fill="#94a3b8" />
+    <circle cx="350" cy="80" r="5" fill="#94a3b8" />
+    
+    <!-- Points outside tube (Support Vectors) -->
+    <!-- Point above tube -> xi -->
+    <circle cx="220" cy="70" r="6" fill="#8b5cf6" />
+    <circle cx="220" cy="70" r="10" fill="none" stroke="#ef4444" stroke-width="2" stroke-dasharray="2" />
+    <line x1="220" y1="70" x2="220" y2="105" stroke="#ef4444" stroke-width="2" marker-end="url(#arrow-red)" />
+    <text x="225" y="85" font-family="Arial" font-size="14" fill="#ef4444" font-weight="bold">ξ_i</text>
+    
+    <!-- Point below tube -> xi* -->
+    <circle cx="300" cy="180" r="6" fill="#8b5cf6" />
+    <circle cx="300" cy="180" r="10" fill="none" stroke="#ef4444" stroke-width="2" stroke-dasharray="2" />
+    <line x1="300" y1="180" x2="300" y2="145" stroke="#ef4444" stroke-width="2" marker-end="url(#arrow-red)" />
+    <text x="310" y="170" font-family="Arial" font-size="14" fill="#ef4444" font-weight="bold">ξ_i*</text>
+    
+    <defs>
+      <marker id="arrow-red" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+        <path d="M 0 0 L 10 5 L 0 10 z" fill="#ef4444" />
+      </marker>
+    </defs>
+  </svg>
 _metadata:
   bloc: 3
   section: "2_regression_tabulaire"

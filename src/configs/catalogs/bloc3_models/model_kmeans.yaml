@@ -1,14 +1,21 @@
 id: "model_kmeans"
 name: "Model: K-Means Clustering"
-description: "Algorithme non-supervisé de partitionnement en K groupes (clusters) homogènes."
+description: "Algorithme d'apprentissage non-supervisé de partitionnement de données. Il regroupe les observations en K clusters homogènes en minimisant la variance intra-cluster (inertie)."
 category: "Clustering (Non-Supervisé)"
-tags: ["model", "clustering", "tabular", "sklearn", "kmeans"]
+tags: ["model", "clustering", "tabular", "sklearn", "kmeans", "unsupervised"]
 applies_to: ["Tabulaire"]
-when_to_use: "Pour segmenter une base de clients ou trouver des profils types sans variables cibles (y)."
+when_to_use: "À utiliser pour segmenter une population, identifier des profils types ou réduire la complexité d'un grand ensemble de données lorsque aucune variable cible (y) n'est disponible."
+use_cases:
+  - "Segmentation marketing : Regroupement de clients ayant des comportements d'achat similaires."
+  - "Compression d'image (Quantification) : Réduction du nombre de couleurs dans une image."
+  - "Détection de signaux faibles : Identification de groupes minoritaires au sein d'une large population."
 pros:
-  - "Très rapide et intuitif."
+  - "Implémentation extrêmement rapide et passage à l'échelle très efficace sur de grands volumes de données."
+  - "Résultats très intuitifs et faciles à interpréter visuellement en 2D ou 3D."
 cons:
-  - "Nécessite de connaître K à l'avance. Sensible aux outliers et aux variables non scalées."
+  - "Nécessite la définition préalable du nombre de clusters (K), souvent via la méthode du coude ou le score de silhouette."
+  - "Très sensible à l'échelle des variables (standardisation requise) et à la présence de valeurs aberrantes (outliers)."
+  - "Ne gère que des clusters de forme sphérique (convexe), peinant sur des structures géométriques complexes."
 hyperparameters:
   n_clusters: "Nombre de clusters K à former (ex: 3)."
 code_template: |
@@ -43,25 +50,67 @@ code_template: |
       task_type = "clustering"
       meta = {}
 illustration_mermaid: |
-  graph TD
-    subgraph Initialization
-      Data[Input Data Points] --> Init[Initialize K Centroids]
-    end
-    subgraph Iteration
-      Init --> Assign[Assign points to nearest centroid]
-      Assign --> Update[Recompute centroid means]
-      Update --> Check{Centroids moved?}
-      Check -->|Yes| Assign
-    end
-    subgraph Output
-      Check -->|No| Converge[Algorithm Converged]
-      Converge --> Out[Final Cluster Labels]
-    end
-    style Init fill:#3b82f6,stroke:#2563eb,stroke-width:2px,color:#fff
-    style Assign fill:#8b5cf6,stroke:#7c3aed,stroke-width:2px,color:#fff
-    style Update fill:#8b5cf6,stroke:#7c3aed,stroke-width:2px,color:#fff
-    style Converge fill:#10b981,stroke:#059669,stroke-width:2px,color:#fff
+  flowchart LR
+    Data(["Données Entrantes"])
+    Init{"Initialisation des Centres"}
+    Assign{"Assignation aux Centres"}
+    Update{"Mise à jour des Moyennes"}
+    Converge{"Convergence ?"}
+    Out(["Labels (Clusters)"])
 
+    Data --> Init
+    Init --> Assign
+    Assign --> Update
+    Update --> Converge
+    Converge -- "Non (Boucle)" --> Assign
+    Converge -- "Oui" --> Out
+
+    style Data fill:#10b981,stroke:#059669,stroke-width:2px,color:#fff
+    style Out fill:#10b981,stroke:#059669,stroke-width:2px,color:#fff
+    style Init fill:#3b82f6,stroke:#2563eb,stroke-width:2px,color:#fff
+    style Assign fill:#3b82f6,stroke:#2563eb,stroke-width:2px,color:#fff
+    style Update fill:#3b82f6,stroke:#2563eb,stroke-width:2px,color:#fff
+    style Converge fill:#3b82f6,stroke:#2563eb,stroke-width:2px,color:#fff
+
+math_theory: |
+  $$ J = \sum_{\textcolor{#3b82f6}{k}=1}^{\textcolor{#10b981}{K}} \sum_{x \in C_{\textcolor{#3b82f6}{k}}} || x - \textcolor{#fbbf24}{\mu}_{\textcolor{#3b82f6}{k}} ||^2 $$
+  
+  Où :
+  - $\textcolor{#10b981}{K}$ est le nombre total de clusters.
+  - $C_{\textcolor{#3b82f6}{k}}$ représente l'ensemble des points assignés au cluster $\textcolor{#3b82f6}{k}$.
+  - $\textcolor{#fbbf24}{\mu}_{\textcolor{#3b82f6}{k}}$ est le centroïde (la moyenne) du cluster $\textcolor{#3b82f6}{k}$.
+  - L'objectif est de minimiser l'inertie $J$, c'est-à-dire la somme des distances au carré entre chaque point $x$ et le centroïde de son cluster.
+math_illustration_svg: |
+  <svg viewBox="0 0 500 250" xmlns="http://www.w3.org/2000/svg">
+    <rect width="500" height="250" fill="#f8fafc" rx="10"/>
+    <circle cx="120" cy="120" r="60" fill="#3b82f6" fill-opacity="0.1" stroke="#3b82f6" stroke-dasharray="4"/>
+    <circle cx="120" cy="120" r="6" fill="#fbbf24"/>
+    <text x="135" y="115" font-family="Arial" font-size="14" font-weight="bold" fill="#fbbf24">μ1</text>
+    <circle cx="100" cy="90" r="4" fill="#3b82f6"/>
+    <line x1="100" y1="90" x2="120" y2="120" stroke="#3b82f6" stroke-width="1" opacity="0.5"/>
+    <circle cx="140" cy="100" r="4" fill="#3b82f6"/>
+    <line x1="140" y1="100" x2="120" y2="120" stroke="#3b82f6" stroke-width="1" opacity="0.5"/>
+    <circle cx="90" cy="140" r="4" fill="#3b82f6"/>
+    <line x1="90" y1="140" x2="120" y2="120" stroke="#3b82f6" stroke-width="1" opacity="0.5"/>
+    <circle cx="150" cy="150" r="4" fill="#3b82f6"/>
+    <line x1="150" y1="150" x2="120" y2="120" stroke="#3b82f6" stroke-width="1" opacity="0.5"/>
+    <text x="70" y="60" font-family="Arial" font-size="14" font-weight="bold" fill="#3b82f6">k=1</text>
+    <circle cx="350" cy="150" r="70" fill="#10b981" fill-opacity="0.1" stroke="#10b981" stroke-dasharray="4"/>
+    <circle cx="350" cy="150" r="6" fill="#fbbf24"/>
+    <text x="365" y="145" font-family="Arial" font-size="14" font-weight="bold" fill="#fbbf24">μ2</text>
+    <circle cx="320" cy="120" r="4" fill="#10b981"/>
+    <line x1="320" y1="120" x2="350" y2="150" stroke="#10b981" stroke-width="1" opacity="0.5"/>
+    <circle cx="380" cy="130" r="4" fill="#10b981"/>
+    <line x1="380" y1="130" x2="350" y2="150" stroke="#10b981" stroke-width="1" opacity="0.5"/>
+    <circle cx="340" cy="190" r="4" fill="#10b981"/>
+    <line x1="340" y1="190" x2="350" y2="150" stroke="#10b981" stroke-width="1" opacity="0.5"/>
+    <circle cx="390" cy="170" r="4" fill="#10b981"/>
+    <line x1="390" y1="170" x2="350" y2="150" stroke="#10b981" stroke-width="1" opacity="0.5"/>
+    <circle cx="310" cy="160" r="4" fill="#10b981"/>
+    <line x1="310" y1="160" x2="350" y2="150" stroke="#10b981" stroke-width="1" opacity="0.5"/>
+    <text x="400" y="100" font-family="Arial" font-size="14" font-weight="bold" fill="#10b981">k=2</text>
+    <text x="250" y="30" font-family="Arial" font-size="16" font-weight="bold" text-anchor="middle" fill="#1f2937">Minimisation de la variance (K=2)</text>
+  </svg>
 _metadata:
   bloc: 3
   section: "5_clustering_automl_and_nn"

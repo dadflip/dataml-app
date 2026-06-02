@@ -1,6 +1,16 @@
 id: extract_http
 name: 'Extract: Fichier distant (HTTP/HTTPS)'
-description: Télécharge un fichier brut depuis une URL publique.
+description: "Télécharge un fichier brut depuis une URL publique (HTTP/HTTPS) en émulant un navigateur pour éviter certains blocages."
+when_to_use: "Pour récupérer un dataset hébergé librement sur le web (ex: archives publiques, fichiers de recherche open data)."
+use_cases:
+  - "Import de datasets depuis des plateformes comme Kaggle (via des liens directs), UCI Machine Learning ou des sites institutionnels."
+  - "Téléchargement d'annotations complémentaires depuis un bucket S3 ou GCS public."
+pros:
+  - "Simple et universel, ne nécessite souvent aucune authentification."
+  - "Compatible avec quasiment tous les types de fichiers (CSV, ZIP, JSON)."
+cons:
+  - "Les téléchargements volumineux peuvent être lents ou interrompus."
+  - "Sensible aux changements d'URL ou aux restrictions de type anti-bot."
 category: 1. Extract
 tags:
 - extract
@@ -41,13 +51,22 @@ code_template: |
   task_type = "unknown"
   meta = {"source": "http", "path": DEST_PATH}
 illustration_mermaid: |
-    flowchart TD
-    A([FILE_PATH]) --> B[Load EXTRACT_HTTP]
-    B --> df([df])
-    
-    style A fill:#3b82f6,color:#fff
-    style B fill:#10b981,color:#fff
-    style df fill:#f59e0b,color:#fff
+    flowchart LR
+        A[/"📄 URL HTTP/HTTPS"/] --> B{"Download HTTP()"}
+        C[/"🎯 TARGET_COL"/] --> D{"Check TARGET_COL"}
+        B --> E(["📊 Local File Path"])
+        E --> D
+        D --> F(["🎯 target_name"])
+        D --> G(["⚙️ task_type"])
+        D --> H(["ℹ️ meta (source, path)"])
+        style A fill:#fbbf24,stroke:#d97706,stroke-width:2px,color:#000
+        style C fill:#fbbf24,stroke:#d97706,stroke-width:2px,color:#000
+        style B fill:#3b82f6,stroke:#2563eb,stroke-width:2px,color:#fff
+        style D fill:#3b82f6,stroke:#2563eb,stroke-width:2px,color:#fff
+        style E fill:#10b981,stroke:#059669,stroke-width:2px,color:#fff
+        style F fill:#8b5cf6,stroke:#7c3aed,stroke-width:2px,color:#fff
+        style G fill:#8b5cf6,stroke:#7c3aed,stroke-width:2px,color:#fff
+        style H fill:#8b5cf6,stroke:#7c3aed,stroke-width:2px,color:#fff
 
 
 

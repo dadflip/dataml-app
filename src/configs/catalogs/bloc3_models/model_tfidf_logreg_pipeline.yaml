@@ -1,17 +1,57 @@
 id: "model_tfidf_logreg_pipeline"
 name: "Model: TF-IDF + Logistic Regression"
-description: "Pipeline NLP classique : vectorisation TF-IDF suivie d'une régression logistique."
+description: |
+  Pipeline de Traitement du Langage Naturel (NLP) classique combinant une vectorisation TF-IDF (Term Frequency-Inverse Document Frequency) avec un modèle de classification par Régression Logistique. Ce modèle transforme d'abord les textes en vecteurs numériques basés sur la fréquence pondérée des mots, puis applique un modèle linéaire pour prédire la classe.
 category: "Modèles NLP (Entraînés)"
 tags: ["model", "nlp", "classification", "sklearn", "tfidf"]
 applies_to: ["Texte"]
-when_to_use: "Le meilleur modèle baseline pour la classification de texte avant d'utiliser du Deep Learning."
+when_to_use: |
+  Ce pipeline est la référence (baseline) incontournable pour toute tâche de classification de texte. À utiliser systématiquement en premier pour établir un niveau de performance de base avant de s'engager dans le développement de modèles Deep Learning plus coûteux et complexes (comme les Transformers).
+use_cases:
+  - "Classification de documents (ex: tri d'emails en spam/non-spam, catégorisation d'articles de presse)."
+  - "Analyse de sentiment supervisée sur des données textuelles avec un ensemble de données annotées."
+  - "Détection d'intention dans des requêtes d'utilisateurs ou des chatbots simples."
+  - "Établissement d'une baseline (référence) solide et rapide avant l'exploration de méthodes NLP avancées."
 pros:
-  - "Extrêmement rapide, très efficace sur des textes longs."
-  - "Très robuste à l'overfitting."
+  - "Extrêmement rapide à entraîner et à exécuter, même sur de très grands corpus de textes longs."
+  - "Très robuste face au surapprentissage (overfitting) dans les espaces de grande dimension."
+  - "Hautement interprétable : les coefficients de la régression indiquent directement le poids de chaque mot."
 cons:
-  - "Ne capture pas le contexte local des mots (Bag of Words)."
+  - "Approche 'Bag-of-Words' (sac de mots) qui ignore l'ordre des mots et la syntaxe."
+  - "Ne capture pas la sémantique profonde ni le contexte local (contrairement aux embeddings de mots)."
+  - "Matrice de caractéristiques clairsemée (sparse) qui peut devenir gigantesque sur des corpus non filtrés."
 hyperparameters:
   max_features: "Nombre maximum de mots dans le vocabulaire TF-IDF."
+math_theory: |
+  Le modèle transforme chaque texte en un vecteur $\textcolor{#3b82f6}{x}$ basé sur le score TF-IDF de ses mots.
+  Pour un terme $t$ dans un document $d$, le score $\textcolor{#3b82f6}{x}_{t,d}$ est :
+  $$ \textcolor{#3b82f6}{x}_{t,d} = \text{TF}(t, d) \times \log\left(\frac{\textcolor{#fbbf24}{N}}{\text{DF}(t)}\right) $$
+  Où $\text{TF}$ est la fréquence du terme et $\text{DF}$ le nombre de documents contenant $t$ parmi $\textcolor{#fbbf24}{N}$ documents.
+  Ensuite, la Régression Logistique modélise la probabilité d'une classe $\textcolor{#ef4444}{y}$ via une fonction sigmoïde (ou softmax) appliquée à une combinaison linéaire des caractéristiques :
+  $$ P(\textcolor{#ef4444}{y}=1 | \textcolor{#3b82f6}{x}) = \frac{1}{1 + \exp(-(\textcolor{#8b5cf6}{w} \cdot \textcolor{#3b82f6}{x} + b))} $$
+math_illustration_svg: |
+  <svg viewBox="0 0 800 400" xmlns="http://www.w3.org/2000/svg">
+    <rect x="0" y="0" width="800" height="400" fill="#1e293b" rx="10"/>
+    <text x="400" y="40" fill="#ffffff" font-family="sans-serif" font-size="22" font-weight="bold" text-anchor="middle">TF-IDF + Logistic Regression</text>
+    <rect x="50" y="150" width="100" height="100" fill="#fbbf24" fill-opacity="0.2" stroke="#fbbf24" stroke-width="2" rx="5"/>
+    <text x="100" y="195" fill="#fbbf24" font-family="sans-serif" font-size="16" font-weight="bold" text-anchor="middle">N Docs</text>
+    <path d="M160 200 L220 200" stroke="#ffffff" stroke-width="2" marker-end="url(#arrow)" />
+    <rect x="230" y="120" width="200" height="160" fill="#3b82f6" fill-opacity="0.2" stroke="#3b82f6" stroke-width="2" rx="5"/>
+    <text x="330" y="170" fill="#3b82f6" font-family="sans-serif" font-size="18" font-weight="bold" text-anchor="middle">TF-IDF Vectorizer</text>
+    <text x="330" y="210" fill="#3b82f6" font-family="sans-serif" font-size="16" text-anchor="middle">Vector x_t,d</text>
+    <path d="M440 200 L500 200" stroke="#ffffff" stroke-width="2" marker-end="url(#arrow)" />
+    <rect x="510" y="120" width="160" height="160" fill="#8b5cf6" fill-opacity="0.2" stroke="#8b5cf6" stroke-width="2" rx="5"/>
+    <text x="590" y="180" fill="#8b5cf6" font-family="sans-serif" font-size="18" font-weight="bold" text-anchor="middle">Logistic Reg</text>
+    <text x="590" y="220" fill="#8b5cf6" font-family="sans-serif" font-size="16" text-anchor="middle">Weights w</text>
+    <path d="M680 200 L720 200" stroke="#ffffff" stroke-width="2" marker-end="url(#arrow)" />
+    <circle cx="750" cy="200" r="25" fill="#ef4444" fill-opacity="0.2" stroke="#ef4444" stroke-width="2"/>
+    <text x="750" y="205" fill="#ef4444" font-family="sans-serif" font-size="16" font-weight="bold" text-anchor="middle">y</text>
+    <defs>
+      <marker id="arrow" markerWidth="10" markerHeight="10" refX="9" refY="3" orient="auto">
+        <path d="M0,0 L0,6 L9,3 z" fill="#ffffff" />
+      </marker>
+    </defs>
+  </svg>
 code_template: |
   import pandas as pd
   import numpy as np
@@ -70,15 +110,15 @@ code_template: |
       full_pipeline = model
       training_history = {"status": "success"}
 illustration_mermaid: |
-    graph LR
-      In([Raw Text Data]) --> TFIDF(TF-IDF Vectorizer)
-      TFIDF --> LR(Logistic Regression)
-      LR --> Pred([Predictions & Probabilities])
-      
-      style In fill:#f8fafc,stroke:#94a3b8,stroke-width:2px
-      style TFIDF fill:#38bdf8,stroke:#0284c7,stroke-width:2px,color:#fff
-      style LR fill:#8b5cf6,stroke:#7c3aed,stroke-width:2px,color:#fff
-      style Pred fill:#10b981,stroke:#059669,stroke-width:2px,color:#fff
+  flowchart LR
+    In[/"Données Textuelles (Raw Text)"/]:::input --> TFIDF{"Vectorisation TF-IDF"}:::model
+    TFIDF --> Features(["Vecteurs TF-IDF"]):::tensor
+    Features --> LR{"Régression Logistique"}:::model
+    LR --> Pred(["Prédictions & Probabilités"]):::tensor
+
+    classDef input fill:#fbbf24,stroke:#d97706,stroke-width:2px,color:#000
+    classDef model fill:#3b82f6,stroke:#2563eb,stroke-width:2px,color:#fff
+    classDef tensor fill:#10b981,stroke:#059669,stroke-width:2px,color:#fff
 
 _metadata:
   bloc: 3

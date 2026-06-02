@@ -1,14 +1,48 @@
 id: "transform_label_encoding"
 name: "Transform: Ordinal/Label Encoding"
-description: "Ordinal Encoding des colonnes catégorielles."
+description: "L'Ordinal Encoding transforme les variables catégorielles en valeurs entières distinctes. Chaque modalité unique d'une colonne catégorielle se voit attribuer un entier. Bien que très utile et économe en mémoire pour les algorithmes ensemblistes à base d'arbres (comme Random Forest ou XGBoost), cette méthode introduit une notion d'ordre et de distance arithmétique factice qui peut fortement pénaliser les modèles linéaires ou basés sur la distance."
+math_theory: |
+  Soit une caractéristique catégorielle $\textcolor{#3b82f6}{X}$ avec un ensemble de modalités $\textcolor{#10b981}{C} = \{c_1, c_2, \dots, c_k\}$. L'encodage ordinal correspond à une fonction d'injection $f: \textcolor{#10b981}{C} \rightarrow \{0, 1, \dots, k-1\}$, telle que $\textcolor{#ef4444}{X_{enc}} = f(\textcolor{#3b82f6}{X})$. Par conséquent, pour deux observations $x_i, x_j$, la distance $|f(x_i) - f(x_j)|$ devient mathématiquement significative, ce qui justifie son usage restreint selon les algorithmes.
+math_illustration_svg: |
+  <svg viewBox="0 0 400 200" xmlns="http://www.w3.org/2000/svg">
+    <rect width="400" height="200" fill="#1e293b" rx="8"/>
+    <rect x="50" y="40" width="80" height="30" fill="#10b981" rx="4"/>
+    <text x="90" y="60" fill="white" font-family="sans-serif" font-size="14" text-anchor="middle">"Low"</text>
+    <rect x="50" y="80" width="80" height="30" fill="#10b981" rx="4"/>
+    <text x="90" y="100" fill="white" font-family="sans-serif" font-size="14" text-anchor="middle">"Medium"</text>
+    <rect x="50" y="120" width="80" height="30" fill="#10b981" rx="4"/>
+    <text x="90" y="140" fill="white" font-family="sans-serif" font-size="14" text-anchor="middle">"High"</text>
+    <path d="M 140 55 L 250 55" stroke="#3b82f6" stroke-width="2" marker-end="url(#arrow)"/>
+    <path d="M 140 95 L 250 95" stroke="#3b82f6" stroke-width="2" marker-end="url(#arrow)"/>
+    <path d="M 140 135 L 250 135" stroke="#3b82f6" stroke-width="2" marker-end="url(#arrow)"/>
+    <text x="195" y="45" fill="#3b82f6" font-family="sans-serif" font-size="14" font-style="italic" text-anchor="middle">f(x)</text>
+    <text x="195" y="85" fill="#3b82f6" font-family="sans-serif" font-size="14" font-style="italic" text-anchor="middle">f(x)</text>
+    <text x="195" y="125" fill="#3b82f6" font-family="sans-serif" font-size="14" font-style="italic" text-anchor="middle">f(x)</text>
+    <rect x="270" y="40" width="80" height="30" fill="#ef4444" rx="4"/>
+    <text x="310" y="60" fill="white" font-family="sans-serif" font-size="14" text-anchor="middle">0</text>
+    <rect x="270" y="80" width="80" height="30" fill="#ef4444" rx="4"/>
+    <text x="310" y="100" fill="white" font-family="sans-serif" font-size="14" text-anchor="middle">1</text>
+    <rect x="270" y="120" width="80" height="30" fill="#ef4444" rx="4"/>
+    <text x="310" y="140" fill="white" font-family="sans-serif" font-size="14" text-anchor="middle">2</text>
+    <defs>
+      <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+        <path d="M 0 0 L 10 5 L 0 10 z" fill="#3b82f6"/>
+      </marker>
+    </defs>
+  </svg>
 category: "4.1 Preprocessing"
 tags: ["transform", "encoding", "tabular", "sklearn", "pipeline"]
 applies_to: ["Tabulaire"]
-when_to_use: "Pour les arbres de décision."
+when_to_use: "À utiliser prioritairement pour des variables ordinales (où l'ordre a un sens intrinsèque) ou lors de l'entraînement de modèles à base d'arbres de décision qui savent partitionner efficacement des variables continues/ordinales sans être affectés par l'échelle des valeurs."
+use_cases:
+  - "Encodage de niveaux de diplômes ou de tranches de revenus."
+  - "Préparation de features catégorielles à haute cardinalité pour LightGBM ou XGBoost."
 pros:
-  - "N'augmente pas les colonnes."
+  - "N'augmente pas la dimensionnalité de l'espace des caractéristiques."
+  - "Très économe en ressources mémoire."
+  - "Conserve la relation d'ordre pour les variables ordinales."
 cons:
-  - "Modèles linéaires peuvent mal interpréter."
+  - "Impose un ordre arbitraire qui peut fausser les modèles linéaires, régressions logistiques et réseaux de neurones."
 hyperparameters: {}
 code_template: |
   import pandas as pd
@@ -48,19 +82,17 @@ code_template: |
           print("[AVERTISSEMENT] Aucune colonne catégorielle à encoder.")
 
 illustration_mermaid: |
-  graph TD
-    A[Input DataFrame] --> B[Extract Categorical Columns]
-    B --> C{Any Cat Cols?}
-    C -- Yes --> D[Initialize OrdinalEncoder]
-    C -- No --> E[Skip]
-    D --> F[ColumnTransformer with remainder='passthrough']
-    F --> G[Fit & Transform df]
-    G --> H[Convert Output to DataFrame]
-    H --> I[Update pipeline_steps & df]
-    E --> I
-    I --> J[Ordinal Encoded DataFrame]
-    style A fill:#eff6ff,stroke:#94a3b8,stroke-width:2px
-    style J fill:#10b981,stroke:#059669,stroke-width:2px,color:#fff
+  flowchart LR
+    A[/"📄 cat_cols"/] --> B{"⚙️ OrdinalEncoder"}
+    C(["📊 df Input"]) --> B
+    B --> D(["📊 df Encoded"])
+    B --> E(["ℹ️ pipeline_steps"])
+
+    style A fill:#fbbf24,stroke:#d97706,stroke-width:2px,color:#000
+    style B fill:#3b82f6,stroke:#2563eb,stroke-width:2px,color:#fff
+    style C fill:#10b981,stroke:#059669,stroke-width:2px,color:#fff
+    style D fill:#10b981,stroke:#059669,stroke-width:2px,color:#fff
+    style E fill:#8b5cf6,stroke:#7c3aed,stroke-width:2px,color:#fff
 
 _metadata:
   bloc: 2

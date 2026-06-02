@@ -1,18 +1,86 @@
 id: "model_cnn_1d"
 name: "Model: 1D CNN"
-description: "Réseau Convolutif 1D, efficace pour extraire des motifs locaux sur des séries temporelles ou du texte."
+description: |
+  Réseau Convolutif 1D, adapté pour extraire des motifs locaux sur des données séquentielles.
+  Très efficace pour identifier des patterns récurrents indépendants de leur position absolue.
 category: "Réseaux Convolutifs (CNN)"
 tags: ["model", "classification", "timeseries", "pytorch", "cnn", "cnn-1d", "deep-learning"]
 applies_to: ["Séquences", "Séries Temporelles", "Texte"]
-when_to_use: "Alternative plus rapide aux RNN quand l'ordre absolu compte moins que la présence de motifs locaux."
+when_to_use: |
+  Idéal pour les séries temporelles, les signaux (audio, capteurs) ou le traitement de texte (NLP)
+  lorsqu'une exécution rapide est primordiale par rapport aux réseaux récurrents (RNN/LSTM).
+use_cases:
+  - "Classification de signaux biomédicaux (ECG, EEG)."
+  - "Détection d'anomalies sur des séries temporelles industrielles."
+  - "Classification rapide de textes basés sur des n-grammes lexicaux."
 pros:
-  - "Très rapide, parallélisable."
+  - "Très rapide à entraîner grâce à la parallélisation des calculs."
+  - "Efficace pour extraire des caractéristiques locales (motifs de forme)."
 cons:
-  - "Moins bon que le LSTM pour comprendre un contexte très éloigné."
+  - "Peine à capturer les dépendances temporelles à très long terme comparé à un LSTM."
 hyperparameters:
   num_filters: "Nombre de filtres convolutifs (ex: 64)."
   kernel_size: "Taille de la fenêtre (ex: 3)."
   epochs: "Nombre d'époques (ex: 10)."
+math_theory: |
+  Un réseau CNN 1D applique une opération de convolution croisée discrète sur une séquence d'entrée pour extraire des motifs locaux.
+  Soit une séquence d'entrée $\textcolor{#3b82f6}{x}$ et un filtre (ou noyau) $\textcolor{#10b981}{w}$ de taille $K$.
+  La sortie $\textcolor{#fbbf24}{y_i}$ (feature map) à la position $i$ est calculée par :
+  $$\textcolor{#fbbf24}{y_i} = \sigma \left( \sum_{k=0}^{K-1} \textcolor{#3b82f6}{x_{i+k}} \cdot \textcolor{#10b981}{w_k} + \textcolor{#8b5cf6}{b} \right)$$
+  où $\textcolor{#8b5cf6}{b}$ est le biais et $\sigma$ une fonction d'activation non linéaire (comme ReLU).
+  Le pooling réduit ensuite la dimension spatiale, et l'opération est répétée pour $F$ filtres afin de créer de multiples représentations (canaux) de la séquence temporelle.
+math_illustration_svg: |
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 400">
+    <!-- Inputs -->
+    <text x="50" y="80" font-family="sans-serif" font-size="20" font-weight="bold" fill="#3b82f6">Input Sequence (x)</text>
+    <g transform="translate(50, 100)">
+      <rect x="0" y="0" width="50" height="50" fill="#3b82f6" stroke="#fff" stroke-width="2" />
+      <rect x="50" y="0" width="50" height="50" fill="#3b82f6" stroke="#fff" stroke-width="2" />
+      <rect x="100" y="0" width="50" height="50" fill="#3b82f6" stroke="#fff" stroke-width="2" />
+      <rect x="150" y="0" width="50" height="50" fill="#60a5fa" stroke="#fff" stroke-width="2" />
+      <rect x="200" y="0" width="50" height="50" fill="#60a5fa" stroke="#fff" stroke-width="2" />
+      <rect x="250" y="0" width="50" height="50" fill="#60a5fa" stroke="#fff" stroke-width="2" />
+      <rect x="300" y="0" width="50" height="50" fill="#60a5fa" stroke="#fff" stroke-width="2" />
+      <!-- Filter box highlighting first 3 elements -->
+      <rect x="0" y="0" width="150" height="50" fill="none" stroke="#10b981" stroke-width="4" stroke-dasharray="5,5" />
+    </g>
+  
+    <!-- Filter -->
+    <text x="100" y="210" font-family="sans-serif" font-size="20" font-weight="bold" fill="#10b981">Filter (w) K=3</text>
+    <g transform="translate(100, 230)">
+      <rect x="0" y="0" width="50" height="50" fill="#10b981" stroke="#fff" stroke-width="2" />
+      <rect x="50" y="0" width="50" height="50" fill="#10b981" stroke="#fff" stroke-width="2" />
+      <rect x="100" y="0" width="50" height="50" fill="#10b981" stroke="#fff" stroke-width="2" />
+      <text x="25" y="30" fill="#fff" font-family="sans-serif" font-size="16" text-anchor="middle">w_0</text>
+      <text x="75" y="30" fill="#fff" font-family="sans-serif" font-size="16" text-anchor="middle">w_1</text>
+      <text x="125" y="30" fill="#fff" font-family="sans-serif" font-size="16" text-anchor="middle">w_2</text>
+    </g>
+  
+    <!-- Connections -->
+    <path d="M 75 150 L 125 230" stroke="#8b5cf6" stroke-width="2" stroke-dasharray="4" />
+    <path d="M 125 150 L 175 230" stroke="#8b5cf6" stroke-width="2" stroke-dasharray="4" />
+  
+    <!-- Output -->
+    <text x="400" y="160" font-family="sans-serif" font-size="24" font-weight="bold" fill="#fbbf24">=</text>
+  
+    <text x="450" y="130" font-family="sans-serif" font-size="20" font-weight="bold" fill="#fbbf24">Feature Map (y)</text>
+    <g transform="translate(450, 150)">
+      <rect x="0" y="0" width="50" height="50" fill="#fbbf24" stroke="#fff" stroke-width="2" />
+      <rect x="50" y="0" width="50" height="50" fill="#fcd34d" stroke="#fff" stroke-width="2" />
+      <rect x="100" y="0" width="50" height="50" fill="#fcd34d" stroke="#fff" stroke-width="2" />
+      <rect x="150" y="0" width="50" height="50" fill="#fcd34d" stroke="#fff" stroke-width="2" />
+      <rect x="200" y="0" width="50" height="50" fill="#fcd34d" stroke="#fff" stroke-width="2" />
+      <text x="25" y="30" fill="#000" font-family="sans-serif" font-size="16" text-anchor="middle">y_0</text>
+    </g>
+  
+    <!-- Arrow sliding -->
+    <path d="M 150 180 L 250 180" stroke="#10b981" stroke-width="3" marker-end="url(#arrowEnd)"/>
+    <defs>
+      <marker id="arrowEnd" markerWidth="10" markerHeight="10" refX="9" refY="3" orient="auto" markerUnits="strokeWidth">
+        <path d="M0,0 L0,6 L9,3 z" fill="#10b981" />
+      </marker>
+    </defs>
+  </svg>
 code_template: |
   import pandas as pd
   import numpy as np
@@ -135,38 +203,32 @@ code_template: |
           full_pipeline = model
 
 illustration_mermaid: |
-    graph TD
-      subgraph Input
-        Data([Input Data: N x Channels x Length])
-      end
-      
-      subgraph Neural Network Architecture
-        Conv[Conv1D Layer<br/>Filters: NUM_FILTERS<br/>Kernel: KERNEL_SIZE]
-        Relu[ReLU Activation]
-        Pool[AdaptiveMaxPool1D<br/>Extract max over sequence]
-        Squeeze[Squeeze<br/>Remove spatial dim]
-        FC[Fully Connected Layer<br/>Output: Num Classes]
-      end
-      
-      subgraph Output
-        Softmax[Softmax / Logits]
-        Preds([Class Predictions])
-      end
-      
-      Data --> Conv
-      Conv --> Relu
-      Relu --> Pool
-      Pool --> Squeeze
-      Squeeze --> FC
-      FC --> Softmax
-      Softmax --> Preds
+  flowchart LR
+    Data[/"Séquence (N x Channels x Length)"/]
+    Conv1D{"Conv1D\n(Filtres & Kernel)"}
+    Relu{"Activation ReLU"}
+    Pool{"AdaptiveMaxPool1D"}
+    Squeeze{"Squeeze (Réduction Dim)"}
+    FC{"Couche Dense (Linéaire)"}
+    SM{"Softmax"}
+    Pred(["Prédictions (Classes)"])
 
-      style Conv fill:#8b5cf6,stroke:#7c3aed,stroke-width:2px,color:#fff
-      style Relu fill:#c4b5fd,stroke:#8b5cf6,stroke-width:1px,color:#000
-      style Pool fill:#8b5cf6,stroke:#7c3aed,stroke-width:2px,color:#fff
-      style FC fill:#8b5cf6,stroke:#7c3aed,stroke-width:2px,color:#fff
-      style Data fill:#f8fafc,stroke:#94a3b8,stroke-width:1px
-      style Preds fill:#f8fafc,stroke:#94a3b8,stroke-width:1px
+    Data --> Conv1D
+    Conv1D --> Relu
+    Relu --> Pool
+    Pool --> Squeeze
+    Squeeze --> FC
+    FC --> SM
+    SM --> Pred
+
+    style Data fill:#fbbf24,stroke:#d97706,stroke-width:2px,color:#000
+    style Conv1D fill:#3b82f6,stroke:#2563eb,stroke-width:2px,color:#fff
+    style Relu fill:#3b82f6,stroke:#2563eb,stroke-width:2px,color:#fff
+    style Pool fill:#3b82f6,stroke:#2563eb,stroke-width:2px,color:#fff
+    style Squeeze fill:#3b82f6,stroke:#2563eb,stroke-width:2px,color:#fff
+    style FC fill:#3b82f6,stroke:#2563eb,stroke-width:2px,color:#fff
+    style SM fill:#3b82f6,stroke:#2563eb,stroke-width:2px,color:#fff
+    style Pred fill:#10b981,stroke:#059669,stroke-width:2px,color:#fff
 
 _metadata:
   bloc: 3

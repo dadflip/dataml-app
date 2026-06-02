@@ -1,6 +1,17 @@
 id: "load_nifti"
 name: "Load: IRM 3D NIfTI (.nii)"
-description: "Charge un volume 3D/4D d'imagerie par résonance magnétique (IRM)."
+description: "Ce composant charge des images médicales volumétriques (3D ou 4D) stockées au format NIfTI (.nii). Il extrait les valeurs des voxels et affine les métadonnées associées à la matrice de transformation spatiale."
+when_to_use: "Idéal pour les projets de computer vision appliqués au domaine médical, notamment l'imagerie par résonance magnétique (IRM) ou la tomographie."
+use_cases:
+  - "Segmentation automatique des tumeurs cérébrales sur des IRM."
+  - "Classification des maladies neurodégénératives via l'imagerie 3D."
+  - "Recalage d'images médicales entre plusieurs modalités ou patients."
+pros:
+  - "Permet de traiter facilement des données médicales standards grâce à `nibabel`."
+  - "Préserve la matrice affine indispensable aux alignements spatiaux."
+cons:
+  - "L'aplatissement du volume d'une image 3D peut créer des DataFrames d'une taille colossale en mémoire."
+  - "Perte des dépendances spatiales naturelles en convertissant en DataFrame plat (souvent mieux adapté aux tenseurs)."
 category: "2. Load"
 tags: ["load", "nifti", "medical", "3d"]
 code_template: |
@@ -41,19 +52,22 @@ output_variables:
   - task_type
   - meta
 illustration_mermaid: |
-  flowchart TD
-      A([FILE_PATH]) --> B{File Exists?}
-      B -- Yes --> C[nibabel.load]
-      B -- No --> D[Empty DataFrame]
-      C --> E[Extract get_fdata & affine]
-      E --> F[Flatten array to DataFrame]
-      F --> G([df, target_name, task_type, meta])
-      D --> G
-
-      style A fill:#3b82f6,color:#fff
-      style C fill:#10b981,color:#fff
-      style F fill:#10b981,color:#fff
-      style G fill:#f59e0b,color:#fff
+  flowchart LR
+      A[/"📄 FILE_PATH"/] --> B{"nibabel.load & Flatten"}
+      C[/"🎯 TARGET_COL"/] --> D{"Check TARGET_COL"}
+      B --> E(["📊 df (DataFrame)"])
+      E --> D
+      D --> F(["🎯 target_name"])
+      D --> G(["⚙️ task_type"])
+      D --> H(["ℹ️ meta (...)"])
+      style A fill:#fbbf24,stroke:#d97706,stroke-width:2px,color:#000
+      style C fill:#fbbf24,stroke:#d97706,stroke-width:2px,color:#000
+      style B fill:#3b82f6,stroke:#2563eb,stroke-width:2px,color:#fff
+      style D fill:#3b82f6,stroke:#2563eb,stroke-width:2px,color:#fff
+      style E fill:#10b981,stroke:#059669,stroke-width:2px,color:#fff
+      style F fill:#8b5cf6,stroke:#7c3aed,stroke-width:2px,color:#fff
+      style G fill:#8b5cf6,stroke:#7c3aed,stroke-width:2px,color:#fff
+      style H fill:#8b5cf6,stroke:#7c3aed,stroke-width:2px,color:#fff
 
 _metadata:
   bloc: 1

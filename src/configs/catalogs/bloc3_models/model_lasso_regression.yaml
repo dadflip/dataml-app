@@ -1,14 +1,20 @@
 id: "model_lasso_regression"
 name: "Model: Lasso Regression"
-description: "Régression linéaire avec pénalisation L1. Agit comme un sélecteur de features."
+description: "Modèle de régression linéaire incluant une pénalisation de norme L1 (valeur absolue des coefficients). Cette régularisation agit de facto comme un mécanisme de sélection de variables (Feature Selection)."
 category: "Modèles Linéaires"
-tags: ["model", "regression", "tabular", "sklearn", "linear"]
+tags: ["model", "regression", "tabular", "sklearn", "linear", "lasso", "l1-penalty"]
 applies_to: ["Tabulaire"]
-when_to_use: "Quand vous soupçonnez qu'un grand nombre de features sont inutiles (parcimonie)."
+when_to_use: "À privilégier lorsque vous disposez d'un très grand nombre de variables explicatives, mais que vous suspectez que seule une poignée d'entre elles ont un réel pouvoir prédictif (modèles dits parcimonieux / sparse)."
+use_cases:
+  - "Génomique : Identification des quelques gènes réellement responsables d'un phénotype continu parmi des milliers."
+  - "Économétrie : Modélisation macroéconomique où l'on souhaite exclure automatiquement les indicateurs redondants."
+  - "Compression de modèle : Création d'une équation linéaire très simple et hautement interprétable pour un système embarqué."
 pros:
-  - "Met les coefficients des features inutiles exactement à zéro."
+  - "Force littéralement les coefficients des variables inutiles à valoir exactement zéro."
+  - "Produit des modèles extrêmement faciles à interpréter."
 cons:
-  - "S'il y a des variables très corrélées, il en choisit une arbitrairement et annule les autres."
+  - "En présence d'un groupe de variables fortement corrélées (multicolinéarité), Lasso en sélectionne souvent une au hasard et annule toutes les autres."
+  - "Peut sous-performer par rapport à Ridge si la majorité des variables apportent un peu de signal (modèles denses)."
 hyperparameters:
   alpha: "Force de régularisation (ex: 1.0)."
 code_template: |
@@ -46,26 +52,76 @@ code_template: |
       task_type = "regression"
       meta = {}
 illustration_mermaid: |
-  graph TD
-    subgraph Inputs
-      X[Features Matrix X] --> Loss
-      Y[Target Vector Y] --> Loss
-    end
-    subgraph Optimization
-      Loss[Compute MSE Loss]
-      Reg[Add L1 Penalty: alpha * sum|w|]
-      Loss --> Opt[Optimize w to minimize MSE + L1]
-      Reg --> Opt
-      Opt --> Shrink[Shrink weights towards 0]
-      Shrink --> Sparse[Feature Selection: some w = 0]
-    end
-    subgraph Output
-      Sparse --> Weights[Fitted Coefficients]
-      Weights --> Pred[Continuous Predictions]
-    end
-    style Reg fill:#f59e0b,stroke:#d97706,stroke-width:2px,color:#fff
-    style Shrink fill:#8b5cf6,stroke:#7c3aed,stroke-width:2px,color:#fff
-    style Sparse fill:#10b981,stroke:#059669,stroke-width:2px,color:#fff
+  flowchart LR
+    X(["Matrice des Features (X)"])
+    Y(["Vecteur Cible (Y)"])
+    Alpha[/"Paramètre Alpha (L1)"/]
+    Opt{"Optimisation (MSE + L1)"}
+    Shrink{"Réduction des Poids"}
+    Sparse{"Mise à Zéro (Sélection)"}
+    Weights(["Coefficients (w)"])
+    Pred(["Prédictions Continues"])
+
+    X --> Opt
+    Y --> Opt
+    Alpha --> Opt
+    Opt --> Shrink
+    Shrink --> Sparse
+    Sparse --> Weights
+    Weights --> Pred
+
+    style X fill:#10b981,stroke:#059669,stroke-width:2px,color:#fff
+    style Y fill:#10b981,stroke:#059669,stroke-width:2px,color:#fff
+    style Weights fill:#10b981,stroke:#059669,stroke-width:2px,color:#fff
+    style Pred fill:#10b981,stroke:#059669,stroke-width:2px,color:#fff
+    style Alpha fill:#fbbf24,stroke:#d97706,stroke-width:2px,color:#000
+    style Opt fill:#3b82f6,stroke:#2563eb,stroke-width:2px,color:#fff
+    style Shrink fill:#3b82f6,stroke:#2563eb,stroke-width:2px,color:#fff
+    style Sparse fill:#3b82f6,stroke:#2563eb,stroke-width:2px,color:#fff
+
+math_theory: |
+  Lasso Regression applies an L1 penalty to the traditional Ordinary Least Squares (OLS) loss function. This forces some of the regression coefficients to become exactly zero, performing intrinsic feature selection. The objective is to minimize:
+  
+  $$ \min_{w} \left( \frac{1}{2n} ||\textcolor{#10b981}{X}\textcolor{#ef4444}{w} - \textcolor{#3b82f6}{y}||_2^2 + \textcolor{#fbbf24}{\alpha} ||\textcolor{#ef4444}{w}||_1 \right) $$
+  
+  Where $\textcolor{#10b981}{X}$ is the feature matrix, $\textcolor{#3b82f6}{y}$ is the target vector, $\textcolor{#ef4444}{w}$ are the learned weights, and $\textcolor{#fbbf24}{\alpha}$ defines the intensity of the penalty.
+
+math_illustration_svg: |
+  <svg viewBox="0 0 500 250" xmlns="http://www.w3.org/2000/svg">
+    <rect width="500" height="250" fill="#ffffff" />
+    <defs>
+      <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+        <path d="M 0 0 L 10 5 L 0 10 z" fill="#64748b" />
+      </marker>
+    </defs>
+    
+    <!-- Geometry of Lasso (diamond intersecting contour) -->
+    <g transform="translate(150, 125)">
+      <!-- L1 Diamond -->
+      <polygon points="0,-60 60,0 0,60 -60,0" fill="#fbbf24" fill-opacity="0.1" stroke="#fbbf24" stroke-width="2" />
+      <text x="-40" y="-40" font-family="sans-serif" font-size="12" fill="#fbbf24" font-weight="bold">L1 Penalty</text>
+      <!-- Axes -->
+      <line x1="-90" y1="0" x2="90" y2="0" stroke="#94a3b8" stroke-width="1" />
+      <line x1="0" y1="-90" x2="0" y2="90" stroke="#94a3b8" stroke-width="1" />
+      <!-- MSE Contours -->
+      <ellipse cx="60" cy="50" rx="30" ry="15" fill="none" stroke="#3b82f6" stroke-width="1.5" transform="rotate(-30 60 50)" />
+      <ellipse cx="60" cy="50" rx="55" ry="25" fill="none" stroke="#3b82f6" stroke-width="1.5" transform="rotate(-30 60 50)" />
+      <ellipse cx="60" cy="50" rx="80" ry="35" fill="none" stroke="#3b82f6" stroke-width="1.5" transform="rotate(-30 60 50)" />
+      
+      <!-- OLS solution -->
+      <circle cx="60" cy="50" r="4" fill="#3b82f6" />
+      <text x="70" y="55" font-family="sans-serif" font-size="10" fill="#3b82f6">OLS Optimum</text>
+      <!-- Lasso solution (at corner) -->
+      <circle cx="60" cy="0" r="5" fill="#ef4444" />
+      <text x="70" y="-10" font-family="monospace" font-weight="bold" fill="#ef4444">w (Sparse)</text>
+    </g>
+    
+    <!-- Equation summary -->
+    <rect x="320" y="80" width="150" height="90" rx="8" fill="#f8fafc" stroke="#e2e8f0" stroke-width="2" />
+    <text x="395" y="110" font-family="sans-serif" font-size="14" font-weight="bold" fill="#475569" text-anchor="middle">Optimization</text>
+    <text x="395" y="135" font-family="sans-serif" font-size="12" fill="#3b82f6" font-weight="bold" text-anchor="middle">MSE(X, y)</text>
+    <text x="395" y="155" font-family="sans-serif" font-size="12" fill="#fbbf24" font-weight="bold" text-anchor="middle">+ α * |w|</text>
+  </svg>
 
 _metadata:
   bloc: 3

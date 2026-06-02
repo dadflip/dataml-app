@@ -1,14 +1,61 @@
 id: "transform_text_tokenizer_padder"
 name: "Transform: Tokenizer & Padder (RNN/Transformer)"
-description: "Tokenise et padde du texte brut pour les réseaux de neurones (Séquences de longueur fixe)."
+description: "Ce composant combine deux opérations majeures du NLP : la tokénisation et le padding. La tokénisation segmente le texte brut (phrases, documents) en unités élémentaires (mots, sous-mots) puis les associe à des indices entiers selon un dictionnaire de vocabulaire. Le padding vient ensuite ajuster toutes ces séquences d'entiers à une taille unique. C'est le pipeline d'ingestion classique pour préparer des données textuelles brutes aux modèles d'apprentissage profond."
+math_theory: |
+  Soit un corpus de documents $D = \{d_1, \dots, d_N\}$. L'étape de tokénisation établit une fonction de projection bijective $\textcolor{#3b82f6}{V} : \text{Token} \rightarrow \{1, 2, \dots, \textcolor{#10b981}{V_{\text{max}}}\}$ où $\textcolor{#10b981}{V_{\text{max}}}$ est la taille maximale du vocabulaire (les mots les plus fréquents). Chaque document $d_i$ est converti en une séquence d'entiers $S_i = [\textcolor{#3b82f6}{V}(w_{i,1}), \textcolor{#3b82f6}{V}(w_{i,2}), \dots, \textcolor{#3b82f6}{V}(w_{i, L_i})]$. Ensuite, la fonction de padding $P(S_i)$ ajuste la longueur de $S_i$ à une constante $\textcolor{#fbbf24}{L}$ : $P(S_i) = S_i \oplus \textcolor{#ef4444}{\mathbf{0}_{L - L_i}}$ si $L_i < \textcolor{#fbbf24}{L}$, et $P(S_i) = S_i[1:\textcolor{#fbbf24}{L}]$ si $L_i > \textcolor{#fbbf24}{L}$. Le tenseur résultant est dans $\textcolor{#8b5cf6}{\mathbb{N}^{N \times L}}$.
+math_illustration_svg: |
+  <svg viewBox="0 0 400 200" xmlns="http://www.w3.org/2000/svg">
+    <defs>
+      <marker id="arrowtok" markerWidth="5" markerHeight="5" refX="5" refY="2.5" orient="auto">
+        <polygon points="0 0, 5 2.5, 0 5" fill="#3b82f6" />
+      </marker>
+      <marker id="arrowpad" markerWidth="5" markerHeight="5" refX="5" refY="2.5" orient="auto">
+        <polygon points="0 0, 5 2.5, 0 5" fill="#fbbf24" />
+      </marker>
+    </defs>
+    <text x="20" y="30" fill="#94a3b8" font-family="sans-serif" font-size="12">1. Tokenization (V)</text>
+    <rect x="20" y="45" width="60" height="25" fill="none" stroke="#94a3b8" rx="4" />
+    <text x="50" y="62" fill="#94a3b8" font-family="sans-serif" font-size="12" text-anchor="middle">"hello"</text>
+    <path d="M 90 57 L 120 57" stroke="#3b82f6" stroke-width="2" marker-end="url(#arrowtok)" />
+    <text x="105" y="50" fill="#3b82f6" font-family="sans-serif" font-size="10" text-anchor="middle">V</text>
+    <rect x="130" y="45" width="40" height="25" fill="#3b82f6" rx="4" />
+    <text x="150" y="62" fill="#fff" font-family="sans-serif" font-size="12" text-anchor="middle">42</text>
+    <rect x="180" y="45" width="40" height="25" fill="#3b82f6" rx="4" />
+    <text x="200" y="62" fill="#fff" font-family="sans-serif" font-size="12" text-anchor="middle">17</text>
+    
+    <text x="20" y="110" fill="#94a3b8" font-family="sans-serif" font-size="12">2. Padding (L)</text>
+    <rect x="20" y="125" width="40" height="25" fill="#3b82f6" rx="4" />
+    <text x="40" y="142" fill="#fff" font-family="sans-serif" font-size="12" text-anchor="middle">42</text>
+    <rect x="70" y="125" width="40" height="25" fill="#3b82f6" rx="4" />
+    <text x="90" y="142" fill="#fff" font-family="sans-serif" font-size="12" text-anchor="middle">17</text>
+    <path d="M 120 137 L 150 137" stroke="#fbbf24" stroke-width="2" marker-end="url(#arrowpad)" />
+    <rect x="160" y="125" width="40" height="25" fill="#3b82f6" rx="4" />
+    <text x="180" y="142" fill="#fff" font-family="sans-serif" font-size="12" text-anchor="middle">42</text>
+    <rect x="210" y="125" width="40" height="25" fill="#3b82f6" rx="4" />
+    <text x="230" y="142" fill="#fff" font-family="sans-serif" font-size="12" text-anchor="middle">17</text>
+    <rect x="260" y="125" width="40" height="25" fill="#ef4444" fill-opacity="0.3" stroke="#ef4444" rx="4" />
+    <text x="280" y="142" fill="#ef4444" font-family="sans-serif" font-size="12" text-anchor="middle">0</text>
+    <rect x="310" y="125" width="40" height="25" fill="#ef4444" fill-opacity="0.3" stroke="#ef4444" rx="4" />
+    <text x="330" y="142" fill="#ef4444" font-family="sans-serif" font-size="12" text-anchor="middle">0</text>
+    <line x1="360" y1="110" x2="360" y2="160" stroke="#fbbf24" stroke-width="2" stroke-dasharray="4,4" />
+    <text x="360" y="100" fill="#fbbf24" font-family="sans-serif" font-size="12" text-anchor="middle">L</text>
+  </svg>
 category: "4.1 Preprocessing"
 tags: ["transform", "text", "nlp", "keras", "pad"]
 applies_to: ["Texte"]
-when_to_use: "Étape indispensable avant un LSTM, CNN 1D ou Transformer."
+when_to_use: "Indispensable lors du passage d'un format de texte libre (chaînes de caractères) vers une architecture de réseau de neurones nécessitant des tenseurs numériques denses de dimensions fixes (Embedding layer, LSTM, CNN 1D ou architectures de type Transformer)."
+use_cases:
+  - "Classification de textes bruts (ex: détection de spam, catégorisation d'articles)."
+  - "Systèmes d'analyse de sentiments à partir d'avis clients ou de tweets."
+  - "Construction de la matrice d'entrée pour des modèles d'extraction d'entités nommées (NER)."
 pros:
-  - "Standardise la longueur des séquences."
+  - "Offre une solution complète (end-to-end) du texte brut jusqu'au tenseur prêt pour l'entraînement."
+  - "Permet de limiter l'explosion de l'espace vectoriel en fixant une taille maximale de vocabulaire (max_words)."
+  - "Standardise automatiquement la longueur des séquences pour un traitement en lots (batches) optimisé."
 cons:
-  - "Nécessite TensorFlow/Keras pour le tokenizer intégré (ou équivalent PyTorch)."
+  - "Introduit une dépendance forte à des bibliothèques externes lourdes (comme TensorFlow/Keras) pour l'objet Tokenizer."
+  - "Perte d'information liée aux mots hors vocabulaire (OOV - Out Of Vocabulary) ignorés par le tokenizer."
+  - "Consommation mémoire potentiellement élevée si le dictionnaire ou la longueur maximale sont surdimensionnés."
 hyperparameters:
   text_col: "Colonne texte"
   max_words: "Taille du vocabulaire (ex: 10000)."
@@ -78,16 +125,16 @@ code_template: |
   if 'task_type' not in locals(): task_type = "classification"
   if 'meta' not in locals(): meta = {}
 illustration_mermaid: |
-  graph TD
-    A[Raw Data] --> B{Does TEXT_COL exist & Keras installed?}
-    B -- Yes --> C[Initialize Custom TokenizerPadder]
-    C --> D[Create ColumnTransformer]
-    D --> E[Add to Pipeline Steps]
-    B -- No --> F[Skip TokenizerPadder]
-    E --> G[Update Data Contract Variables]
-    F --> G
-    style A fill:#eff6ff,stroke:#3b82f6,stroke-width:2px
-    style G fill:#10b981,stroke:#059669,stroke-width:2px
+  flowchart LR
+    A[/ "📄 Params (max_words, max_len)" /] --> C
+    B(["📊 df (Texte brut)"]) --> C{"⚙️ Tokenize & Pad"}
+    C --> D(["📊 df (Tenseur Entier)"])
+    C --> E(["ℹ️ pipeline_steps"])
+    style A fill:#fbbf24,stroke:#d97706,stroke-width:2px,color:#000
+    style C fill:#3b82f6,stroke:#2563eb,stroke-width:2px,color:#fff
+    style B fill:#10b981,stroke:#059669,stroke-width:2px,color:#fff
+    style D fill:#10b981,stroke:#059669,stroke-width:2px,color:#fff
+    style E fill:#8b5cf6,stroke:#7c3aed,stroke-width:2px,color:#fff
 
 _metadata:
   bloc: 2

@@ -1,7 +1,19 @@
 id: eda_kmeans_clustering_2d
 name: 'EDA: Clustering Rapide (K-Means 2D)'
-description: Applique une PCA à 2D suivie d'un K-Means pour voir des structures non
-  supervisées.
+description: Applique une réduction de dimension (PCA à 2D) suivie d'un clustering K-Means pour identifier des structures non supervisées dans les données.
+when_to_use: À utiliser lors de l'exploration initiale de données tabulaires pour découvrir des segments naturels, des groupes cachés ou tester la séparabilité globale des données.
+use_cases:
+- "Segmentation de clientèle sans labels préalables"
+- "Vérification de la séparabilité des classes sur des composantes principales"
+- "Identification visuelle de groupes de comportements ou de mesures similaires"
+pros:
+- "Combine réduction de dimension et clustering en une seule étape visuelle"
+- "Permet de voir rapidement s'il existe une structure naturelle dans le dataset"
+- "Rapide à exécuter sur des volumes de données modérés"
+cons:
+- "La PCA limite la variance expliquée à seulement 2 dimensions"
+- "Sensible aux valeurs aberrantes (outliers) et à la mise à l'échelle"
+- "Nécessite de définir le nombre de clusters (K) à l'avance"
 category: 3. Exploratory Data Analysis
 tags:
 - eda
@@ -42,22 +54,27 @@ code_template: |
       print("[EDA] Dataset inadapté pour le clustering (trop petit ou NaNs).")
 illustration_mermaid: |
     flowchart TD
-        Input([Pandas DataFrame]) --> Filter[Select Numeric Columns & Drop NaNs]
-        Filter --> Check{Length > 50 & Cols >= 2?}
-        Check -- Yes --> Scale[StandardScaler]
-        Scale --> SplitFork[ ]
-        SplitFork -->|Transform| PCA[PCA n_components=2]
-        SplitFork -->|Cluster| KMeans[KMeans n_clusters]
-        PCA --> X[2D Coordinates]
-        KMeans --> Y[Cluster Labels]
-        X & Y --> Scatter{{Seaborn Scatterplot}}
-        Check -- No --> Err[/Print Warning/]
+        InDF[/ df /] --> Filter{ select_dtypes_dropna }
+        InParam[/ N_CLUSTERS /] --> KMeans
+        Filter --> Scale{ StandardScaler }
+        Scale --> PCA{ PCA_2D }
+        Scale --> KMeans{ KMeans }
+        PCA --> Coords([ coords_2d ])
+        KMeans --> Labels([ cluster_labels ])
+        Coords --> Scatter{ sns_scatterplot }
+        Labels --> Scatter
+        Scatter --> Fig([ KMeans_PCA_Fig ])
     
-        style Input fill:#10b981,stroke:#059669,color:#fff
-        style Scale fill:#3b82f6,stroke:#2563eb,color:#fff
-        style PCA fill:#8b5cf6,stroke:#7c3aed,color:#fff
-        style KMeans fill:#8b5cf6,stroke:#7c3aed,color:#fff
-        style Scatter fill:#f59e0b,stroke:#d97706,color:#fff
+        style InDF fill:#fbbf24,stroke:#d97706,stroke-width:2px,color:#000
+        style InParam fill:#fbbf24,stroke:#d97706,stroke-width:2px,color:#000
+        style Filter fill:#3b82f6,stroke:#2563eb,stroke-width:2px,color:#fff
+        style Scale fill:#3b82f6,stroke:#2563eb,stroke-width:2px,color:#fff
+        style PCA fill:#3b82f6,stroke:#2563eb,stroke-width:2px,color:#fff
+        style KMeans fill:#3b82f6,stroke:#2563eb,stroke-width:2px,color:#fff
+        style Scatter fill:#3b82f6,stroke:#2563eb,stroke-width:2px,color:#fff
+        style Coords fill:#8b5cf6,stroke:#7c3aed,stroke-width:2px,color:#fff
+        style Labels fill:#8b5cf6,stroke:#7c3aed,stroke-width:2px,color:#fff
+        style Fig fill:#10b981,stroke:#059669,stroke-width:2px,color:#fff
 
 _metadata:
   bloc: 1
