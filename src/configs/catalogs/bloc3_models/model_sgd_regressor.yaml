@@ -30,9 +30,15 @@ code_template: |
 math_theory: |
   Le régresseur SGD optimise les coefficients d'un modèle linéaire en mettant à jour les poids pour chaque observation (ou mini-lot), ce qui le rend idéal pour l'apprentissage en ligne.
 
-  La mise à jour avec la perte Squared Error ($L_{SE}$) est :
-  $$ \textcolor{#ef4444}{L}_{SE}(\textcolor{#10b981}{y_t}, \hat{y}_t) = \frac{1}{2} (\textcolor{#10b981}{y_t} - \textcolor{#3b82f6}{w}_t^T \textcolor{#10b981}{x_t})^2 $$
-  $$ \textcolor{#3b82f6}{w}_{t+1} = \textcolor{#3b82f6}{w}_t + \textcolor{#8b5cf6}{\eta_t} \left( (\textcolor{#10b981}{y_t} - \textcolor{#3b82f6}{w}_t^T \textcolor{#10b981}{x_t})\textcolor{#10b981}{x_t} - \frac{\textcolor{#fbbf24}{\alpha}}{N} \nabla R(\textcolor{#3b82f6}{w}_t) \right) $$
+  La règle de mise à jour utilisant la perte de l'Erreur Quadratique ($L_{SE}$) est :
+
+  $$
+  \textcolor{#ef4444}{L}_{SE}(\textcolor{#10b981}{y_t}, \hat{y}_t) = \frac{1}{2} (\textcolor{#10b981}{y_t} - \textcolor{#3b82f6}{w}_t^T \textcolor{#10b981}{x_t})^2 
+  $$
+
+  $$
+  \textcolor{#3b82f6}{w}_{t+1} = \textcolor{#3b82f6}{w}_t + \textcolor{#8b5cf6}{\eta_t} \left( (\textcolor{#10b981}{y_t} - \textcolor{#3b82f6}{w}_t^T \textcolor{#10b981}{x_t})\textcolor{#10b981}{x_t} - \frac{\textcolor{#fbbf24}{\alpha}}{N} \nabla R(\textcolor{#3b82f6}{w}_t) \right) 
+  $$
 
   - $\textcolor{#3b82f6}{w}$ : Poids du modèle de régression
   - $\textcolor{#8b5cf6}{\eta_t}$ : Taux d'apprentissage à l'étape $t$

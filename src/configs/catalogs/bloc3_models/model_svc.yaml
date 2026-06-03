@@ -24,19 +24,23 @@ hyperparameters:
   kernel: "Noyau ('rbf', 'poly', 'linear', 'sigmoid')."
   C: "Paramètre de pénalité."
 math_theory: |
-  Le SVM cherche à trouver l'hyperplan optimal qui sépare les classes en maximisant la marge, tout en permettant quelques erreurs grâce aux variables d'écart $\textcolor{#ef4444}{\xi_i}$.
+  Le SVM cherche à trouver l'hyperplan optimal qui sépare les classes en maximisant la marge, tout en autorisant quelques erreurs via les variables d'écart $\textcolor{#ef4444}{\xi_i}$.
   
   L'objectif primal est de minimiser :
-  $$\min_{\textcolor{#3b82f6}{w}, \textcolor{#10b981}{b}, \textcolor{#ef4444}{\xi}} \frac{1}{2} \|\textcolor{#3b82f6}{w}\|^2 + \textcolor{#fbbf24}{C} \sum_{i=1}^{n} \textcolor{#ef4444}{\xi_i}$$
+  $$
+  \min_{\textcolor{#3b82f6}{w}, \textcolor{#10b981}{b}, \textcolor{#ef4444}{\xi}} \frac{1}{2} \|\textcolor{#3b82f6}{w}\|^2 + \textcolor{#fbbf24}{C} \sum_{i=1}^{n} \textcolor{#ef4444}{\xi_i}
+  $$
   
   Sous les contraintes (pour chaque point $\textcolor{#fbbf24}{x_i}$) :
-  $$\textcolor{#8b5cf6}{y_i} (\textcolor{#3b82f6}{w}^T \phi(\textcolor{#fbbf24}{x_i}) + \textcolor{#10b981}{b}) \geq 1 - \textcolor{#ef4444}{\xi_i} \quad \text{et} \quad \textcolor{#ef4444}{\xi_i} \geq 0$$
+  $$
+  \textcolor{#8b5cf6}{y_i} (\textcolor{#3b82f6}{w}^T \phi(\textcolor{#fbbf24}{x_i}) + \textcolor{#10b981}{b}) \geq 1 - \textcolor{#ef4444}{\xi_i} \quad \text{et} \quad \textcolor{#ef4444}{\xi_i} \geq 0
+  $$
   
   - $\textcolor{#3b82f6}{w}$ : Vecteur de poids (définit l'orientation de l'hyperplan).
   - $\textcolor{#10b981}{b}$ : Biais (définit le décalage de l'hyperplan).
-  - $\textcolor{#ef4444}{\xi_i}$ : Variable d'écart (slack), mesure l'erreur pour une observation mal classée ou dans la marge.
-  - $\textcolor{#fbbf24}{C}$ : Hyperparamètre de régularisation contrôlant le compromis entre marge large et erreurs.
-  - $\phi(\textcolor{#fbbf24}{x})$ : Transformation implicite vers un espace de plus grande dimension via le "Kernel Trick" (ex: $K(x_i, x_j) = \phi(x_i)^T \phi(x_j)$).
+  - $\textcolor{#ef4444}{\xi_i}$ : Variable d'écart, mesure l'erreur pour une observation mal classée ou se trouvant dans la marge.
+  - $\textcolor{#fbbf24}{C}$ : Hyperparamètre de régularisation contrôlant le compromis entre une marge large et les erreurs.
+  - $\phi(\textcolor{#fbbf24}{x})$ : Transformation implicite dans un espace de plus grande dimension via l'"Astuce du Noyau" (Kernel Trick) (par ex., $K(x_i, x_j) = \phi(x_i)^T \phi(x_j)$).
   - $\textcolor{#8b5cf6}{y_i} \in \{-1, 1\}$ : La classe réelle.
 code_template: |
   import pandas as pd

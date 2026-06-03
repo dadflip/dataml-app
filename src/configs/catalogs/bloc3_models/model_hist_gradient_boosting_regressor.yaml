@@ -81,20 +81,24 @@ illustration_mermaid: |
     style Pred fill:#10b981,stroke:#059669,stroke-width:2px,color:#fff
 
 math_theory: |
-  HistGradientBoostingRegressor is a fast gradient boosting implementation that discretizes continuous features into integer-valued bins (histograms) before training.
+  HistGradientBoostingRegressor est une implémentation rapide du gradient boosting qui discrétise les caractéristiques continues en intervalles à valeurs entières (histogrammes) avant l'entraînement.
   
-  First, input features $\textcolor{#ef4444}{x}$ are mapped to bins:
-  $$ \tilde{x} = \text{Bin}(\textcolor{#ef4444}{x}, \text{max\_bins}) $$
+  Tout d'abord, les caractéristiques d'entrée $\textcolor{#ef4444}{x}$ sont associées à des intervalles :
+  $$
+  \tilde{x} = \text{Bin}(\textcolor{#ef4444}{x}, \text{max\_bins}) 
+  $$
   
-  The model then minimizes the chosen regression loss (e.g., MSE) using trees trained on the binned data:
-  $$ \textcolor{#3b82f6}{F_M}(\tilde{x}) = F_0(\tilde{x}) + \sum_{m=1}^{\textcolor{#8b5cf6}{M}} \textcolor{#10b981}{\nu} \cdot \textcolor{#fbbf24}{h_m}(\tilde{x}) $$
+  Ensuite, le modèle minimise la fonction de perte de régression choisie (ex. MSE) en utilisant des arbres entraînés sur les données discrétisées :
+  $$
+  \textcolor{#3b82f6}{F_M}(\tilde{x}) = F_0(\tilde{x}) + \sum_{m=1}^{\textcolor{#8b5cf6}{M}} \textcolor{#10b981}{\nu} \cdot \textcolor{#fbbf24}{h_m}(\tilde{x}) 
+  $$
   
-  Where:
-  - $\textcolor{#3b82f6}{F_M}(\tilde{x})$ is the final continuous prediction.
-  - $\textcolor{#8b5cf6}{M}$ is the maximum number of iterations (`max_iter`).
-  - $\textcolor{#10b981}{\nu}$ is the learning rate.
-  - $\textcolor{#fbbf24}{h_m}$ is the decision tree grown at step $m$ using histogram-based splits.
-  - $\textcolor{#ef4444}{x}$ represents the raw input features.
+  Où :
+  - $\textcolor{#3b82f6}{F_M}(\tilde{x})$ est la prédiction continue finale.
+  - $\textcolor{#8b5cf6}{M}$ est le nombre maximum d'itérations (`max_iter`).
+  - $\textcolor{#10b981}{\nu}$ est le taux d'apprentissage.
+  - $\textcolor{#fbbf24}{h_m}$ est l'arbre de décision construit à l'étape $m$ en utilisant des coupures basées sur des histogrammes.
+  - $\textcolor{#ef4444}{x}$ représente les caractéristiques d'entrée brutes.
 
 math_illustration_svg: |
   <svg viewBox="0 0 800 400" xmlns="http://www.w3.org/2000/svg">

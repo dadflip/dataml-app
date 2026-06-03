@@ -168,16 +168,26 @@ code_template: |
               ('model', wrapped_model)
           ])
 math_theory: |
-  L'architecture Seq2Seq repose sur la modélisation conjointe de deux processus avec des cellules LSTM/GRU.
-  L'encodeur traite la séquence d'entrée $\textcolor{#10b981}{X}$ pour produire une séquence d'états cachés $\textcolor{#3b82f6}{h_t}$, dont le dernier sert de vecteur de contexte $\textcolor{#8b5cf6}{c}$.
+  L'architecture Seq2Seq repose sur la modélisation conjointe de deux processus utilisant des cellules LSTM/GRU.
+  L'encodeur traite la séquence d'entrée $\textcolor{#10b981}{X}$ pour produire une séquence d'états cachés $\textcolor{#3b82f6}{h_t}$, où l'état final sert de vecteur de contexte $\textcolor{#8b5cf6}{c}$.
   
-  $$ \textcolor{#3b82f6}{h_t} = \text{LSTM}_{enc}(\textcolor{#10b981}{x_t}, \textcolor{#3b82f6}{h_{t-1}}) $$
-  $$ \textcolor{#8b5cf6}{c} = \textcolor{#3b82f6}{h_T} $$
+  $$
+  \textcolor{#3b82f6}{h_t} = \text{LSTM}_{enc}(\textcolor{#10b981}{x_t}, \textcolor{#3b82f6}{h_{t-1}}) 
+  $$
+
+  $$
+  \textcolor{#8b5cf6}{c} = \textcolor{#3b82f6}{h_T} 
+  $$
   
   Le décodeur utilise ce contexte pour générer itérativement la séquence de sortie $\textcolor{#fbbf24}{y_t}$, en s'appuyant sur son propre état caché $\textcolor{#ef4444}{s_t}$.
   
-  $$ \textcolor{#ef4444}{s_t} = \text{LSTM}_{dec}(\textcolor{#fbbf24}{y_{t-1}}, \textcolor{#ef4444}{s_{t-1}}, \textcolor{#8b5cf6}{c}) $$
-  $$ P(\textcolor{#fbbf24}{y_t}) = \text{Softmax}(\text{Linear}(\textcolor{#ef4444}{s_t})) $$
+  $$
+  \textcolor{#ef4444}{s_t} = \text{LSTM}_{dec}(\textcolor{#fbbf24}{y_{t-1}}, \textcolor{#ef4444}{s_{t-1}}, \textcolor{#8b5cf6}{c}) 
+  $$
+
+  $$
+  P(\textcolor{#fbbf24}{y_t}) = \text{Softmax}(\text{Linear}(\textcolor{#ef4444}{s_t})) 
+  $$
 math_illustration_svg: |
   <svg viewBox="0 0 800 400" xmlns="http://www.w3.org/2000/svg">
     <!-- Encoder -->

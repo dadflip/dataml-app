@@ -21,11 +21,19 @@ cons:
 hyperparameters:
   batch_size: "Taille du batch pour l'extraction (ex: 32)."
 math_theory: |
-  Ce pipeline de Transfer Learning (extraction de caractéristiques) fige les poids d'un réseau de neurones convolutif (CNN) pré-entraîné $\textcolor{#3b82f6}{f_{CNN}}$.
-  L'image d'entrée $\textcolor{#10b981}{X}$ est transformée en un vecteur de caractéristiques dense $\textcolor{#fbbf24}{h}$ de dimension $d$ (ex: 1280 pour MobileNetV2) :
-  $$ \textcolor{#fbbf24}{h} = \textcolor{#3b82f6}{f_{CNN}}(\textcolor{#10b981}{X}) $$
+  Ce pipeline de Transfer Learning (extraction de caractéristiques) fige (freeze) les poids d'un réseau de neurones convolutif (CNN) pré-entraîné $\textcolor{#3b82f6}{f_{CNN}}$.
+  L'image d'entrée $\textcolor{#10b981}{X}$ est transformée en un vecteur de caractéristiques dense $\textcolor{#fbbf24}{h}$ de dimension $d$ (par ex., 1280 pour MobileNetV2) :
+  
+  $$
+  \textcolor{#fbbf24}{h} = \textcolor{#3b82f6}{f_{CNN}}(\textcolor{#10b981}{X}) 
+  $$
+  
   Ensuite, une régression logistique standard est appliquée sur $\textcolor{#fbbf24}{h}$ pour prédire la probabilité de chaque classe $k$ :
-  $$ P(\textcolor{#ef4444}{y}=k | \textcolor{#fbbf24}{h}) = \frac{\exp(\textcolor{#8b5cf6}{W}_k \cdot \textcolor{#fbbf24}{h} + \textcolor{#8b5cf6}{b}_k)}{\sum_{j} \exp(\textcolor{#8b5cf6}{W}_j \cdot \textcolor{#fbbf24}{h} + \textcolor{#8b5cf6}{b}_j)} $$
+  
+  $$
+  P(\textcolor{#ef4444}{y}=k | \textcolor{#fbbf24}{h}) = \frac{\exp(\textcolor{#8b5cf6}{W}_k \cdot \textcolor{#fbbf24}{h} + \textcolor{#8b5cf6}{b}_k)}{\sum_{j} \exp(\textcolor{#8b5cf6}{W}_j \cdot \textcolor{#fbbf24}{h} + \textcolor{#8b5cf6}{b}_j)} 
+  $$
+  
   où $\textcolor{#8b5cf6}{W}$ et $\textcolor{#8b5cf6}{b}$ sont les seuls paramètres appris lors de l'entraînement.
 math_illustration_svg: |
   <svg viewBox="0 0 800 400" xmlns="http://www.w3.org/2000/svg">

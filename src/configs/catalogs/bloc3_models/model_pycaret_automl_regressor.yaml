@@ -22,10 +22,13 @@ cons:
 hyperparameters:
   sort: "Métrique à optimiser ('R2', 'RMSE', 'MAE', 'MAPE')."
 math_theory: |
-  L'AutoML PyCaret pour la régression évalue plusieurs algorithmes $\textcolor{#3b82f6}{\mathcal{M}} = \{M_1, \dots, M_K\}$.
-  Chaque modèle $M_k$ apprend à partir des données $\textcolor{#fbbf24}{D_{train}}$ pour produire une fonction de prédiction continue $\textcolor{#10b981}{\hat{f}_k(x)}$.
-  Le système minimise une métrique d'erreur $\textcolor{#ef4444}{E_k}$ (ex: RMSE, MAE) calculée par validation croisée. Le modèle final $\textcolor{#8b5cf6}{M^*}$ est sélectionné tel que :
-  $$ \textcolor{#8b5cf6}{M^*} = \arg\min_{k \in \{1 \dots K\}} \textcolor{#ef4444}{E_k}(\textcolor{#10b981}{\hat{f}_k}, \textcolor{#fbbf24}{D_{val}}) $$
+  PyCaret AutoML pour la régression évalue plusieurs algorithmes $\textcolor{#3b82f6}{\mathcal{M}} = \{\textcolor{#3b82f6}{M_1}, \dots, \textcolor{#3b82f6}{M_K}\}$.
+  Chaque modèle $\textcolor{#3b82f6}{M_k}$ apprend à partir des données $\textcolor{#fbbf24}{D_{train}}$ pour produire une fonction de prédiction continue $\textcolor{#10b981}{\hat{f}_k(x)}$.
+  Le système minimise une métrique d'erreur $\textcolor{#ef4444}{E_k}$ (ex. RMSE, MAE) calculée via validation croisée. Le modèle final $\textcolor{#8b5cf6}{M^*}$ est sélectionné tel que :
+  
+  $$
+  \textcolor{#8b5cf6}{M^*} = \arg\min_{k \in \{1 \dots K\}} \textcolor{#ef4444}{E_k}(\textcolor{#10b981}{\hat{f}_k}, \textcolor{#fbbf24}{D_{val}})
+  $$
 math_illustration_svg: |
   <svg viewBox="0 0 800 400" xmlns="http://www.w3.org/2000/svg">
     <!-- Background -->

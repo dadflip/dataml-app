@@ -60,17 +60,23 @@ code_template: |
       training_history = {"status": "success"}
       task_type = "classification"
 math_theory: |
-  Wav2Vec 2.0 learns powerful representations from raw audio in a self-supervised manner, which are then fine-tuned for classification.
+  Wav2Vec 2.0 apprend des représentations puissantes à partir de l'audio brut de manière auto-supervisée, qui sont ensuite affinées (fine-tuned) pour la classification.
   
-  1. **Feature Encoding**: A multi-layer CNN maps the raw audio sequence $\textcolor{#10b981}{X}$ to latent speech representations $\textcolor{#fbbf24}{Z} = \{z_1, z_2, \dots, z_T\}$.
+  1. **Feature Encoding (Encodage des caractéristiques)** : Un CNN multicouche associe la séquence audio brute $\textcolor{#10b981}{X}$ à des représentations de parole latentes $\textcolor{#fbbf24}{Z} = \{z_1, z_2, \dots, z_T\}$.
   
-  2. **Contextualization**: A Transformer network processes $\textcolor{#fbbf24}{Z}$ (with masking applied) to build contextual representations $\textcolor{#3b82f6}{C} = \{c_1, c_2, \dots, c_T\}$.
+  2. **Contextualization (Contextualisation)** : Un réseau Transformer traite $\textcolor{#fbbf24}{Z}$ (avec un masquage appliqué) pour construire des représentations contextuelles $\textcolor{#3b82f6}{C} = \{c_1, c_2, \dots, c_T\}$.
   
-  3. **Contrastive Loss (Pre-training)**: For masked time steps $t$, the model must identify the true quantized latent $\textcolor{#8b5cf6}{q_t}$ from a set of distractors $\textcolor{#ef4444}{K}$, utilizing cosine similarity $\text{sim}$:
-  $$ \mathcal{L}_m = -\log \frac{\exp(\text{sim}(\textcolor{#3b82f6}{c_t}, \textcolor{#8b5cf6}{q_t}) / \kappa)}{\sum_{\tilde{q} \in \textcolor{#ef4444}{K}} \exp(\text{sim}(\textcolor{#3b82f6}{c_t}, \tilde{q}) / \kappa)} $$
+  3. **Contrastive Loss (Perte contrastive en pré-entraînement)** : Pour les pas de temps masqués $t$, le modèle doit identifier le véritable espace latent quantifié $\textcolor{#8b5cf6}{q_t}$ parmi un ensemble de distracteurs $\textcolor{#ef4444}{K}$, en utilisant la similarité cosinus $\text{sim}$ :
   
-  4. **Fine-Tuning (Classification)**: The representations are pooled (e.g., average pooling) to $\textcolor{#3b82f6}{\bar{c}}$, and a linear classifier assigns the probabilities:
-  $$ \textcolor{#10b981}{\hat{y}} = \text{Softmax}(W \cdot \textcolor{#3b82f6}{\bar{c}} + b) $$
+  $$
+  \mathcal{L}_m = -\log \frac{\exp(\text{sim}(\textcolor{#3b82f6}{c_t}, \textcolor{#8b5cf6}{q_t}) / \kappa)}{\sum_{\tilde{q} \in \textcolor{#ef4444}{K}} \exp(\text{sim}(\textcolor{#3b82f6}{c_t}, \tilde{q}) / \kappa)} 
+  $$
+  
+  4. **Fine-Tuning (Classification)** : Les représentations sont agrégées (par exemple, par un average pooling) en $\textcolor{#3b82f6}{\bar{c}}$, et un classifieur linéaire attribue les probabilités :
+  
+  $$
+  \textcolor{#10b981}{\hat{y}} = \text{Softmax}(W \cdot \textcolor{#3b82f6}{\bar{c}} + b) 
+  $$
 math_illustration_svg: |
   <svg viewBox="0 0 800 400" xmlns="http://www.w3.org/2000/svg">
     <!-- Raw Audio -->

@@ -25,10 +25,17 @@ hyperparameters:
 math_theory: |
   Le modèle transforme chaque texte en un vecteur $\textcolor{#3b82f6}{x}$ basé sur le score TF-IDF de ses mots.
   Pour un terme $t$ dans un document $d$, le score $\textcolor{#3b82f6}{x}_{t,d}$ est :
-  $$ \textcolor{#3b82f6}{x}_{t,d} = \text{TF}(t, d) \times \log\left(\frac{\textcolor{#fbbf24}{N}}{\text{DF}(t)}\right) $$
-  Où $\text{TF}$ est la fréquence du terme et $\text{DF}$ le nombre de documents contenant $t$ parmi $\textcolor{#fbbf24}{N}$ documents.
+
+  $$
+  \textcolor{#3b82f6}{x}_{t,d} = \text{TF}(t, d) \times \log\left(\frac{\textcolor{#fbbf24}{N}}{\text{DF}(t)}\right) 
+  $$
+
+  Où $\text{TF}$ est la fréquence du terme et $\text{DF}$ est le nombre de documents contenant $t$ parmi $\textcolor{#fbbf24}{N}$ documents.
   Ensuite, la Régression Logistique modélise la probabilité d'une classe $\textcolor{#ef4444}{y}$ via une fonction sigmoïde (ou softmax) appliquée à une combinaison linéaire des caractéristiques :
-  $$ P(\textcolor{#ef4444}{y}=1 | \textcolor{#3b82f6}{x}) = \frac{1}{1 + \exp(-(\textcolor{#8b5cf6}{w} \cdot \textcolor{#3b82f6}{x} + b))} $$
+
+  $$
+  P(\textcolor{#ef4444}{y}=1 | \textcolor{#3b82f6}{x}) = \frac{1}{1 + \exp(-(\textcolor{#8b5cf6}{w} \cdot \textcolor{#3b82f6}{x} + b))} 
+  $$
 math_illustration_svg: |
   <svg viewBox="0 0 800 400" xmlns="http://www.w3.org/2000/svg">
     <rect x="0" y="0" width="800" height="400" fill="#1e293b" rx="10"/>

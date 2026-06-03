@@ -155,17 +155,27 @@ illustration_mermaid: |
     style Pred fill:#10b981,stroke:#059669,stroke-width:2px,color:#fff
 
 math_theory: |
-  Haar Cascades detect objects using simple Haar-like rectangular features combined in a cascade structure.
+  Les cascades de Haar détectent des objets en utilisant de simples caractéristiques rectangulaires de type Haar combinées dans une structure en cascade.
   
-  A Haar feature evaluates the difference between the sums of pixels within adjacent rectangular regions of an image $\textcolor{#ef4444}{\mathbf{X}}$:
-  $$ \textcolor{#3b82f6}{f(x)} = \sum_{\text{black\_rect}} \text{pixels} - \sum_{\text{white\_rect}} \text{pixels} $$
-  This is computed instantaneously using an **Integral Image** representation, where any rectangular sum takes only four array references.
+  Une caractéristique de Haar évalue la différence entre les sommes de pixels dans des régions rectangulaires adjacentes d'une image $\textcolor{#ef4444}{\mathbf{X}}$ :
   
-  The **AdaBoost** algorithm is used to select the most discriminative features out of thousands, forming strong classifiers $H(x)$ from weak decision stumps $h_i(x)$:
-  $$ \textcolor{#8b5cf6}{H(x)} = \text{sign}\left( \sum_{i=1}^T \textcolor{#fbbf24}{\alpha_i} h_i(x) \right) $$
+  $$
+  \textcolor{#3b82f6}{f(x)} = \sum_{\text{black\_rect}} \text{pixels} - \sum_{\text{white\_rect}} \text{pixels} 
+  $$
   
-  These classifiers are arranged in an **Attentional Cascade**. An image sub-window must pass every stage in the cascade to be considered a face. If any stage $\textcolor{#10b981}{S_k}$ rejects the sub-window, computation immediately stops for that window, making the approach extremely computationally efficient:
-  $$ \text{Face Detected} \iff \forall k, \textcolor{#10b981}{S_k(x)} > \text{threshold}_k $$
+  Ceci est calculé instantanément en utilisant une représentation en **Image Intégrale**, où n'importe quelle somme rectangulaire ne nécessite que quatre références de tableau.
+  
+  L'algorithme **AdaBoost** est utilisé pour sélectionner les caractéristiques les plus discriminantes parmi des milliers, formant des classifieurs forts $H(x)$ à partir de souches de décision faibles $h_i(x)$ :
+  
+  $$
+  \textcolor{#8b5cf6}{H(x)} = \text{sign}\left( \sum_{i=1}^T \textcolor{#fbbf24}{\alpha_i} h_i(x) \right) 
+  $$
+  
+  Ces classifieurs sont disposés dans une **Cascade d'Attention**. Une sous-fenêtre de l'image doit passer chaque étape de la cascade pour être considérée comme un visage. Si une étape $\textcolor{#10b981}{S_k}$ rejette la sous-fenêtre, le calcul s'arrête immédiatement pour cette fenêtre, rendant l'approche extrêmement efficace sur le plan informatique :
+  
+  $$
+  \text{Face Detected} \iff \forall k, \textcolor{#10b981}{S_k(x)} > \text{threshold}_k 
+  $$
 
 math_illustration_svg: |
   <svg viewBox="0 0 800 400" xmlns="http://www.w3.org/2000/svg">

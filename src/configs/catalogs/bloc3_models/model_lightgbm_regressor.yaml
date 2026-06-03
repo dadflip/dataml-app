@@ -101,17 +101,19 @@ illustration_mermaid: |
     style Pred fill:#10b981,stroke:#059669,stroke-width:2px,color:#fff
 
 math_theory: |
-  LightGBM Regressor applies the LightGBM framework to continuous targets by minimizing a regression loss (such as MSE or MAE).
+  Le LightGBM Regressor applique le framework LightGBM aux cibles continues en minimisant une fonction de perte de régression (telle que MSE ou MAE).
   
-  The model uses histogram binning (EFB) to discretize features and builds trees sequentially using leaf-wise growth (choosing the leaf that maximizes the loss reduction).
+  Le modèle utilise la discrétisation par histogrammes (EFB) pour les caractéristiques et construit des arbres de manière séquentielle via une croissance par les feuilles (en choisissant la feuille qui maximise la réduction de la perte).
   
-  $$ \textcolor{#3b82f6}{F_M}(\textcolor{#ef4444}{x}) = F_0(\textcolor{#ef4444}{x}) + \sum_{m=1}^{\textcolor{#8b5cf6}{M}} \textcolor{#10b981}{\eta} \cdot \textcolor{#fbbf24}{h_m}(\textcolor{#ef4444}{x}) $$
+  $$
+  \textcolor{#3b82f6}{F_M}(\textcolor{#ef4444}{x}) = F_0(\textcolor{#ef4444}{x}) + \sum_{m=1}^{\textcolor{#8b5cf6}{M}} \textcolor{#10b981}{\eta} \cdot \textcolor{#fbbf24}{h_m}(\textcolor{#ef4444}{x}) 
+  $$
   
-  Where:
-  - $\textcolor{#3b82f6}{F_M}(\textcolor{#ef4444}{x})$ is the aggregated continuous prediction.
-  - $\textcolor{#8b5cf6}{M}$ is the number of trees (`n_estimators`).
-  - $\textcolor{#10b981}{\eta}$ is the learning rate.
-  - $\textcolor{#fbbf24}{h_m}$ is the leaf-wise regression tree at iteration $m$.
+  Où :
+  - $\textcolor{#3b82f6}{F_M}(\textcolor{#ef4444}{x})$ est la prédiction continue agrégée.
+  - $\textcolor{#8b5cf6}{M}$ est le nombre d'arbres (`n_estimators`).
+  - $\textcolor{#10b981}{\eta}$ est le taux d'apprentissage.
+  - $\textcolor{#fbbf24}{h_m}$ est l'arbre de régression construit par les feuilles à l'itération $m$.
 
 math_illustration_svg: |
   <svg viewBox="0 0 800 400" xmlns="http://www.w3.org/2000/svg">

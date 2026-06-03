@@ -104,18 +104,20 @@ illustration_mermaid: |
     style Pred fill:#10b981,stroke:#059669,stroke-width:2px,color:#fff
 
 math_theory: |
-  LightGBM is a highly optimized gradient boosting framework that uses histogram-based algorithms and leaf-wise (best-first) tree growth. Instead of growing trees level by level, it splits the leaf with the maximum loss reduction.
+  LightGBM est un framework de gradient boosting hautement optimisé qui utilise des algorithmes basés sur des histogrammes et une croissance des arbres par les feuilles (leaf-wise). Au lieu de construire les arbres niveau par niveau, il divise la feuille offrant la réduction de perte maximale.
   
-  The learning process follows the standard boosting formulation:
-  $$ \textcolor{#3b82f6}{F_M}(\textcolor{#ef4444}{x}) = \sum_{m=1}^{\textcolor{#8b5cf6}{M}} \textcolor{#10b981}{\eta} \cdot \textcolor{#fbbf24}{h_m}(\textcolor{#ef4444}{x}) $$
+  Le processus d'apprentissage suit la formulation standard du boosting :
+  $$
+  \textcolor{#3b82f6}{F_M}(\textcolor{#ef4444}{x}) = \sum_{m=1}^{\textcolor{#8b5cf6}{M}} \textcolor{#10b981}{\eta} \cdot \textcolor{#fbbf24}{h_m}(\textcolor{#ef4444}{x}) 
+  $$
   
-  Where:
-  - $\textcolor{#3b82f6}{F_M}(\textcolor{#ef4444}{x})$ is the aggregated log-odds output.
-  - $\textcolor{#8b5cf6}{M}$ is the number of trees (`n_estimators`).
-  - $\textcolor{#10b981}{\eta}$ is the learning rate (`learning_rate`).
-  - $\textcolor{#fbbf24}{h_m}$ is the leaf-wise grown tree at iteration $m$.
+  Où :
+  - $\textcolor{#3b82f6}{F_M}(\textcolor{#ef4444}{x})$ est la sortie agrégée en log-odds.
+  - $\textcolor{#8b5cf6}{M}$ est le nombre d'arbres (`n_estimators`).
+  - $\textcolor{#10b981}{\eta}$ est le taux d'apprentissage (`learning_rate`).
+  - $\textcolor{#fbbf24}{h_m}$ est l'arbre construit par les feuilles à l'itération $m$.
   
-  LightGBM applies GOSS (Gradient-based One-Side Sampling) and EFB (Exclusive Feature Bundling) internally to speed up training while preserving accuracy. The final probability is given by $P(y=1|\textcolor{#ef4444}{x}) = \sigma(\textcolor{#3b82f6}{F_M}(\textcolor{#ef4444}{x}))$.
+  LightGBM applique en interne GOSS (Gradient-based One-Side Sampling) et EFB (Exclusive Feature Bundling) pour accélérer l'entraînement tout en préservant la précision. La probabilité finale est donnée par $P(y=1|\textcolor{#ef4444}{x}) = \sigma(\textcolor{#3b82f6}{F_M}(\textcolor{#ef4444}{x}))$.
 
 math_illustration_svg: |
   <svg viewBox="0 0 800 400" xmlns="http://www.w3.org/2000/svg">

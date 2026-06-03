@@ -22,10 +22,13 @@ cons:
 hyperparameters:
   sort: "Métrique à optimiser ('Accuracy', 'AUC', 'F1', 'Precision', 'Recall')."
 math_theory: |
-  L'AutoML PyCaret compare un ensemble de modèles candidats $\textcolor{#3b82f6}{\mathcal{M}} = \{M_1, M_2, \dots, M_K\}$.
-  Chaque modèle $M_k$ est entraîné sur le jeu de données $\textcolor{#fbbf24}{D_{train}}$ pour générer un modèle ajusté $\textcolor{#10b981}{\hat{f}_k(x)}$.
-  La sélection repose sur une évaluation croisée qui calcule un score de performance $\textcolor{#ef4444}{S_k}$. Le meilleur modèle $\textcolor{#8b5cf6}{M^*}$ est celui qui maximise ce score :
-  $$ \textcolor{#8b5cf6}{M^*} = \arg\max_{k \in \{1 \dots K\}} \textcolor{#ef4444}{S_k}(\textcolor{#10b981}{\hat{f}_k}, \textcolor{#fbbf24}{D_{val}}) $$
+  PyCaret AutoML compare un ensemble de modèles candidats $\textcolor{#3b82f6}{\mathcal{M}} = \{\textcolor{#3b82f6}{M_1}, \textcolor{#3b82f6}{M_2}, \dots, \textcolor{#3b82f6}{M_K}\}$.
+  Chaque modèle $\textcolor{#3b82f6}{M_k}$ est entraîné sur le jeu de données $\textcolor{#fbbf24}{D_{train}}$ pour générer un modèle ajusté $\textcolor{#10b981}{\hat{f}_k(x)}$.
+  La sélection repose sur la validation croisée pour calculer un score de performance $\textcolor{#ef4444}{S_k}$. Le meilleur modèle $\textcolor{#8b5cf6}{M^*}$ est celui qui maximise ce score :
+  
+  $$
+  \textcolor{#8b5cf6}{M^*} = \arg\max_{k \in \{1 \dots K\}} \textcolor{#ef4444}{S_k}(\textcolor{#10b981}{\hat{f}_k}, \textcolor{#fbbf24}{D_{val}})
+  $$
 math_illustration_svg: |
   <svg viewBox="0 0 800 400" xmlns="http://www.w3.org/2000/svg">
     <!-- Background -->

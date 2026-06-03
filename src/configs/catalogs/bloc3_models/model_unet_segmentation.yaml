@@ -51,16 +51,25 @@ illustration_mermaid: |
     classDef tensor fill:#10b981,stroke:#059669,stroke-width:2px,color:#fff
 
 math_theory: |
-  U-Net achieves precise semantic segmentation through a fully convolutional encoder-decoder architecture with **skip connections**.
+  U-Net réalise une segmentation sémantique précise grâce à une architecture encodeur-décodeur entièrement convolutive avec des **connexions résiduelles (skip connections)**.
   
-  The encoder (contracting path) extracts semantic representations using convolutions and pooling. For an input feature map $\textcolor{#ef4444}{\mathbf{X}_{\ell}}$, the next layer is:
-  $$ \textcolor{#fbbf24}{\mathbf{E}_{\ell+1}} = \text{MaxPool}(\text{ReLU}(\textcolor{#3b82f6}{\mathbf{W}_{conv}} * \textcolor{#ef4444}{\mathbf{X}_{\ell}})) $$
+  L'encodeur (chemin de contraction) extrait des représentations sémantiques en utilisant des convolutions et du pooling. Pour une carte de caractéristiques d'entrée $\textcolor{#ef4444}{\mathbf{X}_{\ell}}$, la couche suivante est :
   
-  The decoder (expansive path) reconstructs spatial resolution via transposed convolutions (UpConv). Crucially, to recover fine-grained spatial details lost during pooling, U-Net concatenates the corresponding high-resolution encoder features $\textcolor{#10b981}{\mathbf{E}_{\ell}}$ before further convolutions:
-  $$ \textcolor{#8b5cf6}{\mathbf{D}_{\ell-1}} = \text{ReLU}(\textcolor{#3b82f6}{\mathbf{W}'_{conv}} * [ \text{UpConv}(\textcolor{#8b5cf6}{\mathbf{D}_{\ell}}) ; \textcolor{#10b981}{\mathbf{E}_{\ell}} ]) $$
+  $$
+  \textcolor{#fbbf24}{\mathbf{E}_{\ell+1}} = \text{MaxPool}(\text{ReLU}(\textcolor{#3b82f6}{\mathbf{W}_{conv}} * \textcolor{#ef4444}{\mathbf{X}_{\ell}})) 
+  $$
   
-  The final layer uses a $1 \times 1$ convolution and a Softmax (or Sigmoid) function to predict a dense segmentation mask $\textcolor{#10b981}{\hat{\mathbf{Y}}}$, mapping each pixel to a class probability:
-  $$ \textcolor{#10b981}{\hat{\mathbf{Y}}_{i,j,c}} = \frac{\exp(z_{i,j,c})}{\sum_{k=1}^C \exp(z_{i,j,k})} $$
+  Le décodeur (chemin d'expansion) reconstruit la résolution spatiale via des convolutions transposées (UpConv). Surtout, pour récupérer les détails spatiaux fins perdus lors du pooling, U-Net concatène les caractéristiques correspondantes de l'encodeur à haute résolution $\textcolor{#10b981}{\mathbf{E}_{\ell}}$ avant de procéder à de nouvelles convolutions :
+  
+  $$
+  \textcolor{#8b5cf6}{\mathbf{D}_{\ell-1}} = \text{ReLU}(\textcolor{#3b82f6}{\mathbf{W}'_{conv}} * [ \text{UpConv}(\textcolor{#8b5cf6}{\mathbf{D}_{\ell}}) ; \textcolor{#10b981}{\mathbf{E}_{\ell}} ]) 
+  $$
+  
+  La couche finale utilise une convolution $1 \times 1$ et une fonction Softmax (ou Sigmoïde) pour prédire un masque de segmentation dense $\textcolor{#10b981}{\hat{\mathbf{Y}}}$, associant à chaque pixel une probabilité de classe :
+  
+  $$
+  \textcolor{#10b981}{\hat{\mathbf{Y}}_{i,j,c}} = \frac{\exp(z_{i,j,c})}{\sum_{k=1}^C \exp(z_{i,j,k})} 
+  $$
 
 math_illustration_svg: |
   <svg viewBox="0 0 800 400" xmlns="http://www.w3.org/2000/svg">

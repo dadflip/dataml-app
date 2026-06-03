@@ -99,13 +99,19 @@ math_theory: |
   XGBoost construit un ensemble additif d'arbres de régression pour minimiser une fonction de perte.
   
   La prédiction pour une instance $\textcolor{#fbbf24}{x_i}$ est la somme des prédictions de $\textcolor{#10b981}{K}$ arbres :
-  $$\hat{y}_i = \sum_{\textcolor{#3b82f6}{k}=1}^{\textcolor{#10b981}{K}} \textcolor{#ef4444}{f_{\textcolor{#3b82f6}{k}}}(\textcolor{#fbbf24}{x_i})$$
   
-  À l'étape $\textcolor{#3b82f6}{t}$, l'algorithme optimise une approximation de Taylor au second ordre de l'objectif $\mathcal{L}$ :
-  $$\mathcal{L}^{(\textcolor{#3b82f6}{t})} \approx \sum_{i=1}^n \left[ \textcolor{#8b5cf6}{g_i} \textcolor{#ef4444}{f_{\textcolor{#3b82f6}{t}}}(\textcolor{#fbbf24}{x_i}) + \frac{1}{2} \textcolor{#8b5cf6}{h_i} \textcolor{#ef4444}{f_{\textcolor{#3b82f6}{t}}}(\textcolor{#fbbf24}{x_i})^2 \right] + \Omega(\textcolor{#ef4444}{f_{\textcolor{#3b82f6}{t}}})$$
+  $$
+  \hat{y}_i = \sum_{\textcolor{#3b82f6}{k}=1}^{\textcolor{#10b981}{K}} \textcolor{#ef4444}{f_{\textcolor{#3b82f6}{k}}}(\textcolor{#fbbf24}{x_i})
+  $$
+  
+  À l'étape $\textcolor{#3b82f6}{t}$, l'algorithme optimise une approximation de Taylor du second ordre de l'objectif $\mathcal{L}$ :
+  
+  $$
+  \mathcal{L}^{(\textcolor{#3b82f6}{t})} \approx \sum_{i=1}^n \left[ \textcolor{#8b5cf6}{g_i} \textcolor{#ef4444}{f_{\textcolor{#3b82f6}{t}}}(\textcolor{#fbbf24}{x_i}) + \frac{1}{2} \textcolor{#8b5cf6}{h_i} \textcolor{#ef4444}{f_{\textcolor{#3b82f6}{t}}}(\textcolor{#fbbf24}{x_i})^2 \right] + \Omega(\textcolor{#ef4444}{f_{\textcolor{#3b82f6}{t}}})
+  $$
   
   - $\textcolor{#ef4444}{f_{\textcolor{#3b82f6}{t}}}$ : Le nouvel arbre ajouté à l'étape $\textcolor{#3b82f6}{t}$.
-  - $\textcolor{#8b5cf6}{g_i}, \textcolor{#8b5cf6}{h_i}$ : Gradients de 1er et 2nd ordre de la perte par rapport à la prédiction précédente.
+  - $\textcolor{#8b5cf6}{g_i}, \textcolor{#8b5cf6}{h_i}$ : Gradients de premier et de second ordre de la perte par rapport à la prédiction précédente.
   - $\Omega(\textcolor{#ef4444}{f})$ : Terme de régularisation pénalisant la complexité de l'arbre.
 math_illustration_svg: |
   <svg viewBox="0 0 800 400" xmlns="http://www.w3.org/2000/svg">

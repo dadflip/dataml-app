@@ -75,13 +75,16 @@ illustration_mermaid: |
 
 math_theory: |
   Modèle de prévision additif décomposant la série temporelle :
-  $$ \textcolor{#10b981}{y(t)} = \textcolor{#3b82f6}{g(t)} + \textcolor{#fbbf24}{s(t)} + \textcolor{#ef4444}{h(t)} + \textcolor{#8b5cf6}{\epsilon_t} $$
+
+  $$
+  \textcolor{#10b981}{y(t)} = \textcolor{#3b82f6}{g(t)} + \textcolor{#fbbf24}{s(t)} + \textcolor{#ef4444}{h(t)} + \textcolor{#8b5cf6}{\epsilon_t} 
+  $$
   
   Où :
   - $\textcolor{#10b981}{y(t)}$ est la valeur de la série temporelle à l'instant $t$.
   - $\textcolor{#3b82f6}{g(t)}$ modélise la **tendance** (croissance non périodique, souvent avec des points de rupture).
   - $\textcolor{#fbbf24}{s(t)}$ représente la **saisonnalité** (changements périodiques comme hebdomadaires ou annuels, modélisés via des séries de Fourier).
-  - $\textcolor{#ef4444}{h(t)}$ intègre l'effet des **jours fériés** (holidays) ou d'événements exceptionnels ponctuels.
+  - $\textcolor{#ef4444}{h(t)}$ intègre l'effet des **jours fériés** ou d'événements irréguliers spécifiques.
   - $\textcolor{#8b5cf6}{\epsilon_t}$ est l'erreur résiduelle.
 math_illustration_svg: |
   <svg viewBox="0 0 800 300" xmlns="http://www.w3.org/2000/svg">

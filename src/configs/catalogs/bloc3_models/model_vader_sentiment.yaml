@@ -24,10 +24,12 @@ hyperparameters:
   text_col: "Nom de la colonne contenant le texte brut (si DataFrame en entrée)."
 math_theory: |
   VADER (Valence Aware Dictionary and sEntiment Reasoner) combine un lexique riche avec des règles heuristiques spécifiques (majuscules, ponctuation, modificateurs de degré).
-  Pour chaque mot évalué, un score de valence empirique $\textcolor{#3b82f6}{v}_i$ est ajusté par des amplificateurs/réducteurs $\textcolor{#fbbf24}{h}_i$ (ex: MAJUSCULES, "!!!").
+  Pour chaque mot évalué, un score de valence empirique $\textcolor{#3b82f6}{v}_i$ est ajusté par des amplificateurs/réducteurs $\textcolor{#fbbf24}{h}_i$ (ex. TOUT EN MAJUSCULES, "!!!").
   La somme totale des valences ajustées est $x = \sum (\textcolor{#3b82f6}{v}_i + \textcolor{#fbbf24}{h}_i)$.
-  Le score final composé $\textcolor{#ef4444}{C}$ est normalisé entre -1 et +1 en utilisant une constante de normalisation $\textcolor{#8b5cf6}{\alpha}$ (typ. $\textcolor{#8b5cf6}{\alpha} = 15$) :
-  $$ \textcolor{#ef4444}{C} = \frac{x}{\sqrt{x^2 + \textcolor{#8b5cf6}{\alpha}}} $$
+  Le score composé final $\textcolor{#ef4444}{C}$ est normalisé entre -1 et +1 à l'aide d'une constante de normalisation $\textcolor{#8b5cf6}{\alpha}$ (généralement $\textcolor{#8b5cf6}{\alpha} = 15$) :
+  $$
+  \textcolor{#ef4444}{C} = \frac{x}{\sqrt{x^2 + \textcolor{#8b5cf6}{\alpha}}} 
+  $$
 math_illustration_svg: |
   <svg viewBox="0 0 800 400" xmlns="http://www.w3.org/2000/svg">
     <rect x="0" y="0" width="800" height="400" fill="#1e293b" rx="10"/>

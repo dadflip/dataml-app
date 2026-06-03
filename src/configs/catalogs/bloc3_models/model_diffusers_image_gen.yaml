@@ -43,17 +43,19 @@ code_template: |
       y_pred = np.array([f"Image Gen for: {str(p)[:30]}..." for p in X_test])
       
 math_theory: |
-  Stable Diffusion is based on Latent Diffusion Models (LDMs). Instead of operating in the high-dimensional pixel space, it operates in a lower-dimensional latent space produced by a Variational Autoencoder (VAE). The primary objective is to train a U-Net to reverse a forward diffusion process (which adds noise) by predicting the added noise $\textcolor{#10b981}{\epsilon}$. The loss function is:
+  Stable Diffusion est basé sur les Modèles de Diffusion Latente (LDMs). Au lieu d'opérer dans l'espace des pixels en haute dimension, il opère dans un espace latent de plus faible dimension produit par un Autoencodeur Variationnel (VAE). L'objectif principal est d'entraîner un U-Net à inverser un processus de diffusion direct (qui ajoute du bruit) en prédisant le bruit ajouté $\textcolor{#10b981}{\epsilon}$. La fonction de perte est :
   
-  $$ \mathcal{L}_{LDM} = \mathbb{E}_{\textcolor{#ef4444}{z_0}, \textcolor{#10b981}{\epsilon} \sim \mathcal{N}(0, I), t} \left[ \left\| \textcolor{#10b981}{\epsilon} - \textcolor{#3b82f6}{\epsilon_\theta}(\textcolor{#fbbf24}{z_t}, t, \textcolor{#8b5cf6}{\tau_\theta(y)}) \right\|^2 \right] $$
+  $$
+  \mathcal{L}_{LDM} = \mathbb{E}_{\textcolor{#ef4444}{z_0}, \textcolor{#10b981}{\epsilon} \sim \mathcal{N}(0, I), t} \left[ \left\| \textcolor{#10b981}{\epsilon} - \textcolor{#3b82f6}{\epsilon_\theta}(\textcolor{#fbbf24}{z_t}, t, \textcolor{#8b5cf6}{\tau_\theta(y)}) \right\|^2 \right] 
+  $$
   
-  Where:
-  - $\textcolor{#ef4444}{z_0}$ is the clean latent representation of the image.
-  - $\textcolor{#10b981}{\epsilon}$ is the true Gaussian noise added to the latent.
-  - $t$ is the timestep of the diffusion process.
-  - $\textcolor{#fbbf24}{z_t}$ is the noisy latent at step $t$.
-  - $\textcolor{#3b82f6}{\epsilon_\theta}$ is the U-Net model predicting the noise.
-  - $\textcolor{#8b5cf6}{\tau_\theta(y)}$ is the text embedding of the prompt $y$ (typically from a CLIP encoder), guiding the generation.
+  Où :
+  - $\textcolor{#ef4444}{z_0}$ est la représentation latente propre de l'image.
+  - $\textcolor{#10b981}{\epsilon}$ est le vrai bruit gaussien ajouté au latent.
+  - $t$ est l'étape temporelle (timestep) du processus de diffusion.
+  - $\textcolor{#fbbf24}{z_t}$ est le latent bruité à l'étape $t$.
+  - $\textcolor{#3b82f6}{\epsilon_\theta}$ est le modèle U-Net prédisant le bruit.
+  - $\textcolor{#8b5cf6}{\tau_\theta(y)}$ est le plongement (embedding) textuel du prompt $y$ (généralement issu d'un encodeur CLIP), guidant la génération.
 math_illustration_svg: |
   <svg viewBox="0 0 800 400" xmlns="http://www.w3.org/2000/svg">
     <!-- Clean Image & VAE Encoder -->

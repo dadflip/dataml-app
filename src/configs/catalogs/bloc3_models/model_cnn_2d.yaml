@@ -24,9 +24,13 @@ hyperparameters:
 math_theory: |
   La convolution 2D extrait des caractéristiques spatiales (bords, textures) en faisant glisser un noyau sur une image.
   Pour une image d'entrée $\textcolor{#3b82f6}{I}$ et un noyau (filtre) $\textcolor{#10b981}{K}$ de taille $m \times n$, la carte de caractéristiques résultante $\textcolor{#fbbf24}{S}$ aux coordonnées $(i, j)$ est :
-  $$\textcolor{#fbbf24}{S_{i, j}} = \sigma \left( \sum_{u=0}^{m-1} \sum_{v=0}^{n-1} \textcolor{#3b82f6}{I_{i+u, j+v}} \cdot \textcolor{#10b981}{K_{u, v}} + \textcolor{#8b5cf6}{b} \right)$$
-  où $\textcolor{#8b5cf6}{b}$ est un biais et $\sigma$ l'activation (souvent ReLU : $\max(0, x)$).
-  Le Max Pooling réduit ensuite la résolution spatiale en sélectionnant la valeur maximale dans une fenêtre $p \times p$, permettant une invariance aux petites translations.
+  
+  $$
+  \textcolor{#fbbf24}{S_{i, j}} = \sigma \left( \sum_{u=0}^{m-1} \sum_{v=0}^{n-1} \textcolor{#3b82f6}{I_{i+u, j+v}} \cdot \textcolor{#10b981}{K_{u, v}} + \textcolor{#8b5cf6}{b} \right)
+  $$
+  
+  où $\textcolor{#8b5cf6}{b}$ est un biais et $\sigma$ est la fonction d'activation (souvent ReLU : $\max(0, x)$).
+  Le Max Pooling réduit ensuite la résolution spatiale en sélectionnant la valeur maximale dans une fenêtre $p \times p$, fournissant une invariance aux petites translations.
 math_illustration_svg: |
   <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 400">
     <defs>

@@ -24,18 +24,24 @@ hyperparameters:
   learning_rate: "Taux d'apprentissage (ex: 0.1)."
   depth: "Profondeur des arbres (ex: 6)."
 math_theory: |
-  Pour la régression, CatBoost conserve son architecture d'arbres symétriques (Oblivious Trees) et son **Ordered Target Encoding** pour les variables catégorielles.
+  Pour la régression, CatBoost conserve son architecture d'arbres symétriques (Oblivious Trees) et son **Encodage Cible Ordonné** (Ordered Target Encoding) pour les variables catégorielles.
   
-  L'encodage cible sur données continues (régression) remplace les classes par la valeur cible continue $\textcolor{#3b82f6}{y_j}$ :
-  $$ \textcolor{#10b981}{\hat{x}_{i,k}} = \frac{\sum_{j=1}^{i-1} [x_{j,k} = x_{i,k}] \cdot \textcolor{#3b82f6}{y_j} + \textcolor{#fbbf24}{a} \cdot \textcolor{#ef4444}{P}}{\sum_{j=1}^{i-1} [x_{j,k} = x_{i,k}] + \textcolor{#fbbf24}{a}} $$
+  L'encodage cible sur des données continues (régression) remplace les classes par la valeur continue de la cible $\textcolor{#3b82f6}{y_j}$ :
+  
+  $$
+  \textcolor{#10b981}{\hat{x}_{i,k}} = \frac{\sum_{j=1}^{i-1} [x_{j,k} = x_{i,k}] \cdot \textcolor{#3b82f6}{y_j} + \textcolor{#fbbf24}{a} \cdot \textcolor{#ef4444}{P}}{\sum_{j=1}^{i-1} [x_{j,k} = x_{i,k}] + \textcolor{#fbbf24}{a}} 
+  $$
   
   Où :
-  - La somme se fait sur une permutation aléatoire ($j < i$).
-  - $\textcolor{#fbbf24}{a}$ est le lissage (prior weight).
+  - La somme est calculée sur une permutation aléatoire ($j < i$).
+  - $\textcolor{#fbbf24}{a}$ est le lissage (poids de l'a priori).
   - $\textcolor{#ef4444}{P}$ est la valeur a priori pour la régression, typiquement la moyenne globale de la variable cible continue.
   
-  Les gradients sont optimisés selon une fonction de perte de régression (ex: RMSE). Le modèle additif final $\textcolor{#8b5cf6}{F(x)}$ minimise les résidus :
-  $$ \textcolor{#ef4444}{L}(y, F(x)) = \frac{1}{2} \left(y - \sum_{t=1}^T \eta \cdot \textcolor{#10b981}{h_t}(x) \right)^2 $$
+  Les gradients sont optimisés en utilisant une fonction de perte de régression (par ex., RMSE). Le modèle additif final $\textcolor{#8b5cf6}{F(x)}$ minimise les résidus :
+  
+  $$
+  \textcolor{#ef4444}{L}(y, F(x)) = \frac{1}{2} \left(y - \sum_{t=1}^T \eta \cdot \textcolor{#10b981}{h_t}(x) \right)^2 
+  $$
 math_illustration_svg: |
   <svg viewBox="0 0 800 400" xmlns="http://www.w3.org/2000/svg">
     <!-- Background -->

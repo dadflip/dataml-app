@@ -90,20 +90,24 @@ illustration_mermaid: |
     style Sigmoid fill:#3b82f6,stroke:#2563eb,stroke-width:2px,color:#fff
 
 math_theory: |
-  Gradient Boosting minimizes a loss function $L(y, F(x))$ sequentially. For classification, the loss is typically Log-Loss. At each step $m$, a new tree $\textcolor{#fbbf24}{h_m}(\textcolor{#ef4444}{x})$ is fitted to the negative gradients (pseudo-residuals) of the loss with respect to the previous predictions.
+  Le Gradient Boosting minimise séquentiellement une fonction de perte $L(y, F(x))$. Pour la classification, la perte est typiquement la Log-Loss. À chaque étape $m$, un nouvel arbre $\textcolor{#fbbf24}{h_m}(\textcolor{#ef4444}{x})$ est ajusté aux gradients négatifs (pseudo-résidus) de la perte par rapport aux prédictions précédentes.
   
-  The final model is an additive expansion:
-  $$ \textcolor{#3b82f6}{F_M}(\textcolor{#ef4444}{x}) = F_0(\textcolor{#ef4444}{x}) + \sum_{m=1}^{\textcolor{#8b5cf6}{M}} \textcolor{#10b981}{\nu} \cdot \textcolor{#fbbf24}{h_m}(\textcolor{#ef4444}{x}) $$
+  Le modèle final est une expansion additive :
+  $$
+  \textcolor{#3b82f6}{F_M}(\textcolor{#ef4444}{x}) = F_0(\textcolor{#ef4444}{x}) + \sum_{m=1}^{\textcolor{#8b5cf6}{M}} \textcolor{#10b981}{\nu} \cdot \textcolor{#fbbf24}{h_m}(\textcolor{#ef4444}{x}) 
+  $$
   
-  Where:
-  - $\textcolor{#3b82f6}{F_M}(\textcolor{#ef4444}{x})$ is the final log-odds prediction.
-  - $\textcolor{#8b5cf6}{M}$ is the number of trees (`n_estimators`).
-  - $\textcolor{#10b981}{\nu}$ is the learning rate (`learning_rate`), scaling the contribution of each tree.
-  - $\textcolor{#fbbf24}{h_m}(\textcolor{#ef4444}{x})$ is the weak learner (decision tree) at step $m$.
-  - $\textcolor{#ef4444}{x}$ represents the input features.
+  Où :
+  - $\textcolor{#3b82f6}{F_M}(\textcolor{#ef4444}{x})$ est la prédiction finale du log-odds.
+  - $\textcolor{#8b5cf6}{M}$ est le nombre d'arbres (`n_estimators`).
+  - $\textcolor{#10b981}{\nu}$ est le taux d'apprentissage (`learning_rate`), qui met à l'échelle la contribution de chaque arbre.
+  - $\textcolor{#fbbf24}{h_m}(\textcolor{#ef4444}{x})$ est l'apprenant faible (arbre de décision) à l'étape $m$.
+  - $\textcolor{#ef4444}{x}$ représente les caractéristiques d'entrée.
   
-  The final probability is obtained via the logistic function:
-  $$ P(y=1|\textcolor{#ef4444}{x}) = \frac{1}{1 + e^{-\textcolor{#3b82f6}{F_M}(\textcolor{#ef4444}{x})}} $$
+  La probabilité finale est obtenue via la fonction logistique :
+  $$
+  P(y=1|\textcolor{#ef4444}{x}) = \frac{1}{1 + e^{-\textcolor{#3b82f6}{F_M}(\textcolor{#ef4444}{x})}} 
+  $$
 
 math_illustration_svg: |
   <svg viewBox="0 0 800 400" xmlns="http://www.w3.org/2000/svg">

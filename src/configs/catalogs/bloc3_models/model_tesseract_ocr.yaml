@@ -22,14 +22,20 @@ cons:
 hyperparameters:
   lang: "Langue principale (ex: 'fra' pour français, 'eng' pour anglais)."
 math_theory: |
-  Tesseract v4+ repose sur des réseaux LSTM et la fonction de perte CTC (Connectionist Temporal Classification) pour l'alignement sans segmentation explicite.
+  Tesseract v4+ s'appuie sur des réseaux LSTM et la fonction de perte CTC (Connectionist Temporal Classification) pour l'alignement sans segmentation explicite.
   Soit $\textcolor{#3b82f6}{Y}$ la matrice des probabilités de sortie du LSTM sur $\textcolor{#fbbf24}{T}$ pas de temps.
-  La probabilité d'un alignement spécifique $\textcolor{#10b981}{\pi}$ de caractères (avec des caractères blancs) est :
-  $$ P(\textcolor{#10b981}{\pi} | \textcolor{#3b82f6}{Y}) = \prod_{t=1}^{\textcolor{#fbbf24}{T}} \textcolor{#3b82f6}{y}_{\textcolor{#10b981}{\pi}_t}^t $$
-  La probabilité globale pour la séquence cible finale $\textcolor{#ef4444}{L}$ correspond à la somme des probabilités de tous les chemins $\textcolor{#10b981}{\pi}$ valides qui se réduisent à $\textcolor{#ef4444}{L}$ (via une fonction $\Phi$) :
-  $$ P(\textcolor{#ef4444}{L} | \textcolor{#3b82f6}{Y}) = \sum_{\textcolor{#10b981}{\pi} \in \Phi(\textcolor{#ef4444}{L})} P(\textcolor{#10b981}{\pi} | \textcolor{#3b82f6}{Y}) $$
+  La probabilité d'un alignement de caractères spécifique $\textcolor{#10b981}{\pi}$ (incluant les caractères blancs) est :
+  $$
+  P(\textcolor{#10b981}{\pi} | \textcolor{#3b82f6}{Y}) = \prod_{t=1}^{\textcolor{#fbbf24}{T}} \textcolor{#3b82f6}{y}_{\textcolor{#10b981}{\pi}_t}^t 
+  $$
+  La probabilité globale pour la séquence cible finale $\textcolor{#ef4444}{L}$ est la somme des probabilités de tous les chemins valides $\textcolor{#10b981}{\pi}$ qui se réduisent à $\textcolor{#ef4444}{L}$ (via une fonction $\Phi$) :
+  $$
+  P(\textcolor{#ef4444}{L} | \textcolor{#3b82f6}{Y}) = \sum_{\textcolor{#10b981}{\pi} \in \Phi(\textcolor{#ef4444}{L})} P(\textcolor{#10b981}{\pi} | \textcolor{#3b82f6}{Y}) 
+  $$
   Le modèle est entraîné en minimisant la perte de log-vraisemblance négative :
-  $$ \textcolor{#8b5cf6}{\mathcal{L}_{CTC}} = -\log P(\textcolor{#ef4444}{L} | \textcolor{#3b82f6}{Y}) $$
+  $$
+  \textcolor{#8b5cf6}{\mathcal{L}_{CTC}} = -\log P(\textcolor{#ef4444}{L} | \textcolor{#3b82f6}{Y}) 
+  $$
 math_illustration_svg: |
   <svg viewBox="0 0 800 400" xmlns="http://www.w3.org/2000/svg">
     <rect x="0" y="0" width="800" height="400" fill="#1e293b" rx="10"/>

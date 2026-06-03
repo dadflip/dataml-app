@@ -88,19 +88,21 @@ illustration_mermaid: |
     style Sum fill:#3b82f6,stroke:#2563eb,stroke-width:2px,color:#fff
 
 math_theory: |
-  Gradient Boosting Regression minimizes a loss function $L(y, F(x))$, typically the Mean Squared Error (MSE), in a forward stage-wise manner. At each iteration $m$, a regression tree $\textcolor{#fbbf24}{h_m}(\textcolor{#ef4444}{x})$ is fitted to the pseudo-residuals (negative gradient) of the loss function.
+  La Régression par Gradient Boosting minimise une fonction de perte $L(y, F(x))$, généralement l'Erreur Quadratique Moyenne (MSE), d'une manière séquentielle (forward stage-wise). À chaque itération $m$, un arbre de régression $\textcolor{#fbbf24}{h_m}(\textcolor{#ef4444}{x})$ est ajusté aux pseudo-résidus (gradient négatif) de la fonction de perte.
   
-  The model updates its prediction as follows:
-  $$ \textcolor{#3b82f6}{F_M}(\textcolor{#ef4444}{x}) = F_0(\textcolor{#ef4444}{x}) + \sum_{m=1}^{\textcolor{#8b5cf6}{M}} \textcolor{#10b981}{\nu} \cdot \textcolor{#fbbf24}{h_m}(\textcolor{#ef4444}{x}) $$
+  Le modèle met à jour sa prédiction de la manière suivante :
+  $$
+  \textcolor{#3b82f6}{F_M}(\textcolor{#ef4444}{x}) = F_0(\textcolor{#ef4444}{x}) + \sum_{m=1}^{\textcolor{#8b5cf6}{M}} \textcolor{#10b981}{\nu} \cdot \textcolor{#fbbf24}{h_m}(\textcolor{#ef4444}{x}) 
+  $$
   
-  Where:
-  - $\textcolor{#3b82f6}{F_M}(\textcolor{#ef4444}{x})$ is the final continuous prediction.
-  - $\textcolor{#8b5cf6}{M}$ is the total number of trees (`n_estimators`).
-  - $\textcolor{#10b981}{\nu}$ is the learning rate, controlling the contribution of each tree.
-  - $\textcolor{#fbbf24}{h_m}(\textcolor{#ef4444}{x})$ is the regression tree trained at step $m$ to predict the residuals.
-  - $\textcolor{#ef4444}{x}$ represents the input features.
+  Où :
+  - $\textcolor{#3b82f6}{F_M}(\textcolor{#ef4444}{x})$ est la prédiction continue finale.
+  - $\textcolor{#8b5cf6}{M}$ est le nombre total d'arbres (`n_estimators`).
+  - $\textcolor{#10b981}{\nu}$ est le taux d'apprentissage, qui contrôle la contribution de chaque arbre.
+  - $\textcolor{#fbbf24}{h_m}(\textcolor{#ef4444}{x})$ est l'arbre de régression entraîné à l'étape $m$ pour prédire les résidus.
+  - $\textcolor{#ef4444}{x}$ représente les caractéristiques d'entrée.
   
-  For MSE, the pseudo-residual at step $m$ simplifies to: $r_{im} = y_i - F_{m-1}(\textcolor{#ef4444}{x}_i)$.
+  Pour la MSE, le pseudo-résidu à l'étape $m$ se simplifie en : $r_{im} = y_i - F_{m-1}(\textcolor{#ef4444}{x}_i)$.
 
 math_illustration_svg: |
   <svg viewBox="0 0 800 400" xmlns="http://www.w3.org/2000/svg">

@@ -96,12 +96,15 @@ illustration_mermaid: |
 
 math_theory: |
   Le modèle additif de Holt-Winters projette la prévision $\textcolor{#10b981}{\hat{y}_{t+h|t}}$ à l'horizon $h$ :
-  $$ \textcolor{#10b981}{\hat{y}_{t+h|t}} = \textcolor{#3b82f6}{l_t} + h \textcolor{#fbbf24}{b_t} + \textcolor{#ef4444}{s_{t+h-m}} $$
   
-  Mise à jour des 3 composantes lissées de manière exponentielle (les observations récentes ont plus de poids) :
+  $$
+  \textcolor{#10b981}{\hat{y}_{t+h|t}} = \textcolor{#3b82f6}{l_t} + h \textcolor{#fbbf24}{b_t} + \textcolor{#ef4444}{s_{t+h-m}} 
+  $$
+  
+  En mettant à jour les 3 composantes lissées exponentiellement (les observations récentes reçoivent plus de poids) :
   - **Niveau** (Level) : $ \textcolor{#3b82f6}{l_t} = \alpha (y_t - \textcolor{#ef4444}{s_{t-m}}) + (1 - \alpha)(\textcolor{#3b82f6}{l_{t-1}} + \textcolor{#fbbf24}{b_{t-1}}) $
   - **Tendance** (Trend) : $ \textcolor{#fbbf24}{b_t} = \beta^*(\textcolor{#3b82f6}{l_t} - \textcolor{#3b82f6}{l_{t-1}}) + (1 - \beta^*)\textcolor{#fbbf24}{b_{t-1}} $
-  - **Saisonnalité** (Season) : $ \textcolor{#ef4444}{s_t} = \gamma (y_t - \textcolor{#3b82f6}{l_{t-1}} - \textcolor{#fbbf24}{b_{t-1}}) + (1 - \gamma)\textcolor{#ef4444}{s_{t-m}} $
+  - **Saisonnalité** (Seasonality) : $ \textcolor{#ef4444}{s_t} = \gamma (y_t - \textcolor{#3b82f6}{l_{t-1}} - \textcolor{#fbbf24}{b_{t-1}}) + (1 - \gamma)\textcolor{#ef4444}{s_{t-m}} $
   
   Où $\alpha, \beta^*, \gamma \in [0, 1]$ sont les constantes de lissage et $m$ est la période saisonnière.
 math_illustration_svg: |

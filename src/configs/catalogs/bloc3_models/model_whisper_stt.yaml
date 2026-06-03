@@ -61,16 +61,25 @@ code_template: |
       full_pipeline = model
       training_history = {"status": "success", "processed": len(y_pred)}
 math_theory: |
-  Whisper processes audio using a classic Transformer encoder-decoder sequence-to-sequence architecture.
+  Whisper traite l'audio en utilisant une architecture classique de séquence à séquence d'encodeur-décodeur Transformer.
   
-  1. **Audio Encoding**: The raw audio is converted to a Log-Mel Spectrogram $\textcolor{#10b981}{X_{mel}}$. The Transformer Encoder processes this into continuous hidden representations $\textcolor{#3b82f6}{H_{enc}}$:
-  $$ \textcolor{#3b82f6}{H_{enc}} = \text{Encoder}(\textcolor{#10b981}{X_{mel}}) $$
+  1. **Audio Encoding (Encodage Audio)** : L'audio brut est converti en un spectrogramme Log-Mel $\textcolor{#10b981}{X_{mel}}$. L'Encodeur Transformer le traite en représentations cachées continues $\textcolor{#3b82f6}{H_{enc}}$ :
   
-  2. **Autoregressive Decoding**: The Transformer Decoder predicts the probability of the next text token $\textcolor{#fbbf24}{y_i}$ conditioned on the encoder output and previous tokens $\textcolor{#fbbf24}{y_{<i}}$:
-  $$ P(\textcolor{#fbbf24}{y_i} \mid \textcolor{#fbbf24}{y_{<i}}, \textcolor{#10b981}{X_{mel}}) = \text{Softmax}(\text{Decoder}(\textcolor{#fbbf24}{y_{<i}}, \textcolor{#3b82f6}{H_{enc}})) $$
+  $$
+  \textcolor{#3b82f6}{H_{enc}} = \text{Encoder}(\textcolor{#10b981}{X_{mel}}) 
+  $$
   
-  3. **Multitask Format**: Whisper frames all tasks (STT, translation, VAD) as text sequence prediction, controlled by special prefix tokens (e.g., `<|transcribe|>` vs `<|translate|>`). The model is trained using standard sequence cross-entropy loss:
-  $$ \mathcal{L} = - \sum_{i} \log P(\textcolor{#fbbf24}{y_i} \mid \textcolor{#fbbf24}{y_{<i}}, \textcolor{#10b981}{X_{mel}}; \textcolor{#8b5cf6}{\Theta}) $$
+  2. **Autoregressive Decoding (Décodage Autorégressif)** : Le Décodeur Transformer prédit la probabilité du prochain token de texte $\textcolor{#fbbf24}{y_i}$ conditionnée par la sortie de l'encodeur et les tokens précédents $\textcolor{#fbbf24}{y_{<i}}$ :
+  
+  $$
+  P(\textcolor{#fbbf24}{y_i} \mid \textcolor{#fbbf24}{y_{<i}}, \textcolor{#10b981}{X_{mel}}) = \text{Softmax}(\text{Decoder}(\textcolor{#fbbf24}{y_{<i}}, \textcolor{#3b82f6}{H_{enc}})) 
+  $$
+  
+  3. **Multitask Format (Format Multitâche)** : Whisper formule toutes les tâches (STT, traduction, VAD) comme une prédiction de séquence de texte, contrôlée par des tokens de préfixe spéciaux (ex. `<|transcribe|>` vs `<|translate|>`). Le modèle est entraîné en utilisant la perte standard d'entropie croisée de séquence :
+  
+  $$
+  \mathcal{L} = - \sum_{i} \log P(\textcolor{#fbbf24}{y_i} \mid \textcolor{#fbbf24}{y_{<i}}, \textcolor{#10b981}{X_{mel}}; \textcolor{#8b5cf6}{\Theta}) 
+  $$
 math_illustration_svg: |
   <svg viewBox="0 0 800 400" xmlns="http://www.w3.org/2000/svg">
     <!-- Log Mel Spectrogram -->

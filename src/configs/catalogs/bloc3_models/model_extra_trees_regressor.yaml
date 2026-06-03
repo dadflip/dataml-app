@@ -24,15 +24,24 @@ math_theory: |
   Pour la régression, Extra Trees (Extremely Randomized Trees) applique le même principe de coupures aléatoires.
   
   Pour chaque variable $\textcolor{#fbbf24}{X_j}$ testée à un nœud, un seuil $\textcolor{#8b5cf6}{s_j}$ est tiré uniformément entre ses bornes locales :
-  $$ \textcolor{#8b5cf6}{s_j} \sim Uniform(\min(\textcolor{#fbbf24}{X_j}), \max(\textcolor{#fbbf24}{X_j})) $$
+  
+  $$
+  \textcolor{#8b5cf6}{s_j} \sim Uniforme(\min(\textcolor{#fbbf24}{X_j}), \max(\textcolor{#fbbf24}{X_j})) 
+  $$
   
   Le meilleur seuil parmi ces coupures aléatoires est choisi pour minimiser l'Erreur Quadratique Moyenne (MSE) des nœuds enfants :
-  $$ \textcolor{#3b82f6}{MSE(D)} = \frac{1}{|D|} \sum_{i \in D} (y_i - \bar{y})^2 $$
   
-  En introduisant cet aléa fort sur les seuils, la surface de régression finale devient beaucoup plus lisse que celle d'une Forêt Aléatoire classique, réduisant la variance du modèle.
+  $$
+  \textcolor{#3b82f6}{MSE(D)} = \frac{1}{|D|} \sum_{i \in D} (y_i - \bar{y})^2 
+  $$
+  
+  En introduisant ce fort aléa sur les seuils, la surface de régression finale devient beaucoup plus lisse que celle d'un Random Forest classique, réduisant ainsi la variance du modèle.
   
   La prédiction finale $\textcolor{#ef4444}{\hat{y}}$ est la moyenne des prédictions des $T$ arbres :
-  $$ \textcolor{#ef4444}{\hat{y}} = \frac{1}{T} \sum_{t=1}^T \textcolor{#10b981}{h_t}(x) $$
+  
+  $$
+  \textcolor{#ef4444}{\hat{y}} = \frac{1}{T} \sum_{t=1}^T \textcolor{#10b981}{h_t}(x) 
+  $$
 math_illustration_svg: |
   <svg viewBox="0 0 800 400" xmlns="http://www.w3.org/2000/svg">
     <rect width="800" height="400" fill="#1e1e2f" rx="15" />

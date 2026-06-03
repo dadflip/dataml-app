@@ -71,18 +71,27 @@ code_template: |
 
   training_history = []
 math_theory: |
-  The Ridge Classifier transforms classification into a linear regression problem with L2 regularization (Tikhonov regularization), providing a fast, closed-form analytic solution.
+  Le Classifieur Ridge transforme la classification en un problème de régression linéaire avec régularisation L2 (régularisation de Tikhonov), offrant une solution analytique exacte et rapide.
   
-  1. **Label Conversion**: Binary class labels $\textcolor{#10b981}{y_{bin}} \in \{0, 1\}$ are converted to $\textcolor{#8b5cf6}{y} \in \{-1, 1\}$.
+  1. **Conversion des étiquettes** : Les étiquettes de classe binaires $\textcolor{#10b981}{y_{bin}} \in \{0, 1\}$ sont converties en $\textcolor{#8b5cf6}{y} \in \{-1, 1\}$.
   
-  2. **Ridge Regression Objective**: The weights $\textcolor{#3b82f6}{w}$ are optimized to minimize the squared difference between the linear projection and the target values, penalized by the L2 norm of the weights controlled by $\textcolor{#fbbf24}{\alpha}$:
-  $$ \min_{\textcolor{#3b82f6}{w}} \| \textcolor{#10b981}{X} \textcolor{#3b82f6}{w} - \textcolor{#8b5cf6}{y} \|_2^2 + \textcolor{#fbbf24}{\alpha} \| \textcolor{#3b82f6}{w} \|_2^2 $$
+  2. **Objectif de la régression Ridge** : Les poids $\textcolor{#3b82f6}{w}$ sont optimisés pour minimiser la différence au carré entre la projection linéaire et les valeurs cibles, pénalisés par la norme L2 des poids contrôlée par $\textcolor{#fbbf24}{\alpha}$ :
   
-  3. **Analytic Solution**: Because the objective is convex and smooth, the exact global minimum can be found via the normal equation:
-  $$ \textcolor{#3b82f6}{\hat{w}} = (\textcolor{#10b981}{X}^T \textcolor{#10b981}{X} + \textcolor{#fbbf24}{\alpha} I)^{-1} \textcolor{#10b981}{X}^T \textcolor{#8b5cf6}{y} $$
+  $$
+  \min_{\textcolor{#3b82f6}{w}} \| \textcolor{#10b981}{X} \textcolor{#3b82f6}{w} - \textcolor{#8b5cf6}{y} \|_2^2 + \textcolor{#fbbf24}{\alpha} \| \textcolor{#3b82f6}{w} \|_2^2 
+  $$
   
-  4. **Decision Rule**: Predictions are made by taking the sign of the linear projection:
-  $$ \hat{y}_{pred} = \text{sign}(\textcolor{#10b981}{X}_{test} \textcolor{#3b82f6}{\hat{w}}) $$
+  3. **Solution analytique** : L'objectif étant convexe et lisse, le minimum global exact peut être trouvé via l'équation normale :
+  
+  $$
+  \textcolor{#3b82f6}{\hat{w}} = (\textcolor{#10b981}{X}^T \textcolor{#10b981}{X} + \textcolor{#fbbf24}{\alpha} I)^{-1} \textcolor{#10b981}{X}^T \textcolor{#8b5cf6}{y} 
+  $$
+  
+  4. **Règle de décision** : Les prédictions sont effectuées en prenant le signe de la projection linéaire :
+  
+  $$
+  \hat{y}_{pred} = \text{sign}(\textcolor{#10b981}{X}_{test} \textcolor{#3b82f6}{\hat{w}}) 
+  $$
 math_illustration_svg: |
   <svg viewBox="0 0 800 400" xmlns="http://www.w3.org/2000/svg">
     <!-- Input Features X -->

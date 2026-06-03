@@ -73,13 +73,15 @@ illustration_mermaid: |
     style Converge fill:#3b82f6,stroke:#2563eb,stroke-width:2px,color:#fff
 
 math_theory: |
-  $$ J = \sum_{\textcolor{#3b82f6}{k}=1}^{\textcolor{#10b981}{K}} \sum_{x \in C_{\textcolor{#3b82f6}{k}}} || x - \textcolor{#fbbf24}{\mu}_{\textcolor{#3b82f6}{k}} ||^2 $$
+  $$
+  J = \sum_{\textcolor{#3b82f6}{k}=1}^{\textcolor{#10b981}{K}} \sum_{x \in C_{\textcolor{#3b82f6}{k}}} || x - \textcolor{#fbbf24}{\mu}_{\textcolor{#3b82f6}{k}} ||^2 
+  $$
   
   Où :
   - $\textcolor{#10b981}{K}$ est le nombre total de clusters.
   - $C_{\textcolor{#3b82f6}{k}}$ représente l'ensemble des points assignés au cluster $\textcolor{#3b82f6}{k}$.
   - $\textcolor{#fbbf24}{\mu}_{\textcolor{#3b82f6}{k}}$ est le centroïde (la moyenne) du cluster $\textcolor{#3b82f6}{k}$.
-  - L'objectif est de minimiser l'inertie $J$, c'est-à-dire la somme des distances au carré entre chaque point $x$ et le centroïde de son cluster.
+  - L'objectif est de minimiser l'inertie $J$, qui est la somme des distances au carré entre chaque point $x$ et le centroïde de son cluster.
 math_illustration_svg: |
   <svg viewBox="0 0 500 250" xmlns="http://www.w3.org/2000/svg">
     <rect width="500" height="250" fill="#f8fafc" rx="10"/>

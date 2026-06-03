@@ -21,18 +21,25 @@ cons:
 hyperparameters:
   n_estimators: "Nombre d'arbres (ex: 100)."
 math_theory: |
-  L'algorithme Extra Trees (Extremely Randomized Trees) repose sur le même principe que Random Forest (agrégation par Bootstrap ou Bagging d'arbres décisionnels), mais introduit une dose supplémentaire d'aléa.
+  L'algorithme Extra Trees (Extremely Randomized Trees) repose sur le même principe que Random Forest (agrégation via Bootstrap ou Bagging d'arbres de décision), mais introduit une dose supplémentaire de hasard.
   
-  À chaque nœud, au lieu de chercher le seuil de coupure optimal qui maximise le gain d'information pour chaque variable, Extra Trees tire au hasard un seuil $\textcolor{#8b5cf6}{s_j}$ dans l'intervalle empirique de chaque variable sélectionnée $\textcolor{#fbbf24}{X_j}$ :
+  À chaque nœud, au lieu de chercher le seuil de coupure optimal qui maximise le gain d'information pour chaque variable, Extra Trees tire un seuil $\textcolor{#8b5cf6}{s_j}$ au hasard dans l'intervalle empirique de chaque variable sélectionnée $\textcolor{#fbbf24}{X_j}$ :
   
-  $$ \textcolor{#8b5cf6}{s_j} \sim Uniform(\min(\textcolor{#fbbf24}{X_j}), \max(\textcolor{#fbbf24}{X_j})) $$
+  $$
+  \textcolor{#8b5cf6}{s_j} \sim Uniforme(\min(\textcolor{#fbbf24}{X_j}), \max(\textcolor{#fbbf24}{X_j})) 
+  $$
   
-  Parmi ces coupures aléatoires (une par variable testée), l'algorithme sélectionne celle qui offre la meilleure réduction d'impureté $\textcolor{#10b981}{\Delta I}$ (par exemple, Gini) :
+  Parmi ces coupures aléatoires (une par variable testée), l'algorithme sélectionne celle qui fournit la meilleure réduction d'impureté $\textcolor{#10b981}{\Delta I}$ (ex: Gini) :
   
-  $$ \textcolor{#10b981}{\Delta I} = \textcolor{#3b82f6}{I(D)} - \left( \frac{|D_{left}|}{|D|} \textcolor{#3b82f6}{I(D_{left})} + \frac{|D_{right}|}{|D|} \textcolor{#3b82f6}{I(D_{right})} \right) $$
+  $$
+  \textcolor{#10b981}{\Delta I} = \textcolor{#3b82f6}{I(D)} - \left( \frac{|D_{gauche}|}{|D|} \textcolor{#3b82f6}{I(D_{gauche})} + \frac{|D_{droite}|}{|D|} \textcolor{#3b82f6}{I(D_{droite})} \right) 
+  $$
   
-  La prédiction finale $\textcolor{#ef4444}{\hat{y}}$ est la classe majoritaire issue du vote des $T$ arbres :
-  $$ \textcolor{#ef4444}{\hat{y}} = \text{mode}(\{h_1(x), h_2(x), \dots, h_T(x)\}) $$
+  La prédiction finale $\textcolor{#ef4444}{\hat{y}}$ est la classe majoritaire résultant du vote des $T$ arbres :
+  
+  $$
+  \textcolor{#ef4444}{\hat{y}} = \text{mode}(\{h_1(x), h_2(x), \dots, h_T(x)\}) 
+  $$
 math_illustration_svg: |
   <svg viewBox="0 0 800 400" xmlns="http://www.w3.org/2000/svg">
     <rect width="800" height="400" fill="#1e1e2f" rx="15" />

@@ -116,15 +116,18 @@ illustration_mermaid: |
     style Pred fill:#10b981,stroke:#059669,stroke-width:2px,color:#fff
 
 math_theory: |
-  Chronos modélise la prévision temporelle comme une tâche de génération de langage.
-  La série continue $Y = \{y_1, \dots, y_t\}$ est quantifiée en une séquence de tokens discrets $T = \{\textcolor{#3b82f6}{t_1}, \dots, \textcolor{#3b82f6}{t_t}\}$ issus d'un vocabulaire fini $\textcolor{#10b981}{V}$.
-  Un modèle de langage pré-entraîné (architecture T5) apprend la distribution du prochain token de manière autorégressive :
-  $$ P(\textcolor{#3b82f6}{t_{t+1}} | \textcolor{#3b82f6}{t_1}, \dots, \textcolor{#3b82f6}{t_t}) = \text{Transformer}(\textcolor{#3b82f6}{t_{1:t}} ; \textcolor{#fbbf24}{\theta}) $$
+  Chronos modélise la prévision de séries temporelles comme une tâche de génération de langage.
+  La série continue $Y = \{y_1, \dots, y_t\}$ est quantifiée en une séquence de tokens discrets $T = \{\textcolor{#3b82f6}{t_1}, \dots, \textcolor{#3b82f6}{t_t}\}$ à partir d'un vocabulaire fini $\textcolor{#10b981}{V}$.
+  Un modèle de langage pré-entraîné (architecture T5) apprend la distribution du token suivant de manière autorégressive :
+  
+  $$
+  P(\textcolor{#3b82f6}{t_{t+1}} | \textcolor{#3b82f6}{t_1}, \dots, \textcolor{#3b82f6}{t_t}) = \text{Transformer}(\textcolor{#3b82f6}{t_{1:t}} ; \textcolor{#fbbf24}{\theta}) 
+  $$
   
   Où :
   - $\textcolor{#3b82f6}{t_i}$ représente le signal temporel discrétisé.
-  - $\textcolor{#10b981}{V}$ est l'espace du vocabulaire, permettant au modèle de traiter la série comme du texte.
-  - $\textcolor{#fbbf24}{\theta}$ rassemble les poids du Transformer encodeur-décodeur.
+  - $\textcolor{#10b981}{V}$ est l'espace de vocabulaire, permettant au modèle de traiter la série comme du texte.
+  - $\textcolor{#fbbf24}{\theta}$ représente les poids du Transformer encodeur-décodeur.
 math_illustration_svg: |
   <svg viewBox="0 0 800 400" xmlns="http://www.w3.org/2000/svg">
     <rect width="800" height="400" fill="#f8fafc" rx="10"/>

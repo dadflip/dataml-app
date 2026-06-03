@@ -82,17 +82,23 @@ illustration_mermaid: |
     style Out fill:#10b981,stroke:#059669,stroke-width:2px,color:#fff
 
 math_theory: |
-  EasyOCR leverages a two-stage deep learning approach: text detection followed by text recognition.
+  EasyOCR exploite une approche d'apprentissage profond en deux étapes : la détection de texte suivie de la reconnaissance de texte.
   
-  1. **Detection (CRAFT)**: Character Region Awareness for Text Detection predicts character region scores $\textcolor{#3b82f6}{S_r(p)}$ and character affinity scores $\textcolor{#fbbf24}{S_a(p)}$ for each pixel $p$. 
-  The text bounding boxes $\textcolor{#10b981}{\mathbf{B}}$ are derived by thresholding these probability maps, allowing for non-linear and curved text detection.
+  1. **Détection (CRAFT)** : Character Region Awareness for Text Detection prédit des scores de région de caractère $\textcolor{#3b82f6}{S_r(p)}$ et des scores d'affinité de caractère $\textcolor{#fbbf24}{S_a(p)}$ pour chaque pixel $p$. 
+  Les boîtes englobantes de texte $\textcolor{#10b981}{\mathbf{B}}$ sont dérivées en seuillant ces cartes de probabilité, ce qui permet la détection de texte non linéaire et incurvé.
   
-  2. **Recognition (CRNN)**: A Convolutional Recurrent Neural Network takes the cropped text regions $\textcolor{#10b981}{\mathbf{X}_{crop}}$ as input. 
-  A CNN backbone extracts feature sequences, which are then passed through a Bidirectional LSTM to model temporal/sequential context:
-  $$ \textcolor{#8b5cf6}{\mathbf{h}_t} = \text{BiLSTM}(\text{CNN}(\textcolor{#10b981}{\mathbf{X}_{crop}}))_t $$
+  2. **Reconnaissance (CRNN)** : Un réseau de neurones récurrent et convolutif prend les régions de texte recadrées $\textcolor{#10b981}{\mathbf{X}_{crop}}$ en entrée. 
+  Un squelette (backbone) CNN extrait des séquences de caractéristiques, qui sont ensuite passées à travers un LSTM bidirectionnel pour modéliser le contexte temporel/séquentiel :
   
-  Finally, Connectionist Temporal Classification (CTC) loss maps the unsegmented recurrent sequence $\textcolor{#8b5cf6}{\mathbf{h}_t}$ to the target character sequence $\textcolor{#ef4444}{\mathbf{y}}$ by maximizing the sum of probabilities over all valid alignment paths $\pi$:
-  $$ P(\textcolor{#ef4444}{\mathbf{y}} | \mathbf{X}) = \sum_{\pi \in \mathcal{A}(\textcolor{#ef4444}{\mathbf{y}})} \prod_{t=1}^T y_{\pi_t}^t $$
+  $$
+  \textcolor{#8b5cf6}{\mathbf{h}_t} = \text{BiLSTM}(\text{CNN}(\textcolor{#10b981}{\mathbf{X}_{crop}}))_t 
+  $$
+  
+  Enfin, la perte Connectionist Temporal Classification (CTC) mappe la séquence récurrente non segmentée $\textcolor{#8b5cf6}{\mathbf{h}_t}$ à la séquence de caractères cible $\textcolor{#ef4444}{\mathbf{y}}$ en maximisant la somme des probabilités sur tous les chemins d'alignement valides $\pi$ :
+  
+  $$
+  P(\textcolor{#ef4444}{\mathbf{y}} | \mathbf{X}) = \sum_{\pi \in \mathcal{A}(\textcolor{#ef4444}{\mathbf{y}})} \prod_{t=1}^T y_{\pi_t}^t 
+  $$
 
 math_illustration_svg: |
   <svg viewBox="0 0 800 400" xmlns="http://www.w3.org/2000/svg">

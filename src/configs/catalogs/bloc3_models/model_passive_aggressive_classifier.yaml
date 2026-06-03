@@ -56,17 +56,26 @@ code_template: |
       training_history = {"status": "success", "fitted_on": len(X_train)}
       task_type = "classification"
 math_theory: |
-  L'algorithme Passive-Aggressive met à jour ses poids uniquement lorsque la prédiction est incorrecte ou que la marge de confiance (Hinge Loss) est insuffisante.
+  L'algorithme Passive-Aggressive met à jour ses poids uniquement lorsque la prédiction est incorrecte ou que la marge de confiance (perte Hinge) est insuffisante.
 
   Perte (Hinge Loss) pour l'instance $t$ :
-  $$ \textcolor{#ef4444}{L}(\textcolor{#3b82f6}{w}_t, \textcolor{#10b981}{x_t}, \textcolor{#10b981}{y_t}) = \max(0, 1 - \textcolor{#10b981}{y_t}(\textcolor{#3b82f6}{w}_t^T \textcolor{#10b981}{x_t})) $$
+
+  $$
+  \textcolor{#ef4444}{L}(\textcolor{#3b82f6}{w}_t, \textcolor{#10b981}{x_t}, \textcolor{#10b981}{y_t}) = \max(0, 1 - \textcolor{#10b981}{y_t}(\textcolor{#3b82f6}{w}_t^T \textcolor{#10b981}{x_t})) 
+  $$
 
   Règle de mise à jour (variante PA-I) :
-  $$ \textcolor{#3b82f6}{w}_{t+1} = \textcolor{#3b82f6}{w}_t + \tau_t \textcolor{#10b981}{y_t} \textcolor{#10b981}{x_t} $$
-  $$ \text{avec } \tau_t = \min\left(\textcolor{#fbbf24}{C}, \frac{\textcolor{#ef4444}{L}(\textcolor{#3b82f6}{w}_t, \textcolor{#10b981}{x_t}, \textcolor{#10b981}{y_t})}{||\textcolor{#10b981}{x_t}||^2}\right) $$
+
+  $$
+  \textcolor{#3b82f6}{w}_{t+1} = \textcolor{#3b82f6}{w}_t + \tau_t \textcolor{#10b981}{y_t} \textcolor{#10b981}{x_t} 
+  $$
+
+  $$
+  \text{avec } \tau_t = \min\left(\textcolor{#fbbf24}{C}, \frac{\textcolor{#ef4444}{L}(\textcolor{#3b82f6}{w}_t, \textcolor{#10b981}{x_t}, \textcolor{#10b981}{y_t})}{||\textcolor{#10b981}{x_t}||^2}\right) 
+  $$
 
   - $\textcolor{#3b82f6}{w}$ : Vecteur de poids du modèle
-  - $(\textcolor{#10b981}{x_t}, \textcolor{#10b981}{y_t})$ : Instance d'entrée et sa véritable étiquette ($\in \{-1, 1\}$)
+  - $(\textcolor{#10b981}{x_t}, \textcolor{#10b981}{y_t})$ : Instance d'entrée et sa vraie étiquette ($\in \{-1, 1\}$)
   - $\textcolor{#ef4444}{L}$ : Erreur calculée (Hinge loss)
   - $\textcolor{#fbbf24}{C}$ : Hyperparamètre qui limite l'agressivité de la mise à jour (pénalité maximale)
 math_illustration_svg: |

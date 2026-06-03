@@ -23,9 +23,12 @@ cons:
 hyperparameters:
   time_limit: "Temps maximum alloué en secondes (ex: 60)."
 math_theory: |
-  AutoGluon utilise un processus d'empilement (stacking) avancé. Des modèles de base $\{\textcolor{#3b82f6}{M_1}, \dots, \textcolor{#3b82f6}{M_K}\}$ s'entraînent sur les caractéristiques $\textcolor{#fbbf24}{x}$ pour générer des probabilités prédictives $\textcolor{#10b981}{P_k(x)}$.
-  Ensuite, un modèle d'agrégation (stacker) $\textcolor{#8b5cf6}{S}$ prend en entrée la concaténation ($\oplus$) des variables originales $\textcolor{#fbbf24}{x}$ et des prédictions de base $\textcolor{#10b981}{P_k}$ pour calculer la probabilité finale $\textcolor{#ef4444}{\hat{y}}$ :
-  $$ \textcolor{#ef4444}{\hat{y}} = \textcolor{#8b5cf6}{S}\left( \textcolor{#fbbf24}{x} \oplus [\textcolor{#10b981}{P_1(x)}, \textcolor{#10b981}{P_2(x)}, \dots, \textcolor{#10b981}{P_K(x)}] \right) $$
+  AutoGluon utilise un processus avancé d'ensemble par empilement (stacking). Les modèles de base $\{\textcolor{#3b82f6}{M_1}, \dots, \textcolor{#3b82f6}{M_K}\}$ sont entraînés sur les caractéristiques $\textcolor{#fbbf24}{x}$ pour générer des probabilités prédictives $\textcolor{#10b981}{P_k(x)}$.
+  Ensuite, un modèle méta-apprenant (stacker) $\textcolor{#8b5cf6}{S}$ prend en entrée la concaténation ($\oplus$) des variables originales $\textcolor{#fbbf24}{x}$ et des prédictions de base $\textcolor{#10b981}{P_k}$ pour calculer la probabilité finale $\textcolor{#ef4444}{\hat{y}}$ :
+  
+  $$
+  \textcolor{#ef4444}{\hat{y}} = \textcolor{#8b5cf6}{S}\left( \textcolor{#fbbf24}{x} \oplus [\textcolor{#10b981}{P_1(x)}, \textcolor{#10b981}{P_2(x)}, \dots, \textcolor{#10b981}{P_K(x)}] \right)
+  $$
 math_illustration_svg: |
   <svg viewBox="0 0 800 400" xmlns="http://www.w3.org/2000/svg">
     <rect width="800" height="400" fill="#1e1e1e" rx="10" />

@@ -55,16 +55,22 @@ code_template: |
       training_history = {"status": "success"}
       task_type = "clustering"
 math_theory: |
-  A Self-Organizing Map (SOM) is a type of competitive artificial neural network that produces a low-dimensional (typically 2D) representation of the input space.
+  Une carte auto-organisatrice (SOM) est un type de réseau de neurones artificiels compétitif qui produit une représentation en basse dimension (typiquement 2D) de l'espace d'entrée.
   
-  1. **Competitive Phase**: For a given input vector $\textcolor{#10b981}{x}$, the Best Matching Unit (BMU) is the node $c$ in the grid with the weight vector $\textcolor{#3b82f6}{W_i}$ closest to $\textcolor{#10b981}{x}$:
-  $$ c = \arg\min_i \| \textcolor{#10b981}{x} - \textcolor{#3b82f6}{W_i} \| $$
+  1. **Phase compétitive** : Pour un vecteur d'entrée donné $\textcolor{#10b981}{x}$, l'unité la mieux correspondante (Best Matching Unit, BMU) est le nœud $c$ de la grille dont le vecteur de poids $\textcolor{#3b82f6}{W_i}$ est le plus proche de $\textcolor{#10b981}{x}$ :
+  $$
+  c = \arg\min_i \| \textcolor{#10b981}{x} - \textcolor{#3b82f6}{W_i} \| 
+  $$
   
-  2. **Cooperative Phase**: A neighborhood function $\textcolor{#fbbf24}{h_{c, i}(t)}$ (often Gaussian) determines how much surrounding nodes are affected. It decreases with distance from the BMU in the grid topology and shrinks over time $t$:
-  $$ \textcolor{#fbbf24}{h_{c, i}(t)} = \exp\left(-\frac{\|r_c - r_i\|^2}{2\sigma^2(t)}\right) $$
+  2. **Phase coopérative** : Une fonction de voisinage $\textcolor{#fbbf24}{h_{c, i}(t)}$ (souvent gaussienne) détermine à quel point les nœuds environnants sont affectés. Elle diminue avec la distance par rapport au BMU dans la topologie de la grille et rétrécit au fil du temps $t$ :
+  $$
+  \textcolor{#fbbf24}{h_{c, i}(t)} = \exp\left(-\frac{\|r_c - r_i\|^2}{2\sigma^2(t)}\right) 
+  $$
   
-  3. **Adaptive Phase**: The weights of the BMU and its neighbors are updated to move closer to the input vector, controlled by the learning rate $\textcolor{#ef4444}{\alpha(t)}$:
-  $$ \textcolor{#3b82f6}{W_i}(t+1) = \textcolor{#3b82f6}{W_i}(t) + \textcolor{#ef4444}{\alpha(t)} \cdot \textcolor{#fbbf24}{h_{c, i}(t)} \cdot (\textcolor{#10b981}{x} - \textcolor{#3b82f6}{W_i}(t)) $$
+  3. **Phase adaptative** : Les poids du BMU et de ses voisins sont mis à jour pour se rapprocher du vecteur d'entrée, contrôlés par le taux d'apprentissage $\textcolor{#ef4444}{\alpha(t)}$ :
+  $$
+  \textcolor{#3b82f6}{W_i}(t+1) = \textcolor{#3b82f6}{W_i}(t) + \textcolor{#ef4444}{\alpha(t)} \cdot \textcolor{#fbbf24}{h_{c, i}(t)} \cdot (\textcolor{#10b981}{x} - \textcolor{#3b82f6}{W_i}(t)) 
+  $$
 math_illustration_svg: |
   <svg viewBox="0 0 800 400" xmlns="http://www.w3.org/2000/svg">
     <!-- Input Data -->

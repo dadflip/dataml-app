@@ -102,16 +102,20 @@ code_template: |
       training_history = {"status": "success"}
       task_type = "classification"
 math_theory: |
-  L'Encodeur Transformer repose sur le mécanisme de Multi-Head Self-Attention.
-  Pour une séquence d'entrée $\textcolor{#10b981}{X}$, on projette d'abord $\textcolor{#10b981}{X}$ en trois matrices : Query ($\textcolor{#3b82f6}{Q}$), Key ($\textcolor{#3b82f6}{K}$) et Value ($\textcolor{#3b82f6}{V}$) via des matrices de poids $\textcolor{#8b5cf6}{W}$.
+  L'Encodeur Transformer repose sur le mécanisme de Multi-Head Self-Attention (auto-attention multi-têtes).
+  Pour une séquence d'entrée $\textcolor{#10b981}{X}$, $\textcolor{#10b981}{X}$ est d'abord projetée en trois matrices : Requête ($\textcolor{#3b82f6}{Q}$), Clé ($\textcolor{#3b82f6}{K}$) et Valeur ($\textcolor{#3b82f6}{V}$) via des matrices de poids $\textcolor{#8b5cf6}{W}$.
   
-  $$ \textcolor{#3b82f6}{Q} = \textcolor{#10b981}{X} \textcolor{#8b5cf6}{W_Q}, \quad \textcolor{#3b82f6}{K} = \textcolor{#10b981}{X} \textcolor{#8b5cf6}{W_K}, \quad \textcolor{#3b82f6}{V} = \textcolor{#10b981}{X} \textcolor{#8b5cf6}{W_V} $$
+  $$
+  \textcolor{#3b82f6}{Q} = \textcolor{#10b981}{X} \textcolor{#8b5cf6}{W_Q}, \quad \textcolor{#3b82f6}{K} = \textcolor{#10b981}{X} \textcolor{#8b5cf6}{W_K}, \quad \textcolor{#3b82f6}{V} = \textcolor{#10b981}{X} \textcolor{#8b5cf6}{W_V} 
+  $$
   
-  Le score d'attention calcule la similarité entre chaque élément, ajustée par la dimension $\textcolor{#fbbf24}{d_k}$ :
+  Le score d'attention calcule la similarité entre chaque élément, mise à l'échelle par la dimension $\textcolor{#fbbf24}{d_k}$ :
   
-  $$ \text{Attention}(\textcolor{#3b82f6}{Q}, \textcolor{#3b82f6}{K}, \textcolor{#3b82f6}{V}) = \text{softmax}\left(\frac{\textcolor{#3b82f6}{Q} \textcolor{#3b82f6}{K}^T}{\sqrt{\textcolor{#fbbf24}{d_k}}}\right) \textcolor{#3b82f6}{V} $$
+  $$
+  \text{Attention}(\textcolor{#3b82f6}{Q}, \textcolor{#3b82f6}{K}, \textcolor{#3b82f6}{V}) = \text{softmax}\left(\frac{\textcolor{#3b82f6}{Q} \textcolor{#3b82f6}{K}^T}{\sqrt{\textcolor{#fbbf24}{d_k}}}\right) \textcolor{#3b82f6}{V} 
+  $$
   
-  Ce résultat est ensuite additionné à $\textcolor{#10b981}{X}$ via une connexion résiduelle, puis normalisé et passé dans un réseau Feed-Forward ($\textcolor{#ef4444}{\text{FFN}}$).
+  Ce résultat est ensuite ajouté à $\textcolor{#10b981}{X}$ via une connexion résiduelle, normalisé, et passé à travers un réseau de neurones Feed-Forward ($\textcolor{#ef4444}{\text{FFN}}$).
 math_illustration_svg: |
   <svg viewBox="0 0 500 400" xmlns="http://www.w3.org/2000/svg">
     <rect x="200" y="320" width="100" height="40" rx="5" fill="#10b981" />

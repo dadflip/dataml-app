@@ -25,18 +25,25 @@ hyperparameters:
   learning_rate: "Taux d'apprentissage (ex: 0.1)."
   depth: "Profondeur des arbres (ex: 6)."
 math_theory: |
-  CatBoost innove sur deux axes majeurs : l'encodage cible (Target Encoding) avec statistiques ordonnées, et l'utilisation d'arbres symétriques (Oblivious Trees).
+  CatBoost innove de deux manières principales : l'encodage cible (Target Encoding) avec des statistiques ordonnées, et l'utilisation d'arbres symétriques (Oblivious Trees).
   
-  Pour éviter le target leakage, CatBoost utilise un **Ordered Target Encoding**. La valeur catégorielle d'une observation $i$ pour la variable $k$ est encodée comme :
-  $$ \textcolor{#10b981}{\hat{x}_{i,k}} = \frac{\sum_{j=1}^{i-1} [x_{j,k} = x_{i,k}] \cdot \textcolor{#3b82f6}{y_j} + \textcolor{#fbbf24}{a} \cdot \textcolor{#ef4444}{P}}{\sum_{j=1}^{i-1} [x_{j,k} = x_{i,k}] + \textcolor{#fbbf24}{a}} $$
+  Pour éviter la fuite de données cible (target leakage), CatBoost utilise un **Encodage Cible Ordonné**. La valeur catégorielle d'une observation $i$ pour la variable $k$ est encodée comme suit :
+  
+  $$
+  \textcolor{#10b981}{\hat{x}_{i,k}} = \frac{\sum_{j=1}^{i-1} [x_{j,k} = x_{i,k}] \cdot \textcolor{#3b82f6}{y_j} + \textcolor{#fbbf24}{a} \cdot \textcolor{#ef4444}{P}}{\sum_{j=1}^{i-1} [x_{j,k} = x_{i,k}] + \textcolor{#fbbf24}{a}} 
+  $$
+  
   Où :
-  - La somme se fait uniquement sur les observations précédentes ($j < i$) grâce à une permutation aléatoire.
+  - La somme est calculée uniquement sur les observations précédentes ($j < i$) en utilisant une permutation aléatoire.
   - $\textcolor{#3b82f6}{y_j}$ est la valeur cible (0 ou 1).
-  - $\textcolor{#fbbf24}{a}$ est un paramètre de lissage (prior weight).
-  - $\textcolor{#ef4444}{P}$ est la valeur a priori (prior, ex: moyenne de la cible).
+  - $\textcolor{#fbbf24}{a}$ est un paramètre de lissage (poids de l'a priori).
+  - $\textcolor{#ef4444}{P}$ est la valeur a priori (par ex., la moyenne de la cible).
   
-  Le modèle final $\textcolor{#8b5cf6}{F(x)}$ utilise des "oblivious trees" où le même critère de coupure est appliqué à tous les nœuds d'une même profondeur :
-  $$ \textcolor{#8b5cf6}{F(x)} = \sum_{t=1}^T \eta \cdot \textcolor{#10b981}{h_t}(x) $$
+  Le modèle final $\textcolor{#8b5cf6}{F(x)}$ utilise des "arbres symétriques" (oblivious trees) où le même critère de séparation est appliqué à tous les nœuds de la même profondeur :
+  
+  $$
+  \textcolor{#8b5cf6}{F(x)} = \sum_{t=1}^T \eta \cdot \textcolor{#10b981}{h_t}(x) 
+  $$
 math_illustration_svg: |
   <svg viewBox="0 0 800 400" xmlns="http://www.w3.org/2000/svg">
     <!-- Background -->

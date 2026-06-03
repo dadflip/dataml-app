@@ -24,12 +24,20 @@ hyperparameters:
   epochs: "Nombre d'époques (ex: 20)."
   learning_rate: "Taux d'apprentissage (ex: 0.001)."
 math_theory: |
-  Le régresseur par réseau de neurones calcule ses activations à chaque couche cachée $l$ selon :
-  $$ \textcolor{#3b82f6}{h^{\textcolor{#3b82f6}{(l)}}} = \text{ReLU}(\textcolor{#8b5cf6}{W^{\textcolor{#8b5cf6}{(l)}}} \textcolor{#fbbf24}{h^{\textcolor{#fbbf24}{(l-1)}}} + \textcolor{#8b5cf6}{b^{\textcolor{#8b5cf6}{(l)}}}) $$
+  Le réseau de neurones régresseur calcule ses activations à chaque couche cachée $l$ selon :
+
+  $$
+  \textcolor{#3b82f6}{h^{\textcolor{#3b82f6}{(l)}}} = \text{ReLU}(\textcolor{#8b5cf6}{W^{\textcolor{#8b5cf6}{(l)}}} \textcolor{#fbbf24}{h^{\textcolor{#fbbf24}{(l-1)}}} + \textcolor{#8b5cf6}{b^{\textcolor{#8b5cf6}{(l)}}}) 
+  $$
+
   avec $\textcolor{#fbbf24}{h^{\textcolor{#fbbf24}{(0)}}} = \textcolor{#ef4444}{x}$. 
-  La dernière couche produit une valeur continue unique :
-  $$ \textcolor{#10b981}{\hat{y}} = \textcolor{#8b5cf6}{W^{\textcolor{#8b5cf6}{(L)}}} \textcolor{#3b82f6}{h^{\textcolor{#3b82f6}{(L-1)}}} + \textcolor{#8b5cf6}{b^{\textcolor{#8b5cf6}{(L)}}} $$
-  L'entraînement s'effectue en minimisant l'erreur quadratique moyenne (MSE) entre les prédictions et les valeurs réelles.
+  La dernière couche produit une seule valeur continue :
+
+  $$
+  \textcolor{#10b981}{\hat{y}} = \textcolor{#8b5cf6}{W^{\textcolor{#8b5cf6}{(L)}}} \textcolor{#3b82f6}{h^{\textcolor{#3b82f6}{(L-1)}}} + \textcolor{#8b5cf6}{b^{\textcolor{#8b5cf6}{(L)}}} 
+  $$
+
+  L'entraînement est réalisé en minimisant l'Erreur Quadratique Moyenne (MSE) entre les prédictions et les valeurs réelles.
 math_illustration_svg: |
   <svg viewBox="0 0 800 400" xmlns="http://www.w3.org/2000/svg">
     <rect width="800" height="400" fill="#f8fafc" rx="10"/>

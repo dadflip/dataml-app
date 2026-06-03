@@ -71,15 +71,19 @@ illustration_mermaid: |
     style Pred fill:#10b981,stroke:#059669,stroke-width:2px,color:#fff
 
 math_theory: |
-  Ordinary Least Squares (OLS) Linear Regression finds the set of weights that minimizes the Residual Sum of Squares (RSS) between the true target and the predicted target. The prediction is a simple linear combination of the input features:
+  La régression linéaire par les moindres carrés ordinaires (OLS) trouve l'ensemble de poids qui minimise la somme des carrés des résidus (RSS) entre la cible réelle et la cible prédite. La prédiction est une simple combinaison linéaire des caractéristiques d'entrée :
   
-  $$ \textcolor{#3b82f6}{\hat{y}} = \textcolor{#10b981}{X} \textcolor{#ef4444}{w} $$
+  $$
+  \textcolor{#3b82f6}{\hat{y}} = \textcolor{#10b981}{X} \textcolor{#ef4444}{w} 
+  $$
   
-  The optimization problem can be solved in closed form or via gradient descent, minimizing the loss function:
+  Le problème d'optimisation peut être résolu sous forme explicite ou via la descente de gradient, en minimisant la fonction de perte :
   
-  $$ \min_{w} \left( || \textcolor{#10b981}{X} \textcolor{#ef4444}{w} - \textcolor{#3b82f6}{y} ||_2^2 \right) $$
+  $$
+  \min_{w} \left( || \textcolor{#10b981}{X} \textcolor{#ef4444}{w} - \textcolor{#3b82f6}{y} ||_2^2 \right) 
+  $$
   
-  Where $\textcolor{#10b981}{X}$ is the feature matrix, $\textcolor{#ef4444}{w}$ are the learned coefficients (including the intercept), and $\textcolor{#3b82f6}{y}$ is the ground truth continuous target.
+  Où $\textcolor{#10b981}{X}$ est la matrice des caractéristiques, $\textcolor{#ef4444}{w}$ sont les coefficients appris (incluant l'ordonnée à l'origine), et $\textcolor{#3b82f6}{y}$ est la cible continue réelle.
 
 math_illustration_svg: |
   <svg viewBox="0 0 500 250" xmlns="http://www.w3.org/2000/svg">

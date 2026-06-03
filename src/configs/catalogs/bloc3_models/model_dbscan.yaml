@@ -109,13 +109,18 @@ illustration_mermaid: |
     style Pred fill:#10b981,stroke:#059669,stroke-width:2px,color:#fff
 
 math_theory: |
-  $$ N_{\textcolor{#3b82f6}{\epsilon}}(p) = \{ q \in D \mid dist(p, q) \le \textcolor{#3b82f6}{\epsilon} \} $$
-  $$ |N_{\textcolor{#3b82f6}{\epsilon}}(p)| \ge \textcolor{#10b981}{min\_samples} $$
+  $$
+  N_{\textcolor{#3b82f6}{\epsilon}}(p) = \{ q \in D \mid dist(p, q) \le \textcolor{#3b82f6}{\epsilon} \} 
+  $$
+
+  $$
+  |N_{\textcolor{#3b82f6}{\epsilon}}(p)| \ge \textcolor{#10b981}{min\_samples} 
+  $$
   
   Où :
-  - $\textcolor{#3b82f6}{\epsilon}$ est le rayon maximal de voisinage.
+  - $\textcolor{#3b82f6}{\epsilon}$ est le rayon maximal du voisinage.
   - $\textcolor{#10b981}{min\_samples}$ est le nombre minimum de points requis dans le voisinage pour former une région dense.
-  - Un point respectant cette condition est un point "Cœur" (Core). S'il est dans le voisinage d'un point cœur mais n'a pas assez de voisins, c'est un point "Bord" (Border). Sinon, c'est un bruit ($\textcolor{#ef4444}{Noise}$).
+  - Un point satisfaisant cette condition est un point "Cœur" (Core). S'il est dans le voisinage d'un point cœur mais n'a pas assez de voisins, c'est un point "Bord" (Border). Sinon, c'est un point de bruit ($\textcolor{#ef4444}{Noise}$).
 math_illustration_svg: |
   <svg viewBox="0 0 500 250" xmlns="http://www.w3.org/2000/svg">
     <rect width="500" height="250" fill="#f8fafc" rx="10"/>

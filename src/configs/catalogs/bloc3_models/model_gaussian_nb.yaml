@@ -75,20 +75,29 @@ illustration_mermaid: |
     style Bayes fill:#3b82f6,stroke:#2563eb,stroke-width:2px,color:#fff
     style Max fill:#3b82f6,stroke:#2563eb,stroke-width:2px,color:#fff
 math_theory: |
-  Gaussian Naive Bayes utilise le théorème de Bayes et l'hypothèse (naïve) d'indépendance conditionnelle entre les $d$ features.
+  Le modèle Naïf de Bayes Gaussien (Gaussian Naive Bayes) utilise le théorème de Bayes et l'hypothèse (naïve) d'indépendance conditionnelle entre les $d$ caractéristiques.
   
   La probabilité a posteriori que l'observation $\textcolor{#fbbf24}{x}$ appartienne à la classe $\textcolor{#8b5cf6}{c}$ est proportionnelle à :
-  $$P(y=\textcolor{#8b5cf6}{c} | \textcolor{#fbbf24}{x}) \propto P(y=\textcolor{#8b5cf6}{c}) \prod_{j=1}^{d} P(\textcolor{#fbbf24}{x}^{(j)} | y=\textcolor{#8b5cf6}{c})$$
   
-  Les variables continues sont modélisées par des distributions Gaussiennes. La vraisemblance de la $j$-ème feature pour la classe $\textcolor{#8b5cf6}{c}$ est :
-  $$P(\textcolor{#fbbf24}{x}^{(j)} | y=\textcolor{#8b5cf6}{c}) = \frac{1}{\sqrt{2\pi \textcolor{#ef4444}{\sigma}_{jc}^2}} \exp\left(-\frac{(\textcolor{#fbbf24}{x}^{(j)} - \textcolor{#3b82f6}{\mu}_{jc})^2}{2\textcolor{#ef4444}{\sigma}_{jc}^2}\right)$$
+  $$
+  P(y=\textcolor{#8b5cf6}{c} | \textcolor{#fbbf24}{x}) \propto P(y=\textcolor{#8b5cf6}{c}) \prod_{j=1}^{d} P(\textcolor{#fbbf24}{x}^{(j)} | y=\textcolor{#8b5cf6}{c})
+  $$
+  
+  Les variables continues sont modélisées par des distributions gaussiennes. La vraisemblance de la $j$-ème caractéristique pour la classe $\textcolor{#8b5cf6}{c}$ est :
+  
+  $$
+  P(\textcolor{#fbbf24}{x}^{(j)} | y=\textcolor{#8b5cf6}{c}) = \frac{1}{\sqrt{2\pi \textcolor{#ef4444}{\sigma}_{jc}^2}} \exp\left(-\frac{(\textcolor{#fbbf24}{x}^{(j)} - \textcolor{#3b82f6}{\mu}_{jc})^2}{2\textcolor{#ef4444}{\sigma}_{jc}^2}\right)
+  $$
   
   La prédiction finale $\hat{y}$ est la classe maximisant cette probabilité :
-  $$\hat{y} = \arg\max_{\textcolor{#8b5cf6}{c}} \left[ \log P(y=\textcolor{#8b5cf6}{c}) + \sum_{j=1}^{d} \log P(\textcolor{#fbbf24}{x}^{(j)} | y=\textcolor{#8b5cf6}{c}) \right]$$
+  
+  $$
+  \hat{y} = \arg\max_{\textcolor{#8b5cf6}{c}} \left[ \log P(y=\textcolor{#8b5cf6}{c}) + \sum_{j=1}^{d} \log P(\textcolor{#fbbf24}{x}^{(j)} | y=\textcolor{#8b5cf6}{c}) \right]
+  $$
   
   - $\textcolor{#8b5cf6}{c}$ : Une classe possible.
   - $P(y=\textcolor{#8b5cf6}{c})$ : La probabilité a priori de la classe (fréquence dans les données).
-  - $\textcolor{#3b82f6}{\mu}_{jc}$ et $\textcolor{#ef4444}{\sigma}_{jc}^2$ : Moyenne et variance de la feature $j$ calculées sur les données de la classe $c$.
+  - $\textcolor{#3b82f6}{\mu}_{jc}$ et $\textcolor{#ef4444}{\sigma}_{jc}^2$ : Moyenne et variance de la caractéristique $j$ calculées sur les données de la classe $c$.
 math_illustration_svg: |
   <svg viewBox="0 0 500 250" xmlns="http://www.w3.org/2000/svg">
     <rect width="500" height="250" fill="#f8fafc" rx="10" />

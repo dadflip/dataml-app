@@ -132,17 +132,19 @@ illustration_mermaid: |
     style L fill:#10b981,stroke:#059669,stroke-width:2px,color:#fff
 
 math_theory: |
-  MobileNetV2's core innovation is the **Inverted Residual Block** with Linear Bottlenecks, which uses **Depthwise Separable Convolutions** to drastically reduce computation. A standard convolution is split into two steps: a spatial depthwise convolution and a channel-wise pointwise convolution.
+  L'innovation centrale de MobileNetV2 est le **Bloc Résiduel Inversé** (Inverted Residual Block) avec goulots d'étranglement linéaires, qui utilise des **Convolutions Séparables en Profondeur** (Depthwise Separable Convolutions) pour réduire considérablement les calculs. Une convolution standard est divisée en deux étapes : une convolution spatiale en profondeur et une convolution par point (pointwise) par canal.
 
-  The operation of an inverted residual block can be defined as:
-  $$ \textcolor{#8b5cf6}{\mathbf{Y}} = \textcolor{#3b82f6}{\mathbf{W}_{pw2}} * \text{ReLU6}(\textcolor{#10b981}{\mathbf{W}_{dw}} * \text{ReLU6}(\textcolor{#fbbf24}{\mathbf{W}_{pw1}} * \textcolor{#ef4444}{\mathbf{X}})) + \textcolor{#ef4444}{\mathbf{X}} $$
+  L'opération d'un bloc résiduel inversé peut être définie par :
+  $$
+  \textcolor{#8b5cf6}{\mathbf{Y}} = \textcolor{#3b82f6}{\mathbf{W}_{pw2}} * \text{ReLU6}(\textcolor{#10b981}{\mathbf{W}_{dw}} * \text{ReLU6}(\textcolor{#fbbf24}{\mathbf{W}_{pw1}} * \textcolor{#ef4444}{\mathbf{X}})) + \textcolor{#ef4444}{\mathbf{X}} 
+  $$
   
-  Where:
-  - $\textcolor{#ef4444}{\mathbf{X}}$ is the input tensor of shape $(h, w, c)$.
-  - $\textcolor{#fbbf24}{\mathbf{W}_{pw1}}$ is a $1\times 1$ pointwise convolution that *expands* the channels to $tk$ (where $t$ is the expansion factor).
-  - $\textcolor{#10b981}{\mathbf{W}_{dw}}$ is a $3\times 3$ depthwise convolution applied per channel.
-  - $\textcolor{#3b82f6}{\mathbf{W}_{pw2}}$ is a $1\times 1$ pointwise convolution that projects the channels back to $c$, without a non-linear activation (linear bottleneck).
-  - The skip connection $+\textcolor{#ef4444}{\mathbf{X}}$ is applied only if the stride is 1 and input/output dimensions match.
+  Où :
+  - $\textcolor{#ef4444}{\mathbf{X}}$ est le tenseur d'entrée de forme $(h, w, c)$.
+  - $\textcolor{#fbbf24}{\mathbf{W}_{pw1}}$ est une convolution par point de $1\times 1$ qui *étend* les canaux à $tk$ (où $t$ est le facteur d'expansion).
+  - $\textcolor{#10b981}{\mathbf{W}_{dw}}$ est une convolution en profondeur de $3\times 3$ appliquée par canal.
+  - $\textcolor{#3b82f6}{\mathbf{W}_{pw2}}$ est une convolution par point de $1\times 1$ qui projette les canaux de retour à $c$, sans activation non linéaire (goulot d'étranglement linéaire).
+  - La connexion résiduelle $+\textcolor{#ef4444}{\mathbf{X}}$ est appliquée uniquement si le pas (stride) est de 1 et que les dimensions d'entrée/sortie correspondent.
 
 math_illustration_svg: |
   <svg viewBox="0 0 800 400" xmlns="http://www.w3.org/2000/svg">

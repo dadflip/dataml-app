@@ -91,15 +91,19 @@ illustration_mermaid: |
     style Proba fill:#10b981,stroke:#059669,stroke-width:2px,color:#fff
 
 math_theory: |
-  Logistic Regression models the probability that an observation belongs to the positive class by passing a linear combination of features through a sigmoid (logistic) function. The predicted probability $\textcolor{#3b82f6}{\hat{p}}$ is given by:
+  La régression logistique modélise la probabilité qu'une observation appartienne à la classe positive en passant une combinaison linéaire de caractéristiques à travers une fonction sigmoïde (logistique). La probabilité prédite $\textcolor{#3b82f6}{\hat{p}}$ est donnée par :
   
-  $$ \textcolor{#3b82f6}{\hat{p}} = \sigma(\textcolor{#10b981}{X} \textcolor{#ef4444}{w}) = \frac{1}{1 + e^{-\textcolor{#10b981}{X} \textcolor{#ef4444}{w}}} $$
+  $$
+  \textcolor{#3b82f6}{\hat{p}} = \sigma(\textcolor{#10b981}{X} \textcolor{#ef4444}{w}) = \frac{1}{1 + e^{-\textcolor{#10b981}{X} \textcolor{#ef4444}{w}}} 
+  $$
   
-  The model parameters $\textcolor{#ef4444}{w}$ are learned by minimizing the Log-Loss (Binary Cross-Entropy) between the predicted probabilities and the true binary labels $\textcolor{#fbbf24}{y} \in \{0, 1\}$:
+  Les paramètres du modèle $\textcolor{#ef4444}{w}$ sont appris en minimisant la perte logarithmique (entropie croisée binaire) entre les probabilités prédites et les vraies étiquettes binaires $\textcolor{#fbbf24}{y} \in \{0, 1\}$ :
   
-  $$ \min_{w} \left( - \frac{1}{N} \sum_{i=1}^{N} \left[ \textcolor{#fbbf24}{y}^{(i)} \log(\textcolor{#3b82f6}{\hat{p}}^{(i)}) + (1 - \textcolor{#fbbf24}{y}^{(i)}) \log(1 - \textcolor{#3b82f6}{\hat{p}}^{(i)}) \right] + \frac{1}{\textcolor{#8b5cf6}{C}} ||\textcolor{#ef4444}{w}||_2^2 \right) $$
+  $$
+  \min_{w} \left( - \frac{1}{N} \sum_{i=1}^{N} \left[ \textcolor{#fbbf24}{y}^{(i)} \log(\textcolor{#3b82f6}{\hat{p}}^{(i)}) + (1 - \textcolor{#fbbf24}{y}^{(i)}) \log(1 - \textcolor{#3b82f6}{\hat{p}}^{(i)}) \right] + \frac{1}{\textcolor{#8b5cf6}{C}} ||\textcolor{#ef4444}{w}||_2^2 \right) 
+  $$
   
-  Where $\textcolor{#8b5cf6}{C}$ is the inverse of the regularization strength.
+  Où $\textcolor{#8b5cf6}{C}$ est l'inverse de la force de régularisation.
 
 math_illustration_svg: |
   <svg viewBox="0 0 500 250" xmlns="http://www.w3.org/2000/svg">

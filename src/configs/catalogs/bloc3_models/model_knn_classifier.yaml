@@ -72,23 +72,32 @@ illustration_mermaid: |
     style TopK fill:#3b82f6,stroke:#2563eb,stroke-width:2px,color:#fff
     style Vote fill:#3b82f6,stroke:#2563eb,stroke-width:2px,color:#fff
 math_theory: |
-  Pour une nouvelle observation $\textcolor{#fbbf24}{x}$, l'algorithme identifie l'ensemble $\mathcal{N}_K(\textcolor{#fbbf24}{x})$ contenant ses $\textcolor{#10b981}{K}$ voisins les plus proches dans le jeu d'entraînement.
+  Pour une nouvelle observation $\textcolor{#fbbf24}{x}$, l'algorithme identifie l'ensemble $\mathcal{N}_K(\textcolor{#fbbf24}{x})$ contenant ses $\textcolor{#10b981}{K}$ voisins les plus proches dans l'ensemble d'entraînement.
   
-  La distance (ex: euclidienne) entre la cible $\textcolor{#fbbf24}{x}$ et un point d'entraînement $\textcolor{#3b82f6}{x_i}$ est :
-  $$d(\textcolor{#fbbf24}{x}, \textcolor{#3b82f6}{x_i}) = \sqrt{\sum_{j=1}^m (\textcolor{#fbbf24}{x}^{(j)} - \textcolor{#3b82f6}{x_i}^{(j)})^2}$$
+  La distance (par exemple, euclidienne) entre la cible $\textcolor{#fbbf24}{x}$ et un point d'entraînement $\textcolor{#3b82f6}{x_i}$ est :
+  
+  $$
+  d(\textcolor{#fbbf24}{x}, \textcolor{#3b82f6}{x_i}) = \sqrt{\sum_{j=1}^m (\textcolor{#fbbf24}{x}^{(j)} - \textcolor{#3b82f6}{x_i}^{(j)})^2}
+  $$
   
   La probabilité que $\textcolor{#fbbf24}{x}$ appartienne à la classe $\textcolor{#8b5cf6}{c}$ est la proportion de ses voisins appartenant à cette classe :
-  $$P(y=\textcolor{#8b5cf6}{c}|\textcolor{#fbbf24}{x}) = \frac{1}{\textcolor{#10b981}{K}} \sum_{i \in \mathcal{N}_K(\textcolor{#fbbf24}{x})} I(\textcolor{#ef4444}{y_i} = \textcolor{#8b5cf6}{c})$$
+  
+  $$
+  P(y=\textcolor{#8b5cf6}{c}|\textcolor{#fbbf24}{x}) = \frac{1}{\textcolor{#10b981}{K}} \sum_{i \in \mathcal{N}_K(\textcolor{#fbbf24}{x})} I(\textcolor{#ef4444}{y_i} = \textcolor{#8b5cf6}{c})
+  $$
   
   La prédiction finale $\hat{y}$ est la classe majoritaire (vote) :
-  $$\hat{y} = \arg\max_{\textcolor{#8b5cf6}{c}} P(y=\textcolor{#8b5cf6}{c}|\textcolor{#fbbf24}{x})$$
+  
+  $$
+  \hat{y} = \arg\max_{\textcolor{#8b5cf6}{c}} P(y=\textcolor{#8b5cf6}{c}|\textcolor{#fbbf24}{x})
+  $$
   
   - $\textcolor{#fbbf24}{x}$ : Observation à classifier.
-  - $\textcolor{#3b82f6}{x_i}$ : Points du jeu d'entraînement.
+  - $\textcolor{#3b82f6}{x_i}$ : Points dans l'ensemble d'entraînement.
   - $\textcolor{#10b981}{K}$ : Nombre de voisins considérés.
   - $\textcolor{#ef4444}{y_i}$ : Classe du voisin $i$.
   - $\textcolor{#8b5cf6}{c}$ : Classe candidate.
-  - $I(\cdot)$ : Fonction indicatrice (vaut 1 si vrai, 0 sinon).
+  - $I(\cdot)$ : Fonction indicatrice (1 si vrai, 0 sinon).
 math_illustration_svg: |
   <svg viewBox="0 0 500 250" xmlns="http://www.w3.org/2000/svg">
     <rect width="500" height="250" fill="#f8fafc" rx="10" />

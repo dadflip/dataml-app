@@ -88,19 +88,35 @@ illustration_mermaid: |
     style Out fill:#10b981,stroke:#059669,stroke-width:2px,color:#fff
 
 math_theory: |
-  YOLO (You Only Look Once) frames object detection as a single regression problem. YOLOv8 uses an anchor-free detection head, directly predicting bounding box coordinates and class probabilities per spatial location.
+  YOLO (You Only Look Once) formule la détection d'objets comme un problème de régression unique. YOLOv8 utilise une tête de détection sans ancres (anchor-free), prédisant directement les coordonnées des boîtes englobantes et les probabilités de classe par emplacement spatial.
   
-  For each grid cell, the network predicts class probabilities $\textcolor{#3b82f6}{\mathbf{p}} = (p_1, \dots, p_C)$ and bounding box offsets $\textcolor{#10b981}{\mathbf{b}} = (t_x, t_y, t_w, t_h)$ relative to the cell center $(c_x, c_y)$.
+  Pour chaque cellule de la grille, le réseau prédit les probabilités de classe $\textcolor{#3b82f6}{\mathbf{p}} = (p_1, \dots, p_C)$ et les décalages de la boîte englobante $\textcolor{#10b981}{\mathbf{b}} = (t_x, t_y, t_w, t_h)$ par rapport au centre de la cellule $(c_x, c_y)$.
   
-  The bounding box coordinates $(\textcolor{#fbbf24}{x}, \textcolor{#fbbf24}{y}, \textcolor{#fbbf24}{w}, \textcolor{#fbbf24}{h})$ are decoded as:
-  $$ \textcolor{#fbbf24}{x} = (2 \cdot \sigma(\textcolor{#10b981}{t_x}) - 0.5) + c_x $$
-  $$ \textcolor{#fbbf24}{y} = (2 \cdot \sigma(\textcolor{#10b981}{t_y}) - 0.5) + c_y $$
-  $$ \textcolor{#fbbf24}{w} = \textcolor{#10b981}{t_w}^2 \cdot s_w $$
-  $$ \textcolor{#fbbf24}{h} = \textcolor{#10b981}{t_h}^2 \cdot s_h $$
-  where $\sigma$ is the sigmoid function, and $s_w, s_h$ are stride factors.
+  Les coordonnées de la boîte englobante $(\textcolor{#fbbf24}{x}, \textcolor{#fbbf24}{y}, \textcolor{#fbbf24}{w}, \textcolor{#fbbf24}{h})$ sont décodées comme suit :
   
-  To remove redundant overlapping boxes, Non-Maximum Suppression (NMS) is applied. A box is discarded if its Intersection over Union (IoU) with a higher-confidence box exceeds a threshold:
-  $$ \textcolor{#ef4444}{\text{IoU}} = \frac{\text{Area}(\text{Box}_A \cap \text{Box}_B)}{\text{Area}(\text{Box}_A \cup \text{Box}_B)} > \text{NMS\_Threshold} $$
+  $$
+  \textcolor{#fbbf24}{x} = (2 \cdot \sigma(\textcolor{#10b981}{t_x}) - 0.5) + c_x 
+  $$
+  
+  $$
+  \textcolor{#fbbf24}{y} = (2 \cdot \sigma(\textcolor{#10b981}{t_y}) - 0.5) + c_y 
+  $$
+  
+  $$
+  \textcolor{#fbbf24}{w} = \textcolor{#10b981}{t_w}^2 \cdot s_w 
+  $$
+  
+  $$
+  \textcolor{#fbbf24}{h} = \textcolor{#10b981}{t_h}^2 \cdot s_h 
+  $$
+  
+  où $\sigma$ est la fonction sigmoïde, et $s_w, s_h$ sont des facteurs d'enjambement (stride factors).
+  
+  Pour supprimer les boîtes redondantes qui se chevauchent, la suppression des non-maxima (Non-Maximum Suppression, NMS) est appliquée. Une boîte est rejetée si son intersection sur l'union (IoU) avec une boîte de plus grande confiance dépasse un certain seuil :
+  
+  $$
+  \textcolor{#ef4444}{\text{IoU}} = \frac{\text{Area}(\text{Box}_A \cap \text{Box}_B)}{\text{Area}(\text{Box}_A \cup \text{Box}_B)} > \text{NMS\_Threshold} 
+  $$
 
 math_illustration_svg: |
   <svg viewBox="0 0 800 400" xmlns="http://www.w3.org/2000/svg">

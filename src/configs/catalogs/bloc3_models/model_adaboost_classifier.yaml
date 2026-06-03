@@ -23,17 +23,23 @@ hyperparameters:
   n_estimators: "Nombre d'estimateurs (ex: 50)."
   learning_rate: "Poids appliqué à chaque estimateur (ex: 1.0)."
 math_theory: |
-  L'algorithme AdaBoost construit séquentiellement un ensemble pondéré de classifieurs faibles (souvent des arbres de profondeur 1). À chaque itération, le poids des observations mal classées est augmenté pour forcer le prochain arbre à s'y concentrer. La prédiction finale $\textcolor{#8b5cf6}{H(x)}$ est un vote pondéré :
+  L'algorithme AdaBoost construit séquentiellement un ensemble pondéré de classifieurs faibles (souvent des arbres de décision de profondeur 1). À chaque itération, le poids des observations mal classées est augmenté pour forcer l'arbre suivant à se concentrer sur elles. La prédiction finale $\textcolor{#8b5cf6}{H(x)}$ est un vote pondéré :
   
-  $$ \textcolor{#8b5cf6}{H(x)} = \text{sign}\left( \sum_{t=1}^{T} \textcolor{#3b82f6}{\alpha_t} \textcolor{#10b981}{h_t}(x) \right) $$
+  $$
+  \textcolor{#8b5cf6}{H(x)} = \text{sign}\left( \sum_{t=1}^{T} \textcolor{#3b82f6}{\alpha_t} \textcolor{#10b981}{h_t}(x) \right) 
+  $$
   
-  Où $\textcolor{#10b981}{h_t}(x)$ est la prédiction de l'arbre $t$ (valant -1 ou 1), et $\textcolor{#3b82f6}{\alpha_t}$ est son "poids de vote", inversement proportionnel à son taux d'erreur pondéré $\textcolor{#ef4444}{\epsilon_t}$ :
+  Où $\textcolor{#10b981}{h_t}(x)$ est la prédiction de l'arbre $t$ (-1 ou 1), et $\textcolor{#3b82f6}{\alpha_t}$ est son "poids de vote", inversement proportionnel à son taux d'erreur pondéré $\textcolor{#ef4444}{\epsilon_t}$ :
   
-  $$ \textcolor{#3b82f6}{\alpha_t} = \frac{1}{2} \ln \left( \frac{1 - \textcolor{#ef4444}{\epsilon_t}}{\textcolor{#ef4444}{\epsilon_t}} \right) $$
+  $$
+  \textcolor{#3b82f6}{\alpha_t} = \frac{1}{2} \ln \left( \frac{1 - \textcolor{#ef4444}{\epsilon_t}}{\textcolor{#ef4444}{\epsilon_t}} \right) 
+  $$
   
-  Après chaque arbre, les poids d'échantillon $\textcolor{#fbbf24}{w_i}$ sont mis à jour (augmentés si l'observation est mal classée) :
+  Après chaque arbre, les poids des échantillons $\textcolor{#fbbf24}{w_i}$ sont mis à jour (augmentés si l'observation est mal classée) :
   
-  $$ \textcolor{#fbbf24}{w_i}^{(t+1)} = \textcolor{#fbbf24}{w_i}^{(t)} \exp \left( -\textcolor{#3b82f6}{\alpha_t} y_i \textcolor{#10b981}{h_t}(x_i) \right) $$
+  $$
+  \textcolor{#fbbf24}{w_i}^{(t+1)} = \textcolor{#fbbf24}{w_i}^{(t)} \exp \left( -\textcolor{#3b82f6}{\alpha_t} y_i \textcolor{#10b981}{h_t}(x_i) \right) 
+  $$
 math_illustration_svg: |
   <svg viewBox="0 0 800 400" xmlns="http://www.w3.org/2000/svg">
     <!-- Background -->

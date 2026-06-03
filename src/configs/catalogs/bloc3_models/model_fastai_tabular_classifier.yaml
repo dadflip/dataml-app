@@ -21,10 +21,18 @@ cons:
 hyperparameters:
   epochs: "Nombre d'époques (ex: 5)."
 math_theory: |
-  FastAI remplace chaque variable catégorielle discrète $\textcolor{#ef4444}{c_i}$ par un vecteur dense (Entity Embedding) $\textcolor{#3b82f6}{e_i}$ issu d'une matrice $\textcolor{#8b5cf6}{E}$ :
-  $$ \textcolor{#3b82f6}{e_i} = \textcolor{#8b5cf6}{E} \cdot \text{one\_hot}(\textcolor{#ef4444}{c_i}) $$
-  Les embeddings sont concaténés aux variables continues $\textcolor{#fbbf24}{x_{cont}}$ préalablement normalisées :
-  $$ \textcolor{#10b981}{z} = [\textcolor{#3b82f6}{e_1}, \dots, \textcolor{#3b82f6}{e_k}, \textcolor{#fbbf24}{x_{cont}}] $$
+  FastAI remplace chaque variable catégorielle discrète $\textcolor{#ef4444}{c_i}$ par un vecteur dense (Entity Embedding) $\textcolor{#3b82f6}{e_i}$ dérivé d'une matrice $\textcolor{#8b5cf6}{E}$ :
+  
+  $$
+  \textcolor{#3b82f6}{e_i} = \textcolor{#8b5cf6}{E} \cdot \text{one\_hot}(\textcolor{#ef4444}{c_i}) 
+  $$
+  
+  Les plongements (embeddings) sont concaténés avec les variables continues $\textcolor{#fbbf24}{x_{cont}}$ qui ont été préalablement normalisées :
+  
+  $$
+  \textcolor{#10b981}{z} = [\textcolor{#3b82f6}{e_1}, \dots, \textcolor{#3b82f6}{e_k}, \textcolor{#fbbf24}{x_{cont}}] 
+  $$
+  
   Ce vecteur est ensuite traité par un Perceptron Multicouche (MLP) pour la classification.
 math_illustration_svg: |
   <svg viewBox="0 0 800 400" xmlns="http://www.w3.org/2000/svg">

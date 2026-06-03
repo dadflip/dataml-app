@@ -128,18 +128,27 @@ illustration_mermaid: |
     style Out fill:#10b981,stroke:#059669,stroke-width:2px,color:#fff
 
 math_theory: |
-  Vision Transformers (ViT) process images by dividing them into a grid of fixed-size patches, flattening them, and applying a standard Transformer Encoder.
+  Les Vision Transformers (ViT) traitent les images en les divisant en une grille de patchs de taille fixe, en les aplatissant, et en appliquant un Encodeur Transformer standard.
   
-  The input image $\textcolor{#ef4444}{\mathbf{X}} \in \mathbb{R}^{H \times W \times C}$ is reshaped into a sequence of patches $\textcolor{#fbbf24}{\mathbf{X}_p} \in \mathbb{R}^{N \times (P^2 \cdot C)}$, where $(P, P)$ is the patch resolution and $N = \frac{H \cdot W}{P^2}$.
+  L'image d'entrée $\textcolor{#ef4444}{\mathbf{X}} \in \mathbb{R}^{H \times W \times C}$ est remodelée en une séquence de patchs $\textcolor{#fbbf24}{\mathbf{X}_p} \in \mathbb{R}^{N \times (P^2 \cdot C)}$, où $(P, P)$ est la résolution du patch et $N = \frac{H \cdot W}{P^2}$.
   
-  These patches are linearly projected into embeddings, prepended with a learnable class token $\textcolor{#10b981}{\mathbf{x}_{\text{class}}}$, and position embeddings $\textcolor{#3b82f6}{\mathbf{E}_{pos}}$ are added:
-  $$ \textcolor{#8b5cf6}{\mathbf{Z}_0} = [\textcolor{#10b981}{\mathbf{x}_{\text{class}}}; \textcolor{#fbbf24}{\mathbf{X}_p^1}\mathbf{E}; \dots; \textcolor{#fbbf24}{\mathbf{X}_p^N}\mathbf{E}] + \textcolor{#3b82f6}{\mathbf{E}_{pos}} $$
+  Ces patchs sont projetés linéairement en embeddings, précédés d'un token de classe apprenable $\textcolor{#10b981}{\mathbf{x}_{\text{class}}}$, et des embeddings de position $\textcolor{#3b82f6}{\mathbf{E}_{pos}}$ sont ajoutés :
   
-  This sequence $\textcolor{#8b5cf6}{\mathbf{Z}_0}$ is then passed through $L$ Transformer Encoder layers, using Multi-Head Self-Attention (MSA) and Multi-Layer Perceptrons (MLP):
-  $$ \mathbf{Z}'_{\ell} = \text{MSA}(\text{LN}(\mathbf{Z}_{\ell-1})) + \mathbf{Z}_{\ell-1} $$
-  $$ \mathbf{Z}_{\ell} = \text{MLP}(\text{LN}(\mathbf{Z}'_{\ell})) + \mathbf{Z}'_{\ell} $$
+  $$
+  \textcolor{#8b5cf6}{\mathbf{Z}_0} = [\textcolor{#10b981}{\mathbf{x}_{\text{class}}}; \textcolor{#fbbf24}{\mathbf{X}_p^1}\mathbf{E}; \dots; \textcolor{#fbbf24}{\mathbf{X}_p^N}\mathbf{E}] + \textcolor{#3b82f6}{\mathbf{E}_{pos}} 
+  $$
+  
+  Cette séquence $\textcolor{#8b5cf6}{\mathbf{Z}_0}$ est ensuite passée à travers $L$ couches d'Encodeur Transformer, en utilisant la Multi-Head Self-Attention (MSA) et des Perceptrons Multicouches (MLP) :
+  
+  $$
+  \mathbf{Z}'_{\ell} = \text{MSA}(\text{LN}(\mathbf{Z}_{\ell-1})) + \mathbf{Z}_{\ell-1} 
+  $$
+  
+  $$
+  \mathbf{Z}_{\ell} = \text{MLP}(\text{LN}(\mathbf{Z}'_{\ell})) + \mathbf{Z}'_{\ell} 
+  $$
 
-  Finally, the classification head uses the state of the class token at the last layer, $\mathbf{Z}_L^0$.
+  Enfin, la tête de classification utilise l'état du token de classe à la dernière couche, $\mathbf{Z}_L^0$.
 
 math_illustration_svg: |
   <svg viewBox="0 0 800 400" xmlns="http://www.w3.org/2000/svg">

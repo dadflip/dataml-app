@@ -22,10 +22,17 @@ hyperparameters:
 math_theory: |
   Le modèle représente chaque mot par un vecteur d'embedding dense $\textcolor{#3b82f6}{v}_i$ (Word2Vec) de dimension $d$.
   Pour une phrase d'entrée $\textcolor{#10b981}{X}$ contenant $\textcolor{#fbbf24}{T}$ mots, la représentation globale du document $\textcolor{#8b5cf6}{h}$ est la moyenne des embeddings :
-  $$ \textcolor{#8b5cf6}{h} = \frac{1}{\textcolor{#fbbf24}{T}} \sum_{i=1}^{\textcolor{#fbbf24}{T}} \textcolor{#3b82f6}{v}_i $$
-  Un classifieur SVM linéaire recherche ensuite l'hyperplan optimal défini par un vecteur normal $\textcolor{#ef4444}{w}$ et un biais $b$ qui sépare les classes avec la plus grande marge.
+  
+  $$
+  \textcolor{#8b5cf6}{h} = \frac{1}{\textcolor{#fbbf24}{T}} \sum_{i=1}^{\textcolor{#fbbf24}{T}} \textcolor{#3b82f6}{v}_i 
+  $$
+  
+  Un classifieur SVM linéaire recherche ensuite l'hyperplan optimal défini par un vecteur normal $\textcolor{#ef4444}{w}$ et un biais $b$ qui sépare les classes avec la marge maximale.
   La décision de classe $\hat{y} \in \{-1, 1\}$ est donnée par le signe de la fonction de décision :
-  $$ \hat{y} = \text{sign}(\textcolor{#ef4444}{w} \cdot \textcolor{#8b5cf6}{h} + b) $$
+  
+  $$
+  \hat{y} = \text{sign}(\textcolor{#ef4444}{w} \cdot \textcolor{#8b5cf6}{h} + b) 
+  $$
 math_illustration_svg: |
   <svg viewBox="0 0 800 400" xmlns="http://www.w3.org/2000/svg">
     <rect x="0" y="0" width="800" height="400" fill="#1e293b" rx="10"/>

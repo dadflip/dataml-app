@@ -169,14 +169,18 @@ code_template: |
               ('model', wrapped_model)
           ])
 math_theory: |
-  Un réseau RBF est composé d'une couche cachée dont les neurones calculent une distance entre l'entrée $\textcolor{#10b981}{x}$ et des centres $\textcolor{#ef4444}{c_i}$ appris.
-  L'activation radiale est souvent modélisée par une gaussienne, contrôlée par un facteur d'étalement (spread) $\textcolor{#fbbf24}{\beta_i}$ :
+  Un réseau RBF est composé d'une couche cachée dont les neurones calculent une distance entre l'entrée $\textcolor{#10b981}{x}$ et des centres appris $\textcolor{#ef4444}{c_i}$.
+  L'activation radiale est souvent modélisée par une Gaussienne, contrôlée par un facteur d'étalement $\textcolor{#fbbf24}{\beta_i}$ :
   
-  $$ \textcolor{#3b82f6}{h_i}(\textcolor{#10b981}{x}) = \exp \left( -\textcolor{#fbbf24}{\beta_i} ||\textcolor{#10b981}{x} - \textcolor{#ef4444}{c_i}||^2 \right) $$
+  $$
+  \textcolor{#3b82f6}{h_i}(\textcolor{#10b981}{x}) = \exp \left( -\textcolor{#fbbf24}{\beta_i} ||\textcolor{#10b981}{x} - \textcolor{#ef4444}{c_i}||^2 \right) 
+  $$
   
   La sortie $\textcolor{#8b5cf6}{y}$ du réseau est ensuite une simple combinaison linéaire pondérée par $\textcolor{#3b82f6}{w_i}$ de ces activations radiales :
   
-  $$ \textcolor{#8b5cf6}{y} = \sum_{i=1}^{N} \textcolor{#3b82f6}{w_i} \textcolor{#3b82f6}{h_i}(\textcolor{#10b981}{x}) + b $$
+  $$
+  \textcolor{#8b5cf6}{y} = \sum_{i=1}^{N} \textcolor{#3b82f6}{w_i} \textcolor{#3b82f6}{h_i}(\textcolor{#10b981}{x}) + b 
+  $$
 math_illustration_svg: |
   <svg viewBox="0 0 500 300" xmlns="http://www.w3.org/2000/svg">
     <!-- Input -->

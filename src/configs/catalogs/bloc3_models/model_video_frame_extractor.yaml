@@ -63,17 +63,23 @@ code_template: |
       training_history = {"status": "success"}
       task_type = "video_processing"
 math_theory: |
-  L'extraction de trames (frames) repose sur un sous-échantillonnage temporel uniforme. Pour une vidéo contenant un total de $\textcolor{#10b981}{T}$ trames, on souhaite extraire $\textcolor{#8b5cf6}{N}$ trames réparties équitablement.
-
+  L'extraction de trames (frames) repose sur un sous-échantillonnage temporel uniforme. Pour une vidéo contenant un total de $\textcolor{#10b981}{T}$ trames, nous souhaitons extraire $\textcolor{#8b5cf6}{N}$ trames réparties uniformément.
+  
   Le pas d'échantillonnage (intervalle entre chaque trame extraite) est :
-  $$ \textcolor{#fbbf24}{S} = \lfloor \frac{\textcolor{#10b981}{T}}{\textcolor{#8b5cf6}{N}} \rfloor $$
-
-  L'indice temporel (numéro de la frame) pour la $i$-ème image extraite (où $i \in \{0, 1, \dots, \textcolor{#8b5cf6}{N}-1\}$) est donné par :
-  $$ \textcolor{#3b82f6}{f_i} = i \times \textcolor{#fbbf24}{S} $$
-
+  
+  $$
+  \textcolor{#fbbf24}{S} = \lfloor \frac{\textcolor{#10b981}{T}}{\textcolor{#8b5cf6}{N}} \rfloor 
+  $$
+  
+  L'indice temporel (numéro de trame) pour la $i$-ème image extraite (où $i \in \{0, 1, \dots, \textcolor{#8b5cf6}{N}-1\}$) est donné par :
+  
+  $$
+  \textcolor{#3b82f6}{f_i} = i \times \textcolor{#fbbf24}{S} 
+  $$
+  
   - $\textcolor{#10b981}{T}$ : Nombre total de trames dans la séquence vidéo originale
   - $\textcolor{#8b5cf6}{N}$ : Nombre cible de trames à extraire (hyperparamètre)
-  - $\textcolor{#fbbf24}{S}$ : Pas ou intervalle d'échantillonnage
+  - $\textcolor{#fbbf24}{S}$ : Pas d'échantillonnage ou intervalle
   - $\textcolor{#3b82f6}{f_i}$ : Indice exact de la trame extraite dans la vidéo
 math_illustration_svg: |
   <svg viewBox="0 0 500 250" xmlns="http://www.w3.org/2000/svg">

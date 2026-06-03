@@ -22,11 +22,18 @@ math_theory: |
   L'arbre de décision (algorithme CART) divise récursivement l'espace des données pour maximiser la pureté des nœuds enfants.
   
   L'impureté d'un nœud $\textcolor{#fbbf24}{D}$ est souvent mesurée par l'indice de $\textcolor{#3b82f6}{Gini}$ :
-  $$ \textcolor{#3b82f6}{Gini}(\textcolor{#fbbf24}{D}) = 1 - \sum_{i=1}^C \textcolor{#ef4444}{p_i}^2 $$
+  
+  $$
+  \textcolor{#3b82f6}{Gini}(\textcolor{#fbbf24}{D}) = 1 - \sum_{i=1}^C \textcolor{#ef4444}{p_i}^2 
+  $$
+  
   où $\textcolor{#ef4444}{p_i}$ est la proportion d'observations de la classe $i$ dans le nœud $\textcolor{#fbbf24}{D}$.
   
-  Le meilleur fractionnement (split) sur une variable $\textcolor{#8b5cf6}{A}$ est celui qui maximise le Gain d'Information (ou la réduction d'impureté) :
-  $$ \textcolor{#10b981}{IG}(\textcolor{#fbbf24}{D}, \textcolor{#8b5cf6}{A}) = \textcolor{#3b82f6}{Gini}(\textcolor{#fbbf24}{D}) - \frac{|\textcolor{#fbbf24}{D}_{left}|}{|\textcolor{#fbbf24}{D}|} \textcolor{#3b82f6}{Gini}(\textcolor{#fbbf24}{D}_{left}) - \frac{|\textcolor{#fbbf24}{D}_{right}|}{|\textcolor{#fbbf24}{D}|} \textcolor{#3b82f6}{Gini}(\textcolor{#fbbf24}{D}_{right}) $$
+  La meilleure division sur une variable $\textcolor{#8b5cf6}{A}$ est celle qui maximise le gain d'information (ou la réduction d'impureté) :
+  
+  $$
+  \textcolor{#10b981}{IG}(\textcolor{#fbbf24}{D}, \textcolor{#8b5cf6}{A}) = \textcolor{#3b82f6}{Gini}(\textcolor{#fbbf24}{D}) - \frac{|\textcolor{#fbbf24}{D}_{gauche}|}{|\textcolor{#fbbf24}{D}|} \textcolor{#3b82f6}{Gini}(\textcolor{#fbbf24}{D}_{gauche}) - \frac{|\textcolor{#fbbf24}{D}_{droite}|}{|\textcolor{#fbbf24}{D}|} \textcolor{#3b82f6}{Gini}(\textcolor{#fbbf24}{D}_{droite}) 
+  $$
   
   La prédiction finale dans une feuille est la classe majoritaire (celle ayant le plus grand $\textcolor{#ef4444}{p_i}$).
 math_illustration_svg: |

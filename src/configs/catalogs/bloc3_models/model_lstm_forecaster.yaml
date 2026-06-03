@@ -176,19 +176,19 @@ illustration_mermaid: |
     style I fill:#10b981,stroke:#059669,stroke-width:2px,color:#fff
 
 math_theory: |
-  Opérations au sein d'une cellule Long Short-Term Memory (LSTM) au temps $t$ :
+  Opérations à l'intérieur d'une cellule Long Short-Term Memory (LSTM) à l'instant $t$ :
   
   **Portes (Gates) :**
   - Porte d'oubli : $\textcolor{#ef4444}{f_t} = \sigma(W_f \cdot [\textcolor{#3b82f6}{h_{t-1}}, x_t] + b_f)$
   - Porte d'entrée : $\textcolor{#10b981}{i_t} = \sigma(W_i \cdot [\textcolor{#3b82f6}{h_{t-1}}, x_t] + b_i)$
   - Porte de sortie : $\textcolor{#8b5cf6}{o_t} = \sigma(W_o \cdot [\textcolor{#3b82f6}{h_{t-1}}, x_t] + b_o)$
   
-  **États de mémoire :**
+  **États de la Mémoire :**
   - Candidat : $\tilde{C}_t = \tanh(W_C \cdot [\textcolor{#3b82f6}{h_{t-1}}, x_t] + b_C)$
-  - État de la cellule (Mémoire Long-Terme) : $\textcolor{#fbbf24}{C_t} = \textcolor{#ef4444}{f_t} \odot \textcolor{#fbbf24}{C_{t-1}} + \textcolor{#10b981}{i_t} \odot \tilde{C}_t$
-  - État caché (Mémoire Court-Terme) : $\textcolor{#3b82f6}{h_t} = \textcolor{#8b5cf6}{o_t} \odot \tanh(\textcolor{#fbbf24}{C_t})$
+  - État de la cellule (Mémoire à long terme) : $\textcolor{#fbbf24}{C_t} = \textcolor{#ef4444}{f_t} \odot \textcolor{#fbbf24}{C_{t-1}} + \textcolor{#10b981}{i_t} \odot \tilde{C}_t$
+  - État caché (Mémoire à court terme) : $\textcolor{#3b82f6}{h_t} = \textcolor{#8b5cf6}{o_t} \odot \tanh(\textcolor{#fbbf24}{C_t})$
   
-  Grâce à la porte d'oubli et l'état de cellule $\textcolor{#fbbf24}{C_t}$, le modèle empêche la disparition du gradient et conserve l'historique lointain.
+  Grâce à la porte d'oubli et à l'état de la cellule $\textcolor{#fbbf24}{C_t}$, le modèle prévient le problème de la disparition du gradient et conserve l'historique à long terme.
 math_illustration_svg: |
   <svg viewBox="0 0 800 400" xmlns="http://www.w3.org/2000/svg">
     <rect width="800" height="400" fill="#f8fafc" rx="10"/>

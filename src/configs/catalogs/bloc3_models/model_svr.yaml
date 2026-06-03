@@ -24,20 +24,32 @@ hyperparameters:
   C: "Pénalité."
   epsilon: "Marge de tolérance d'erreur (ex: 0.1)."
 math_theory: |
-  Le SVR cherche une fonction d'approximation qui tolère une erreur de prédiction jusqu'à un certain seuil (le tube $\textcolor{#10b981}{\epsilon}$), et pénalise les erreurs au-delà via des variables d'écart $\textcolor{#ef4444}{\xi_i}, \textcolor{#ef4444}{\xi_i^*}$.
+  Le SVR cherche une fonction d'approximation qui tolère une erreur de prédiction jusqu'à un certain seuil (le tube $\textcolor{#10b981}{\epsilon}$) et pénalise les erreurs au-delà en utilisant des variables d'écart $\textcolor{#ef4444}{\xi_i}, \textcolor{#ef4444}{\xi_i^*}$.
   
   L'objectif primal est :
-  $$\min_{\textcolor{#3b82f6}{w}, b, \textcolor{#ef4444}{\xi}, \textcolor{#ef4444}{\xi^*}} \frac{1}{2} \|\textcolor{#3b82f6}{w}\|^2 + \textcolor{#fbbf24}{C} \sum_{i=1}^{n} (\textcolor{#ef4444}{\xi_i} + \textcolor{#ef4444}{\xi_i^*})$$
+
+  $$
+  \min_{\textcolor{#3b82f6}{w}, b, \textcolor{#ef4444}{\xi}, \textcolor{#ef4444}{\xi^*}} \frac{1}{2} \|\textcolor{#3b82f6}{w}\|^2 + \textcolor{#fbbf24}{C} \sum_{i=1}^{n} (\textcolor{#ef4444}{\xi_i} + \textcolor{#ef4444}{\xi_i^*})
+  $$
   
   Sous les contraintes (pour chaque point $\textcolor{#fbbf24}{x_i}$) :
-  $$\textcolor{#8b5cf6}{y_i} - (\textcolor{#3b82f6}{w}^T \phi(\textcolor{#fbbf24}{x_i}) + b) \leq \textcolor{#10b981}{\epsilon} + \textcolor{#ef4444}{\xi_i}$$
-  $$(\textcolor{#3b82f6}{w}^T \phi(\textcolor{#fbbf24}{x_i}) + b) - \textcolor{#8b5cf6}{y_i} \leq \textcolor{#10b981}{\epsilon} + \textcolor{#ef4444}{\xi_i^*}$$
-  $$\textcolor{#ef4444}{\xi_i}, \textcolor{#ef4444}{\xi_i^*} \geq 0$$
+
+  $$
+  \textcolor{#8b5cf6}{y_i} - (\textcolor{#3b82f6}{w}^T \phi(\textcolor{#fbbf24}{x_i}) + b) \leq \textcolor{#10b981}{\epsilon} + \textcolor{#ef4444}{\xi_i}
+  $$
+
+  $$
+  (\textcolor{#3b82f6}{w}^T \phi(\textcolor{#fbbf24}{x_i}) + b) - \textcolor{#8b5cf6}{y_i} \leq \textcolor{#10b981}{\epsilon} + \textcolor{#ef4444}{\xi_i^*}
+  $$
+
+  $$
+  \textcolor{#ef4444}{\xi_i}, \textcolor{#ef4444}{\xi_i^*} \geq 0
+  $$
   
   - $\textcolor{#3b82f6}{w}$ : Vecteur de poids (détermine la régularité de la fonction).
   - $\textcolor{#10b981}{\epsilon}$ : Marge du tube de tolérance où l'erreur n'est pas pénalisée.
-  - $\textcolor{#ef4444}{\xi_i}, \textcolor{#ef4444}{\xi_i^*}$ : Variables d'écart (slack) mesurant l'erreur au-dessus et en dessous du tube.
-  - $\textcolor{#fbbf24}{C}$ : Paramètre de régularisation pénalisant les erreurs extérieures.
+  - $\textcolor{#ef4444}{\xi_i}, \textcolor{#ef4444}{\xi_i^*}$ : Variables d'écart mesurant l'erreur au-dessus et en dessous du tube.
+  - $\textcolor{#fbbf24}{C}$ : Paramètre de régularisation pénalisant les erreurs en dehors du tube.
   - $\textcolor{#8b5cf6}{y_i}$ : Cible continue.
 code_template: |
   import pandas as pd

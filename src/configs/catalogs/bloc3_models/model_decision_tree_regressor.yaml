@@ -21,12 +21,19 @@ hyperparameters:
 math_theory: |
   Pour la régression, l'arbre de décision (CART) cherche à minimiser la variance (ou l'Erreur Quadratique Moyenne - MSE) au sein de chaque nœud $\textcolor{#fbbf24}{D}$.
   
-  Le $\textcolor{#3b82f6}{MSE}$ d'un nœud est :
-  $$ \textcolor{#3b82f6}{MSE}(\textcolor{#fbbf24}{D}) = \frac{1}{|\textcolor{#fbbf24}{D}|} \sum_{i \in \textcolor{#fbbf24}{D}} (y_i - \textcolor{#ef4444}{\bar{y}})^2 $$
+  La $\textcolor{#3b82f6}{MSE}$ d'un nœud est :
+  
+  $$
+  \textcolor{#3b82f6}{MSE}(\textcolor{#fbbf24}{D}) = \frac{1}{|\textcolor{#fbbf24}{D}|} \sum_{i \in \textcolor{#fbbf24}{D}} (y_i - \textcolor{#ef4444}{\bar{y}})^2 
+  $$
+  
   où $\textcolor{#ef4444}{\bar{y}} = \frac{1}{|\textcolor{#fbbf24}{D}|} \sum_{i \in \textcolor{#fbbf24}{D}} y_i$ est la moyenne des cibles dans le nœud.
   
   Le modèle choisit la variable $\textcolor{#8b5cf6}{A}$ et le seuil de coupure qui maximisent la Réduction de Variance :
-  $$ \textcolor{#10b981}{VarReduction} = \textcolor{#3b82f6}{MSE}(\textcolor{#fbbf24}{D}) - \left( \frac{|\textcolor{#fbbf24}{D}_{left}|}{|\textcolor{#fbbf24}{D}|} \textcolor{#3b82f6}{MSE}(\textcolor{#fbbf24}{D}_{left}) + \frac{|\textcolor{#fbbf24}{D}_{right}|}{|\textcolor{#fbbf24}{D}|} \textcolor{#3b82f6}{MSE}(\textcolor{#fbbf24}{D}_{right}) \right) $$
+  
+  $$
+  \textcolor{#10b981}{VarReduction} = \textcolor{#3b82f6}{MSE}(\textcolor{#fbbf24}{D}) - \left( \frac{|\textcolor{#fbbf24}{D}_{gauche}|}{|\textcolor{#fbbf24}{D}|} \textcolor{#3b82f6}{MSE}(\textcolor{#fbbf24}{D}_{gauche}) + \frac{|\textcolor{#fbbf24}{D}_{droite}|}{|\textcolor{#fbbf24}{D}|} \textcolor{#3b82f6}{MSE}(\textcolor{#fbbf24}{D}_{droite}) \right) 
+  $$
   
   La prédiction finale $\hat{y}$ pour une nouvelle observation est la valeur $\textcolor{#ef4444}{\bar{y}}$ de la feuille dans laquelle elle tombe.
 math_illustration_svg: |

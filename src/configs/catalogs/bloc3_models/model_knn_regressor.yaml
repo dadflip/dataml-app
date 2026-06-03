@@ -71,16 +71,22 @@ illustration_mermaid: |
     style TopK fill:#3b82f6,stroke:#2563eb,stroke-width:2px,color:#fff
     style Avg fill:#3b82f6,stroke:#2563eb,stroke-width:2px,color:#fff
 math_theory: |
-  Pour une nouvelle observation $\textcolor{#fbbf24}{x}$, l'algorithme identifie l'ensemble $\mathcal{N}_K(\textcolor{#fbbf24}{x})$ contenant ses $\textcolor{#10b981}{K}$ voisins les plus proches dans le jeu d'entraînement.
+  Pour une nouvelle observation $\textcolor{#fbbf24}{x}$, l'algorithme identifie l'ensemble $\mathcal{N}_K(\textcolor{#fbbf24}{x})$ contenant ses $\textcolor{#10b981}{K}$ voisins les plus proches dans l'ensemble d'entraînement.
   
-  La distance (ex: euclidienne) entre la cible $\textcolor{#fbbf24}{x}$ et un point d'entraînement $\textcolor{#3b82f6}{x_i}$ est :
-  $$d(\textcolor{#fbbf24}{x}, \textcolor{#3b82f6}{x_i}) = \sqrt{\sum_{j=1}^m (\textcolor{#fbbf24}{x}^{(j)} - \textcolor{#3b82f6}{x_i}^{(j)})^2}$$
+  La distance (par exemple, euclidienne) entre la cible $\textcolor{#fbbf24}{x}$ et un point d'entraînement $\textcolor{#3b82f6}{x_i}$ est :
+  
+  $$
+  d(\textcolor{#fbbf24}{x}, \textcolor{#3b82f6}{x_i}) = \sqrt{\sum_{j=1}^m (\textcolor{#fbbf24}{x}^{(j)} - \textcolor{#3b82f6}{x_i}^{(j)})^2}
+  $$
   
   La prédiction finale $\hat{y}$ est simplement la moyenne des valeurs cibles de ses voisins :
-  $$\hat{y} = \frac{1}{\textcolor{#10b981}{K}} \sum_{i \in \mathcal{N}_K(\textcolor{#fbbf24}{x})} \textcolor{#8b5cf6}{y_i}$$
+  
+  $$
+  \hat{y} = \frac{1}{\textcolor{#10b981}{K}} \sum_{i \in \mathcal{N}_K(\textcolor{#fbbf24}{x})} \textcolor{#8b5cf6}{y_i}
+  $$
   
   - $\textcolor{#fbbf24}{x}$ : Observation pour laquelle prédire la valeur.
-  - $\textcolor{#3b82f6}{x_i}$ : Points du jeu d'entraînement.
+  - $\textcolor{#3b82f6}{x_i}$ : Points de l'ensemble d'entraînement.
   - $\textcolor{#10b981}{K}$ : Nombre de voisins considérés.
   - $\textcolor{#8b5cf6}{y_i}$ : Valeur cible continue du voisin $i$.
 math_illustration_svg: |

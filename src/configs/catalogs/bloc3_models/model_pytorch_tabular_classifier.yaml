@@ -24,12 +24,20 @@ hyperparameters:
   epochs: "Nombre d'époques (ex: 20)."
   learning_rate: "Taux d'apprentissage (ex: 0.001)."
 math_theory: |
-  Un réseau de neurones profond (DNN) applique une séquence de transformations affines suivies de fonctions d'activation non-linéaires. Pour une couche $l$ :
-  $$ \textcolor{#3b82f6}{h^{\textcolor{#3b82f6}{(l)}}} = \sigma(\textcolor{#8b5cf6}{W^{\textcolor{#8b5cf6}{(l)}}} \textcolor{#fbbf24}{h^{\textcolor{#fbbf24}{(l-1)}}} + \textcolor{#8b5cf6}{b^{\textcolor{#8b5cf6}{(l)}}}) $$
+  Un réseau de neurones profond (DNN) applique une séquence de transformations affines suivies de fonctions d'activation non linéaires. Pour une couche $l$ :
+
+  $$
+  \textcolor{#3b82f6}{h^{\textcolor{#3b82f6}{(l)}}} = \sigma(\textcolor{#8b5cf6}{W^{\textcolor{#8b5cf6}{(l)}}} \textcolor{#fbbf24}{h^{\textcolor{#fbbf24}{(l-1)}}} + \textcolor{#8b5cf6}{b^{\textcolor{#8b5cf6}{(l)}}}) 
+  $$
+
   où $\textcolor{#fbbf24}{h^{\textcolor{#fbbf24}{(0)}}} = \textcolor{#ef4444}{x}$ est l'entrée tabulaire.
-  La sortie passe par une fonction Softmax pour obtenir les probabilités des classes :
-  $$ \textcolor{#10b981}{\hat{y}_c} = \frac{\exp(\textcolor{#3b82f6}{h_c^{\textcolor{#3b82f6}{(L)}}})}{\sum_{j} \exp(\textcolor{#3b82f6}{h_j^{\textcolor{#3b82f6}{(L)}}})} $$
-  La perte est optimisée via l'entropie croisée (Cross-Entropy).
+  La sortie passe par une fonction Softmax pour obtenir les probabilités de classe :
+
+  $$
+  \textcolor{#10b981}{\hat{y}_c} = \frac{\exp(\textcolor{#3b82f6}{h_c^{\textcolor{#3b82f6}{(L)}}})}{\sum_{j} \exp(\textcolor{#3b82f6}{h_j^{\textcolor{#3b82f6}{(L)}}})} 
+  $$
+
+  La perte est optimisée via l'Entropie Croisée (Cross-Entropy).
 math_illustration_svg: |
   <svg viewBox="0 0 800 400" xmlns="http://www.w3.org/2000/svg">
     <rect width="800" height="400" fill="#f8fafc" rx="10"/>

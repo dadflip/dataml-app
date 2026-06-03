@@ -85,17 +85,19 @@ illustration_mermaid: |
     style OutText fill:#10b981,stroke:#059669,stroke-width:2px,color:#fff
 
 math_theory: |
-  Text summarization relies on an Encoder-Decoder Transformer architecture (e.g., BART or T5). The task is framed as conditional text generation.
+  Le résumé de texte repose sur une architecture Transformer de type Encodeur-Décodeur (par ex. BART ou T5). La tâche est formulée comme une génération conditionnelle de texte.
   
-  The model maximizes the likelihood of the summary sequence $\textcolor{#10b981}{Y}$ given the input text $\textcolor{#3b82f6}{X}$, factoring the probability using the chain rule over $T$ steps:
+  Le modèle maximise la vraisemblance de la séquence de résumé $\textcolor{#10b981}{Y}$ étant donné le texte d'entrée $\textcolor{#3b82f6}{X}$, en factorisant la probabilité avec la règle de dérivation en chaîne (chain rule) sur $T$ étapes :
   
-  $$ P(\textcolor{#10b981}{Y} \mid \textcolor{#3b82f6}{X}) = \prod_{t=1}^{T} P(\textcolor{#10b981}{y_t} \mid \textcolor{#10b981}{y_{<t}}, \textcolor{#fbbf24}{H}) $$
+  $$
+  P(\textcolor{#10b981}{Y} \mid \textcolor{#3b82f6}{X}) = \prod_{t=1}^{T} P(\textcolor{#10b981}{y_t} \mid \textcolor{#10b981}{y_{<t}}, \textcolor{#fbbf24}{H})
+  $$
   
-  where:
-  *   $\textcolor{#3b82f6}{X}$ is the long input document.
-  *   $\textcolor{#fbbf24}{H} = \text{Encoder}(\textcolor{#3b82f6}{X})$ represents the contextualized hidden states of the input.
-  *   $\textcolor{#10b981}{y_t}$ is the generated summary token at step $t$.
-  *   $\textcolor{#10b981}{y_{<t}}$ are the previously generated summary tokens (autoregressive decoding).
+  où :
+  *   $\textcolor{#3b82f6}{X}$ est le long document d'entrée.
+  *   $\textcolor{#fbbf24}{H} = \text{Encoder}(\textcolor{#3b82f6}{X})$ représente les états cachés contextualisés de l'entrée.
+  *   $\textcolor{#10b981}{y_t}$ est le token du résumé généré à l'étape $t$.
+  *   $\textcolor{#10b981}{y_{<t}}$ sont les tokens du résumé générés précédemment (décodage autorégressif).
 
 math_illustration_svg: |
   <svg viewBox="0 0 700 350" xmlns="http://www.w3.org/2000/svg">
@@ -133,7 +135,7 @@ math_illustration_svg: |
     
     <!-- Autoregressive feedback loop -->
     <path d="M 690 215 L 690 280 L 540 280 L 540 275" fill="none" stroke="#10b981" stroke-width="2" marker-end="url(#arrow-green)"/>
-    <text x="615" y="270" text-anchor="middle" font-family="sans-serif" font-size="12" font-weight="bold" fill="#10b981">y_&lt;t</text>
+    <text x="615" y="270" text-anchor="middle" font-family="sans-serif" font-size="12" font-weight="bold" fill="#10b981">y_{&lt;t}</text>
     
     <line x1="600" y1="175" x2="660" y2="175" stroke="#6b7280" stroke-width="2" marker-end="url(#arrow)"/>
     

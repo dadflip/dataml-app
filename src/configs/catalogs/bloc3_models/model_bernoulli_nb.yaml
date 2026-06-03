@@ -110,21 +110,27 @@ illustration_mermaid: |
       style ArgMax fill:#3b82f6,stroke:#2563eb,stroke-width:2px,color:#fff
       style Pred fill:#10b981,stroke:#059669,stroke-width:2px,color:#fff
 math_theory: |
-  Le Bernoulli Naive Bayes est adapté aux variables prédictives binaires (0 ou 1).
+  Le classifieur Naïf de Bayes Bernoulli est adapté aux variables prédictives binaires (0 ou 1).
   
   La vraisemblance de chaque variable $j$ pour la classe $\textcolor{#8b5cf6}{c}$ est modélisée par une distribution de Bernoulli :
-  $$P(\textcolor{#fbbf24}{x}^{(j)} | y=\textcolor{#8b5cf6}{c}) = \textcolor{#3b82f6}{p}_{jc}^{\textcolor{#fbbf24}{x}^{(j)}} (1 - \textcolor{#3b82f6}{p}_{jc})^{(1 - \textcolor{#fbbf24}{x}^{(j)})}$$
   
-  Où $\textcolor{#3b82f6}{p}_{jc}$ est la probabilité que la variable $j$ soit présente (1) sachant la classe $c$.
+  $$
+  P(\textcolor{#fbbf24}{x}^{(j)} | y=\textcolor{#8b5cf6}{c}) = \textcolor{#3b82f6}{p}_{jc}^{\textcolor{#fbbf24}{x}^{(j)}} (1 - \textcolor{#3b82f6}{p}_{jc})^{(1 - \textcolor{#fbbf24}{x}^{(j)})}
+  $$
+  
+  Où $\textcolor{#3b82f6}{p}_{jc}$ est la probabilité que la variable $j$ soit présente (1) étant donné la classe $c$.
   
   La probabilité a posteriori est proportionnelle au produit des probabilités individuelles (hypothèse naïve) :
-  $$P(y=\textcolor{#8b5cf6}{c} | \textcolor{#fbbf24}{x}) \propto P(y=\textcolor{#8b5cf6}{c}) \prod_{j=1}^{d} P(\textcolor{#fbbf24}{x}^{(j)} | y=\textcolor{#8b5cf6}{c})$$
   
-  Un lissage de Laplace (paramètre $\textcolor{#10b981}{\alpha}$) est souvent appliqué pour éviter des probabilités nulles si une variable n'a jamais été vue pour une classe lors de l'entraînement.
+  $$
+  P(y=\textcolor{#8b5cf6}{c} | \textcolor{#fbbf24}{x}) \propto P(y=\textcolor{#8b5cf6}{c}) \prod_{j=1}^{d} P(\textcolor{#fbbf24}{x}^{(j)} | y=\textcolor{#8b5cf6}{c})
+  $$
   
-  - $\textcolor{#fbbf24}{x}^{(j)} \in \{0, 1\}$ : Valeur binaire de la $j$-ème feature.
+  Le lissage de Laplace (paramètre $\textcolor{#10b981}{\alpha}$) est souvent appliqué pour éviter les probabilités nulles si une variable n'a jamais été observée pour une classe pendant l'entraînement.
+  
+  - $\textcolor{#fbbf24}{x}^{(j)} \in \{0, 1\}$ : Valeur binaire de la $j$-ème caractéristique.
   - $\textcolor{#8b5cf6}{c}$ : Classe cible.
-  - $\textcolor{#3b82f6}{p}_{jc}$ : Probabilité d'occurrence de la feature $j$ dans la classe $c$.
+  - $\textcolor{#3b82f6}{p}_{jc}$ : Probabilité d'occurrence de la caractéristique $j$ dans la classe $c$.
   - $\textcolor{#10b981}{\alpha}$ : Hyperparamètre de lissage.
 math_illustration_svg: |
   <svg viewBox="0 0 500 250" xmlns="http://www.w3.org/2000/svg">

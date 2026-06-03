@@ -91,20 +91,26 @@ illustration_mermaid: |
     style Decode fill:#3b82f6,stroke:#2563eb,stroke-width:2px,color:#fff
 
 math_theory: |
-  GPT-2 uses an autoregressive Decoder-only Transformer architecture. Text generation is framed as the factorization of the joint probability over a sequence of tokens $\textcolor{#10b981}{X}$.
+  GPT-2 emploie une architecture Transformer autorégressive uniquement composée de décodeurs (Decoder-only). La génération de texte est formulée comme la factorisation de la probabilité jointe sur une séquence de tokens $\textcolor{#10b981}{X}$.
   
-  The model computes the conditional probability of the next token $\textcolor{#10b981}{x_t}$ given the sequence of all preceding tokens $\textcolor{#3b82f6}{x_{<t}}$:
+  Le modèle calcule la probabilité conditionnelle du prochain token $\textcolor{#10b981}{x_t}$ étant donné la séquence de tous les tokens précédents $\textcolor{#3b82f6}{x_{<t}}$ :
   
-  $$ P(\textcolor{#10b981}{X}) = \prod_{t=1}^{T} P(\textcolor{#10b981}{x_t} \mid \textcolor{#3b82f6}{x_1, \dots, x_{t-1}}) $$
+  $$
+  P(\textcolor{#10b981}{X}) = \prod_{t=1}^{T} P(\textcolor{#10b981}{x_t} \mid \textcolor{#3b82f6}{x_{<t}})
+  $$
   
-  At each generation step $t$:
-  1. $\textcolor{#3b82f6}{x_{<t}}$ is passed through stacked masked self-attention layers to produce a hidden representation $\textcolor{#fbbf24}{h_t}$.
-  2. The probability distribution for the next token is computed: $P(\textcolor{#10b981}{x_t}) = \text{Softmax}(\textcolor{#ef4444}{W_{\text{vocab}}} \cdot \textcolor{#fbbf24}{h_t})$.
+  À chaque étape de génération $t$ :
+  1. Le contexte $\textcolor{#3b82f6}{x_{<t}}$ passe à travers des couches d'auto-attention masquées (masked self-attention) empilées pour produire une représentation cachée $\textcolor{#fbbf24}{h_t}$.
+  2. La distribution de probabilité pour le token suivant est calculée en utilisant la matrice de poids du vocabulaire $\textcolor{#ef4444}{W_{\text{vocab}}}$ :
   
-  Tokens are sampled from this distribution and appended to the context for the next step.
+  $$
+  P(\textcolor{#10b981}{x_t}) = \text{Softmax}(\textcolor{#ef4444}{W_{\text{vocab}}} \cdot \textcolor{#fbbf24}{h_t})
+  $$
+  
+  Les tokens sont échantillonnés à partir de cette distribution et ajoutés au contexte pour l'étape suivante.
 
 math_illustration_svg: |
-  <svg viewBox="0 0 600 300" xmlns="http://www.w3.org/2000/svg">
+  <svg viewBox="0 0 700 350" xmlns="http://www.w3.org/2000/svg">
     <defs>
       <marker id="arrow" viewBox="0 0 10 10" refX="10" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
         <path d="M 0 0 L 10 5 L 0 10 z" fill="#9ca3af" />
@@ -115,38 +121,43 @@ math_illustration_svg: |
     </defs>
     
     <!-- Input Context -->
-    <rect x="20" y="80" width="100" height="60" rx="5" fill="#eff6ff" stroke="#3b82f6" stroke-width="2"/>
-    <text x="70" y="110" text-anchor="middle" font-family="sans-serif" font-size="14" font-weight="bold" fill="#3b82f6">Context (x_&lt;t)</text>
+    <rect x="20" y="80" width="120" height="60" rx="8" fill="#eff6ff" stroke="#3b82f6" stroke-width="2"/>
+    <text x="80" y="105" text-anchor="middle" font-family="sans-serif" font-size="14" font-weight="bold" fill="#3b82f6">Context</text>
+    <text x="80" y="125" text-anchor="middle" font-family="sans-serif" font-size="12" fill="#3b82f6">x_&lt;t</text>
     
-    <line x1="120" y1="110" x2="180" y2="110" stroke="#9ca3af" stroke-width="2" marker-end="url(#arrow)"/>
+    <line x1="140" y1="110" x2="200" y2="110" stroke="#9ca3af" stroke-width="2" marker-end="url(#arrow)"/>
     
-    <!-- GPT-2 Transformer -->
-    <rect x="180" y="50" width="140" height="120" rx="10" fill="#f3f4f6" stroke="#4b5563" stroke-width="2"/>
-    <text x="250" y="100" text-anchor="middle" font-family="sans-serif" font-size="16" font-weight="bold" fill="#374151">GPT-2 Decoder</text>
-    <text x="250" y="120" text-anchor="middle" font-family="sans-serif" font-size="12" fill="#4b5563">(Masked Attention)</text>
+    <!-- GPT-2 Transformer Blocks -->
+    <rect x="200" y="40" width="160" height="140" rx="12" fill="#f3f4f6" stroke="#4b5563" stroke-width="2"/>
+    <text x="280" y="70" text-anchor="middle" font-family="sans-serif" font-size="16" font-weight="bold" fill="#374151">GPT-2 Decoder</text>
+    <rect x="220" y="90" width="120" height="30" rx="4" fill="#e5e7eb" stroke="#9ca3af" stroke-width="1"/>
+    <text x="280" y="110" text-anchor="middle" font-family="sans-serif" font-size="12" fill="#4b5563">Masked Self-Attention</text>
+    <rect x="220" y="130" width="120" height="30" rx="4" fill="#e5e7eb" stroke="#9ca3af" stroke-width="1"/>
+    <text x="280" y="150" text-anchor="middle" font-family="sans-serif" font-size="12" fill="#4b5563">Feed Forward</text>
     
-    <line x1="320" y1="110" x2="380" y2="110" stroke="#9ca3af" stroke-width="2" marker-end="url(#arrow)"/>
+    <line x1="360" y1="110" x2="420" y2="110" stroke="#9ca3af" stroke-width="2" marker-end="url(#arrow)"/>
     
-    <!-- h_t -->
-    <rect x="380" y="90" width="40" height="40" rx="20" fill="#fffbeb" stroke="#fbbf24" stroke-width="2"/>
-    <text x="400" y="115" text-anchor="middle" font-family="sans-serif" font-size="14" font-weight="bold" fill="#fbbf24">h_t</text>
+    <!-- Hidden Representation h_t -->
+    <rect x="420" y="90" width="50" height="40" rx="20" fill="#fffbeb" stroke="#fbbf24" stroke-width="2"/>
+    <text x="445" y="115" text-anchor="middle" font-family="sans-serif" font-size="14" font-weight="bold" fill="#fbbf24">h_t</text>
     
-    <line x1="420" y1="110" x2="480" y2="110" stroke="#9ca3af" stroke-width="2" marker-end="url(#arrow)"/>
+    <line x1="470" y1="110" x2="520" y2="110" stroke="#9ca3af" stroke-width="2" marker-end="url(#arrow)"/>
     
     <!-- Linear Head & Output -->
-    <rect x="480" y="70" width="100" height="80" rx="5" fill="#fef2f2" stroke="#ef4444" stroke-width="2"/>
-    <text x="530" y="100" text-anchor="middle" font-family="sans-serif" font-size="12" font-weight="bold" fill="#ef4444">Linear (W)</text>
-    <text x="530" y="130" text-anchor="middle" font-family="sans-serif" font-size="12" font-weight="bold" fill="#ef4444">+ Softmax</text>
+    <rect x="520" y="70" width="120" height="80" rx="8" fill="#fef2f2" stroke="#ef4444" stroke-width="2"/>
+    <text x="580" y="100" text-anchor="middle" font-family="sans-serif" font-size="14" font-weight="bold" fill="#ef4444">Linear (W_vocab)</text>
+    <text x="580" y="130" text-anchor="middle" font-family="sans-serif" font-size="12" font-weight="bold" fill="#ef4444">+ Softmax</text>
     
     <!-- Next Token -->
-    <line x1="530" y1="150" x2="530" y2="190" stroke="#9ca3af" stroke-width="2" marker-end="url(#arrow)"/>
+    <line x1="580" y1="150" x2="580" y2="200" stroke="#9ca3af" stroke-width="2" marker-end="url(#arrow)"/>
     
-    <rect x="500" y="190" width="60" height="40" rx="5" fill="#f0fdf4" stroke="#10b981" stroke-width="2"/>
-    <text x="530" y="215" text-anchor="middle" font-family="sans-serif" font-size="14" font-weight="bold" fill="#10b981">x_t</text>
+    <rect x="540" y="200" width="80" height="50" rx="8" fill="#f0fdf4" stroke="#10b981" stroke-width="2"/>
+    <text x="580" y="225" text-anchor="middle" font-family="sans-serif" font-size="14" font-weight="bold" fill="#10b981">Next Token</text>
+    <text x="580" y="240" text-anchor="middle" font-family="sans-serif" font-size="12" fill="#10b981">x_t</text>
     
     <!-- Autoregressive feedback -->
-    <path d="M 500 210 L 70 210 L 70 140" fill="none" stroke="#10b981" stroke-width="2" stroke-dasharray="5,5" marker-end="url(#arrow-green)"/>
-    <text x="285" y="200" text-anchor="middle" font-family="sans-serif" font-size="12" font-weight="bold" fill="#10b981">Appended to Context</text>
+    <path d="M 540 225 L 80 225 L 80 140" fill="none" stroke="#10b981" stroke-width="2" stroke-dasharray="5,5" marker-end="url(#arrow-green)"/>
+    <text x="310" y="215" text-anchor="middle" font-family="sans-serif" font-size="12" font-weight="bold" fill="#10b981">Appended to Context for Next Step</text>
   </svg>
 
 _metadata:

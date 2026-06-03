@@ -23,12 +23,16 @@ hyperparameters:
   kernel_size: "Taille de la fenêtre (ex: 3)."
   epochs: "Nombre d'époques (ex: 10)."
 math_theory: |
-  Un réseau CNN 1D applique une opération de convolution croisée discrète sur une séquence d'entrée pour extraire des motifs locaux.
-  Soit une séquence d'entrée $\textcolor{#3b82f6}{x}$ et un filtre (ou noyau) $\textcolor{#10b981}{w}$ de taille $K$.
-  La sortie $\textcolor{#fbbf24}{y_i}$ (feature map) à la position $i$ est calculée par :
-  $$\textcolor{#fbbf24}{y_i} = \sigma \left( \sum_{k=0}^{K-1} \textcolor{#3b82f6}{x_{i+k}} \cdot \textcolor{#10b981}{w_k} + \textcolor{#8b5cf6}{b} \right)$$
-  où $\textcolor{#8b5cf6}{b}$ est le biais et $\sigma$ une fonction d'activation non linéaire (comme ReLU).
-  Le pooling réduit ensuite la dimension spatiale, et l'opération est répétée pour $F$ filtres afin de créer de multiples représentations (canaux) de la séquence temporelle.
+  Un CNN 1D applique une opération de corrélation croisée discrète sur une séquence d'entrée pour extraire des motifs locaux.
+  Soit $\textcolor{#3b82f6}{x}$ une séquence d'entrée et $\textcolor{#10b981}{w}$ un filtre (ou noyau) de taille $K$.
+  La sortie $\textcolor{#fbbf24}{y_i}$ (carte de caractéristiques) à la position $i$ est calculée par :
+  
+  $$
+  \textcolor{#fbbf24}{y_i} = \sigma \left( \sum_{k=0}^{K-1} \textcolor{#3b82f6}{x_{i+k}} \cdot \textcolor{#10b981}{w_k} + \textcolor{#8b5cf6}{b} \right)
+  $$
+  
+  où $\textcolor{#8b5cf6}{b}$ est le biais et $\sigma$ est une fonction d'activation non linéaire (comme ReLU).
+  Le pooling réduit ensuite la dimension spatiale, et l'opération est répétée pour $F$ filtres afin de créer de multiples représentations (canaux) de la série temporelle.
 math_illustration_svg: |
   <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 400">
     <!-- Inputs -->

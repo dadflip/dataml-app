@@ -75,13 +75,19 @@ code_template: |
 math_theory: |
   La Factorisation de Matrices Non-Négatives (NMF) décompose une matrice de données $\textcolor{#10b981}{V}$ en un produit de deux matrices de rang inférieur $\textcolor{#3b82f6}{W}$ et $\textcolor{#fbbf24}{H}$, avec la contrainte stricte que toutes les valeurs doivent être positives ou nulles.
 
-  $$ \textcolor{#10b981}{V} \approx \textcolor{#3b82f6}{W} \times \textcolor{#fbbf24}{H} $$
+  $$
+  \textcolor{#10b981}{V} \approx \textcolor{#3b82f6}{W} \times \textcolor{#fbbf24}{H} 
+  $$
   
   L'objectif est de minimiser l'erreur de reconstruction (norme de Frobenius) :
-  $$ \textcolor{#ef4444}{L} = \frac{1}{2} ||\textcolor{#10b981}{V} - \textcolor{#3b82f6}{W}\textcolor{#fbbf24}{H}||_F^2 $$
-  Sous contrainte : $\textcolor{#3b82f6}{W} \ge 0, \textcolor{#fbbf24}{H} \ge 0$
 
-  - $\textcolor{#10b981}{V}$ : Matrice Document-Terme initiale (taille $N \times M$)
+  $$
+  \textcolor{#ef4444}{L} = \frac{1}{2} ||\textcolor{#10b981}{V} - \textcolor{#3b82f6}{W}\textcolor{#fbbf24}{H}||_F^2 
+  $$
+  
+  Sous la contrainte : $\textcolor{#3b82f6}{W} \ge 0, \textcolor{#fbbf24}{H} \ge 0$
+
+  - $\textcolor{#10b981}{V}$ : Matrice initiale Document-Terme (taille $N \times M$)
   - $\textcolor{#3b82f6}{W}$ : Matrice Document-Topic (taille $N \times \textcolor{#8b5cf6}{K}$) indiquant le poids de chaque topic dans chaque document
   - $\textcolor{#fbbf24}{H}$ : Matrice Topic-Terme (taille $\textcolor{#8b5cf6}{K} \times M$) indiquant l'importance de chaque mot dans chaque topic
   - $\textcolor{#8b5cf6}{K}$ : Nombre de topics (composantes latentes)

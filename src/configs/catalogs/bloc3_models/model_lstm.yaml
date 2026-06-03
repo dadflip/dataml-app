@@ -24,10 +24,18 @@ hyperparameters:
   num_layers: "Nombre de couches empilées (ex: 2)."
   epochs: "Nombre d'époques (ex: 10)."
 math_theory: |
-  Le LSTM utilise des portes pour contrôler l'information. La porte d'oubli $\textcolor{#ef4444}{f_t}$ et la porte d'entrée $\textcolor{#3b82f6}{i_t}$ régulent la mise à jour de l'état de la cellule $\textcolor{#fbbf24}{C_t}$ :
-  $$ \textcolor{#fbbf24}{C_t} = \textcolor{#ef4444}{f_t} \odot \textcolor{#fbbf24}{C_{t-1}} + \textcolor{#3b82f6}{i_t} \odot \tilde{C}_t $$
+  Le LSTM utilise des portes pour contrôler le flux d'informations. La porte d'oubli $\textcolor{#ef4444}{f_t}$ et la porte d'entrée $\textcolor{#3b82f6}{i_t}$ régulent la mise à jour de l'état de la cellule $\textcolor{#fbbf24}{C_t}$ :
+  
+  $$
+  \textcolor{#fbbf24}{C_t} = \textcolor{#ef4444}{f_t} \odot \textcolor{#fbbf24}{C_{t-1}} + \textcolor{#3b82f6}{i_t} \odot \tilde{C}_t
+  $$
+  
   L'état caché $\textcolor{#10b981}{h_t}$ est calculé à l'aide de la porte de sortie $\textcolor{#8b5cf6}{o_t}$ :
-  $$ \textcolor{#10b981}{h_t} = \textcolor{#8b5cf6}{o_t} \odot \tanh(\textcolor{#fbbf24}{C_t}) $$
+  
+  $$
+  \textcolor{#10b981}{h_t} = \textcolor{#8b5cf6}{o_t} \odot \tanh(\textcolor{#fbbf24}{C_t})
+  $$
+  
   Ces portes sont des fonctions sigmoïdes des entrées $x_t$ et $h_{t-1}$, permettant au modèle d'apprendre des dépendances à long terme.
 math_illustration_svg: |
   <svg viewBox="0 0 800 400" xmlns="http://www.w3.org/2000/svg">

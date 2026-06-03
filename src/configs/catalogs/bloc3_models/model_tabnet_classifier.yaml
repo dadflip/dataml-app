@@ -23,10 +23,18 @@ hyperparameters:
   max_epochs: "Nombre max d'époques (ex: 50)."
 math_theory: |
   TabNet utilise un processus de décision séquentiel où chaque étape sélectionne des variables à l'aide d'un masque :
-  $$ \textcolor{#3b82f6}{M[i]} = \text{sparsemax}(\textcolor{#fbbf24}{a_{i-1}}) $$
+
+  $$
+  \textcolor{#3b82f6}{M[i]} = \text{sparsemax}(\textcolor{#fbbf24}{a_{i-1}}) 
+  $$
+
   La décision finale est l'agrégation des sorties activées (ReLU) de chaque étape de décision :
-  $$ \textcolor{#10b981}{d_{out}} = \sum_{i=1}^{N_{steps}} \text{ReLU}(\textcolor{#8b5cf6}{W_i} \cdot \textcolor{#ef4444}{x} \odot \textcolor{#3b82f6}{M[i]}) $$
-  L'importance de chaque feature s'obtient directement via l'agrégation des masques $\textcolor{#3b82f6}{M[i]}$.
+
+  $$
+  \textcolor{#10b981}{d_{out}} = \sum_{i=1}^{N_{steps}} \text{ReLU}(\textcolor{#8b5cf6}{W_i} \cdot \textcolor{#ef4444}{x} \odot \textcolor{#3b82f6}{M[i]}) 
+  $$
+
+  L'importance de chaque caractéristique est obtenue directement par l'agrégation des masques $\textcolor{#3b82f6}{M[i]}$.
 math_illustration_svg: |
   <svg viewBox="0 0 800 400" xmlns="http://www.w3.org/2000/svg">
     <rect width="800" height="400" fill="#f8fafc" rx="10"/>

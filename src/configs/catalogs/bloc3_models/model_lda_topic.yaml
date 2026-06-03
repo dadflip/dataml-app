@@ -69,26 +69,28 @@ code_template: |
       print("[MODEL] LDA entraîné avec succès.")
   else:
       print("[ERREUR] Données d'entraînement introuvables.")
-      print("[ERREUR] Données d'entraînement introuvables.")
 math_theory: |
-  Latent Dirichlet Allocation (LDA) est un modèle génératif probabiliste. Il suppose que chaque document est un mélange de sujets (topics) et chaque sujet une distribution sur un vocabulaire de mots.
+  L'allocation de Dirichlet latente (LDA) est un modèle génératif probabiliste. Il suppose que chaque document est un mélange de sujets et que chaque sujet est une distribution sur un vocabulaire de mots.
   
   Le processus génératif pour un document $d$ est le suivant :
   1. Tirer une distribution de sujets $\theta_d \sim \text{Dirichlet}(\textcolor{#fbbf24}{\alpha})$
   2. Pour chaque sujet $k$, tirer une distribution de mots $\phi_k \sim \text{Dirichlet}(\textcolor{#10b981}{\beta})$
-  3. Pour chaque mot $\textcolor{#ef4444}{w_{d,n}}$ du document $d$ :
+  3. Pour chaque mot $\textcolor{#ef4444}{w_{d,n}}$ dans le document $d$ :
      - Choisir un sujet $\textcolor{#3b82f6}{z_{d,n}} \sim \text{Multinomial}(\theta_d)$
      - Générer le mot $\textcolor{#ef4444}{w_{d,n}} \sim \text{Multinomial}(\phi_{\textcolor{#3b82f6}{z_{d,n}}})$
-
-  Probabilité jointe du modèle :
-  $$ P(\textcolor{#ef4444}{W}, \textcolor{#3b82f6}{Z}, \Theta, \Phi | \textcolor{#fbbf24}{\alpha}, \textcolor{#10b981}{\beta}) = \prod_{k=1}^{\textcolor{#8b5cf6}{K}} P(\phi_k | \textcolor{#10b981}{\beta}) \prod_{d=1}^{D} P(\theta_d | \textcolor{#fbbf24}{\alpha}) \prod_{n=1}^{N_d} P(\textcolor{#3b82f6}{z_{d,n}} | \theta_d) P(\textcolor{#ef4444}{w_{d,n}} | \phi_{\textcolor{#3b82f6}{z_{d,n}}}) $$
-
-  - $\textcolor{#fbbf24}{\alpha}, \textcolor{#10b981}{\beta}$ : Hyperparamètres de concentration des a priori de Dirichlet
+  
+  Probabilité conjointe du modèle :
+  
+  $$
+  P(\textcolor{#ef4444}{W}, \textcolor{#3b82f6}{Z}, \Theta, \Phi | \textcolor{#fbbf24}{\alpha}, \textcolor{#10b981}{\beta}) = \prod_{k=1}^{\textcolor{#8b5cf6}{K}} P(\phi_k | \textcolor{#10b981}{\beta}) \prod_{d=1}^{D} P(\theta_d | \textcolor{#fbbf24}{\alpha}) \prod_{n=1}^{N_d} P(\textcolor{#3b82f6}{z_{d,n}} | \theta_d) P(\textcolor{#ef4444}{w_{d,n}} | \phi_{\textcolor{#3b82f6}{z_{d,n}}}) 
+  $$
+  
+  - $\textcolor{#fbbf24}{\alpha}, \textcolor{#10b981}{\beta}$ : Hyperparamètres de concentration des distributions a priori de Dirichlet
   - $\theta_d$ : Distribution des sujets pour le document $d$
   - $\phi_k$ : Distribution des mots pour le sujet $k$
-  - $\textcolor{#3b82f6}{z_{d,n}}$ : L'assignation latente du sujet pour le $n$-ième mot
-  - $\textcolor{#ef4444}{w_{d,n}}$ : Le mot observé
-  - $\textcolor{#8b5cf6}{K}$ : Le nombre total de sujets (topics)
+  - $\textcolor{#3b82f6}{z_{d,n}}$ : Assignation de sujet latent pour le $n$-ième mot
+  - $\textcolor{#ef4444}{w_{d,n}}$ : Mot observé
+  - $\textcolor{#8b5cf6}{K}$ : Nombre total de sujets
 math_illustration_svg: |
   <svg viewBox="0 0 600 300" xmlns="http://www.w3.org/2000/svg">
     <!-- Plate Notation Graphic -->

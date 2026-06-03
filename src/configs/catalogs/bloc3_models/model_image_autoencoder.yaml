@@ -106,18 +106,24 @@ code_template: |
       task_type = "image_reconstruction"
       meta = {}
 math_theory: |
-  Un autoencodeur convolutionnel applique des filtres spatiaux pour compresser l'image originale $\textcolor{#10b981}{X}$.
-  L'encodeur enchaîne des convolutions et du sous-échantillonnage (pooling) pour obtenir le tenseur latent $\textcolor{#3b82f6}{Z}$ (le goulot d'étranglement ou bottleneck) :
+  Un auto-encodeur convolutif applique des filtres spatiaux pour compresser l'image originale $\textcolor{#10b981}{X}$.
+  L'encodeur enchaîne des convolutions et du pooling pour obtenir le tenseur latent $\textcolor{#3b82f6}{Z}$ (le goulot d'étranglement) :
   
-  $$ \textcolor{#3b82f6}{Z} = \sigma(\textcolor{#8b5cf6}{W_{enc}} * \textcolor{#10b981}{X} + \textcolor{#fbbf24}{b_{enc}}) $$
+  $$
+  \textcolor{#3b82f6}{Z} = \sigma(\textcolor{#8b5cf6}{W_{enc}} * \textcolor{#10b981}{X} + \textcolor{#fbbf24}{b_{enc}}) 
+  $$
   
-  Le décodeur utilise des convolutions transposées (ou un upsampling) pour remonter à la dimension originale et former la reconstruction $\textcolor{#ef4444}{\hat{X}}$ :
+  Le décodeur utilise des convolutions transposées (ou upsampling) pour revenir à la dimension originale et former la reconstruction $\textcolor{#ef4444}{\hat{X}}$ :
   
-  $$ \textcolor{#ef4444}{\hat{X}} = \sigma(\textcolor{#8b5cf6}{W_{dec}} * \textcolor{#3b82f6}{Z} + \textcolor{#fbbf24}{b_{dec}}) $$
+  $$
+  \textcolor{#ef4444}{\hat{X}} = \sigma(\textcolor{#8b5cf6}{W_{dec}} * \textcolor{#3b82f6}{Z} + \textcolor{#fbbf24}{b_{dec}}) 
+  $$
   
-  L'apprentissage s'effectue en minimisant la Mean Squared Error (MSE) pixel par pixel :
+  L'entraînement s'effectue en minimisant l'erreur quadratique moyenne (MSE) pixel par pixel :
   
-  $$ \mathcal{L} = \frac{1}{N} \sum || \textcolor{#10b981}{X} - \textcolor{#ef4444}{\hat{X}} ||^2 $$
+  $$
+  \mathcal{L} = \frac{1}{N} \sum || \textcolor{#10b981}{X} - \textcolor{#ef4444}{\hat{X}} ||^2 
+  $$
 math_illustration_svg: |
   <svg viewBox="0 0 700 300" xmlns="http://www.w3.org/2000/svg">
     <!-- Image X -->

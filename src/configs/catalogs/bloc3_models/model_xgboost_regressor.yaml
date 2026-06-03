@@ -94,16 +94,22 @@ illustration_mermaid: |
     style Sum fill:#3b82f6,stroke:#2563eb,stroke-width:2px,color:#fff
     style Out fill:#10b981,stroke:#059669,stroke-width:2px,color:#fff
 math_theory: |
-  XGBoost Regressor fonctionne selon le même principe d'ensemble additif que pour la classification, mais cible une variable continue.
+  XGBoost Regressor fonctionne sur le même principe d'ensemble additif que pour la classification, mais cible une variable continue.
   
   La prédiction pour l'observation $\textcolor{#fbbf24}{x_i}$ est la somme des prédictions de $\textcolor{#10b981}{K}$ arbres de régression :
-  $$\hat{y}_i = \sum_{\textcolor{#3b82f6}{k}=1}^{\textcolor{#10b981}{K}} \textcolor{#ef4444}{f_{\textcolor{#3b82f6}{k}}}(\textcolor{#fbbf24}{x_i})$$
   
-  Pour la régression (ex: avec perte MSE), l'objectif à l'étape $\textcolor{#3b82f6}{t}$ à minimiser est :
-  $$\mathcal{L}^{(\textcolor{#3b82f6}{t})} = \sum_{i=1}^n (\textcolor{#8b5cf6}{y_i} - (\hat{y}_i^{(\textcolor{#3b82f6}{t}-1)} + \textcolor{#ef4444}{f_{\textcolor{#3b82f6}{t}}}(\textcolor{#fbbf24}{x_i})))^2 + \Omega(\textcolor{#ef4444}{f_{\textcolor{#3b82f6}{t}}})$$
+  $$
+  \hat{y}_i = \sum_{\textcolor{#3b82f6}{k}=1}^{\textcolor{#10b981}{K}} \textcolor{#ef4444}{f_{\textcolor{#3b82f6}{k}}}(\textcolor{#fbbf24}{x_i})
+  $$
+  
+  Pour la régression (ex. avec une perte MSE), l'objectif à minimiser à l'étape $\textcolor{#3b82f6}{t}$ est :
+  
+  $$
+  \mathcal{L}^{(\textcolor{#3b82f6}{t})} = \sum_{i=1}^n (\textcolor{#8b5cf6}{y_i} - (\hat{y}_i^{(\textcolor{#3b82f6}{t}-1)} + \textcolor{#ef4444}{f_{\textcolor{#3b82f6}{t}}}(\textcolor{#fbbf24}{x_i})))^2 + \Omega(\textcolor{#ef4444}{f_{\textcolor{#3b82f6}{t}}})
+  $$
   
   Où :
-  - $\textcolor{#8b5cf6}{y_i}$ : La valeur réelle continue à prédire.
+  - $\textcolor{#8b5cf6}{y_i}$ : La valeur continue réelle à prédire.
   - $\textcolor{#ef4444}{f_{\textcolor{#3b82f6}{t}}}$ : Le nouvel arbre ajouté, entraîné pour prédire les résidus de l'étape précédente.
   - $\Omega(\textcolor{#ef4444}{f})$ : Terme de régularisation contrôlant la complexité de l'arbre.
 math_illustration_svg: |

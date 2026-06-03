@@ -62,15 +62,18 @@ code_template: |
       task_type = "image_transformation"
       meta = {}
 math_theory: |
-  La quantification d'image par K-Means traite chaque pixel de l'image comme un point dans un espace de couleurs à 3 dimensions (ex: RVB). L'algorithme cherche à regrouper ces pixels en $\textcolor{#8b5cf6}{K}$ clusters de couleurs distinctes.
+  La quantification d'image à l'aide de K-Means traite chaque pixel de l'image comme un point dans un espace colorimétrique tridimensionnel (par exemple, RGB). L'algorithme cherche à regrouper ces pixels en $\textcolor{#8b5cf6}{K}$ clusters de couleurs distincts.
 
-  L'objectif est de minimiser l'inertie intra-cluster (la somme des distances au carré entre la couleur de chaque pixel et la couleur du centroïde qui lui est assigné) :
-  $$ \textcolor{#ef4444}{J} = \sum_{j=1}^{\textcolor{#8b5cf6}{K}} \sum_{\textcolor{#10b981}{p_i} \in \textcolor{#fbbf24}{S_j}} ||\textcolor{#10b981}{p_i} - \textcolor{#3b82f6}{c_j}||^2 $$
+  L'objectif est de minimiser l'inertie intra-cluster (la somme des distances au carré entre la couleur de chaque pixel et la couleur de son centroïde assigné) :
+  
+  $$
+  \textcolor{#ef4444}{J} = \sum_{j=1}^{\textcolor{#8b5cf6}{K}} \sum_{\textcolor{#10b981}{p_i} \in \textcolor{#fbbf24}{S_j}} ||\textcolor{#10b981}{p_i} - \textcolor{#3b82f6}{c_j}||^2 
+  $$
 
-  - $\textcolor{#10b981}{p_i}$ : Le vecteur couleur (R,V,B) du $i$-ème pixel
-  - $\textcolor{#3b82f6}{c_j}$ : Le vecteur couleur du $j$-ème centroïde (qui deviendra une couleur de la nouvelle palette)
+  - $\textcolor{#10b981}{p_i}$ : Le vecteur de couleur (R,G,B) du $i$-ème pixel
+  - $\textcolor{#3b82f6}{c_j}$ : Le vecteur de couleur du $j$-ème centroïde (qui deviendra une couleur dans la nouvelle palette)
   - $\textcolor{#fbbf24}{S_j}$ : L'ensemble des pixels assignés au cluster $j$
-  - $\textcolor{#8b5cf6}{K}$ : Le nombre total de couleurs de la palette réduite
+  - $\textcolor{#8b5cf6}{K}$ : Le nombre total de couleurs dans la palette réduite
 math_illustration_svg: |
   <svg viewBox="0 0 500 250" xmlns="http://www.w3.org/2000/svg">
     <!-- RGB Axes -->

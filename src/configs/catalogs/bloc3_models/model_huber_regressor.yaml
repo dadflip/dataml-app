@@ -54,19 +54,23 @@ code_template: |
       task_type = "regression"
       meta = {}
 math_theory: |
-  The Huber Regressor optimizes a robust loss function that combines the advantages of squared error (L2) and absolute error (L1). It is less sensitive to outliers than ordinary least squares.
+  Le Huber Regressor optimise une fonction de perte robuste qui combine les avantages de l'erreur quadratique (L2) et de l'erreur absolue (L1). Il est moins sensible aux valeurs aberrantes que les moindres carrés ordinaires.
   
-  1. **Residuals**: For a linear model $\hat{y} = \textcolor{#3b82f6}{X \beta}$, the residual is $r_i = \textcolor{#10b981}{y_i} - \textcolor{#3b82f6}{X_i \beta}$.
+  1. **Résidus** : Pour un modèle linéaire $\hat{y} = \textcolor{#3b82f6}{X \beta}$, le résidu est $r_i = \textcolor{#10b981}{y_i} - \textcolor{#3b82f6}{X_i \beta}$.
   
-  2. **Huber Loss**: The loss function behaves quadratically for small residuals and linearly for large residuals, controlled by a threshold parameter $\textcolor{#fbbf24}{\epsilon}$:
-  $$ \mathcal{L}_\epsilon(r) = \begin{cases} 
-  \frac{1}{2} r^2 & \text{if } |r| \le \textcolor{#fbbf24}{\epsilon} \quad \text{(L2 behavior)} \\
-  \textcolor{#fbbf24}{\epsilon} |r| - \frac{1}{2} \textcolor{#fbbf24}{\epsilon}^2 & \text{if } |r| > \textcolor{#fbbf24}{\epsilon} \quad \text{(L1 behavior)}
-  \end{cases} $$
+  2. **Perte de Huber** : La fonction de perte a un comportement quadratique pour les petits résidus et un comportement linéaire pour les grands résidus, contrôlé par un paramètre de seuil $\textcolor{#fbbf24}{\epsilon}$ :
+  $$
+  \mathcal{L}_\epsilon(r) = \begin{cases} 
+  \frac{1}{2} r^2 & \text{si } |r| \le \textcolor{#fbbf24}{\epsilon} \quad \text{(comportement L2)} \\
+  \textcolor{#fbbf24}{\epsilon} |r| - \frac{1}{2} \textcolor{#fbbf24}{\epsilon}^2 & \text{si } |r| > \textcolor{#fbbf24}{\epsilon} \quad \text{(comportement L1)}
+  \end{cases} 
+  $$
   
-  3. **Objective**: The model minimizes the Huber loss over all samples plus an L2 penalty (Ridge regularization) on the coefficients:
-  $$ \min_{\textcolor{#3b82f6}{\beta}} \sum_{i=1}^n \mathcal{L}_\epsilon(\textcolor{#10b981}{y_i} - \textcolor{#3b82f6}{X_i \beta}) + \textcolor{#8b5cf6}{\alpha} \|\textcolor{#3b82f6}{\beta}\|_2^2 $$
-  This ensures smooth differentiability everywhere while severely limiting the influence of large outliers (where the gradient is capped at $\pm \textcolor{#fbbf24}{\epsilon}$).
+  3. **Objectif** : Le modèle minimise la perte de Huber sur tous les échantillons avec une pénalité L2 (régularisation Ridge) sur les coefficients :
+  $$
+  \min_{\textcolor{#3b82f6}{\beta}} \sum_{i=1}^n \mathcal{L}_\epsilon(\textcolor{#10b981}{y_i} - \textcolor{#3b82f6}{X_i \beta}) + \textcolor{#8b5cf6}{\alpha} \|\textcolor{#3b82f6}{\beta}\|_2^2 
+  $$
+  Cela garantit une différentiabilité lisse partout tout en limitant fortement l'influence des valeurs aberrantes importantes (où le gradient est plafonné à $\pm \textcolor{#fbbf24}{\epsilon}$).
 math_illustration_svg: |
   <svg viewBox="0 0 800 400" xmlns="http://www.w3.org/2000/svg">
     <!-- Axes for Loss Graph -->

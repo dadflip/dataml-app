@@ -20,12 +20,16 @@ cons:
 hyperparameters:
   spacy_model: "Nom du modèle spaCy (ex: 'en_core_web_md')."
 math_theory: |
-  Le modèle de Reconnaissance d'Entités Nommées (NER) de SpaCy utilise une architecture Transition-Based avec un réseau de neurones convolutionnel (CNN) ou Transformer pour encoder le contexte.
-  Étant donné une séquence de tokens d'entrée $\textcolor{#10b981}{X} = (x_1, \dots, x_{\textcolor{#fbbf24}{T}})$, le modèle produit des représentations contextuelles $\textcolor{#3b82f6}{h}_t$.
-  Les décisions de transition (ex: Shift, Reduce, Label) sont prédites itérativement pour construire les entités $\textcolor{#ef4444}{E}$.
+  Le modèle de Reconnaissance d'Entités Nommées (NER) de SpaCy utilise une architecture basée sur les transitions (Transition-Based) avec un réseau de neurones convolutif (CNN) ou un Transformer pour encoder le contexte.
+  Étant donné une séquence de tokens en entrée $\textcolor{#10b981}{X} = (x_1, \dots, x_{\textcolor{#fbbf24}{T}})$, le modèle produit des représentations contextuelles $\textcolor{#3b82f6}{h}_t$.
+  Les décisions de transition (par ex., Shift, Reduce, Label) sont prédites itérativement pour construire les entités $\textcolor{#ef4444}{E}$.
   Le score pour une transition $\textcolor{#8b5cf6}{a}$ à l'état $s$ est modélisé par :
-  $$ P(\textcolor{#8b5cf6}{a} | s, \textcolor{#10b981}{X}) = \text{Softmax}(\textcolor{#3b82f6}{W} \cdot \textcolor{#3b82f6}{h}_{s} + \textcolor{#3b82f6}{b}) $$
-  Le modèle cherche la séquence d'actions maximisant la vraisemblance conjointe pour identifier les entités cibles.
+
+  $$
+  P(\textcolor{#8b5cf6}{a} | s, \textcolor{#10b981}{X}) = \text{Softmax}(\textcolor{#3b82f6}{W} \cdot \textcolor{#3b82f6}{h}_{s} + \textcolor{#3b82f6}{b}) 
+  $$
+
+  Le modèle recherche la séquence d'actions qui maximise la vraisemblance conjointe pour identifier les entités cibles.
 math_illustration_svg: |
   <svg viewBox="0 0 800 400" xmlns="http://www.w3.org/2000/svg">
     <rect x="0" y="0" width="800" height="400" fill="#1e293b" rx="10"/>

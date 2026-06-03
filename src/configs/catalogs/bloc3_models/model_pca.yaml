@@ -22,10 +22,18 @@ cons:
 hyperparameters:
   n_components: "Nombre de composantes à garder (ex: 2)."
 math_theory: |
-  L'Analyse en Composantes Principales (PCA) cherche la projection linéaire des données centrées $\textcolor{#10b981}{X}$ qui maximise la variance conservée. Mathématiquement, cela revient à calculer la matrice de covariance $\textcolor{#fbbf24}{C}$ :
-  $$ \textcolor{#fbbf24}{C} = \frac{1}{n} \textcolor{#10b981}{X}^T \textcolor{#10b981}{X} $$
-  Ensuite, on résout le problème aux valeurs propres pour extraire les composantes principales (vecteurs propres) $\textcolor{#3b82f6}{v_k}$ et leurs variances associées (valeurs propres) $\textcolor{#ef4444}{\lambda_k}$ :
-  $$ \textcolor{#fbbf24}{C} \textcolor{#3b82f6}{v_k} = \textcolor{#ef4444}{\lambda_k} \textcolor{#3b82f6}{v_k} $$
+  L'Analyse en Composantes Principales (PCA) recherche la projection linéaire des données centrées $\textcolor{#10b981}{X}$ qui maximise la variance conservée. Mathématiquement, cela revient à calculer la matrice de covariance $\textcolor{#fbbf24}{C}$ :
+
+  $$
+  \textcolor{#fbbf24}{C} = \frac{1}{n} \textcolor{#10b981}{X}^T \textcolor{#10b981}{X} 
+  $$
+
+  Ensuite, nous résolvons le problème aux valeurs propres pour extraire les composantes principales (vecteurs propres) $\textcolor{#3b82f6}{v_k}$ et leurs variances associées (valeurs propres) $\textcolor{#ef4444}{\lambda_k}$ :
+
+  $$
+  \textcolor{#fbbf24}{C} \textcolor{#3b82f6}{v_k} = \textcolor{#ef4444}{\lambda_k} \textcolor{#3b82f6}{v_k} 
+  $$
+
   Les données sont finalement projetées sur les top-K vecteurs propres ayant les plus grandes valeurs propres.
 math_illustration_svg: |
   <svg viewBox="0 0 500 250" xmlns="http://www.w3.org/2000/svg">

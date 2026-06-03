@@ -16,6 +16,8 @@ import {
   Search,
   Server,
   Workflow,
+  Maximize2,
+  X,
 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import ReactMarkdown from "react-markdown";
@@ -364,8 +366,37 @@ function BlockDetail({
   onAdd: (b: CatalogBlock) => void;
   contract?: import("@/lib/pipeline").IOContract;
 }) {
+  const [fullscreenContent, setFullscreenContent] = useState<{ type: 'svg' | 'mermaid', content: string } | null>(null);
+
   return (
     <div className="mx-auto max-w-4xl space-y-6 p-4 sm:p-6 lg:p-8">
+      {fullscreenContent && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-background/95 backdrop-blur-sm p-4 sm:p-8">
+          <div className="relative w-full h-full max-w-7xl max-h-[90vh] rounded-2xl border border-border bg-card shadow-2xl flex flex-col overflow-hidden">
+            <div className="flex justify-between items-center p-4 border-b border-border/60 bg-muted/30">
+              <h3 className="text-sm font-semibold text-foreground/80">Mode Plein Écran</h3>
+              <button 
+                onClick={() => setFullscreenContent(null)}
+                className="rounded-lg p-1.5 hover:bg-muted text-muted-foreground transition-colors"
+              >
+                <X size={20} />
+              </button>
+            </div>
+            <div className="flex-1 overflow-auto p-4 flex items-center justify-center bg-card">
+              {fullscreenContent.type === 'svg' ? (
+                <div 
+                  className="w-full h-full flex items-center justify-center [&_svg]:w-full [&_svg]:h-full [&_svg]:max-h-full"
+                  dangerouslySetInnerHTML={{ __html: fullscreenContent.content }}
+                />
+              ) : (
+                <div className="w-full h-full flex items-center justify-center min-w-full">
+                   <MermaidRenderer chart={fullscreenContent.content} />
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
       <header className="space-y-3">
         <div className="flex items-center gap-1.5 font-mono text-[10px] uppercase tracking-wider text-muted-foreground">
           <span>Bloc {block.bloc}</span>
@@ -417,10 +448,15 @@ function BlockDetail({
       </header>
 
       {block.illustration_svg && (
-        <div 
-          className="overflow-hidden rounded-2xl border border-border bg-card/30 flex justify-center p-4 [&>svg]:max-h-32 [&>svg]:w-auto" 
-          dangerouslySetInnerHTML={{ __html: block.illustration_svg }} 
-        />
+        <div className="relative group overflow-hidden rounded-2xl border border-border bg-card/30 p-4">
+          <button 
+            onClick={() => setFullscreenContent({ type: 'svg', content: block.illustration_svg! })}
+            className="absolute top-2 right-2 p-1.5 rounded-lg bg-background/80 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity border border-border/50 hover:text-foreground z-10"
+          >
+            <Maximize2 size={14} />
+          </button>
+          <div className="flex justify-center w-full [&_svg]:max-h-32 [&_svg]:w-auto [&_svg]:h-auto" dangerouslySetInnerHTML={{ __html: block.illustration_svg }} />
+        </div>
       )}
 
       {block.illustration_mermaid && (
@@ -460,10 +496,15 @@ function BlockDetail({
               </ReactMarkdown>
             </div>
             {block.math_illustration_svg && (
-              <div 
-                className="border-t border-border/60 bg-muted/20 p-4 flex justify-center [&>svg]:max-w-full [&>svg]:max-h-48 [&>svg]:h-auto [&>svg]:w-auto"
-                dangerouslySetInnerHTML={{ __html: block.math_illustration_svg }} 
-              />
+              <div className="relative group border-t border-border/60 bg-muted/20 p-4">
+                <button 
+                  onClick={() => setFullscreenContent({ type: 'svg', content: block.math_illustration_svg! })}
+                  className="absolute top-2 right-2 p-1.5 rounded-lg bg-background/80 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity border border-border/50 hover:text-foreground z-10"
+                >
+                  <Maximize2 size={14} />
+                </button>
+                <div className="flex justify-center w-full [&_svg]:max-w-full [&_svg]:max-h-48 [&_svg]:h-auto [&_svg]:w-auto" dangerouslySetInnerHTML={{ __html: block.math_illustration_svg }} />
+              </div>
             )}
           </div>
         </Section>

@@ -24,11 +24,19 @@ hyperparameters:
   nhead: "Nombre de têtes d'attention (ex: 4)."
   epochs: "Nombre d'époques d'entraînement (ex: 10)."
 math_theory: |
-  Le TabTransformer embarque chaque modalité catégorielle $\textcolor{#ef4444}{x_i}$ en un vecteur $\textcolor{#3b82f6}{e_i}$. Ces embeddings passent par un Transformer Encoder :
-  $$ \textcolor{#10b981}{E_{out}} = \text{Transformer}(\textcolor{#3b82f6}{E_{in}}) $$
+  TabTransformer plonge (embeds) chaque modalité catégorielle $\textcolor{#ef4444}{x_i}$ dans un vecteur $\textcolor{#3b82f6}{e_i}$. Ces plongements passent par un encodeur Transformer :
+
+  $$
+  \textcolor{#10b981}{E_{out}} = \text{Transformer}(\textcolor{#3b82f6}{E_{in}}) 
+  $$
+
   Le mécanisme d'attention (Scaled Dot-Product) est défini par :
-  $$ \text{Attention}(\textcolor{#fbbf24}{Q}, \textcolor{#fbbf24}{K}, \textcolor{#fbbf24}{V}) = \text{softmax}\left(\frac{\textcolor{#fbbf24}{Q}\textcolor{#fbbf24}{K}^T}{\sqrt{\textcolor{#8b5cf6}{d_k}}}\right)\textcolor{#fbbf24}{V} $$
-  Les variables continues sont concaténées avec $\textcolor{#10b981}{E_{out}}$ puis passées dans un Multi-Layer Perceptron (MLP) final.
+
+  $$
+  \text{Attention}(\textcolor{#fbbf24}{Q}, \textcolor{#fbbf24}{K}, \textcolor{#fbbf24}{V}) = \text{softmax}\left(\frac{\textcolor{#fbbf24}{Q}\textcolor{#fbbf24}{K}^T}{\sqrt{\textcolor{#8b5cf6}{d_k}}}\right)\textcolor{#fbbf24}{V} 
+  $$
+
+  Les variables continues sont concaténées avec $\textcolor{#10b981}{E_{out}}$ puis transmises à un perceptron multicouche final (MLP).
 math_illustration_svg: |
   <svg viewBox="0 0 800 400" xmlns="http://www.w3.org/2000/svg">
     <rect width="800" height="400" fill="#f8fafc" rx="10"/>

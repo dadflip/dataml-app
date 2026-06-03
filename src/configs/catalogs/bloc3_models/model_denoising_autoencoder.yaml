@@ -102,18 +102,24 @@ code_template: |
       training_history = {"status": "success", "loss": final_loss}
 
 math_theory: |
-  L'autoencodeur débruiteur (DAE) apprend à reconstruire une entrée propre $\textcolor{#10b981}{x}$ à partir d'une version intentionnellement corrompue $\textcolor{#fbbf24}{\tilde{x}}$.
-  La corruption est souvent un bruit additif gaussien ou un dropout :
+  L'Autoencodeur Débruiteur (DAE) apprend à reconstruire une entrée propre $\textcolor{#10b981}{x}$ à partir d'une version intentionnellement corrompue $\textcolor{#fbbf24}{\tilde{x}}$.
+  La corruption est souvent un bruit gaussien additif ou du dropout :
   
-  $$ \textcolor{#fbbf24}{\tilde{x}} \sim q(\textcolor{#fbbf24}{\tilde{x}} | \textcolor{#10b981}{x}) $$
+  $$
+  \textcolor{#fbbf24}{\tilde{x}} \sim q(\textcolor{#fbbf24}{\tilde{x}} | \textcolor{#10b981}{x}) 
+  $$
   
   L'encodeur extrait une représentation latente $\textcolor{#8b5cf6}{h}$, et le décodeur produit la reconstruction $\textcolor{#3b82f6}{\hat{x}}$ :
   
-  $$ \textcolor{#8b5cf6}{h} = f_{\theta}(\textcolor{#fbbf24}{\tilde{x}}) \quad \text{et} \quad \textcolor{#3b82f6}{\hat{x}} = g_{\phi}(\textcolor{#8b5cf6}{h}) $$
+  $$
+  \textcolor{#8b5cf6}{h} = f_{\theta}(\textcolor{#fbbf24}{\tilde{x}}) \quad \text{et} \quad \textcolor{#3b82f6}{\hat{x}} = g_{\phi}(\textcolor{#8b5cf6}{h}) 
+  $$
   
-  Le réseau est entraîné pour minimiser l'erreur de reconstruction entre la sortie $\textcolor{#3b82f6}{\hat{x}}$ et l'entrée originale propre $\textcolor{#10b981}{x}$, forçant l'extraction de caractéristiques robustes :
+  Le réseau est entraîné pour minimiser l'erreur de reconstruction entre la sortie $\textcolor{#3b82f6}{\hat{x}}$ et l'entrée originale propre $\textcolor{#10b981}{x}$, forçant ainsi l'extraction de caractéristiques robustes :
   
-  $$ \mathcal{L}(\theta, \phi) = || \textcolor{#10b981}{x} - \textcolor{#3b82f6}{\hat{x}} ||^2 $$
+  $$
+  \mathcal{L}(\theta, \phi) = || \textcolor{#10b981}{x} - \textcolor{#3b82f6}{\hat{x}} ||^2 
+  $$
 math_illustration_svg: |
   <svg viewBox="0 0 600 300" xmlns="http://www.w3.org/2000/svg">
     <!-- Input x -->

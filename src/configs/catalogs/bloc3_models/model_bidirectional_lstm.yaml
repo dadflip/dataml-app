@@ -25,14 +25,26 @@ hyperparameters:
   num_layers: "Nombre de couches (ex: 2)."
   epochs: "Nombre d'époques (ex: 10)."
 math_theory: |
-  Le Bi-LSTM calcule les représentations d'une séquence en effectuant deux passages: un dans le sens direct et un dans le sens inverse.
+  Le Bi-LSTM calcule les représentations d'une séquence en effectuant deux passages : un dans le sens avant et un dans le sens arrière.
   Soit $\textcolor{#3b82f6}{x_t}$ l'entrée au temps $t$.
   Le passage avant calcule l'état caché $\textcolor{#10b981}{\overrightarrow{h}_t}$ :
-  $$\textcolor{#10b981}{\overrightarrow{h}_t} = \text{LSTM}_{fwd}(\textcolor{#3b82f6}{x_t}, \textcolor{#10b981}{\overrightarrow{h}_{t-1}})$$
+
+  $$
+  \textcolor{#10b981}{\overrightarrow{h}_t} = \text{LSTM}_{fwd}(\textcolor{#3b82f6}{x_t}, \textcolor{#10b981}{\overrightarrow{h}_{t-1}})
+  $$
+
   Le passage arrière calcule l'état caché $\textcolor{#fbbf24}{\overleftarrow{h}_t}$ en lisant la séquence à l'envers :
-  $$\textcolor{#fbbf24}{\overleftarrow{h}_t} = \text{LSTM}_{bwd}(\textcolor{#3b82f6}{x_t}, \textcolor{#fbbf24}{\overleftarrow{h}_{t+1}})$$
+
+  $$
+  \textcolor{#fbbf24}{\overleftarrow{h}_t} = \text{LSTM}_{bwd}(\textcolor{#3b82f6}{x_t}, \textcolor{#fbbf24}{\overleftarrow{h}_{t+1}})
+  $$
+
   La représentation finale au temps $t$, $\textcolor{#8b5cf6}{h_t}$, est la concaténation des deux états :
-  $$\textcolor{#8b5cf6}{h_t} = [\textcolor{#10b981}{\overrightarrow{h}_t} ; \textcolor{#fbbf24}{\overleftarrow{h}_t}]$$
+
+  $$
+  \textcolor{#8b5cf6}{h_t} = [\textcolor{#10b981}{\overrightarrow{h}_t} ; \textcolor{#fbbf24}{\overleftarrow{h}_t}]
+  $$
+
   La sortie $\textcolor{#ef4444}{y}$ pour la classification repose souvent sur la dernière combinaison : $\textcolor{#ef4444}{y} = \text{Softmax}(W \cdot \textcolor{#8b5cf6}{h_T} + b)$.
 math_illustration_svg: |
   <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 400">

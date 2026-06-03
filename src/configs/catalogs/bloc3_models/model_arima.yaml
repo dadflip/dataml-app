@@ -123,13 +123,16 @@ illustration_mermaid: |
       style Forecast fill:#10b981,stroke:#059669,stroke-width:2px,color:#fff
 
 math_theory: |
-  Modèle Auto-Regressive Integrated Moving Average $ARIMA(\textcolor{#10b981}{p}, \textcolor{#8b5cf6}{d}, \textcolor{#fbbf24}{q})$ :
-  $$ \textcolor{#3b82f6}{Y'_{t}} = c + \sum_{i=1}^{\textcolor{#10b981}{p}} \phi_i \textcolor{#3b82f6}{Y'_{t-i}} + \sum_{j=1}^{\textcolor{#fbbf24}{q}} \theta_j \textcolor{#ef4444}{\epsilon_{t-j}} + \textcolor{#ef4444}{\epsilon_t} $$
+  Modèle moyenne mobile autorégressive intégrée $ARIMA(\textcolor{#10b981}{p}, \textcolor{#8b5cf6}{d}, \textcolor{#fbbf24}{q})$ :
+  
+  $$
+  \textcolor{#3b82f6}{Y'_{t}} = c + \sum_{i=1}^{\textcolor{#10b981}{p}} \phi_i \textcolor{#3b82f6}{Y'_{t-i}} + \sum_{j=1}^{\textcolor{#fbbf24}{q}} \theta_j \textcolor{#ef4444}{\epsilon_{t-j}} + \textcolor{#ef4444}{\epsilon_t} 
+  $$
   
   Où :
   - $\textcolor{#3b82f6}{Y'_{t}}$ est la série temporelle différenciée $\textcolor{#8b5cf6}{d}$ fois pour la rendre stationnaire.
-  - $\textcolor{#10b981}{p}$ est l'ordre de la composante Auto-Régressive (dépendance aux observations passées).
-  - $\textcolor{#fbbf24}{q}$ est l'ordre de la composante Moyenne Mobile (dépendance aux erreurs passées).
+  - $\textcolor{#10b981}{p}$ est l'ordre de la composante auto-régressive (dépendance aux observations passées).
+  - $\textcolor{#fbbf24}{q}$ est l'ordre de la composante moyenne mobile (dépendance aux erreurs passées).
   - $\textcolor{#ef4444}{\epsilon_t}$ représente le bruit blanc (erreur résiduelle) au temps $t$.
 math_illustration_svg: |
   <svg viewBox="0 0 800 300" xmlns="http://www.w3.org/2000/svg">

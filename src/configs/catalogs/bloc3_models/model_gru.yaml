@@ -23,11 +23,18 @@ hyperparameters:
   num_layers: "Nombre de couches (ex: 2)."
   epochs: "Nombre d'époques (ex: 10)."
 math_theory: |
-  Le GRU simplifie le LSTM en combinant l'état de cellule et l'état caché, et en utilisant deux portes : la porte de mise à jour $\textcolor{#3b82f6}{z_t}$ et la porte de réinitialisation $\textcolor{#ef4444}{r_t}$.
-  L'état caché $\textcolor{#10b981}{h_t}$ est une interpolation linéaire entre le précédent état $\textcolor{#fbbf24}{h_{t-1}}$ et un nouvel état candidat $\textcolor{#8b5cf6}{\tilde{h}_t}$ :
-  $$ \textcolor{#10b981}{h_t} = (1 - \textcolor{#3b82f6}{z_t}) \odot \textcolor{#fbbf24}{h_{t-1}} + \textcolor{#3b82f6}{z_t} \odot \textcolor{#8b5cf6}{\tilde{h}_t} $$
+  Le GRU simplifie le LSTM en combinant l'état de la cellule et l'état caché, et en utilisant deux portes : la porte de mise à jour (update gate) $\textcolor{#3b82f6}{z_t}$ et la porte de réinitialisation (reset gate) $\textcolor{#ef4444}{r_t}$.
+  L'état caché $\textcolor{#10b981}{h_t}$ est une interpolation linéaire entre l'état précédent $\textcolor{#fbbf24}{h_{t-1}}$ et un nouvel état candidat $\textcolor{#8b5cf6}{\tilde{h}_t}$ :
+  
+  $$
+  \textcolor{#10b981}{h_t} = (1 - \textcolor{#3b82f6}{z_t}) \odot \textcolor{#fbbf24}{h_{t-1}} + \textcolor{#3b82f6}{z_t} \odot \textcolor{#8b5cf6}{\tilde{h}_t} 
+  $$
+  
   Où l'état candidat dépend de la porte de réinitialisation :
-  $$ \textcolor{#8b5cf6}{\tilde{h}_t} = \tanh(W x_t + U (\textcolor{#ef4444}{r_t} \odot \textcolor{#fbbf24}{h_{t-1}})) $$
+  
+  $$
+  \textcolor{#8b5cf6}{\tilde{h}_t} = \tanh(W x_t + U (\textcolor{#ef4444}{r_t} \odot \textcolor{#fbbf24}{h_{t-1}})) 
+  $$
 math_illustration_svg: |
   <svg viewBox="0 0 800 400" xmlns="http://www.w3.org/2000/svg">
     <rect width="800" height="400" fill="#f8fafc" rx="10"/>

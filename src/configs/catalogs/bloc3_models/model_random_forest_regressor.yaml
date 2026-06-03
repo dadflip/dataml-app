@@ -93,18 +93,20 @@ illustration_mermaid: |
     In --> Pre --> Boot --> Trees --> Mean --> Pred
 
 math_theory: |
-  Random Forest Regressor operates by training $\textcolor{#8b5cf6}{B}$ independent regression trees on random subsets of the data (bootstrap samples) and random subsets of features at each split.
+  Le Random Forest Regressor fonctionne en entraînant $\textcolor{#8b5cf6}{B}$ arbres de régression indépendants sur des sous-ensembles aléatoires des données (échantillons bootstrap) et des sous-ensembles aléatoires de variables à chaque nœud de séparation.
   
-  Unlike classification where a majority vote is taken, the final prediction in regression is computed as the unweighted mean of the continuous predictions from all individual trees $\textcolor{#fbbf24}{h_b}$.
+  Contrairement à la classification où un vote majoritaire est utilisé, la prédiction finale en régression est calculée comme la moyenne non pondérée des prédictions continues de tous les arbres individuels $\textcolor{#fbbf24}{h_b}$.
   
-  $$ \textcolor{#3b82f6}{\hat{y}} = \frac{1}{\textcolor{#8b5cf6}{B}} \sum_{b=1}^{\textcolor{#8b5cf6}{B}} \textcolor{#fbbf24}{h_b}(\textcolor{#ef4444}{x}) $$
+  $$
+  \textcolor{#3b82f6}{\hat{y}} = \frac{1}{\textcolor{#8b5cf6}{B}} \sum_{b=1}^{\textcolor{#8b5cf6}{B}} \textcolor{#fbbf24}{h_b}(\textcolor{#ef4444}{x}) 
+  $$
   
-  Where:
-  - $\textcolor{#3b82f6}{\hat{y}}$ is the final continuous prediction.
-  - $\textcolor{#8b5cf6}{B}$ is the total number of trees (`n_estimators`).
-  - $\textcolor{#fbbf24}{h_b}(\textcolor{#ef4444}{x})$ is the individual prediction of the $b$-th regression tree for input $\textcolor{#ef4444}{x}$.
+  Où :
+  - $\textcolor{#3b82f6}{\hat{y}}$ est la prédiction continue finale.
+  - $\textcolor{#8b5cf6}{B}$ est le nombre total d'arbres (`n_estimators`).
+  - $\textcolor{#fbbf24}{h_b}(\textcolor{#ef4444}{x})$ est la prédiction individuelle du $b$-ième arbre de régression pour l'entrée $\textcolor{#ef4444}{x}$.
   
-  This averaging process strongly mitigates the high variance (overfitting) typically associated with fully grown, unpruned decision trees, yielding a much more robust predictive model.
+  Ce processus de moyenne atténue fortement la forte variance (surapprentissage) typiquement associée aux arbres de décision non élagués et développés au maximum, produisant un modèle prédictif beaucoup plus robuste.
 
 math_illustration_svg: |
   <svg viewBox="0 0 800 400" xmlns="http://www.w3.org/2000/svg">

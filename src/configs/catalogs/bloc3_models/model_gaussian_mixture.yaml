@@ -22,8 +22,12 @@ cons:
 hyperparameters:
   n_components: "Nombre de gaussiennes / clusters (ex: 3)."
 math_theory: |
-  Un Gaussian Mixture Model (GMM) suppose que la distribution des données $\textcolor{#10b981}{x}$ est une combinaison linéaire de $K$ composantes gaussiennes. La probabilité globale d'un point est donnée par :
-  $$ P(\textcolor{#10b981}{x}) = \sum_{k=1}^{K} \textcolor{#3b82f6}{\pi_k} \mathcal{N}(\textcolor{#10b981}{x} | \textcolor{#ef4444}{\mu_k}, \textcolor{#fbbf24}{\Sigma_k}) $$
+  Un modèle de mélange gaussien (GMM) suppose que la distribution des données $\textcolor{#10b981}{x}$ est une combinaison linéaire de $K$ composantes gaussiennes. La probabilité globale d'un point est donnée par :
+  
+  $$
+  P(\textcolor{#10b981}{x}) = \sum_{k=1}^{K} \textcolor{#3b82f6}{\pi_k} \mathcal{N}(\textcolor{#10b981}{x} | \textcolor{#ef4444}{\mu_k}, \textcolor{#fbbf24}{\Sigma_k}) 
+  $$
+  
   Où $\textcolor{#3b82f6}{\pi_k}$ sont les coefficients de mélange (avec $\sum \textcolor{#3b82f6}{\pi_k} = 1$), et $\mathcal{N}$ représente la distribution normale multivariée caractérisée par sa moyenne $\textcolor{#ef4444}{\mu_k}$ et sa matrice de covariance $\textcolor{#fbbf24}{\Sigma_k}$. Le modèle est ajusté itérativement via l'algorithme Espérance-Maximisation (EM).
 math_illustration_svg: |
   <svg viewBox="0 0 500 250" xmlns="http://www.w3.org/2000/svg">

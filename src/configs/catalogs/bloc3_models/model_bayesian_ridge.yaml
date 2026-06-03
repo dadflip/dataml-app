@@ -118,15 +118,19 @@ illustration_mermaid: |
       style Std fill:#10b981,stroke:#059669,stroke-width:2px,color:#fff
 
 math_theory: |
-  Bayesian Ridge Regression formulates linear regression using probability distributions. Instead of finding a single set of optimal weights, it estimates a posterior distribution over the weights. The target $\textcolor{#3b82f6}{y}$ is assumed to be drawn from a Gaussian distribution:
+  La Régression Ridge Bayésienne formule la régression linéaire en utilisant des distributions de probabilité. Au lieu de trouver un seul ensemble de poids optimaux, elle estime une distribution a posteriori sur les poids. La cible $\textcolor{#3b82f6}{y}$ est supposée être tirée d'une distribution Gaussienne :
   
-  $$p(\textcolor{#3b82f6}{y}|\textcolor{#10b981}{X}, \textcolor{#ef4444}{w}, \textcolor{#fbbf24}{\alpha}) = \mathcal{N}(\textcolor{#3b82f6}{y}|\textcolor{#10b981}{X} \textcolor{#ef4444}{w}, \textcolor{#fbbf24}{\alpha}^{-1})$$
+  $$
+  p(\textcolor{#3b82f6}{y}|\textcolor{#10b981}{X}, \textcolor{#ef4444}{w}, \textcolor{#fbbf24}{\alpha}) = \mathcal{N}(\textcolor{#3b82f6}{y}|\textcolor{#10b981}{X} \textcolor{#ef4444}{w}, \textcolor{#fbbf24}{\alpha}^{-1})
+  $$
   
-  The weights $\textcolor{#ef4444}{w}$ are given a spherical Gaussian prior with precision $\textcolor{#8b5cf6}{\lambda}$ (acting as an automatic $L_2$ penalty):
+  Les poids $\textcolor{#ef4444}{w}$ reçoivent un a priori Gaussien sphérique avec une précision $\textcolor{#8b5cf6}{\lambda}$ (agissant comme une pénalité $L_2$ automatique) :
   
-  $$p(\textcolor{#ef4444}{w}|\textcolor{#8b5cf6}{\lambda}) = \mathcal{N}(\textcolor{#ef4444}{w}|0, \textcolor{#8b5cf6}{\lambda}^{-1} I)$$
+  $$
+  p(\textcolor{#ef4444}{w}|\textcolor{#8b5cf6}{\lambda}) = \mathcal{N}(\textcolor{#ef4444}{w}|0, \textcolor{#8b5cf6}{\lambda}^{-1} I)
+  $$
   
-  The hyperparameters $\textcolor{#fbbf24}{\alpha}$ and $\textcolor{#8b5cf6}{\lambda}$ are themselves treated as random variables with Gamma priors and are optimized during training. This provides both predictions and their associated uncertainty (variance).
+  Les hyperparamètres $\textcolor{#fbbf24}{\alpha}$ et $\textcolor{#8b5cf6}{\lambda}$ sont eux-mêmes traités comme des variables aléatoires avec des a priori Gamma et sont optimisés pendant l'entraînement. Cela fournit à la fois les prédictions et leur incertitude associée (variance).
 
 math_illustration_svg: |
   <svg viewBox="0 0 500 250" xmlns="http://www.w3.org/2000/svg">

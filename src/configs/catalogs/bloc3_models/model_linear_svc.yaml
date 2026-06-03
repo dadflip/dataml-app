@@ -78,11 +78,13 @@ illustration_mermaid: |
     style Class0 fill:#10b981,stroke:#059669,stroke-width:2px,color:#fff
 
 math_theory: |
-  Linear Support Vector Classification (SVC) seeks to find the best linear separating hyperplane that maximizes the margin between two classes. It minimizes the squared hinge loss subject to an L2 penalty on the weights:
+  La classification par vecteurs de support linéaire (SVC) cherche à trouver le meilleur hyperplan de séparation linéaire qui maximise la marge entre deux classes. Elle minimise la fonction de perte "hinge" au carré soumise à une pénalité L2 sur les poids :
   
-  $$ \min_{w, b} \left( \frac{1}{2} ||\textcolor{#ef4444}{w}||_2^2 + \textcolor{#fbbf24}{C} \sum_{i=1}^{N} \max(0, 1 - \textcolor{#3b82f6}{y}^{(i)} (\textcolor{#10b981}{X}^{(i)} \textcolor{#ef4444}{w} + b)) \right) $$
+  $$
+  \min_{w, b} \left( \frac{1}{2} ||\textcolor{#ef4444}{w}||_2^2 + \textcolor{#fbbf24}{C} \sum_{i=1}^{N} \max(0, 1 - \textcolor{#3b82f6}{y}^{(i)} (\textcolor{#10b981}{X}^{(i)} \textcolor{#ef4444}{w} + b)) \right) 
+  $$
   
-  Where $\textcolor{#ef4444}{w}$ and $b$ define the hyperplane, $\textcolor{#3b82f6}{y} \in \{-1, 1\}$ are the target labels, $\textcolor{#10b981}{X}$ is the feature matrix, and $\textcolor{#fbbf24}{C}$ is the penalty parameter controlling the trade-off between margin width and classification errors.
+  Où $\textcolor{#ef4444}{w}$ et $b$ définissent l'hyperplan, $\textcolor{#3b82f6}{y} \in \{-1, 1\}$ sont les étiquettes cibles, $\textcolor{#10b981}{X}$ est la matrice des caractéristiques, et $\textcolor{#fbbf24}{C}$ est le paramètre de pénalité contrôlant le compromis entre la largeur de la marge et les erreurs de classification.
 
 math_illustration_svg: |
   <svg viewBox="0 0 500 250" xmlns="http://www.w3.org/2000/svg">

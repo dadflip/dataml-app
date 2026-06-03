@@ -75,7 +75,6 @@ illustration_mermaid: |
     Model --> NLI{"Entailment Inference"}
     NLI --> Scores(["Scores / Probabilities"])
     Scores --> Pred(["Predicted Label"])
-
     style Text fill:#fbbf24,stroke:#d97706,stroke-width:2px,color:#000
     style Labels fill:#fbbf24,stroke:#d97706,stroke-width:2px,color:#000
     style Model fill:#3b82f6,stroke:#2563eb,stroke-width:2px,color:#fff
@@ -84,18 +83,20 @@ illustration_mermaid: |
     style Pred fill:#10b981,stroke:#059669,stroke-width:2px,color:#fff
 
 math_theory: |
-  Zero-shot classification with MNLI models formulates the problem as Natural Language Inference (NLI). 
-  The input text is treated as the **Premise** ($\textcolor{#3b82f6}{P}$), and the candidate label is injected into a template to form the **Hypothesis** ($\textcolor{#10b981}{H}$), such as "This text is about $\textcolor{#10b981}{\text{label}}$".
+  La classification zero-shot avec des modèles MNLI formule le problème comme une inférence en langage naturel (NLI). 
+  Le texte d'entrée est traité comme la **Prémisse** ($\textcolor{#3b82f6}{P}$), et l'étiquette candidate est injectée dans un modèle (template) pour former l'**Hypothèse** ($\textcolor{#10b981}{H}$), telle que "Ce texte parle de $\textcolor{#10b981}{\text{label}}$".
   
-  The model outputs logits for Entailment, Contradiction, and Neutral. The probability of the label being true is calculated by taking the softmax over the entailment and contradiction logits (ignoring neutral):
+  Le modèle produit des logits pour l'Implication (Entailment), la Contradiction et le Neutre. La probabilité que l'étiquette soit vraie est calculée en appliquant la fonction softmax sur les logits d'implication et de contradiction (en ignorant le neutre) :
   
-  $$ P(\textcolor{#10b981}{y} \mid \textcolor{#3b82f6}{X}) = \frac{\exp(\textcolor{#fbbf24}{s_{\text{entail}}})}{\exp(\textcolor{#fbbf24}{s_{\text{entail}}}) + \exp(\textcolor{#ef4444}{s_{\text{contra}}})} $$
+  $$
+  P(\textcolor{#10b981}{y} \mid \textcolor{#3b82f6}{X}) = \frac{\exp(\textcolor{#fbbf24}{s_{\text{entail}}})}{\exp(\textcolor{#fbbf24}{s_{\text{entail}}}) + \exp(\textcolor{#ef4444}{s_{\text{contra}}})}
+  $$
   
-  where:
-  *   $\textcolor{#3b82f6}{X}$ is the input text.
-  *   $\textcolor{#10b981}{y}$ is the candidate label.
-  *   $\textcolor{#fbbf24}{s_{\text{entail}}}$ is the logit for entailment.
-  *   $\textcolor{#ef4444}{s_{\text{contra}}}$ is the logit for contradiction.
+  où :
+  *   $\textcolor{#3b82f6}{X}$ est le texte d'entrée.
+  *   $\textcolor{#10b981}{y}$ est l'étiquette candidate.
+  *   $\textcolor{#fbbf24}{s_{\text{entail}}}$ est le logit pour l'implication (entailment).
+  *   $\textcolor{#ef4444}{s_{\text{contra}}}$ est le logit pour la contradiction.
 
 math_illustration_svg: |
   <svg viewBox="0 0 600 300" xmlns="http://www.w3.org/2000/svg">

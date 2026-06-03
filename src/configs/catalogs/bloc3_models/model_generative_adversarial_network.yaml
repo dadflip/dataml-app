@@ -113,13 +113,15 @@ math_theory: |
   Un GAN oppose deux modèles : un Générateur $\textcolor{#3b82f6}{G}$ et un Discriminateur $\textcolor{#ef4444}{D}$.
   Le Générateur prend un vecteur de bruit aléatoire $\textcolor{#8b5cf6}{z}$ issu d'une distribution a priori et tente de produire des données synthétiques $\textcolor{#fbbf24}{G(z)}$.
   
-  Le Discriminateur reçoit à la fois des données réelles $\textcolor{#10b981}{x}$ et des données fausses $\textcolor{#fbbf24}{G(z)}$, et estime la probabilité qu'un échantillon soit réel.
+  Le Discriminateur reçoit à la fois des données réelles $\textcolor{#10b981}{x}$ et des données générées (fausses) $\textcolor{#fbbf24}{G(z)}$, et estime la probabilité qu'un échantillon soit réel.
   
   Leur entraînement est formulé comme un jeu minimax avec la fonction de valeur $V(G, D)$ :
   
-  $$ \min_{G} \max_{D} V(D, G) = \mathbb{E}_{\textcolor{#10b981}{x} \sim p_{data}}[\log \textcolor{#ef4444}{D}(\textcolor{#10b981}{x})] + \mathbb{E}_{\textcolor{#8b5cf6}{z} \sim p_{z}}[\log(1 - \textcolor{#ef4444}{D}(\textcolor{#fbbf24}{G}(\textcolor{#8b5cf6}{z})))] $$
+  $$
+  \min_{G} \max_{D} V(D, G) = \mathbb{E}_{\textcolor{#10b981}{x} \sim p_{data}}[\log \textcolor{#ef4444}{D}(\textcolor{#10b981}{x})] + \mathbb{E}_{\textcolor{#8b5cf6}{z} \sim p_{z}}[\log(1 - \textcolor{#ef4444}{D}(\textcolor{#fbbf24}{G}(\textcolor{#8b5cf6}{z})))] 
+  $$
   
-  $\textcolor{#ef4444}{D}$ maximise cette fonction pour mieux distinguer le vrai du faux, tandis que $\textcolor{#3b82f6}{G}$ la minimise pour "tromper" $\textcolor{#ef4444}{D}$ en générant des exemples indifférenciables des vrais.
+  $\textcolor{#ef4444}{D}$ maximise cette fonction pour mieux distinguer le vrai du faux, tandis que $\textcolor{#3b82f6}{G}$ la minimise pour "tromper" $\textcolor{#ef4444}{D}$ en générant des exemples indiscernables des données réelles.
 math_illustration_svg: |
   <svg viewBox="0 0 700 350" xmlns="http://www.w3.org/2000/svg">
     <!-- Noise z -->

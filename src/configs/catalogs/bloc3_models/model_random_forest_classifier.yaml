@@ -90,21 +90,27 @@ illustration_mermaid: |
     In --> Pre --> Boot --> Trees --> Vote --> Pred
 
 math_theory: |
-  Random Forest is a bagging (Bootstrap Aggregation) ensemble algorithm that constructs an extensive collection of deep decision trees independently. 
+  Le Random Forest (Forêt Aléatoire) est un algorithme d'ensemble de type bagging (Bootstrap Aggregation) qui construit indépendamment une vaste collection d'arbres de décision profonds. 
   
-  For each tree $\textcolor{#fbbf24}{h_b}$, a bootstrap sample of the data is drawn, and at each split, a random subset of features is evaluated. This decorrelates the trees and significantly reduces the variance.
+  Pour chaque arbre $\textcolor{#fbbf24}{h_b}$, un échantillon bootstrap des données est tiré, et à chaque nœud de séparation, un sous-ensemble aléatoire de variables (features) est évalué. Cela décorrèle les arbres et réduit considérablement la variance.
   
-  The final prediction for a given input $\textcolor{#ef4444}{x}$ is determined by a majority vote across all $\textcolor{#8b5cf6}{B}$ trees in the forest:
-  $$ \textcolor{#3b82f6}{\hat{y}} = \text{mode} \left\{ \textcolor{#fbbf24}{h_1}(\textcolor{#ef4444}{x}), \textcolor{#fbbf24}{h_2}(\textcolor{#ef4444}{x}), \dots, \textcolor{#fbbf24}{h_B}(\textcolor{#ef4444}{x}) \right\} $$
+  La prédiction finale pour une entrée donnée $\textcolor{#ef4444}{x}$ est déterminée par un vote majoritaire sur l'ensemble des $\textcolor{#8b5cf6}{B}$ arbres de la forêt :
   
-  Alternatively, for probabilistic predictions, the forest averages the class probabilities predicted by each individual tree:
-  $$ P(y=c|\textcolor{#ef4444}{x}) = \frac{1}{\textcolor{#8b5cf6}{B}} \sum_{b=1}^{\textcolor{#8b5cf6}{B}} \textcolor{#10b981}{P_b}(y=c|\textcolor{#ef4444}{x}) $$
+  $$
+  \textcolor{#3b82f6}{\hat{y}} = \text{mode} \left\{ \textcolor{#fbbf24}{h_1}(\textcolor{#ef4444}{x}), \textcolor{#fbbf24}{h_2}(\textcolor{#ef4444}{x}), \dots, \textcolor{#fbbf24}{h_B}(\textcolor{#ef4444}{x}) \right\} 
+  $$
   
-  Where:
-  - $\textcolor{#3b82f6}{\hat{y}}$ is the final predicted class.
-  - $\textcolor{#8b5cf6}{B}$ is the number of trees (`n_estimators`).
-  - $\textcolor{#fbbf24}{h_b}(\textcolor{#ef4444}{x})$ is the prediction of the $b$-th decision tree.
-  - $\textcolor{#10b981}{P_b}$ is the probability distribution estimated by tree $b$.
+  Alternativement, pour les prédictions probabilistes, la forêt calcule la moyenne des probabilités de classe prédites par chaque arbre individuel :
+  
+  $$
+  P(y=c|\textcolor{#ef4444}{x}) = \frac{1}{\textcolor{#8b5cf6}{B}} \sum_{b=1}^{\textcolor{#8b5cf6}{B}} \textcolor{#10b981}{P_b}(y=c|\textcolor{#ef4444}{x}) 
+  $$
+  
+  Où :
+  - $\textcolor{#3b82f6}{\hat{y}}$ est la classe finale prédite.
+  - $\textcolor{#8b5cf6}{B}$ est le nombre d'arbres (`n_estimators`).
+  - $\textcolor{#fbbf24}{h_b}(\textcolor{#ef4444}{x})$ est la prédiction du $b$-ième arbre de décision.
+  - $\textcolor{#10b981}{P_b}$ est la distribution de probabilité estimée par l'arbre $b$.
 
 math_illustration_svg: |
   <svg viewBox="0 0 800 400" xmlns="http://www.w3.org/2000/svg">

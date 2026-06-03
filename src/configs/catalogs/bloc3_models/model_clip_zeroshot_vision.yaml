@@ -133,17 +133,23 @@ illustration_mermaid: |
     style Pred fill:#10b981,stroke:#059669,stroke-width:2px,color:#fff
 
 math_theory: |
-  CLIP (Contrastive Language-Image Pre-Training) learns a joint embedding space for images and texts. It consists of an Image Encoder $f_{vis}$ and a Text Encoder $f_{text}$.
+  CLIP (Contrastive Language-Image Pre-Training) apprend un espace de plongement (embedding) conjoint pour les images et les textes. Il se compose d'un Encodeur d'Images $f_{vis}$ et d'un Encodeur de Texte $f_{text}$.
   
-  Given an image $\textcolor{#10b981}{\mathbf{x}}$ and a set of candidate text labels $\{\textcolor{#3b82f6}{\mathbf{t}_1}, \textcolor{#3b82f6}{\mathbf{t}_2}, \dots, \textcolor{#3b82f6}{\mathbf{t}_K}\}$, they are encoded into normalized vectors:
-  $$ \textcolor{#10b981}{\mathbf{v}} = \frac{f_{vis}(\textcolor{#10b981}{\mathbf{x}})}{||f_{vis}(\textcolor{#10b981}{\mathbf{x}})||_2}, \quad \textcolor{#3b82f6}{\mathbf{w}_i} = \frac{f_{text}(\textcolor{#3b82f6}{\mathbf{t}_i})}{||f_{text}(\textcolor{#3b82f6}{\mathbf{t}_i})||_2} $$
+  Étant donné une image $\textcolor{#10b981}{\mathbf{x}}$ et un ensemble d'étiquettes textuelles candidates $\{\textcolor{#3b82f6}{\mathbf{t}_1}, \textcolor{#3b82f6}{\mathbf{t}_2}, \dots, \textcolor{#3b82f6}{\mathbf{t}_K}\}$, ils sont encodés en vecteurs normalisés :
+  $$
+  \textcolor{#10b981}{\mathbf{v}} = \frac{f_{vis}(\textcolor{#10b981}{\mathbf{x}})}{||f_{vis}(\textcolor{#10b981}{\mathbf{x}})||_2}, \quad \textcolor{#3b82f6}{\mathbf{w}_i} = \frac{f_{text}(\textcolor{#3b82f6}{\mathbf{t}_i})}{||f_{text}(\textcolor{#3b82f6}{\mathbf{t}_i})||_2} 
+  $$
   
-  The similarity score for each label is computed as the scaled cosine similarity:
-  $$ \textcolor{#fbbf24}{s_i} = \exp(\textcolor{#ef4444}{\tau} \cdot \langle \textcolor{#10b981}{\mathbf{v}}, \textcolor{#3b82f6}{\mathbf{w}_i} \rangle) $$
-  where $\textcolor{#ef4444}{\tau}$ is a learned temperature parameter.
+  Le score de similarité pour chaque étiquette est calculé comme la similarité cosinus mise à l'échelle :
+  $$
+  \textcolor{#fbbf24}{s_i} = \exp(\textcolor{#ef4444}{\tau} \cdot \langle \textcolor{#10b981}{\mathbf{v}}, \textcolor{#3b82f6}{\mathbf{w}_i} \rangle) 
+  $$
+  où $\textcolor{#ef4444}{\tau}$ est un paramètre de température appris.
   
-  The final zero-shot prediction probability for class $i$ is obtained via a softmax over all candidate labels:
-  $$ \textcolor{#8b5cf6}{P(y=i | \mathbf{x})} = \frac{\exp(\textcolor{#fbbf24}{s_i})}{\sum_{j=1}^K \exp(\textcolor{#fbbf24}{s_j})} $$
+  La probabilité de prédiction zero-shot finale pour la classe $i$ est obtenue via un softmax sur toutes les étiquettes candidates :
+  $$
+  \textcolor{#8b5cf6}{P(y=i | \mathbf{x})} = \frac{\exp(\textcolor{#fbbf24}{s_i})}{\sum_{j=1}^K \exp(\textcolor{#fbbf24}{s_j})} 
+  $$
 
 math_illustration_svg: |
   <svg viewBox="0 0 800 400" xmlns="http://www.w3.org/2000/svg">

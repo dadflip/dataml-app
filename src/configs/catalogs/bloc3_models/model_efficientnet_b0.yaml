@@ -21,12 +21,16 @@ cons:
 hyperparameters:
   epochs: "Nombre d'époques de fine-tuning (ex: 3)."
 math_theory: |
-  EfficientNet utilise le \textit{Compound Scaling} pour augmenter uniformément les trois dimensions du réseau (largeur, profondeur, résolution).
+  EfficientNet utilise le \textit{Compound Scaling} (mise à l'échelle composée) pour mettre à l'échelle uniformément les trois dimensions du réseau (largeur, profondeur, résolution).
   Au lieu de modifier arbitrairement une seule dimension, la mise à l'échelle est contrôlée par un coefficient global $\textcolor{#8b5cf6}{\phi}$.
   Les facteurs de mise à l'échelle pour la profondeur $\textcolor{#10b981}{d}$, la largeur $\textcolor{#3b82f6}{w}$ et la résolution $\textcolor{#fbbf24}{r}$ sont déterminés par :
-  $$\textcolor{#10b981}{d} = \alpha^{\textcolor{#8b5cf6}{\phi}} \quad \textcolor{#3b82f6}{w} = \beta^{\textcolor{#8b5cf6}{\phi}} \quad \textcolor{#fbbf24}{r} = \gamma^{\textcolor{#8b5cf6}{\phi}}$$
-  Sous la contrainte que $\alpha \cdot \beta^2 \cdot \gamma^2 \approx 2$, ce qui garantit que l'augmentation du nombre de FLOPS est d'environ $2^{\textcolor{#8b5cf6}{\phi}}$.
-  EfficientNet-B0 est l'architecture de base ($\textcolor{#8b5cf6}{\phi}=0$), trouvée via une recherche d'architecture neuronale (NAS) optimisant l'exactitude et les FLOPS.
+  
+  $$
+  \textcolor{#10b981}{d} = \alpha^{\textcolor{#8b5cf6}{\phi}} \quad \textcolor{#3b82f6}{w} = \beta^{\textcolor{#8b5cf6}{\phi}} \quad \textcolor{#fbbf24}{r} = \gamma^{\textcolor{#8b5cf6}{\phi}}
+  $$
+  
+  Sous la contrainte que $\alpha \cdot \beta^2 \cdot \gamma^2 \approx 2$, ce qui garantit que l'augmentation des FLOPS est d'environ $2^{\textcolor{#8b5cf6}{\phi}}$.
+  EfficientNet-B0 est l'architecture de base ($\textcolor{#8b5cf6}{\phi}=0$), trouvée via une recherche d'architecture neuronale (NAS) optimisant la précision et les FLOPS.
 math_illustration_svg: |
   <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 400">
     <defs>

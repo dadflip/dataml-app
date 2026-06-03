@@ -80,11 +80,13 @@ illustration_mermaid: |
     style Sparse fill:#3b82f6,stroke:#2563eb,stroke-width:2px,color:#fff
 
 math_theory: |
-  Lasso Regression applies an L1 penalty to the traditional Ordinary Least Squares (OLS) loss function. This forces some of the regression coefficients to become exactly zero, performing intrinsic feature selection. The objective is to minimize:
+  La régression Lasso applique une pénalité L1 à la fonction de perte classique des moindres carrés ordinaires (OLS). Cela force certains coefficients de régression à devenir exactement zéro, réalisant ainsi une sélection de variables intrinsèque. L'objectif est de minimiser :
   
-  $$ \min_{w} \left( \frac{1}{2n} ||\textcolor{#10b981}{X}\textcolor{#ef4444}{w} - \textcolor{#3b82f6}{y}||_2^2 + \textcolor{#fbbf24}{\alpha} ||\textcolor{#ef4444}{w}||_1 \right) $$
+  $$
+  \min_{w} \left( \frac{1}{2n} ||\textcolor{#10b981}{X}\textcolor{#ef4444}{w} - \textcolor{#3b82f6}{y}||_2^2 + \textcolor{#fbbf24}{\alpha} ||\textcolor{#ef4444}{w}||_1 \right) 
+  $$
   
-  Where $\textcolor{#10b981}{X}$ is the feature matrix, $\textcolor{#3b82f6}{y}$ is the target vector, $\textcolor{#ef4444}{w}$ are the learned weights, and $\textcolor{#fbbf24}{\alpha}$ defines the intensity of the penalty.
+  Où $\textcolor{#10b981}{X}$ est la matrice des caractéristiques, $\textcolor{#3b82f6}{y}$ est le vecteur cible, $\textcolor{#ef4444}{w}$ sont les poids appris, et $\textcolor{#fbbf24}{\alpha}$ définit l'intensité de la pénalité.
 
 math_illustration_svg: |
   <svg viewBox="0 0 500 250" xmlns="http://www.w3.org/2000/svg">

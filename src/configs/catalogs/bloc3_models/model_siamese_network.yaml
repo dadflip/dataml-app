@@ -107,17 +107,23 @@ code_template: |
       training_history = {"status": "success", "loss": float(loss)}
       task_type = "similarity"
 math_theory: |
-  A Siamese Network computes a similarity metric between two inputs using twin networks with shared weights.
+  Un réseau siamois calcule une métrique de similarité entre deux entrées à l'aide de réseaux jumeaux partageant les mêmes poids.
   
-  1. **Embeddings**: Two inputs, $\textcolor{#10b981}{x_1}$ and $\textcolor{#10b981}{x_2}$, are passed through the same network $f_\theta$ to produce latent embeddings:
-  $$ e_1 = \textcolor{#3b82f6}{f_\theta}(\textcolor{#10b981}{x_1}), \quad e_2 = \textcolor{#3b82f6}{f_\theta}(\textcolor{#10b981}{x_2}) $$
+  1. **Embeddings (Plongements)** : Deux entrées, $\textcolor{#10b981}{x_1}$ et $\textcolor{#10b981}{x_2}$, sont passées à travers le même réseau $f_\theta$ pour produire des plongements latents :
+  $$
+  e_1 = \textcolor{#3b82f6}{f_\theta}(\textcolor{#10b981}{x_1}), \quad e_2 = \textcolor{#3b82f6}{f_\theta}(\textcolor{#10b981}{x_2}) 
+  $$
   
-  2. **Distance Metric**: The Euclidean distance $D$ between the embeddings is calculated:
-  $$ D_w(\textcolor{#10b981}{x_1}, \textcolor{#10b981}{x_2}) = \| e_1 - e_2 \|_2 $$
+  2. **Métrique de Distance** : La distance euclidienne $D$ entre les plongements est calculée :
+  $$
+  D_w(\textcolor{#10b981}{x_1}, \textcolor{#10b981}{x_2}) = \| e_1 - e_2 \|_2 
+  $$
   
-  3. **Contrastive Loss**: The network is trained using a contrastive loss function. Let $\textcolor{#8b5cf6}{Y} = 1$ if the inputs are from the same class (positive pair) and $\textcolor{#8b5cf6}{Y} = 0$ if they are from different classes (negative pair). With a margin $\textcolor{#fbbf24}{m}$:
-  $$ \mathcal{L} = \textcolor{#8b5cf6}{Y} \cdot \frac{1}{2} D_w^2 + (1 - \textcolor{#8b5cf6}{Y}) \cdot \frac{1}{2} \max(0, \textcolor{#fbbf24}{m} - D_w)^2 $$
-  This pulls positive pairs together and pushes negative pairs apart up to distance $\textcolor{#fbbf24}{m}$.
+  3. **Perte Contrastive** : Le réseau est entraîné à l'aide d'une fonction de perte contrastive. Soit $\textcolor{#8b5cf6}{Y} = 1$ si les entrées proviennent de la même classe (paire positive) et $\textcolor{#8b5cf6}{Y} = 0$ si elles proviennent de classes différentes (paire négative). Avec une marge $\textcolor{#fbbf24}{m}$ :
+  $$
+  \mathcal{L} = \textcolor{#8b5cf6}{Y} \cdot \frac{1}{2} D_w^2 + (1 - \textcolor{#8b5cf6}{Y}) \cdot \frac{1}{2} \max(0, \textcolor{#fbbf24}{m} - D_w)^2 
+  $$
+  Cela rapproche les paires positives et éloigne les paires négatives jusqu'à une distance $\textcolor{#fbbf24}{m}$.
 math_illustration_svg: |
   <svg viewBox="0 0 800 400" xmlns="http://www.w3.org/2000/svg">
     <!-- Input 1 -->

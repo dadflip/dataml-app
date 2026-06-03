@@ -23,18 +23,32 @@ math_theory: |
   AdaBoost pour la régression (AdaBoost.R2) calcule une perte maximale à chaque itération pour normaliser les erreurs. La prédiction de l'ensemble $\textcolor{#8b5cf6}{H(x)}$ est la médiane pondérée des prédictions individuelles $\textcolor{#10b981}{h_t}(x)$.
   
   L'erreur d'une prédiction individuelle est donnée par :
-  $$ \textcolor{#ef4444}{L_i} = \frac{|y_i - \textcolor{#10b981}{h_t}(x_i)|}{D_{max}} $$
+  
+  $$
+  \textcolor{#ef4444}{L_i} = \frac{|y_i - \textcolor{#10b981}{h_t}(x_i)|}{D_{max}} 
+  $$
+  
   où $D_{max}$ est l'erreur absolue maximale sur le jeu de données pour l'arbre $t$.
   
   L'erreur moyenne pondérée $\textcolor{#ef4444}{\bar{L}}$ est :
-  $$ \textcolor{#ef4444}{\bar{L}} = \sum_{i} \textcolor{#fbbf24}{w_i} \textcolor{#ef4444}{L_i} $$
+  
+  $$
+  \textcolor{#ef4444}{\bar{L}} = \sum_{i} \textcolor{#fbbf24}{w_i} \textcolor{#ef4444}{L_i} 
+  $$
   
   Le poids du modèle $t$ est calculé par le facteur de confiance $\textcolor{#3b82f6}{\beta_t}$ :
-  $$ \textcolor{#3b82f6}{\beta_t} = \frac{\textcolor{#ef4444}{\bar{L}}}{1 - \textcolor{#ef4444}{\bar{L}}} $$
-  (Un faible $\textcolor{#3b82f6}{\beta_t}$ signifie une grande confiance).
+  
+  $$
+  \textcolor{#3b82f6}{\beta_t} = \frac{\textcolor{#ef4444}{\bar{L}}}{1 - \textcolor{#ef4444}{\bar{L}}} 
+  $$
+  
+  (Un $\textcolor{#3b82f6}{\beta_t}$ faible signifie une confiance élevée).
   
   La mise à jour des poids favorise les points avec de grandes erreurs ($L_i \approx 1$) :
-  $$ \textcolor{#fbbf24}{w_i}^{(t+1)} = \textcolor{#fbbf24}{w_i}^{(t)} \textcolor{#3b82f6}{\beta_t}^{1 - \textcolor{#ef4444}{L_i}} $$
+  
+  $$
+  \textcolor{#fbbf24}{w_i}^{(t+1)} = \textcolor{#fbbf24}{w_i}^{(t)} \textcolor{#3b82f6}{\beta_t}^{1 - \textcolor{#ef4444}{L_i}} 
+  $$
 math_illustration_svg: |
   <svg viewBox="0 0 800 400" xmlns="http://www.w3.org/2000/svg">
     <!-- Background -->

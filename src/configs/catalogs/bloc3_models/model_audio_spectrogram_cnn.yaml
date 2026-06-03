@@ -184,17 +184,25 @@ code_template: |
       training_history = {"status": "success", "epochs_trained": int(EPOCHS)}
 
 math_theory: |
-  The Audio Spectrogram CNN transforms raw 1D audio signals into 2D time-frequency representations (Mel-spectrograms) to apply convolutional neural networks (CNNs). 
+  Le CNN pour Spectrogramme Audio transforme les signaux audio 1D bruts en représentations temps-fréquence 2D (spectrogrammes Mel) pour appliquer des réseaux de neurones convolutifs (CNN). 
   
-  1. **Spectrogram Generation**: The Short-Time Fourier Transform (STFT) computes the energy $\textcolor{#3b82f6}{S(t, f)}$ of the signal $\textcolor{#10b981}{x}$ over time. A Mel-filterbank $M$ is applied, followed by logarithmic scaling:
-  $$ \textcolor{#fbbf24}{X_{mel}} = \log(M \cdot |\text{STFT}(\textcolor{#10b981}{x})|^2) $$
+  1. **Génération du Spectrogramme** : La transformée de Fourier à court terme (STFT) calcule l'énergie $\textcolor{#3b82f6}{S(t, f)}$ du signal $\textcolor{#10b981}{x}$ au cours du temps. Un banc de filtres Mel $M$ est appliqué, suivi d'une mise à l'échelle logarithmique :
+  $$
+  \textcolor{#fbbf24}{X_{mel}} = \log(M \cdot |\text{STFT}(\textcolor{#10b981}{x})|^2) 
+  $$
   
-  2. **CNN Forward Pass**: The 2D spectrogram $\textcolor{#fbbf24}{X_{mel}}$ is passed through convolutional layers with weights $\textcolor{#8b5cf6}{W_c}$, pooling, and dense layers with weights $\textcolor{#ef4444}{W_d}$:
-  $$ \textcolor{#3b82f6}{h} = \text{Pool}(\text{ReLU}(\textcolor{#8b5cf6}{W_c} \ast \textcolor{#fbbf24}{X_{mel}} + b_c)) $$
-  $$ \textcolor{#10b981}{y_{pred}} = \text{Softmax}(\textcolor{#ef4444}{W_d} \cdot \text{Flatten}(\textcolor{#3b82f6}{h}) + b_d) $$
+  2. **Propagation Avant du CNN** : Le spectrogramme 2D $\textcolor{#fbbf24}{X_{mel}}$ est passé à travers des couches convolutives avec des poids $\textcolor{#8b5cf6}{W_c}$, du pooling, et des couches denses avec des poids $\textcolor{#ef4444}{W_d}$ :
+  $$
+  \textcolor{#3b82f6}{h} = \text{Pool}(\text{ReLU}(\textcolor{#8b5cf6}{W_c} \ast \textcolor{#fbbf24}{X_{mel}} + b_c)) 
+  $$
+  $$
+  \textcolor{#10b981}{y_{pred}} = \text{Softmax}(\textcolor{#ef4444}{W_d} \cdot \text{Flatten}(\textcolor{#3b82f6}{h}) + b_d) 
+  $$
   
-  3. **Loss Function**: Cross-Entropy loss is used to optimize the weights against the true class labels $\textcolor{#8b5cf6}{y}$:
-  $$ \mathcal{L} = - \sum_{i=1}^{C} \textcolor{#8b5cf6}{y_i} \log(\textcolor{#10b981}{y_{pred, i}}) $$
+  3. **Fonction de Perte** : La perte d'entropie croisée (Cross-Entropy) est utilisée pour optimiser les poids par rapport aux vraies étiquettes de classe $\textcolor{#8b5cf6}{y}$ :
+  $$
+  \mathcal{L} = - \sum_{i=1}^{C} \textcolor{#8b5cf6}{y_i} \log(\textcolor{#10b981}{y_{pred, i}}) 
+  $$
 math_illustration_svg: |
   <svg viewBox="0 0 800 400" xmlns="http://www.w3.org/2000/svg">
     <!-- Raw Audio -->

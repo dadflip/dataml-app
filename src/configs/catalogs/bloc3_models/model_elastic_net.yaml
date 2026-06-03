@@ -85,11 +85,13 @@ illustration_mermaid: |
     style Out fill:#10b981,stroke:#059669,stroke-width:2px,color:#fff
 
 math_theory: |
-  Elastic Net blends the absolute value penalty (L1/Lasso) and the squared penalty (L2/Ridge) to regularize a linear regression model. The optimization objective minimizes the residual sum of squares plus the combined penalties:
+  L'Elastic Net mélange la pénalité de valeur absolue (L1/Lasso) et la pénalité quadratique (L2/Ridge) pour régulariser un modèle de régression linéaire. L'objectif d'optimisation minimise la somme des carrés des résidus plus les pénalités combinées :
   
-  $$ \min_{w} \left( \frac{1}{2n} ||\textcolor{#10b981}{X}\textcolor{#ef4444}{w} - \textcolor{#3b82f6}{y}||_2^2 + \textcolor{#fbbf24}{\alpha} \cdot \textcolor{#8b5cf6}{\rho} ||\textcolor{#ef4444}{w}||_1 + \frac{\textcolor{#fbbf24}{\alpha}(1-\textcolor{#8b5cf6}{\rho})}{2} ||\textcolor{#ef4444}{w}||_2^2 \right) $$
+  $$
+  \min_{w} \left( \frac{1}{2n} ||\textcolor{#10b981}{X}\textcolor{#ef4444}{w} - \textcolor{#3b82f6}{y}||_2^2 + \textcolor{#fbbf24}{\alpha} \cdot \textcolor{#8b5cf6}{\rho} ||\textcolor{#ef4444}{w}||_1 + \frac{\textcolor{#fbbf24}{\alpha}(1-\textcolor{#8b5cf6}{\rho})}{2} ||\textcolor{#ef4444}{w}||_2^2 \right) 
+  $$
   
-  Where $\textcolor{#fbbf24}{\alpha}$ controls the total regularization strength, and $\textcolor{#8b5cf6}{\rho}$ (`l1_ratio`) determines the balance between L1 (forces exact zeros for feature selection) and L2 (handles correlated features).
+  Où $\textcolor{#fbbf24}{\alpha}$ contrôle la force de régularisation totale, et $\textcolor{#8b5cf6}{\rho}$ (`l1_ratio`) détermine l'équilibre entre L1 (force des zéros stricts pour la sélection de variables) et L2 (gère les variables corrélées).
 
 math_illustration_svg: |
   <svg viewBox="0 0 500 250" xmlns="http://www.w3.org/2000/svg">

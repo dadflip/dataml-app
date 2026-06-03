@@ -24,11 +24,15 @@ hyperparameters:
   generations: "Nombre d'itérations génétiques (ex: 5)."
   population_size: "Taille de la population par génération (ex: 20)."
 math_theory: |
-  TPOT utilise la programmation génétique pour faire évoluer des pipelines d'apprentissage.
+  TPOT utilise la programmation génétique pour faire évoluer des pipelines d'apprentissage automatique.
   Une population de pipelines $\textcolor{#8b5cf6}{\mathcal{P}_{gen}}$ évolue au fil des générations.
-  Chaque pipeline $\textcolor{#3b82f6}{P}$ est évalué sur sa capacité de classification pour obtenir une fitness (score) $\textcolor{#ef4444}{F(P)}$.
-  La nouvelle génération est créée via des opérations de mutation $\textcolor{#10b981}{\mu(P)}$ et de croisement $\textcolor{#fbbf24}{\chi(P_1, P_2)}$. Le but est de trouver le pipeline optimal $\textcolor{#3b82f6}{P^*}$ :
-  $$ \textcolor{#3b82f6}{P^*} = \arg\max_{P \in \mathcal{P}} \textcolor{#ef4444}{F(P)} $$
+  Chaque pipeline $\textcolor{#3b82f6}{P}$ est évalué sur sa capacité de classification pour obtenir un score de fitness $\textcolor{#ef4444}{F(P)}$.
+  La nouvelle génération est créée via des opérations de mutation $\textcolor{#10b981}{\mu(P)}$ et de croisement $\textcolor{#fbbf24}{\chi(P_1, P_2)}$. L'objectif est de trouver le pipeline optimal $\textcolor{#3b82f6}{P^*}$ :
+  
+  $$
+  \textcolor{#3b82f6}{P^*} = \arg\max_{P \in \mathcal{P}} \textcolor{#ef4444}{F(P)}
+  $$
+
 math_illustration_svg: |
   <svg viewBox="0 0 800 400" xmlns="http://www.w3.org/2000/svg">
     <rect width="800" height="400" fill="#1e1e1e" rx="10" />

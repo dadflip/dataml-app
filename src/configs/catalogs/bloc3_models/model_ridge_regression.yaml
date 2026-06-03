@@ -53,12 +53,14 @@ code_template: |
       training_history = {"status": "success", "fitted_on": len(X_train)}
       task_type = "regression"
 math_theory: |
-  La régression Ridge minimise la somme des carrés des résidus (MCO) tout en appliquant une pénalité $L_2$ sur la norme des coefficients pour prévenir le sur-apprentissage et gérer la multicolinéarité.
+  La régression Ridge minimise la somme des carrés des résidus (MCO) tout en appliquant une pénalité $L_2$ à la norme des coefficients pour prévenir le surapprentissage et gérer la multicolinéarité.
 
-  $$ L(\textcolor{#3b82f6}{w}) = ||\textcolor{#10b981}{X}\textcolor{#3b82f6}{w} - \textcolor{#10b981}{y}||_2^2 + \textcolor{#fbbf24}{\alpha} ||\textcolor{#3b82f6}{w}||_2^2 $$
+  $$
+  L(\textcolor{#3b82f6}{w}) = ||\textcolor{#10b981}{X}\textcolor{#3b82f6}{w} - \textcolor{#10b981}{y}||_2^2 + \textcolor{#fbbf24}{\alpha} ||\textcolor{#3b82f6}{w}||_2^2 
+  $$
 
-  - $\textcolor{#10b981}{X}$ : Matrice des caractéristiques (features)
-  - $\textcolor{#10b981}{y}$ : Vecteur des valeurs cibles
+  - $\textcolor{#10b981}{X}$ : Matrice des variables (features)
+  - $\textcolor{#10b981}{y}$ : Vecteur cible
   - $\textcolor{#3b82f6}{w}$ : Vecteur des coefficients du modèle (poids)
   - $\textcolor{#fbbf24}{\alpha}$ : Hyperparamètre de régularisation contrôlant la force de la pénalité
 math_illustration_svg: |

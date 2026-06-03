@@ -123,51 +123,79 @@ illustration_mermaid: |
     style Out fill:#10b981,stroke:#059669,stroke-width:2px,color:#fff
 
 math_theory: |
-  DistilBERT processes text to output a sequence of hidden states. For sequence classification, the hidden state of the `[CLS]` token, denoted as $\textcolor{#ef4444}{h_{\text{CLS}}}$, is extracted as the aggregate representation of the input $\textcolor{#10b981}{X}$.
+  DistilBERT est une version distillée de BERT qui traite le texte pour produire une séquence d'états cachés contextualisés. Pour les tâches de classification de séquences, l'état caché correspondant au jeton (token) spécial `[CLS]`, noté $\textcolor{#ef4444}{h_{\text{CLS}}}$, est extrait. Ce vecteur agit comme une représentation sémantique agrégée de l'ensemble de la séquence d'entrée $\textcolor{#10b981}{X}$.
   
-  The predicted probability for a class $\textcolor{#3b82f6}{y}$ is given by applying a linear transformation followed by a softmax function:
+  La distribution de probabilité prédite sur les classes possibles, où chaque classe est notée $\textcolor{#3b82f6}{y}$, est calculée en passant la représentation du jeton `[CLS]` à travers une tête de classification linéaire suivie d'une fonction d'activation softmax :
   
-  $$ P(\textcolor{#3b82f6}{y} \mid \textcolor{#10b981}{X}) = \text{Softmax}(\textcolor{#fbbf24}{W} \cdot \textcolor{#ef4444}{h_{\text{CLS}}} + \textcolor{#8b5cf6}{b}) $$
+  $$
+  P(\textcolor{#3b82f6}{y} \mid \textcolor{#10b981}{X}) = \text{Softmax}(\textcolor{#fbbf24}{W} \cdot \textcolor{#ef4444}{h_{\text{CLS}}} + \textcolor{#8b5cf6}{b})
+  $$
   
-  where:
-  *   $\textcolor{#10b981}{X}$ is the input token sequence.
-  *   $\textcolor{#ef4444}{h_{\text{CLS}}}$ is the contextualized vector for the `[CLS]` token.
-  *   $\textcolor{#fbbf24}{W}$ is the weight matrix of the classification head.
-  *   $\textcolor{#8b5cf6}{b}$ is the bias vector.
-  *   $\textcolor{#3b82f6}{y}$ is the target class.
+  où :
+  *   $\textcolor{#10b981}{X}$ représente la séquence de jetons d'entrée.
+  *   $\textcolor{#ef4444}{h_{\text{CLS}}}$ est la représentation vectorielle contextualisée continue pour le jeton `[CLS]`.
+  *   $\textcolor{#fbbf24}{W}$ est la matrice de poids apprise de la couche de classification linéaire.
+  *   $\textcolor{#8b5cf6}{b}$ est le vecteur de biais appliqué à la transformation linéaire.
+  *   $\textcolor{#3b82f6}{y}$ est la classe catégorique cible.
 
 math_illustration_svg: |
-  <svg viewBox="0 0 500 250" xmlns="http://www.w3.org/2000/svg">
+  <svg viewBox="0 0 800 350" xmlns="http://www.w3.org/2000/svg">
     <defs>
-      <marker id="arrow" viewBox="0 0 10 10" refX="10" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
-        <path d="M 0 0 L 10 5 L 0 10 z" fill="#d1d5db" />
+      <marker id="arrow" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+        <path d="M 0 0 L 10 5 L 0 10 z" fill="#9ca3af" />
       </marker>
     </defs>
+
+    <!-- Input Sequence -->
+    <rect x="20" y="150" width="120" height="60" rx="8" fill="#f0fdf4" stroke="#10b981" stroke-width="2"/>
+    <text x="80" y="175" text-anchor="middle" font-family="sans-serif" font-size="16" font-weight="bold" fill="#10b981">Input Tokens</text>
+    <text x="80" y="195" text-anchor="middle" font-family="sans-serif" font-size="14" fill="#10b981">X</text>
+
+    <!-- Tokenization & Embedding -->
+    <path d="M 140 180 L 180 180" stroke="#9ca3af" stroke-width="2" marker-end="url(#arrow)"/>
+    <rect x="180" y="130" width="100" height="100" rx="8" fill="#f3f4f6" stroke="#6b7280" stroke-width="2" stroke-dasharray="4"/>
+    <text x="230" y="160" text-anchor="middle" font-family="sans-serif" font-size="14" font-weight="bold" fill="#4b5563">Embeddings</text>
+    <text x="230" y="180" text-anchor="middle" font-family="sans-serif" font-size="12" fill="#6b7280">+ Positional</text>
+    <text x="230" y="200" text-anchor="middle" font-family="sans-serif" font-size="12" fill="#6b7280">Encoding</text>
+
+    <!-- DistilBERT Transformer Blocks -->
+    <path d="M 280 180 L 320 180" stroke="#9ca3af" stroke-width="2" marker-end="url(#arrow)"/>
+    <rect x="320" y="100" width="160" height="160" rx="10" fill="#eff6ff" stroke="#3b82f6" stroke-width="2"/>
+    <text x="400" y="130" text-anchor="middle" font-family="sans-serif" font-size="16" font-weight="bold" fill="#1d4ed8">DistilBERT</text>
+    <text x="400" y="150" text-anchor="middle" font-family="sans-serif" font-size="12" fill="#3b82f6">6 Transformer Layers</text>
     
-    <rect x="10" y="100" width="40" height="40" rx="5" fill="#f0fdf4" stroke="#10b981" stroke-width="2"/>
-    <text x="30" y="125" text-anchor="middle" font-family="sans-serif" font-size="16" font-weight="bold" fill="#10b981">X</text>
+    <rect x="340" y="170" width="120" height="30" rx="4" fill="#dbeafe" stroke="#60a5fa" stroke-width="1"/>
+    <text x="400" y="190" text-anchor="middle" font-family="sans-serif" font-size="12" fill="#1e3a8a">Multi-Head Attention</text>
+
+    <rect x="340" y="210" width="120" height="30" rx="4" fill="#dbeafe" stroke="#60a5fa" stroke-width="1"/>
+    <text x="400" y="230" text-anchor="middle" font-family="sans-serif" font-size="12" fill="#1e3a8a">Feed Forward Net</text>
+
+    <!-- CLS Token Extraction -->
+    <path d="M 480 140 L 520 140" stroke="#9ca3af" stroke-width="2" marker-end="url(#arrow)"/>
+    <rect x="520" y="110" width="80" height="60" rx="8" fill="#fef2f2" stroke="#ef4444" stroke-width="2"/>
+    <text x="560" y="135" text-anchor="middle" font-family="sans-serif" font-size="14" font-weight="bold" fill="#ef4444">[CLS] State</text>
+    <text x="560" y="155" text-anchor="middle" font-family="sans-serif" font-size="16" font-weight="bold" fill="#ef4444">h_CLS</text>
+
+    <!-- Classification Head -->
+    <path d="M 600 140 L 640 140" stroke="#9ca3af" stroke-width="2" marker-end="url(#arrow)"/>
+    <rect x="640" y="70" width="140" height="140" rx="8" fill="#fffbeb" stroke="#fbbf24" stroke-width="2"/>
+    <text x="710" y="100" text-anchor="middle" font-family="sans-serif" font-size="14" font-weight="bold" fill="#d97706">Classification Head</text>
     
-    <line x1="50" y1="120" x2="80" y2="120" stroke="#d1d5db" stroke-width="2" marker-end="url(#arrow)"/>
-    
-    <rect x="80" y="90" width="90" height="60" rx="5" fill="#f3f4f6" stroke="#4b5563" stroke-width="2"/>
-    <text x="125" y="125" text-anchor="middle" font-family="sans-serif" font-size="14" font-weight="bold" fill="#4b5563">DistilBERT</text>
-    
-    <line x1="170" y1="120" x2="200" y2="120" stroke="#d1d5db" stroke-width="2" marker-end="url(#arrow)"/>
-    
-    <rect x="200" y="100" width="50" height="40" rx="5" fill="#fef2f2" stroke="#ef4444" stroke-width="2"/>
-    <text x="225" y="125" text-anchor="middle" font-family="sans-serif" font-size="14" font-weight="bold" fill="#ef4444">h_CLS</text>
-    
-    <line x1="250" y1="120" x2="280" y2="120" stroke="#d1d5db" stroke-width="2" marker-end="url(#arrow)"/>
-    
-    <rect x="280" y="70" width="90" height="100" rx="5" fill="#fffbeb" stroke="#fbbf24" stroke-width="2"/>
-    <text x="325" y="100" text-anchor="middle" font-family="sans-serif" font-size="12" font-weight="bold" fill="#fbbf24">Linear (W)</text>
-    <text x="325" y="120" text-anchor="middle" font-family="sans-serif" font-size="12" font-weight="bold" fill="#8b5cf6">+ Bias (b)</text>
-    <text x="325" y="145" text-anchor="middle" font-family="sans-serif" font-size="12" font-weight="bold" fill="#4b5563">Softmax</text>
-    
-    <line x1="370" y1="120" x2="400" y2="120" stroke="#d1d5db" stroke-width="2" marker-end="url(#arrow)"/>
-    
-    <rect x="400" y="100" width="50" height="40" rx="5" fill="#eff6ff" stroke="#3b82f6" stroke-width="2"/>
-    <text x="425" y="125" text-anchor="middle" font-family="sans-serif" font-size="16" font-weight="bold" fill="#3b82f6">P(y)</text>
+    <rect x="660" y="115" width="100" height="30" rx="4" fill="#fef3c7" stroke="#f59e0b" stroke-width="1"/>
+    <text x="710" y="135" text-anchor="middle" font-family="sans-serif" font-size="12" font-weight="bold" fill="#b45309">W * h_CLS</text>
+
+    <rect x="660" y="160" width="100" height="30" rx="4" fill="#f5f3ff" stroke="#8b5cf6" stroke-width="1"/>
+    <text x="710" y="180" text-anchor="middle" font-family="sans-serif" font-size="12" font-weight="bold" fill="#6d28d9">+ Bias (b)</text>
+
+    <!-- Softmax and Output -->
+    <path d="M 710 210 L 710 250" stroke="#9ca3af" stroke-width="2" marker-end="url(#arrow)"/>
+    <rect x="660" y="250" width="100" height="40" rx="8" fill="#f3f4f6" stroke="#9ca3af" stroke-width="2"/>
+    <text x="710" y="275" text-anchor="middle" font-family="sans-serif" font-size="14" font-weight="bold" fill="#4b5563">Softmax</text>
+
+    <path d="M 660 270 L 620 270" stroke="#9ca3af" stroke-width="2" marker-end="url(#arrow)"/>
+    <rect x="520" y="240" width="100" height="60" rx="8" fill="#eff6ff" stroke="#3b82f6" stroke-width="2"/>
+    <text x="570" y="265" text-anchor="middle" font-family="sans-serif" font-size="14" font-weight="bold" fill="#3b82f6">Probabilities</text>
+    <text x="570" y="285" text-anchor="middle" font-family="sans-serif" font-size="16" font-weight="bold" fill="#3b82f6">P(y | X)</text>
   </svg>
 
 _metadata:

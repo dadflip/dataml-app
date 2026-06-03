@@ -35,16 +35,20 @@ code_template: |
       feature_importances = None
       model = "PatchTST Placeholder (Naive Forecast)"
 math_theory: |
-  PatchTST traite les séries temporelles multivariées de manière indépendante pour chaque canal.
-  Une série temporelle $\textcolor{#10b981}{x^{(i)}}$ de longueur $L$ est segmentée en patches (fenêtres de chevauchement) $\textcolor{#fbbf24}{P^{(i)}}$ de taille $P_{len}$.
+  PatchTST traite les séries temporelles multivariées indépendamment pour chaque canal.
+  Une série temporelle $\textcolor{#10b981}{x^{(i)}}$ de longueur $L$ est segmentée en patchs (fenêtres superposées) $\textcolor{#fbbf24}{P^{(i)}}$ de taille $P_{len}$.
   
-  $$ \textcolor{#fbbf24}{P^{(i)}} = \text{Patching}(\textcolor{#10b981}{x^{(i)}}) \in \mathbb{R}^{N \times P_{len}} $$
+  $$
+  \textcolor{#fbbf24}{P^{(i)}} = \text{Patching}(\textcolor{#10b981}{x^{(i)}}) \in \mathbb{R}^{N \times P_{len}} 
+  $$
   
-  Chaque patch est ensuite projeté dans un espace latent $\textcolor{#3b82f6}{H^{(i)}}$ via une transformation linéaire $\textcolor{#8b5cf6}{W}$, et enrichi par un encodage positionnel.
+  Chaque patch est ensuite projeté dans un espace latent $\textcolor{#3b82f6}{H^{(i)}}$ via une transformation linéaire $\textcolor{#8b5cf6}{W}$, et enrichi d'un encodage positionnel.
   
-  $$ \textcolor{#3b82f6}{H^{(i)}} = \textcolor{#fbbf24}{P^{(i)}} \textcolor{#8b5cf6}{W} + E_{pos} $$
+  $$
+  \textcolor{#3b82f6}{H^{(i)}} = \textcolor{#fbbf24}{P^{(i)}} \textcolor{#8b5cf6}{W} + E_{pos} 
+  $$
   
-  L'encodeur Transformer traite alors cette séquence de patches $\textcolor{#3b82f6}{H^{(i)}}$ pour modéliser les dépendances temporelles avec un coût attentionnel drastiquement réduit $\mathcal{O}(N^2)$ au lieu de $\mathcal{O}(L^2)$, générant des prédictions $\textcolor{#ef4444}{\hat{y}}$.
+  L'encodeur Transformer traite ensuite cette séquence de patchs $\textcolor{#3b82f6}{H^{(i)}}$ pour modéliser les dépendances temporelles avec un coût attentionnel drastiquement réduit de $\mathcal{O}(N^2)$ au lieu de $\mathcal{O}(L^2)$, générant les prédictions $\textcolor{#ef4444}{\hat{y}}$.
 math_illustration_svg: |
   <svg viewBox="0 0 800 300" xmlns="http://www.w3.org/2000/svg">
     <!-- Time Series Input -->

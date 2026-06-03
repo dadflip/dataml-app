@@ -22,11 +22,15 @@ cons:
 hyperparameters:
   epochs: "Nombre d'époques de fine-tuning (ex: 3)."
 math_theory: |
-  L'innovation majeure des architectures ResNet réside dans l'utilisation de blocs résiduels (Skip Connections).
-  Au lieu d'apprendre directement un mappage sous-jacent complexe $\textcolor{#fbbf24}{H(x)}$, un bloc résiduel apprend une fonction de résidu $\textcolor{#10b981}{F(x)} = \textcolor{#fbbf24}{H(x)} - \textcolor{#3b82f6}{x}$.
-  La sortie $\textcolor{#fbbf24}{y}$ du bloc est définie par l'addition de l'entrée $\textcolor{#3b82f6}{x}$ (qui a court-circuité les couches) à la transformation $\textcolor{#10b981}{F(x)}$ :
-  $$\textcolor{#fbbf24}{y} = \sigma(\textcolor{#10b981}{F(\textcolor{#3b82f6}{x}, W_i)} + \textcolor{#3b82f6}{x})$$
-  où $\sigma$ est la fonction d'activation ReLU. Cette approche prévient la disparition du gradient dans les réseaux très profonds (comme ResNet-18 ou ResNet-50) et facilite l'apprentissage de l'identité $\textcolor{#10b981}{F(x)} \approx 0$ si les couches ne sont pas nécessaires.
+  L'innovation majeure des architectures ResNet réside dans l'utilisation de blocs résiduels (Skip Connections ou connexions de saut).
+  Au lieu d'apprendre directement une transformation sous-jacente complexe $\textcolor{#fbbf24}{H(x)}$, un bloc résiduel apprend une fonction résiduelle $\textcolor{#10b981}{F(x)} = \textcolor{#fbbf24}{H(x)} - \textcolor{#3b82f6}{x}$.
+  La sortie $\textcolor{#fbbf24}{y}$ du bloc est définie en ajoutant l'entrée $\textcolor{#3b82f6}{x}$ (qui a contourné les couches) à la transformation $\textcolor{#10b981}{F(x)}$ :
+  
+  $$
+  \textcolor{#fbbf24}{y} = \sigma(\textcolor{#10b981}{F(\textcolor{#3b82f6}{x}, W_i)} + \textcolor{#3b82f6}{x})
+  $$
+  
+  où $\sigma$ est la fonction d'activation ReLU. Cette approche prévient le problème de la disparition du gradient dans les réseaux très profonds (comme ResNet-18 ou ResNet-50) et facilite l'apprentissage de la transformation d'identité $\textcolor{#10b981}{F(x)} \approx 0$ si les couches ne sont pas nécessaires.
 math_illustration_svg: |
   <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 400">
     <defs>

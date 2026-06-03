@@ -22,11 +22,15 @@ cons:
 hyperparameters:
   epochs: "Nombre d'époques (ex: 5)."
 math_theory: |
-  La convolution 3D étend le principe de la 2D à un volume spatial ou à une séquence d'images (vidéo).
+  La convolution 3D étend le principe 2D à un volume spatial ou une séquence d'images (vidéo).
   Le noyau $\textcolor{#10b981}{K}$ possède désormais trois dimensions : profondeur, hauteur, largeur ($d \times m \times n$).
   La valeur du tenseur de sortie $\textcolor{#fbbf24}{O}$ à la position $(x, y, z)$ est :
-  $$\textcolor{#fbbf24}{O_{x, y, z}} = \sum_{w=0}^{d-1} \sum_{u=0}^{m-1} \sum_{v=0}^{n-1} \textcolor{#3b82f6}{V_{x+w, y+u, z+v}} \cdot \textcolor{#10b981}{K_{w, u, v}} + \textcolor{#8b5cf6}{b}$$
-  Cette opération permet d'extraire non seulement les caractéristiques spatiales dans chaque plan 2D, mais aussi l'évolution temporelle ou la continuité structurelle le long de l'axe de profondeur $z$.
+  
+  $$
+  \textcolor{#fbbf24}{O_{x, y, z}} = \sum_{w=0}^{d-1} \sum_{u=0}^{m-1} \sum_{v=0}^{n-1} \textcolor{#3b82f6}{V_{x+w, y+u, z+v}} \cdot \textcolor{#10b981}{K_{w, u, v}} + \textcolor{#8b5cf6}{b}
+  $$
+  
+  Cette opération extrait non seulement des caractéristiques spatiales dans chaque plan 2D, mais aussi l'évolution temporelle ou la continuité structurelle le long de l'axe de profondeur $z$.
 math_illustration_svg: |
   <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 400">
     <defs>

@@ -23,11 +23,14 @@ cons:
 hyperparameters:
   text_col: "Colonne de texte cible."
 math_theory: |
-  TextBlob utilise une approche lexicale (basée sur des règles et des dictionnaires) pour calculer la polarité (sentiment).
-  Chaque mot $w_i$ d'un texte $\textcolor{#10b981}{X}$ est recherché dans un lexique pré-annoté qui lui associe une polarité $\textcolor{#3b82f6}{p}(w_i) \in [-1, 1]$ et une intensité (ou subjectivité) $\textcolor{#fbbf24}{s}(w_i)$.
-  Le modèle prend en compte les modificateurs (comme "très" ou "pas") qui appliquent un coefficient multiplicatif $\textcolor{#8b5cf6}{m}_i$.
+  TextBlob utilise une approche lexicale (basée sur des règles et un dictionnaire) pour calculer la polarité (sentiment).
+  Chaque mot $w_i$ dans un texte $\textcolor{#10b981}{X}$ est recherché dans un lexique pré-annoté qui l'associe à une polarité $\textcolor{#3b82f6}{p}(w_i) \in [-1, 1]$ et une intensité (ou subjectivité) $\textcolor{#fbbf24}{s}(w_i)$.
+  Le modèle prend en compte des modificateurs (comme "très" ou "ne pas") qui appliquent un coefficient multiplicatif $\textcolor{#8b5cf6}{m}_i$.
   La polarité globale $\textcolor{#ef4444}{P}$ du texte est la moyenne pondérée des mots connus :
-  $$ \textcolor{#ef4444}{P} = \frac{\sum_{i=1}^{N} \textcolor{#8b5cf6}{m}_i \cdot \textcolor{#3b82f6}{p}(w_i)}{\text{nombre de mots évalués}} $$
+
+  $$
+  \textcolor{#ef4444}{P} = \frac{\sum_{i=1}^{N} \textcolor{#8b5cf6}{m}_i \cdot \textcolor{#3b82f6}{p}(w_i)}{\text{nombre de mots évalués}} 
+  $$
 math_illustration_svg: |
   <svg viewBox="0 0 800 400" xmlns="http://www.w3.org/2000/svg">
     <rect x="0" y="0" width="800" height="400" fill="#1e293b" rx="10"/>

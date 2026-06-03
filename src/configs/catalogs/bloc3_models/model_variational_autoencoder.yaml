@@ -103,14 +103,18 @@ code_template: |
       training_history = {"status": "success", "loss": float(loss)}
       task_type = "generative"
 math_theory: |
-  Dans un VAE, l'encodeur ne produit pas un point déterministe, mais les paramètres (moyenne $\textcolor{#3b82f6}{\mu}$ et variance $\textcolor{#fbbf24}{\sigma^2}$) d'une distribution latente.
-  Pour permettre la rétropropagation, on utilise l'astuce de reparamétrisation en échantillonnant un bruit $\textcolor{#8b5cf6}{\epsilon \sim \mathcal{N}(0, I)}$ :
+  Dans un VAE, l'encodeur ne produit pas un point déterministe, mais plutôt les paramètres (moyenne $\textcolor{#3b82f6}{\mu}$ et variance $\textcolor{#fbbf24}{\sigma^2}$) d'une distribution latente.
+  Pour permettre la rétropropagation, l'astuce de reparamétrisation (reparameterization trick) est utilisée en échantillonnant du bruit $\textcolor{#8b5cf6}{\epsilon \sim \mathcal{N}(0, I)}$ :
   
-  $$ \textcolor{#10b981}{z} = \textcolor{#3b82f6}{\mu} + \textcolor{#fbbf24}{\sigma} \odot \textcolor{#8b5cf6}{\epsilon} $$
+  $$
+  \textcolor{#10b981}{z} = \textcolor{#3b82f6}{\mu} + \textcolor{#fbbf24}{\sigma} \odot \textcolor{#8b5cf6}{\epsilon} 
+  $$
   
-  Le décodeur génère ensuite la reconstruction $\textcolor{#ef4444}{\hat{x}}$ à partir de $\textcolor{#10b981}{z}$. La fonction de coût combine l'erreur de reconstruction et la divergence de Kullback-Leibler (KL) qui régularise l'espace latent pour le rapprocher d'une distribution normale centrée réduite :
+  Le décodeur génère ensuite la reconstruction $\textcolor{#ef4444}{\hat{x}}$ à partir de $\textcolor{#10b981}{z}$. La fonction de perte combine l'erreur de reconstruction et la divergence de Kullback-Leibler (KL), qui régularise l'espace latent pour l'approximer à une distribution normale standard :
   
-  $$ \mathcal{L} = || \textcolor{#10b981}{x} - \textcolor{#ef4444}{\hat{x}} ||^2 + D_{KL} \left( \mathcal{N}(\textcolor{#3b82f6}{\mu}, \textcolor{#fbbf24}{\sigma^2}) || \mathcal{N}(0, I) \right) $$
+  $$
+  \mathcal{L} = || \textcolor{#10b981}{x} - \textcolor{#ef4444}{\hat{x}} ||^2 + D_{KL} \left( \mathcal{N}(\textcolor{#3b82f6}{\mu}, \textcolor{#fbbf24}{\sigma^2}) || \mathcal{N}(0, I) \right) 
+  $$
 math_illustration_svg: |
   <svg viewBox="0 0 700 350" xmlns="http://www.w3.org/2000/svg">
     <!-- Input -->

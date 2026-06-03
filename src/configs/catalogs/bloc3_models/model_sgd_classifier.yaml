@@ -28,16 +28,19 @@ code_template: |
   # [PARAM: LOSS | string]
   LOSS = "hinge"
 math_theory: |
-  Le classifieur SGD (Stochastic Gradient Descent) minimise une fonction de perte empirique (ex: Hinge ou Log-Loss) de manière itérative, en mettant à jour les poids pour chaque échantillon (ou mini-lot).
+  Le classifieur SGD (Descente de Gradient Stochastique) minimise une fonction de perte empirique (par ex., Hinge ou Log-Loss) de manière itérative en mettant à jour les poids pour chaque échantillon (ou mini-lot).
 
   Règle de mise à jour stochastique à l'itération $t$ :
-  $$ \textcolor{#3b82f6}{w}_{t+1} = \textcolor{#3b82f6}{w}_t - \textcolor{#8b5cf6}{\eta_t} \nabla_{\textcolor{#3b82f6}{w}} \left( \textcolor{#ef4444}{L}(\textcolor{#10b981}{y_t}, \textcolor{#3b82f6}{w}^T \textcolor{#10b981}{x_t}) + \frac{\textcolor{#fbbf24}{\alpha}}{N} R(\textcolor{#3b82f6}{w}_t) \right) $$
+
+  $$
+  \textcolor{#3b82f6}{w}_{t+1} = \textcolor{#3b82f6}{w}_t - \textcolor{#8b5cf6}{\eta_t} \nabla_{\textcolor{#3b82f6}{w}} \left( \textcolor{#ef4444}{L}(\textcolor{#10b981}{y_t}, \textcolor{#3b82f6}{w}^T \textcolor{#10b981}{x_t}) + \frac{\textcolor{#fbbf24}{\alpha}}{N} R(\textcolor{#3b82f6}{w}_t) \right) 
+  $$
 
   - $\textcolor{#3b82f6}{w}$ : Poids du modèle (coefficients)
-  - $\textcolor{#8b5cf6}{\eta_t}$ : Taux d'apprentissage (Learning rate)
-  - $\textcolor{#ef4444}{L}$ : Fonction de perte pour une instance
+  - $\textcolor{#8b5cf6}{\eta_t}$ : Taux d'apprentissage
+  - $\textcolor{#ef4444}{L}$ : Fonction de perte pour une seule instance
   - $(\textcolor{#10b981}{x_t}, \textcolor{#10b981}{y_t})$ : Caractéristiques et étiquette de l'instance stochastique
-  - $\textcolor{#fbbf24}{\alpha} R(\textcolor{#3b82f6}{w})$ : Terme de régularisation (ex: pénalité $L_2$)
+  - $\textcolor{#fbbf24}{\alpha} R(\textcolor{#3b82f6}{w})$ : Terme de régularisation (par ex., pénalité $L_2$)
 math_illustration_svg: |
   <svg viewBox="0 0 500 250" xmlns="http://www.w3.org/2000/svg">
     <!-- Contour lines of the loss surface -->

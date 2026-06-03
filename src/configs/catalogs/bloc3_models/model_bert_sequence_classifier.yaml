@@ -178,18 +178,24 @@ illustration_mermaid: |
       style FC fill:#3b82f6,stroke:#2563eb,stroke-width:2px,color:#fff
 
 math_theory: |
-  BERT utilizes a multi-layer Bidirectional Transformer encoder. The core mechanism is scaled dot-product attention, allowing the model to weigh the importance of each token relative to others in the sequence:
+  BERT utilise un encodeur Transformer Bidirectionnel multi-couches. Le mécanisme central est l'attention par produit scalaire mis à l'échelle, permettant au modèle de pondérer l'importance de chaque token par rapport aux autres dans la séquence :
   
-  $$ \text{Attention}(\textcolor{#3b82f6}{Q}, \textcolor{#10b981}{K}, \textcolor{#fbbf24}{V}) = \text{Softmax}\left(\frac{\textcolor{#3b82f6}{Q} \cdot \textcolor{#10b981}{K}^T}{\sqrt{\textcolor{#ef4444}{d_k}}}\right) \textcolor{#fbbf24}{V} $$
+  $$
+  \text{Attention}(\textcolor{#3b82f6}{Q}, \textcolor{#10b981}{K}, \textcolor{#fbbf24}{V}) = \text{Softmax}\left(\frac{\textcolor{#3b82f6}{Q} \cdot \textcolor{#10b981}{K}^T}{\sqrt{\textcolor{#ef4444}{d_k}}}\right) \textcolor{#fbbf24}{V}
+  $$
   
-  For sequence classification, the final hidden state of the special `[CLS]` token, $\textcolor{#8b5cf6}{h_{\text{CLS}}}$, is extracted. This vector summarizes the entire sequence's context. A classification head (linear layer + softmax) is applied on top:
+  Pour la classification de séquences, l'état caché final du token spécial `[CLS]`, $\textcolor{#8b5cf6}{h_{\text{CLS}}}$, est extrait. Ce vecteur résume le contexte de toute la séquence. Une tête de classification (couche linéaire + softmax) est appliquée par-dessus :
   
-  $$ P(y \mid X) = \text{Softmax}(\textcolor{#3b82f6}{W} \cdot \textcolor{#8b5cf6}{h_{\text{CLS}}} + \textcolor{#10b981}{b}) $$
+  $$
+  P(\textcolor{#c026d3}{y} \mid \textcolor{#475569}{X}) = \text{Softmax}(\textcolor{#3b82f6}{W} \cdot \textcolor{#8b5cf6}{h_{\text{CLS}}} + \textcolor{#10b981}{b})
+  $$
   
-  where:
-  *   $\textcolor{#3b82f6}{Q}, \textcolor{#10b981}{K}, \textcolor{#fbbf24}{V}$ are Queries, Keys, and Values matrices.
-  *   $\textcolor{#ef4444}{d_k}$ is the dimension of the keys.
-  *   $\textcolor{#8b5cf6}{h_{\text{CLS}}}$ is the pooled contextual representation.
+  où :
+  *   $\textcolor{#3b82f6}{Q}, \textcolor{#10b981}{K}, \textcolor{#fbbf24}{V}$ sont les matrices de Requêtes (Queries), Clés (Keys) et Valeurs (Values).
+  *   $\textcolor{#ef4444}{d_k}$ est la dimension des clés.
+  *   $\textcolor{#8b5cf6}{h_{\text{CLS}}}$ est la représentation contextuelle agrégée (pooled).
+  *   $\textcolor{#c026d3}{y}$ est la classe prédite.
+  *   $\textcolor{#475569}{X}$ est la séquence d'entrée.
 
 math_illustration_svg: |
   <svg viewBox="0 0 800 400" xmlns="http://www.w3.org/2000/svg">

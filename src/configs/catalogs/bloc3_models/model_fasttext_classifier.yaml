@@ -25,10 +25,17 @@ hyperparameters:
 math_theory: |
   FastText modélise un document comme la somme des représentations de ses mots et de ses n-grammes de caractères.
   Soit $\textcolor{#10b981}{X} = \{x_1, \dots, x_{\textcolor{#fbbf24}{N}}\}$ l'ensemble des n-grammes (mots et sous-mots) d'un texte.
-  La représentation du document $\textcolor{#3b82f6}{h}$ est la moyenne de leurs embeddings $\textcolor{#8b5cf6}{v}_{x_n}$ :
-  $$ \textcolor{#3b82f6}{h} = \frac{1}{\textcolor{#fbbf24}{N}} \sum_{n=1}^{\textcolor{#fbbf24}{N}} \textcolor{#8b5cf6}{v}_{x_n} $$
-  Cette représentation est ensuite multipliée par une matrice de poids $\textcolor{#ef4444}{W}$ et passée dans une fonction Softmax (ou Softmax hiérarchique pour accélérer le calcul) afin de prédire la classe $y$ :
-  $$ P(y | \textcolor{#10b981}{X}) = \text{Softmax}(\textcolor{#ef4444}{W} \cdot \textcolor{#3b82f6}{h}) $$
+  La représentation du document $\textcolor{#3b82f6}{h}$ est la moyenne de leurs plongements $\textcolor{#8b5cf6}{v}_{x_n}$ :
+  
+  $$
+  \textcolor{#3b82f6}{h} = \frac{1}{\textcolor{#fbbf24}{N}} \sum_{n=1}^{\textcolor{#fbbf24}{N}} \textcolor{#8b5cf6}{v}_{x_n} 
+  $$
+  
+  Cette représentation est ensuite multipliée par une matrice de poids $\textcolor{#ef4444}{W}$ et passée à travers une fonction Softmax (ou Softmax hiérarchique pour accélérer le calcul) afin de prédire la classe $y$ :
+  
+  $$
+  P(y | \textcolor{#10b981}{X}) = \text{Softmax}(\textcolor{#ef4444}{W} \cdot \textcolor{#3b82f6}{h}) 
+  $$
 math_illustration_svg: |
   <svg viewBox="0 0 800 400" xmlns="http://www.w3.org/2000/svg">
     <rect x="0" y="0" width="800" height="400" fill="#1e293b" rx="10"/>

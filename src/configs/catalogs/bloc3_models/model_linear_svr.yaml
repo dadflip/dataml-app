@@ -91,11 +91,13 @@ illustration_mermaid: |
     style Pred fill:#10b981,stroke:#059669,stroke-width:2px,color:#fff
 
 math_theory: |
-  Linear Support Vector Regression (SVR) tries to find a linear function that fits the data while tolerating errors within a specified margin $\textcolor{#8b5cf6}{\epsilon}$ (epsilon-tube). It minimizes the L2 norm of the weights along with a penalty for predictions that fall outside the $\epsilon$-tube:
+  La régression à vecteurs de support linéaire (SVR) tente de trouver une fonction linéaire qui s'ajuste aux données tout en tolérant des erreurs à l'intérieur d'une marge spécifiée $\textcolor{#8b5cf6}{\epsilon}$ (tube epsilon). Elle minimise la norme L2 des poids avec une pénalité pour les prédictions qui tombent en dehors du tube $\epsilon$ :
   
-  $$ \min_{w, b} \left( \frac{1}{2} ||\textcolor{#ef4444}{w}||_2^2 + \textcolor{#fbbf24}{C} \sum_{i=1}^{N} \max(0, |\textcolor{#3b82f6}{y}^{(i)} - (\textcolor{#10b981}{X}^{(i)} \textcolor{#ef4444}{w} + b)| - \textcolor{#8b5cf6}{\epsilon}) \right) $$
+  $$
+  \min_{w, b} \left( \frac{1}{2} ||\textcolor{#ef4444}{w}||_2^2 + \textcolor{#fbbf24}{C} \sum_{i=1}^{N} \max(0, |\textcolor{#3b82f6}{y}^{(i)} - (\textcolor{#10b981}{X}^{(i)} \textcolor{#ef4444}{w} + b)| - \textcolor{#8b5cf6}{\epsilon}) \right) 
+  $$
   
-  Where $\textcolor{#ef4444}{w}$ and $b$ parameterize the regression line, $\textcolor{#3b82f6}{y}$ is the continuous target, $\textcolor{#10b981}{X}$ is the feature matrix, $\textcolor{#fbbf24}{C}$ controls the penalty, and $\textcolor{#8b5cf6}{\epsilon}$ defines the width of the insensitive zone.
+  Où $\textcolor{#ef4444}{w}$ et $b$ paramètrent la droite de régression, $\textcolor{#3b82f6}{y}$ est la cible continue, $\textcolor{#10b981}{X}$ est la matrice des caractéristiques, $\textcolor{#fbbf24}{C}$ contrôle la pénalité, et $\textcolor{#8b5cf6}{\epsilon}$ définit la largeur de la zone d'insensibilité.
 
 math_illustration_svg: |
   <svg viewBox="0 0 500 250" xmlns="http://www.w3.org/2000/svg">

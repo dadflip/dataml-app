@@ -83,19 +83,23 @@ illustration_mermaid: |
     style C fill:#10b981,stroke:#059669,stroke-width:2px,color:#fff
 
 math_theory: |
-  MediaPipe Pose employs a two-stage machine learning pipeline for robust human pose estimation.
+  MediaPipe Pose utilise un pipeline d'apprentissage automatique en deux étapes pour une estimation robuste de la posture humaine.
   
-  First, a **Detector** locates the person/Region of Interest (ROI) and predicts an initial bounding box.
-  Then, a **Tracker (Pose Landmark Model)** predicts the 33 3D keypoints from the cropped ROI. For an image crop $\textcolor{#ef4444}{\mathbf{X}_{crop}}$, the model outputs coordinates and visibility probabilities:
-  $$ (\textcolor{#3b82f6}{\mathbf{x}}, \textcolor{#3b82f6}{\mathbf{y}}, \textcolor{#10b981}{\mathbf{z}}, \textcolor{#fbbf24}{\mathbf{v}}) = f_{tracker}(\textcolor{#ef4444}{\mathbf{X}_{crop}}) $$
+  D'abord, un **Détecteur** localise la personne / la région d'intérêt (ROI) et prédit une boîte englobante initiale.
+  Ensuite, un **Traqueur (Modèle de repères de posture)** prédit les 33 points clés 3D à partir de la ROI recadrée. Pour une image recadrée $\color{#ef4444}{\mathbf{X}_{crop}}$, le modèle génère des coordonnées et des probabilités de visibilité :
+  $$
+  (\color{#3b82f6}{\mathbf{x}}, \color{#3b82f6}{\mathbf{y}}, \color{#10b981}{\mathbf{z}}, \color{#fbbf24}{\mathbf{v}}) = f_{tracker}(\color{#ef4444}{\mathbf{X}_{crop}}) 
+  $$
   
-  Where:
-  - $\textcolor{#3b82f6}{\mathbf{x}, \mathbf{y}}$ are 2D pixel coordinates normalized to $[0, 1]$.
-  - $\textcolor{#10b981}{\mathbf{z}}$ represents depth relative to the hips, at the same scale as $\mathbf{x}$.
-  - $\textcolor{#fbbf24}{\mathbf{v}} \in [0, 1]$ is the visibility score (probability that the keypoint is visible and not occluded).
+  Où :
+  - $\color{#3b82f6}{\mathbf{x}, \mathbf{y}}$ sont les coordonnées de pixels 2D normalisées dans $[0, 1]$.
+  - $\color{#10b981}{\mathbf{z}}$ représente la profondeur relative aux hanches, à la même échelle que $\mathbf{x}$.
+  - $\color{#fbbf24}{\mathbf{v}} \in [0, 1]$ est le score de visibilité (probabilité que le point clé soit visible et non masqué).
   
-  The tracker's loss is a combination of regression loss for coordinates (e.g., Smooth L1) and binary cross-entropy for visibility:
-  $$ \mathcal{L} = \lambda_{reg} \sum_{i=1}^{33} ||\textcolor{#3b82f6}{\mathbf{p}_i} - \textcolor{#3b82f6}{\mathbf{\hat{p}}_i}||_{smooth\_L1} + \lambda_{vis} \sum_{i=1}^{33} \text{BCE}(\textcolor{#fbbf24}{v_i}, \textcolor{#fbbf24}{\hat{v}_i}) $$
+  La perte du traqueur est une combinaison de perte de régression pour les coordonnées (ex. Smooth L1) et d'entropie croisée binaire pour la visibilité :
+  $$
+  \mathcal{L} = \lambda_{reg} \sum_{i=1}^{33} ||\textcolor{#3b82f6}{\mathbf{p}_i} - \textcolor{#3b82f6}{\mathbf{\hat{p}}_i}||_{smooth\_L1} + \lambda_{vis} \sum_{i=1}^{33} \text{BCE}(\textcolor{#fbbf24}{v_i}, \textcolor{#fbbf24}{\hat{v}_i}) 
+  $$
 
 math_illustration_svg: |
   <svg viewBox="0 0 800 400" xmlns="http://www.w3.org/2000/svg">

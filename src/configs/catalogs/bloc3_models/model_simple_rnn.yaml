@@ -22,10 +22,17 @@ hyperparameters:
   epochs: "Nombre d'époques (ex: 10)."
   learning_rate: "Taux d'apprentissage (ex: 0.001)."
 math_theory: |
-  Le Simple RNN met à jour son état caché $\textcolor{#3b82f6}{h_t}$ à chaque pas de temps $t$ en combinant l'entrée actuelle $\textcolor{#ef4444}{x_t}$ et l'état précédent $\textcolor{#fbbf24}{h_{t-1}}$ :
-  $$ \textcolor{#3b82f6}{h_t} = \tanh(\textcolor{#8b5cf6}{W_{hx}} \textcolor{#ef4444}{x_t} + \textcolor{#8b5cf6}{W_{hh}} \textcolor{#fbbf24}{h_{t-1}} + \textcolor{#8b5cf6}{b_h}) $$
-  La prédiction finale $\textcolor{#10b981}{\hat{y}}$ se base sur le dernier état caché (ou chaque état) via une transformation linéaire :
-  $$ \textcolor{#10b981}{\hat{y}} = \text{Softmax}(\textcolor{#8b5cf6}{W_{yh}} \textcolor{#3b82f6}{h_T} + \textcolor{#8b5cf6}{b_y}) $$
+  Le RNN simple met à jour son état caché $\textcolor{#3b82f6}{h_t}$ à chaque pas de temps $t$ en combinant l'entrée courante $\textcolor{#ef4444}{x_t}$ et l'état précédent $\textcolor{#fbbf24}{h_{t-1}}$ :
+
+  $$
+  \textcolor{#3b82f6}{h_t} = \tanh(\textcolor{#8b5cf6}{W_{hx}} \textcolor{#ef4444}{x_t} + \textcolor{#8b5cf6}{W_{hh}} \textcolor{#fbbf24}{h_{t-1}} + \textcolor{#8b5cf6}{b_h}) 
+  $$
+
+  La prédiction finale $\textcolor{#10b981}{\hat{y}}$ est basée sur le dernier état caché (ou chaque état) via une transformation linéaire :
+
+  $$
+  \textcolor{#10b981}{\hat{y}} = \text{Softmax}(\textcolor{#8b5cf6}{W_{yh}} \textcolor{#3b82f6}{h_T} + \textcolor{#8b5cf6}{b_y}) 
+  $$
 math_illustration_svg: |
   <svg viewBox="0 0 800 400" xmlns="http://www.w3.org/2000/svg">
     <rect width="800" height="400" fill="#f8fafc" rx="10"/>
